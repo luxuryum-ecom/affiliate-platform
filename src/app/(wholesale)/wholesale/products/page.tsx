@@ -21,6 +21,7 @@ export default async function WholesaleProductsPage() {
       .from('products')
       .select('*')
       .eq('active', true)
+      .eq('approval_status', 'approved')
       .order('created_at', { ascending: false }),
     supabase
       .from('wholesale_cart_items')

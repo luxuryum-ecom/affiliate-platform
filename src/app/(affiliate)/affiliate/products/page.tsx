@@ -26,6 +26,7 @@ export default async function AffiliateProductsPage() {
     .from('products')
     .select('*')
     .eq('active', true)
+    .eq('approval_status', 'approved')   // defense-in-depth: active alone implies approved, but be explicit
     .order('created_at', { ascending: false }) as { data: Product[] | null; error: unknown }
 
   const list = products ?? []

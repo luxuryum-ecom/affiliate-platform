@@ -232,7 +232,7 @@ function OrderRow({ order }: { order: OrderRow }) {
       </div>
 
       {/* Quick actions + mobile link */}
-      <div className="flex flex-wrap items-center gap-2 mt-2 pl-13">
+      <div className="flex flex-wrap items-center gap-2 mt-2 pl-10 sm:pl-[52px]">
         <QuickActions order={order} />
         <Link
           href={`/admin/orders/${order.id}`}

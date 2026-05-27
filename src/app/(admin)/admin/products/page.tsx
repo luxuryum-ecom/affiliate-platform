@@ -101,7 +101,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
     !!filters.source_type ||
     !!filters.approval_status ||
     !!filters.active ||
-    !!filters.country
+    !!filters.country ||
+    !!filters.search ||
+    filters.low_stock === 'true'
 
   return (
     <div className="min-h-screen bg-gray-50">
