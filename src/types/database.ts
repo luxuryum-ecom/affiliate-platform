@@ -199,6 +199,30 @@ export interface Payout {
   paid_at: string | null
 }
 
+export type ProofType =
+  | 'bank_receipt'
+  | 'transfer_proof'
+  | 'delivery_receipt'
+  | 'return_receipt'
+  | 'stock_reception_proof'
+  | 'other'
+
+/** Attachment-ready proof/receipt record. Added in migration 005. */
+export interface OrderProof {
+  id: string
+  proof_type: ProofType
+  file_url: string
+  uploaded_by: string
+  /** Linked to a COD order (nullable). */
+  related_order_id: string | null
+  /** Linked to a wholesale order (nullable). */
+  related_wholesale_order_id: string | null
+  /** Linked to a product (e.g. stock reception proof) (nullable). */
+  related_product_id: string | null
+  notes: string | null
+  uploaded_at: string
+}
+
 // ─── JOINED / EXTENDED TYPES ─────────────────────────────────────────────────
 // Used in query results that join related tables.
 
@@ -288,6 +312,11 @@ export type Database = {
         Payout,
         Omit<Payout, 'id' | 'created_at'>,
         Partial<Payout>
+      >
+      order_proofs: TableDef<
+        OrderProof,
+        Omit<OrderProof, 'id' | 'uploaded_at'>,
+        Partial<OrderProof>
       >
     }
     Views: Record<never, never>

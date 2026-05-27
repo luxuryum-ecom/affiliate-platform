@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { OrderStatusForm } from '@/components/admin/order-status-form'
+import { OrderTimeline, buildCodTimeline } from '@/components/shared/order-timeline'
 import type { Order, Product, Profile, Commission } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
@@ -47,13 +48,7 @@ export default async function AdminOrderDetailPage({ params }: Params) {
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
   const thumb = order.product?.images?.[0]
 
-  const tsRow = (label: string, ts: string | null) =>
-    ts ? (
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-500">{label}</span>
-        <span className="text-gray-700 tabular-nums">{new Date(ts).toLocaleString('fr-MA')}</span>
-      </div>
-    ) : null
+  const timeline = buildCodTimeline(order)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -139,14 +134,15 @@ export default async function AdminOrderDetailPage({ params }: Params) {
             )}
 
             {/* Timeline */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-2">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Historique</h2>
-              {tsRow('Créée', order.created_at)}
-              {tsRow('Confirmée', order.confirmed_at)}
-              {tsRow('Expédiée', order.shipped_at)}
-              {tsRow('Livrée', order.delivered_at)}
-              {tsRow('Retournée', order.returned_at)}
-              {tsRow('Transfert COD', order.cod_transfer_received_at)}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de la commande</h2>
+              <OrderTimeline steps={timeline} />
+              {order.cod_transfer_received_at && (
+                <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-green-600">
+                  ✓ Transfert COD reçu le{' '}
+                  {new Date(order.cod_transfer_received_at).toLocaleDateString('fr-MA')}
+                </div>
+              )}
             </div>
 
             {/* Affiliate */}

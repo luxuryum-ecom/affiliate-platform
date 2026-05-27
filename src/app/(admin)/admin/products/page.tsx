@@ -32,6 +32,8 @@ interface SearchParams {
   approval_status?: string
   active?: string
   country?: string
+  search?: string
+  low_stock?: string
 }
 
 interface PageProps {
@@ -59,19 +61,17 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (filters.source_type) {
-    query = query.eq('source_type', filters.source_type)
-  }
-  if (filters.approval_status) {
-    query = query.eq('approval_status', filters.approval_status)
-  }
-  if (filters.active === 'true') {
-    query = query.eq('active', true)
-  } else if (filters.active === 'false') {
-    query = query.eq('active', false)
-  }
-  if (filters.country) {
-    query = query.eq('origin_country', filters.country)
+  if (filters.source_type)    query = query.eq('source_type', filters.source_type)
+  if (filters.approval_status) query = query.eq('approval_status', filters.approval_status)
+  if (filters.active === 'true')  query = query.eq('active', true)
+  else if (filters.active === 'false') query = query.eq('active', false)
+  if (filters.country)        query = query.eq('origin_country', filters.country)
+  if (filters.low_stock === 'true') query = query.lt('stock_count', 5)
+
+  // Full-text search via ilike (backed by pg_trgm index from migration 005)
+  if (filters.search?.trim()) {
+    const term = `%${filters.search.trim()}%`
+    query = query.or(`name.ilike.${term},supplier_name.ilike.${term},origin_country.ilike.${term}`)
   }
 
   const { data: products } = (await query) as { data: Product[] | null; error: unknown }

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
 import type { WholesaleOrder, WholesaleOrderItem, Product, Profile } from '@/types/database'
 
 export const metadata = { title: 'Mes commandes — Espace Grossiste' }
@@ -15,9 +16,6 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; icon: string }>
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400',     icon: '✗' },
 }
 
-const STATUS_ORDER: Record<string, number> = {
-  pending: 0, confirmed: 1, sourcing: 2, shipped: 3, delivered: 4, cancelled: 5,
-}
 
 type OrderWithItems = WholesaleOrder & {
   items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images'> })[]
@@ -110,7 +108,6 @@ export default async function WholesaleOrdersPage() {
 
 function OrderCard({ order, compact = false }: { order: OrderWithItems; compact?: boolean }) {
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
-  const progress = Math.min(100, (STATUS_ORDER[order.status] ?? 0) / 4 * 100)
 
   return (
     <div className={`bg-white rounded-xl border border-gray-200 p-5 ${compact ? 'opacity-75' : ''}`}>
@@ -132,22 +129,10 @@ function OrderCard({ order, compact = false }: { order: OrderWithItems; compact?
         <p className="text-lg font-bold text-gray-900">{formatMAD(order.total_amount)}</p>
       </div>
 
-      {/* Progress bar for active orders */}
+      {/* Visual timeline for active orders */}
       {!compact && !['delivered', 'cancelled'].includes(order.status) && (
         <div className="mb-4">
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>En attente</span>
-            <span>Confirmée</span>
-            <span>Sourcing</span>
-            <span>Expédiée</span>
-            <span>Livrée</span>
-          </div>
+          <OrderTimeline steps={buildWholesaleTimeline(order)} />
         </div>
       )}
 

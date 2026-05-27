@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
+import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
 import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
@@ -51,13 +52,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
 
-  const tsRow = (label: string, ts: string | null) =>
-    ts ? (
-      <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-0">
-        <span className="text-gray-500">{label}</span>
-        <span className="text-gray-700 tabular-nums">{new Date(ts).toLocaleString('fr-MA')}</span>
-      </div>
-    ) : null
+  const timeline = buildWholesaleTimeline(order)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -146,13 +141,8 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
             {/* Timeline */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Historique</h2>
-              {tsRow('Créée', order.created_at)}
-              {tsRow('Confirmée', order.confirmed_at)}
-              {tsRow('En sourcing', order.sourcing_at)}
-              {tsRow('Expédiée', order.shipped_at)}
-              {tsRow('Livrée', order.delivered_at)}
-              {tsRow('Annulée', order.cancelled_at)}
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de la commande</h2>
+              <OrderTimeline steps={timeline} />
             </div>
           </div>
 
