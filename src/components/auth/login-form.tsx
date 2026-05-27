@@ -60,7 +60,7 @@ export function LoginForm() {
       <p className="text-center text-sm text-gray-500">
         Pas encore de compte ?{' '}
         <Link href="/signup" className="text-gray-900 font-medium underline underline-offset-2">
-          S'inscrire
+          S&apos;inscrire
         </Link>
       </p>
     </form>

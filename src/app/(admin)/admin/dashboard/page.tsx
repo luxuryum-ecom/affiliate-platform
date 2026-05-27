@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import type { Profile } from '@/types/database'
@@ -120,7 +121,7 @@ export default async function AdminDashboardPage() {
             Tableau de bord
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Vue d'ensemble de la plateforme.
+            Vue d&apos;ensemble de la plateforme.
           </p>
         </div>
 
@@ -155,19 +156,19 @@ export default async function AdminDashboardPage() {
                 title: 'Approuver les inscriptions',
                 description: 'Valider ou rejeter les nouveaux comptes.',
                 badge: pendingUsers ?? 0,
-                disabled: true,
+                href: null, // Day 3
               },
               {
                 title: 'Gérer les produits',
                 description: 'Ajouter, modifier ou désactiver des produits.',
                 badge: null,
-                disabled: true,
+                href: '/admin/products',
               },
               {
                 title: 'Commandes COD',
                 description: 'Mettre à jour les statuts de livraison.',
                 badge: null,
-                disabled: true,
+                href: null, // Day 3
               },
             ].map((action) => (
               <div
@@ -183,12 +184,21 @@ export default async function AdminDashboardPage() {
                   )}
                 </div>
                 <p className="text-xs text-gray-500 mb-4">{action.description}</p>
-                <button
-                  disabled={action.disabled}
-                  className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg opacity-40 cursor-not-allowed"
-                >
-                  Ouvrir →
-                </button>
+                {action.href ? (
+                  <Link
+                    href={action.href}
+                    className="inline-block text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Ouvrir →
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg opacity-40 cursor-not-allowed"
+                  >
+                    Bientôt →
+                  </button>
+                )}
               </div>
             ))}
           </div>

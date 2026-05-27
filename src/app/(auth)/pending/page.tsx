@@ -78,7 +78,7 @@ export default async function PendingPage() {
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
                 2
               </span>
-              Notification par email à l'adresse fournie
+              Notification par email à l&apos;adresse fournie
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
