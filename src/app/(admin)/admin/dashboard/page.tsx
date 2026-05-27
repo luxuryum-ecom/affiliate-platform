@@ -53,7 +53,7 @@ export default async function AdminDashboardPage() {
     supabase
       .from('wholesale_orders')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['submitted', 'contacted']),
+      .in('status', ['pending', 'confirmed', 'sourcing']),
   ])
 
   const platformStats = [
@@ -149,14 +149,14 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Quick actions */}
-        {isAdmin && (
-          <div className="grid sm:grid-cols-3 gap-3">
+          {isAdmin && (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               {
                 title: 'Approuver les inscriptions',
                 description: 'Valider ou rejeter les nouveaux comptes.',
                 badge: pendingUsers ?? 0,
-                href: null, // Day 3
+                href: null,
               },
               {
                 title: 'Gérer les produits',
@@ -166,9 +166,15 @@ export default async function AdminDashboardPage() {
               },
               {
                 title: 'Commandes COD',
-                description: 'Mettre à jour les statuts de livraison.',
+                description: 'Suivre et mettre à jour les statuts de livraison.',
                 badge: null,
-                href: null, // Day 3
+                href: '/admin/orders',
+              },
+              {
+                title: 'Commandes grossiste',
+                description: 'Gérer les commandes B2B et convertir les paniers.',
+                badge: pendingWholesaleOrders ?? 0,
+                href: '/admin/wholesale-orders',
               },
             ].map((action) => (
               <div

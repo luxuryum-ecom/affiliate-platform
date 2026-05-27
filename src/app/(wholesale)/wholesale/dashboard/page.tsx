@@ -41,11 +41,11 @@ export default async function WholesaleDashboardPage() {
   ])
 
   const totalSpend = (orderRows ?? [])
-    .filter((o) => o.status === 'completed')
+    .filter((o) => o.status === 'delivered')
     .reduce((sum, o) => sum + Number(o.total_amount), 0)
 
   const pendingOrders = (orderRows ?? []).filter(
-    (o) => !['completed', 'cancelled'].includes(o.status)
+    (o) => !['delivered', 'cancelled'].includes(o.status)
   ).length
 
   const stats = [
@@ -134,17 +134,22 @@ export default async function WholesaleDashboardPage() {
           </div>
         </div>
 
-        {/* Orders — empty state */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-100">
+        {/* Orders CTA */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
             <h2 className="text-sm font-semibold text-gray-900">Mes commandes</h2>
-          </div>
-          <div className="px-5 py-12 text-center">
-            <p className="text-sm text-gray-400">Aucune commande pour le moment.</p>
-            <p className="mt-1 text-xs text-gray-400">
-              Ajoutez des produits au panier pour passer votre première commande.
+            <p className="text-xs text-gray-500 mt-0.5">
+              {pendingOrders > 0
+                ? `${pendingOrders} commande${pendingOrders > 1 ? 's' : ''} en cours.`
+                : 'Suivez l\'état de vos commandes grossiste.'}
             </p>
           </div>
+          <Link
+            href="/wholesale/orders"
+            className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+          >
+            Voir mes commandes →
+          </Link>
         </div>
       </main>
     </div>

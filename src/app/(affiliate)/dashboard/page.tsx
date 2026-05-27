@@ -117,26 +117,20 @@ export default async function AffiliateDashboardPage() {
           </Link>
         </div>
 
-        {/* Orders table — empty state */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        {/* Orders CTA */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
             <h2 className="text-sm font-semibold text-gray-900">Mes commandes</h2>
-            <button
-              disabled
-              className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg opacity-40 cursor-not-allowed"
-            >
-              + Nouvelle commande
-            </button>
-          </div>
-
-          <div className="px-5 py-12 text-center">
-            <p className="text-sm text-gray-400">
-              Aucune commande pour le moment.
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              Le catalogue de produits est maintenant disponible.
+            <p className="text-xs text-gray-500 mt-0.5">
+              Suivez vos commandes et consultez vos commissions.
             </p>
           </div>
+          <Link
+            href="/affiliate/orders"
+            className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+          >
+            Voir mes commandes →
+          </Link>
         </div>
       </main>
     </div>

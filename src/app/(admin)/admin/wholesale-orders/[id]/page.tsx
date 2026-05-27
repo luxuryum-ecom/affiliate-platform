@@ -1,0 +1,179 @@
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { signOut } from '@/app/actions/auth'
+import { formatMAD } from '@/lib/utils'
+import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
+import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus } from '@/types/database'
+
+interface Params { params: Promise<{ id: string }> }
+
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  pending:   { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
+  confirmed: { label: 'Confirmée',   cls: 'bg-blue-100 text-blue-700' },
+  sourcing:  { label: 'En sourcing', cls: 'bg-purple-100 text-purple-700' },
+  shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
+  delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700' },
+  cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
+}
+
+type OrderItemWithProduct = WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'stock_count'> }
+type OrderDetail = WholesaleOrder & {
+  buyer: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'>
+  agent: Pick<Profile, 'id' | 'full_name'> | null
+  items: OrderItemWithProduct[]
+}
+
+export default async function AdminWholesaleOrderDetailPage({ params }: Params) {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
+  const adminProfile = adminProfileRes.data as { full_name: string } | null
+
+  const [orderRes, itemsRes] = await Promise.all([
+    supabase
+      .from('wholesale_orders')
+      .select('*, buyer:profiles!buyer_id(id,full_name,phone,city), agent:profiles!agent_id(id,full_name)')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('wholesale_order_items')
+      .select('*, product:products(id,name,images,stock_count)')
+      .eq('order_id', id),
+  ])
+
+  const order = orderRes.data as unknown as OrderDetail | null
+  const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
+
+  if (!order) notFound()
+
+  const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
+
+  const tsRow = (label: string, ts: string | null) =>
+    ts ? (
+      <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-0">
+        <span className="text-gray-500">{label}</span>
+        <span className="text-gray-700 tabular-nums">{new Date(ts).toLocaleString('fr-MA')}</span>
+      </div>
+    ) : null
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/admin/wholesale-orders" className="text-gray-400 hover:text-gray-600 text-sm">← Grossiste</Link>
+            <span className="text-gray-300">/</span>
+            <span className="font-mono text-sm text-gray-700">#{id.slice(0,8).toUpperCase()}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500 hidden sm:block">{adminProfile?.full_name}</span>
+            <form action={signOut}>
+              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">Déconnexion</button>
+            </form>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ── Left ── */}
+          <div className="lg:col-span-2 space-y-5">
+
+            {/* Status + buyer */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                  <p className="mt-2 text-xs text-gray-400">
+                    Créée le {new Date(order.created_at).toLocaleString('fr-MA')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-gray-900">{formatMAD(order.total_amount)}</p>
+                  <p className="text-xs text-gray-400">{items.length} article{items.length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Buyer info */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3">Acheteur</h2>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><p className="text-xs text-gray-400">Nom</p><p className="font-medium">{order.buyer.full_name}</p></div>
+                <div><p className="text-xs text-gray-400">Téléphone</p><p className="font-medium">{order.buyer.phone ?? '—'}</p></div>
+                <div><p className="text-xs text-gray-400">Ville</p><p className="font-medium">{order.city ?? order.buyer.city ?? '—'}</p></div>
+                <div><p className="text-xs text-gray-400">Adresse</p><p className="font-medium">{order.address ?? '—'}</p></div>
+                {order.buyer_notes && <div className="col-span-2"><p className="text-xs text-gray-400">Note acheteur</p><p className="text-gray-700">{order.buyer_notes}</p></div>}
+                {order.agent_notes && <div className="col-span-2"><p className="text-xs text-gray-400">Note agent</p><p className="text-gray-700">{order.agent_notes}</p></div>}
+              </div>
+            </div>
+
+            {/* Order items */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3">Articles commandés</h2>
+              <div className="divide-y divide-gray-100">
+                {items.map((item) => {
+                  const thumb = item.product.images?.[0]
+                  const lowStock = item.product.stock_count < 5
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden border shrink-0">
+                        {thumb
+                          ? <img src={thumb} alt={item.product.name} className="w-full h-full object-cover" /> // eslint-disable-line @next/next/no-img-element
+                          : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-300">{item.product.name.slice(0,2).toUpperCase()}</div>
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {item.tier_label_snapshot} · {item.quantity} × {formatMAD(item.unit_price_snapshot)}
+                        </p>
+                        {lowStock && <p className="text-xs text-amber-500">⚠ Stock bas ({item.product.stock_count})</p>}
+                      </div>
+                      <p className="text-sm font-bold text-gray-900 shrink-0">{formatMAD(item.subtotal)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="pt-3 border-t border-gray-100 mt-3 flex justify-between">
+                <span className="text-sm font-semibold text-gray-700">Total</span>
+                <span className="text-sm font-bold text-gray-900">{formatMAD(order.total_amount)}</span>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3">Historique</h2>
+              {tsRow('Créée', order.created_at)}
+              {tsRow('Confirmée', order.confirmed_at)}
+              {tsRow('En sourcing', order.sourcing_at)}
+              {tsRow('Expédiée', order.shipped_at)}
+              {tsRow('Livrée', order.delivered_at)}
+              {tsRow('Annulée', order.cancelled_at)}
+            </div>
+          </div>
+
+          {/* ── Right: status update ── */}
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Mettre à jour</h2>
+              <WholesaleOrderStatusForm
+                orderId={order.id}
+                currentStatus={order.status as WholesaleOrderStatus}
+              />
+            </div>
+            {order.agent && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-400">Agent assigné</p>
+                <p className="text-sm font-medium text-gray-900 mt-0.5">{order.agent.full_name}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}

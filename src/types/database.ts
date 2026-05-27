@@ -22,14 +22,13 @@ export type OrderStatus =
   | 'returned'
   | 'cancelled'
 
+/** Simplified 5-state lifecycle for wholesale orders (updated in migration 004). */
 export type WholesaleOrderStatus =
-  | 'submitted'
-  | 'contacted'
-  | 'validated'
-  | 'awaiting_payment'
-  | 'paid'
-  | 'ready'
-  | 'completed'
+  | 'pending'
+  | 'confirmed'
+  | 'sourcing'
+  | 'shipped'
+  | 'delivered'
   | 'cancelled'
 
 export type DeliveryPreference = 'pickup' | 'delivery'
@@ -103,7 +102,8 @@ export interface Product {
 
 export interface Order {
   id: string
-  affiliate_id: string
+  /** Null when customer orders directly (no referral link). */
+  affiliate_id: string | null
   product_id: string
   customer_name: string
   customer_phone: string
@@ -114,6 +114,25 @@ export interface Order {
   commission_amount: number
   status: OrderStatus
   notes: string | null
+
+  // ── COD traceability (added migration 004) ────────────────────────────────
+  delivery_company: string | null
+  tracking_number: string | null
+  /** Expected cash-on-delivery amount (= total_amount at confirmation). */
+  cod_expected: number | null
+  /** Actual COD amount received by admin. */
+  cod_received: number | null
+  /** Anomaly flag: cod_received < cod_expected. Computed at reconciliation. */
+  return_reason: string | null
+  /** Gap: delivered_at → cod_transfer_received_at = COD payment delay. */
+  cod_transfer_received_at: string | null
+
+  // ── Audit timestamps ──────────────────────────────────────────────────────
+  confirmed_at: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  returned_at: string | null
+
   created_at: string
   updated_at: string
 }
@@ -137,6 +156,14 @@ export interface WholesaleOrder {
   agent_notes: string | null
   total_amount: number
   status: WholesaleOrderStatus
+
+  // ── Audit timestamps (added migration 004) ────────────────────────────────
+  confirmed_at: string | null
+  sourcing_at: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  cancelled_at: string | null
+
   created_at: string
   updated_at: string
 }
@@ -180,7 +207,13 @@ export interface OrderWithProduct extends Order {
 }
 
 export interface OrderWithAffiliate extends Order {
-  affiliate: Pick<Profile, 'id' | 'full_name' | 'phone'>
+  affiliate: Pick<Profile, 'id' | 'full_name' | 'phone'> | null
+}
+
+export interface OrderFull extends Order {
+  product: Pick<Product, 'id' | 'name' | 'images' | 'sell_price' | 'commission_amount'>
+  affiliate: Pick<Profile, 'id' | 'full_name' | 'phone'> | null
+  commission: Pick<Commission, 'id' | 'status' | 'amount'> | null
 }
 
 export interface WholesaleOrderWithItems extends WholesaleOrder {
