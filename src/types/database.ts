@@ -163,26 +163,70 @@ export interface CommissionWithOrder extends Commission {
 }
 
 // ─── DATABASE TYPE (for Supabase client generics) ─────────────────────────────
-// This is a minimal stub. Replace with the generated type from:
-// `npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/supabase.ts`
-// after connecting the Supabase project.
+// Hand-written stub that satisfies the shape @supabase/supabase-js v2 expects.
+// Replace with the generated output of:
+//   npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/supabase.ts
+// once the Supabase project is connected.
+//
+// Each table entry requires Row, Insert, Update, AND Relationships.
+// Views, Enums, CompositeTypes must be present (can be empty objects).
+
+type TableDef<R, I, U> = {
+  Row: R
+  Insert: I
+  Update: U
+  Relationships: []
+}
 
 export type Database = {
   public: {
     Tables: {
-      profiles: { Row: Profile; Insert: Omit<Profile, 'created_at'>; Update: Partial<Profile> }
-      products: { Row: Product; Insert: Omit<Product, 'id' | 'created_at'>; Update: Partial<Product> }
-      orders: { Row: Order; Insert: Omit<Order, 'id' | 'created_at' | 'updated_at'>; Update: Partial<Order> }
-      wholesale_cart_items: { Row: WholesaleCartItem; Insert: Omit<WholesaleCartItem, 'id' | 'added_at'>; Update: Partial<WholesaleCartItem> }
-      wholesale_orders: { Row: WholesaleOrder; Insert: Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at'>; Update: Partial<WholesaleOrder> }
-      wholesale_order_items: { Row: WholesaleOrderItem; Insert: Omit<WholesaleOrderItem, 'id'>; Update: never }
-      commissions: { Row: Commission; Insert: Omit<Commission, 'id' | 'created_at'>; Update: Partial<Commission> }
-      payouts: { Row: Payout; Insert: Omit<Payout, 'id' | 'created_at'>; Update: Partial<Payout> }
+      profiles: TableDef<
+        Profile,
+        Omit<Profile, 'created_at'>,
+        Partial<Profile>
+      >
+      products: TableDef<
+        Product,
+        Omit<Product, 'id' | 'created_at'>,
+        Partial<Product>
+      >
+      orders: TableDef<
+        Order,
+        Omit<Order, 'id' | 'created_at' | 'updated_at'>,
+        Partial<Order>
+      >
+      wholesale_cart_items: TableDef<
+        WholesaleCartItem,
+        Omit<WholesaleCartItem, 'id' | 'added_at'>,
+        Partial<WholesaleCartItem>
+      >
+      wholesale_orders: TableDef<
+        WholesaleOrder,
+        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at'>,
+        Partial<WholesaleOrder>
+      >
+      wholesale_order_items: TableDef<
+        WholesaleOrderItem,
+        Omit<WholesaleOrderItem, 'id'>,
+        never
+      >
+      commissions: TableDef<
+        Commission,
+        Omit<Commission, 'id' | 'created_at'>,
+        Partial<Commission>
+      >
+      payouts: TableDef<
+        Payout,
+        Omit<Payout, 'id' | 'created_at'>,
+        Partial<Payout>
+      >
     }
-    Views: Record<string, never>
+    Views: Record<never, never>
     Functions: {
       my_role: { Args: Record<string, never>; Returns: UserRole }
     }
-    Enums: Record<string, never>
+    Enums: Record<never, never>
+    CompositeTypes: Record<never, never>
   }
 }

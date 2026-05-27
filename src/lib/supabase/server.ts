@@ -1,15 +1,19 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { Database } from '@/types/database'
 
 /**
  * Server Supabase client — use in Server Components, Server Actions, and Route Handlers.
  * Must be called inside an async function (it awaits cookies()).
+ *
+ * NOTE: The Database generic is intentionally omitted here. As of supabase-js v2.106+,
+ * the type inference for hand-written DB stubs is unreliable (it resolves to `never`).
+ * Use explicit type assertions at the call-site instead (see types/database.ts).
+ * Replace with `createServerClient<Database>(...)` once you run `supabase gen types`.
  */
 export async function createClient() {
   const cookieStore = await cookies()
 
-  return createServerClient<Database>(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
