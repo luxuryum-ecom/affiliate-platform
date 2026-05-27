@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
@@ -100,6 +101,22 @@ export default async function AffiliateDashboardPage() {
           ))}
         </div>
 
+        {/* Catalog CTA */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Catalogue produits</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Parcourez les produits, copiez vos liens affiliés et partagez-les.
+            </p>
+          </div>
+          <Link
+            href="/affiliate/products"
+            className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+          >
+            Voir le catalogue
+          </Link>
+        </div>
+
         {/* Orders table — empty state */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -117,7 +134,7 @@ export default async function AffiliateDashboardPage() {
               Aucune commande pour le moment.
             </p>
             <p className="mt-1 text-xs text-gray-400">
-              Le catalogue de produits sera disponible prochainement.
+              Le catalogue de produits est maintenant disponible.
             </p>
           </div>
         </div>

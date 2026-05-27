@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
@@ -98,20 +99,39 @@ export default async function WholesaleDashboardPage() {
           ))}
         </div>
 
-        {/* Catalog CTA */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Catalogue produits</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Parcourez notre sélection et ajoutez au panier.
-            </p>
+        {/* Quick actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Catalogue produits</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Parcourez notre sélection et ajoutez au panier.
+              </p>
+            </div>
+            <Link
+              href="/wholesale/products"
+              className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+            >
+              Voir le catalogue
+            </Link>
           </div>
-          <button
-            disabled
-            className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg opacity-40 cursor-not-allowed whitespace-nowrap"
-          >
-            Voir le catalogue
-          </button>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Mon panier</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {cartItemCount
+                  ? `${cartItemCount} article${(cartItemCount as number) > 1 ? 's' : ''} en attente.`
+                  : 'Votre panier est vide.'}
+              </p>
+            </div>
+            <Link
+              href="/wholesale/cart"
+              className="text-xs px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+            >
+              Voir le panier
+            </Link>
+          </div>
         </div>
 
         {/* Orders — empty state */}
