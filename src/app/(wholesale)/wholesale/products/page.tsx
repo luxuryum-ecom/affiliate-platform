@@ -179,12 +179,12 @@ function WholesaleProductCard({
         <div className="flex items-center gap-1.5">
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
-              product.type === 'local'
+              product.source_type === 'local_production'
                 ? 'bg-blue-100 text-blue-700'
                 : 'bg-purple-100 text-purple-700'
             }`}
           >
-            {product.type === 'local' ? 'Local' : 'Importé'}
+            {product.source_type === 'local_production' ? 'Local' : 'Importé'}
           </span>
           {hasTiers && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">

@@ -127,15 +127,15 @@ function AffiliateProductCard({
       <div className="p-4 flex flex-col gap-3 flex-1">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full ${
-                product.type === 'local'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-purple-100 text-purple-700'
-              }`}
-            >
-              {product.type === 'local' ? 'Local' : 'Importé'}
-            </span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      product.source_type === 'local_production'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-purple-100 text-purple-700'
+                    }`}
+                  >
+                    {product.source_type === 'local_production' ? 'Local' : 'Importé'}
+                  </span>
           </div>
           <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2">
             {product.name}

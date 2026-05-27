@@ -4,7 +4,15 @@
 
 export type UserRole = 'admin' | 'affiliate' | 'wholesaler' | 'agent'
 export type UserStatus = 'pending' | 'approved' | 'rejected'
-export type ProductType = 'local' | 'imported'
+
+/** Source type — replaces the old two-value 'type' column. */
+export type ProductSourceType = 'local_production' | 'imported'
+
+/** How the product was submitted into the system. */
+export type ProductSubmittedVia = 'admin_dashboard' | 'telegram_future' | 'supplier_future'
+
+/** Product review workflow state. active can only be true when this is 'approved'. */
+export type ProductApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'rejected'
 
 export type OrderStatus =
   | 'pending'
@@ -55,15 +63,42 @@ export interface Product {
   id: string
   name: string
   description: string | null
+
+  // ── Sourcing & traceability ───────────────────────────────────────────────
+  source_type: ProductSourceType
+  supplier_id: string | null
+  supplier_name: string | null
+  origin_country: string | null
+  submitted_by: string | null
+  submitted_via: ProductSubmittedVia
+
+  // ── Cost inputs ───────────────────────────────────────────────────────────
+  purchase_price: number | null
+  purchase_currency: string
+  exchange_rate_to_mad: number
+  /** Computed: purchase_price in MAD (stored for audit). */
+  purchase_price_mad: number | null
+  margin_percentage: number
+  /** Computed: purchase_price_mad × (1 + margin/100), stored for audit. */
+  calculated_sale_price_mad: number | null
+  source_notes: string | null
+
+  // ── Approval workflow ─────────────────────────────────────────────────────
+  approval_status: ProductApprovalStatus
+  approved_by: string | null
+  approved_at: string | null
+
+  // ── Sales / catalog ───────────────────────────────────────────────────────
+  active: boolean
   sell_price: number
   commission_amount: number
   wholesale_tiers: WholesaleTier[]
   wholesale_min_qty: number
   stock_count: number
   images: string[]
-  type: ProductType
-  active: boolean
+
   created_at: string
+  updated_at: string
 }
 
 export interface Order {
