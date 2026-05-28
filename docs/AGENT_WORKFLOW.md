@@ -2,6 +2,37 @@
 
 This document defines how AI agents should execute work on this project autonomously, with user approval only for high-risk actions.
 
+**Cursor rules (persistent):**
+- `.cursor/rules/agent-routing.mdc` — model routing, chat splits, token control
+- `.cursor/rules/agent-operating-system.mdc` — execution loop, approvals, verification
+
+## How the user should work
+
+Describe **only the business feature or issue**. Do not specify model, files, or commands unless you want to override defaults.
+
+Example: *"Affiliates should see pending commission total on the dashboard."*
+
+The agent will route the task, plan, inspect, implement, and verify.
+
+## Model routing (cost control)
+
+| Model | When | Examples |
+|---|---|---|
+| **Composer** | Terminal & environment only | `git status`, logs, `reset-cache`, dev server restart, migration list |
+| **Sonnet** | Default for all coding | Features, bugs, refactors, migrations, server actions, UI |
+| **Opus** | Critical reasoning only | Architecture review, security audit, DB design strategy |
+
+**Rules:** Never Opus for routine coding. Never Sonnet for pure terminal tasks Composer can handle.
+
+## When to open a new Cursor chat
+
+The agent should warn you to start a fresh chat when:
+1. A **new isolated bug** unrelated to the current thread
+2. A **long debugging loop** (repeated failed fixes)
+3. An **architecture audit** or system-wide review
+4. A **new major feature** unrelated to current WIP
+5. **Context is too large** (mixed goals, many unrelated files)
+
 ## Philosophy
 
 | User does | Agent does |
@@ -14,13 +45,21 @@ This document defines how AI agents should execute work on this project autonomo
 ## Standard execution loop
 
 ```
+0. ROUTE        Pick Composer / Sonnet / Opus; warn if new chat needed
 1. UNDERSTAND   Restate goal + success criteria
-2. INSPECT      Read relevant files (never guess from memory)
-3. PLAN         List files to change; flag approval-gate items
+2. PLAN         Short execution plan BEFORE first file edit
+3. INSPECT      Read relevant files (never guess from memory)
 4. IMPLEMENT    Minimal diff, existing conventions
-5. VERIFY       npm run safe-check
+5. VERIFY       Stop dev server if needed → npm run safe-check
 6. REPORT       Summary + test steps + pending approvals
 ```
+
+## Stability guardrails
+
+- **COD WIP** — do not rewrite unless explicitly requested
+- **Affiliate flow** — referral links, commissions, dashboards
+- **Wholesale flow** — tier pricing, cart, orders
+- **Integrations** — never guess Supabase/GitHub/Hostinger credentials or run destructive commands without approval
 
 ## Commands reference
 
@@ -53,9 +92,17 @@ This document defines how AI agents should execute work on this project autonomo
 
 ### Bug fix
 1. Reproduce from error message / terminal logs
-2. Minimal fix only
-3. Run `npm run check`
-4. Report root cause
+2. Identify root cause (one cause, not symptoms)
+3. Minimal fix only
+4. Verify: `npm run check` (single file) or `safe-check` (multi-file)
+5. Summarize: cause, fix, test URL
+
+### Feature
+1. Benchmark common SaaS patterns; match existing AffiPartner architecture
+2. Read `business-model.mdc` if touching products, orders, commissions, roles
+3. Design in plan; implement smallest MVP
+4. Verify: `npm run safe-check`
+5. Summarize: changed files, test URLs, approvals needed
 
 ### Stabilization / audit
 1. No new features
@@ -129,6 +176,7 @@ Make the affiliate dashboard better.
 | Area | Primary files |
 |---|---|
 | Business rules | `.cursor/rules/business-model.mdc` |
+| Agent routing | `.cursor/rules/agent-routing.mdc` |
 | Agent OS | `.cursor/rules/agent-operating-system.mdc` |
 | DB safety | `.cursor/rules/database-safety.mdc` |
 | Deploy safety | `.cursor/rules/deployment-safety.mdc` |

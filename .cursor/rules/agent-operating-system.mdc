@@ -5,6 +5,12 @@ alwaysApply: true
 
 # Agent Operating System — AffiPartner Morocco
 
+## Routing first
+Before any work, apply `.cursor/rules/agent-routing.mdc`:
+- pick **Composer / Sonnet / Opus**
+- warn if a **new focused chat** is cheaper or clearer
+- post a **short execution plan** before the first file edit
+
 ## Mission
 The user gives **business/product instructions**. The agent executes code, migrations, checks, and preparation **autonomously**. The user approves only **high-risk actions** (see `docs/RISK_APPROVAL_MATRIX.md`).
 
@@ -27,13 +33,31 @@ Unless a task is in the approval matrix, the agent MUST:
 
 ## Execution loop
 ```
+0. ROUTE       → model tier + chat-split warning (agent-routing.mdc)
 1. UNDERSTAND  → restate goal + success criteria in one sentence
-2. INSPECT     → read relevant src/, supabase/, types/ files
-3. PLAN        → list files to change; flag any approval-gate items
+2. PLAN        → short execution plan BEFORE any file edit
+3. INSPECT     → read relevant src/, supabase/, types/ files
 4. IMPLEMENT   → minimal diff, match existing conventions
-5. VERIFY      → npm run safe-check (or npm run check + npm run build)
+5. VERIFY      → stop dev server if needed → npm run safe-check
 6. REPORT      → summary, test URLs/commands, pending approvals
 ```
+
+## Bug workflow
+```
+reproduce → root cause → minimal fix → verify → summarize
+```
+Use `npm run check` for single-file fixes; `safe-check` when multiple files or routes affected.
+
+## Feature workflow
+```
+benchmark SaaS patterns → design → implement → test → summarize
+```
+Read `business-model.mdc` for pricing, commissions, roles. Do not expand scope beyond the user request.
+
+## Repo stability (do not break)
+- **COD WIP** — keep migration 009 + COD engine stable; no rewrites unless explicitly requested
+- **Affiliate flow** — referral links, commissions, `/affiliate/*` dashboards
+- **Wholesale flow** — tier pricing, cart, WhatsApp submit, `/wholesale/*`
 
 ## Verification commands (prefer npm scripts)
 | When | Command |
@@ -92,6 +116,7 @@ See `docs/AGENT_WORKFLOW.md` for the full request template.
 ## Related rules (read on demand)
 | Rule file | When to read |
 |---|---|
+| `agent-routing.mdc` | Model tier, chat splits, token control, task routing (always) |
 | `business-model.mdc` | Products, pricing, commissions, roles, COD/wholesale flows |
 | `architecture.mdc` | Stack, folder structure, server actions, patterns |
 | `database.mdc` | Schema details, tables, triggers, RLS patterns |

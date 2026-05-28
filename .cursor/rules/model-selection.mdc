@@ -1,67 +1,16 @@
 ---
-description: Model selection policy for AI agents working on this codebase.
+description: Model tier quick reference — full policy in agent-routing.mdc
+alwaysApply: false
 ---
 
-# Model Selection Policy
+# Model Selection (quick reference)
 
-## Principle
-Use the smallest capable model for each task. Minimize token spend without sacrificing correctness.
+> **Canonical policy:** `.cursor/rules/agent-routing.mdc` (always applied)
 
-## Model tiers
+| Tier | Use for | Never for |
+|---|---|---|
+| **Composer** | Terminal, logs, cache, dev server, git status, health checks | Migrations, auth, business logic, multi-file code |
+| **Sonnet** | Features, bugs, refactors, migrations, UI, server actions | Pure terminal tasks |
+| **Opus** | Architecture audit, security/RLS review, critical design forks | Routine coding, commands |
 
-### Composer (fast / lightweight)
-Use for:
-- Running terminal commands (npm, git, supabase CLI)
-- Reading logs and error output
-- Clearing cache (`npm run reset-cache`, `.next` cleanup)
-- Trivial one-line fixes with no logic involved
-
-**Never use Composer for:**
-- Database migrations or schema changes
-- Auth flows, RLS policies, or security changes
-- Payment, commission, or payout logic
-- Production-critical refactors touching multiple files
-- Any task where a wrong output could corrupt data or break prod
-
-### Sonnet (default / coding)
-Use for:
-- All implementation tasks: components, server actions, pages, utilities
-- Bug fixes, feature additions, TypeScript type changes
-- Migration writing (009, 010, …)
-- Test flows, form logic, UI builds
-- Reviewing and editing existing code
-
-This is the **default model** for ~90 % of tasks.
-
-### Opus (heavyweight / architecture)
-Use only for:
-- System architecture decisions and trade-off analysis
-- Security audits and RLS policy reviews
-- Commission / payout logic design
-- Performance profiling and database query optimization
-- Complex multi-system refactors where subtle errors have high cost
-- Any review where deep reasoning over the full codebase is required
-
-Invoke Opus deliberately — it is expensive and slow.
-
-## Decision heuristic
-
-```
-Is the task just a terminal command or log inspection?
-  → Composer
-
-Does it touch auth, RLS, migrations, payments, or commissions?
-  → Sonnet (implementation) or Opus (design/audit)
-
-Is it a straightforward code change in one or a few files?
-  → Sonnet
-
-Does it require reasoning about the entire system, security model, or architecture?
-  → Opus
-```
-
-## Token efficiency rules
-- Do not re-read files that were already read in the same session unless the file changed.
-- Prefer targeted `Grep` / `Glob` over reading entire directories.
-- Pass only the relevant context to sub-agents; do not dump the full codebase.
-- Summarize previous steps in handoffs rather than re-quoting raw output.
+Default: **Sonnet**. Opus only when deep system judgment is the deliverable.
