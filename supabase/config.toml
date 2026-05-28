@@ -32,10 +32,6 @@ max_client_conn = 100
 [realtime]
 enabled = true
 ip_version = "IPv6"
-heartbeat_interval_ms = 5000
-listen_backlog = 511
-max_header_length = 4096
-max_replication_lag_bytes = 0
 
 [studio]
 enabled = true
@@ -73,7 +69,6 @@ password_requirements = ""
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
-secure_email_change_enabled = true
 max_frequency = "1s"
 
 [auth.sms]
