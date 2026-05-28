@@ -60,8 +60,9 @@ export default async function AffiliateOrdersPage() {
   ).length
   const delivered = orders.filter((o) => o.status === 'delivered').length
   const returned = orders.filter((o) => o.status === 'returned').length
+  // pending + approved = owed but not yet paid (matches dashboard pendingBalance)
   const totalPending = commissions
-    .filter((c) => c.status === 'pending')
+    .filter((c) => c.status === 'pending' || c.status === 'approved')
     .reduce((s, c) => s + Number(c.amount), 0)
   const totalEarned = commissions
     .filter((c) => c.status === 'paid')

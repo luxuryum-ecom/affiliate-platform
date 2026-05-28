@@ -6,9 +6,11 @@ import { revalidatePath } from 'next/cache'
 export interface AffiliatePriceState {
   error: string | null
   success: boolean
+  /** true when the action deleted the custom price (reset to platform price) */
+  cleared: boolean
 }
 
-const initialState: AffiliatePriceState = { error: null, success: false }
+const initialState: AffiliatePriceState = { error: null, success: false, cleared: false }
 export { initialState as affiliatePriceInitialState }
 
 /**
@@ -24,12 +26,13 @@ export async function saveAffiliateProductPrice(
   _prevState: AffiliatePriceState,
   formData: FormData
 ): Promise<AffiliatePriceState> {
+  const fail = (msg: string): AffiliatePriceState => ({ error: msg, success: false, cleared: false })
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié.', success: false }
+  if (!user) return fail('Non authentifié.')
 
   const { data: profile } = (await supabase
     .from('profiles')
@@ -38,11 +41,11 @@ export async function saveAffiliateProductPrice(
     .single()) as { data: { role: string; status: string } | null; error: unknown }
 
   if (profile?.role !== 'affiliate' || profile?.status !== 'approved') {
-    return { error: 'Accès réservé aux affiliés approuvés.', success: false }
+    return fail('Accès réservé aux affiliés approuvés.')
   }
 
   const productId = (formData.get('productId') as string)?.trim()
-  if (!productId) return { error: 'Produit invalide.', success: false }
+  if (!productId) return fail('Produit invalide.')
 
   const priceRaw = (formData.get('customSellPriceMad') as string)?.trim()
 
@@ -54,15 +57,12 @@ export async function saveAffiliateProductPrice(
       .eq('affiliate_id', user.id)
       .eq('product_id', productId)
     revalidatePath('/affiliate/products')
-    return { error: null, success: true }
+    return { error: null, success: true, cleared: true }
   }
 
   const price = parseFloat(priceRaw)
-  if (isNaN(price) || price <= 0) {
-    return { error: 'Prix invalide.', success: false }
-  }
+  if (isNaN(price) || price <= 0) return fail('Prix invalide.')
 
-  // Fetch product to validate eligibility and enforce minimum price
   const { data: product } = (await supabase
     .from('products')
     .select('sell_price, affiliate_enabled, active, approval_status')
@@ -83,15 +83,12 @@ export async function saveAffiliateProductPrice(
     !product.active ||
     product.approval_status !== 'approved'
   ) {
-    return { error: 'Produit non disponible.', success: false }
+    return fail('Produit non disponible.')
   }
 
   const platformPrice = Number(product.sell_price)
   if (price < platformPrice) {
-    return {
-      error: `Prix minimum : ${platformPrice} MAD (prix plateforme). Vous ne pouvez pas vendre en dessous.`,
-      success: false,
-    }
+    return fail(`Prix minimum : ${platformPrice} MAD (prix plateforme). Vous ne pouvez pas vendre en dessous.`)
   }
 
   const { error: upsertErr } = await supabase
@@ -106,8 +103,8 @@ export async function saveAffiliateProductPrice(
       { onConflict: 'affiliate_id,product_id' }
     )
 
-  if (upsertErr) return { error: upsertErr.message, success: false }
+  if (upsertErr) return fail(upsertErr.message)
 
   revalidatePath('/affiliate/products')
-  return { error: null, success: true }
+  return { error: null, success: true, cleared: false }
 }

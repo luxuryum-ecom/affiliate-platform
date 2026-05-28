@@ -20,25 +20,28 @@ export function AffiliatePriceForm({
     affiliatePriceInitialState
   )
 
-  const isSet = currentCustomPrice !== null && !state.success
-  const displayPrice = state.success ? null : currentCustomPrice
+  // After revalidatePath, the server re-renders with the updated currentCustomPrice prop.
+  // Show the server-rendered prop directly — no client-side caching needed.
+  const markup = currentCustomPrice !== null ? currentCustomPrice - platformPrice : 0
 
   return (
     <div className="border-t border-gray-100 pt-3 mt-1">
       <p className="text-xs font-medium text-gray-600 mb-1.5">Mon prix de vente</p>
 
-      {displayPrice !== null ? (
+      {currentCustomPrice !== null ? (
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm font-bold text-blue-700 tabular-nums">
-            {formatMAD(displayPrice)}
+            {formatMAD(currentCustomPrice)}
           </span>
-          <span className="text-xs text-gray-400">
-            +{formatMAD(displayPrice - platformPrice + (displayPrice > platformPrice ? 0 : 0))} vs catalogue
-          </span>
+          {markup > 0 && (
+            <span className="text-xs text-gray-400 tabular-nums">
+              +{formatMAD(markup)} vs catalogue
+            </span>
+          )}
         </div>
       ) : (
         <p className="text-xs text-gray-400 mb-1.5">
-          Non défini — prix catalogue utilisé ({formatMAD(platformPrice)})
+          Non défini — prix catalogue ({formatMAD(platformPrice)})
         </p>
       )}
 
@@ -48,7 +51,7 @@ export function AffiliatePriceForm({
           <input
             type="number"
             name="customSellPriceMad"
-            defaultValue={isSet ? currentCustomPrice! : ''}
+            defaultValue={currentCustomPrice ?? ''}
             min={platformPrice}
             step="1"
             placeholder={`Min. ${platformPrice} MAD`}
@@ -70,12 +73,12 @@ export function AffiliatePriceForm({
       )}
       {state.success && (
         <p className="text-xs text-green-600 mt-1">
-          {isSet ? 'Prix mis à jour.' : 'Prix réinitialisé au prix catalogue.'}
+          {state.cleared ? 'Prix réinitialisé au prix catalogue.' : 'Prix enregistré.'}
         </p>
       )}
 
       <p className="text-xs text-gray-400 mt-1 leading-tight">
-        Laissez vide pour utiliser le prix catalogue. Min.&nbsp;{formatMAD(platformPrice)}.
+        Laissez vide pour réinitialiser au prix catalogue. Min.&nbsp;{formatMAD(platformPrice)}.
       </p>
     </div>
   )

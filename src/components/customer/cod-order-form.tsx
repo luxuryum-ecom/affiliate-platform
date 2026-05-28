@@ -2,8 +2,13 @@
 
 import { useActionState, useEffect, useState } from 'react'
 import { placeOrder, type OrderFormState } from '@/app/actions/orders'
+import { recordAffiliateClick } from '@/app/actions/affiliate-clicks'
 import { formatMAD } from '@/lib/utils'
-import { resolveAffiliateId } from '@/lib/affiliate-attribution'
+import {
+  getOrCreateSessionId,
+  storeAttribution,
+  readAttribution,
+} from '@/lib/affiliate-attribution'
 import { WhatsAppCodButton } from '@/components/customer/whatsapp-cod-button'
 
 interface CodOrderFormProps {
@@ -34,11 +39,23 @@ export function CodOrderForm({
   }>({ affiliateId: affiliateIdFromUrl, clickId: null })
 
   useEffect(() => {
-    const resolved = resolveAffiliateId(affiliateIdFromUrl, productId)
-    setAttribution({
-      affiliateId: resolved.affiliateId,
-      clickId: resolved.clickId,
-    })
+    const sessionId = getOrCreateSessionId()
+
+    if (affiliateIdFromUrl) {
+      // Fresh visit via ?ref= link: record click server-side, then store attribution
+      // with the real clickId so subsequent visits and the order submission both have it.
+      setAttribution({ affiliateId: affiliateIdFromUrl, clickId: null })
+      recordAffiliateClick(affiliateIdFromUrl, productId, sessionId).then(({ clickId }) => {
+        storeAttribution({ affiliateId: affiliateIdFromUrl, productId, clickId, sessionId })
+        setAttribution({ affiliateId: affiliateIdFromUrl, clickId })
+      })
+    } else {
+      // Return visit without ?ref=: recover affiliate + clickId from 30-day localStorage window.
+      const stored = readAttribution(productId)
+      if (stored) {
+        setAttribution({ affiliateId: stored.affiliateId, clickId: stored.clickId })
+      }
+    }
   }, [affiliateIdFromUrl, productId])
 
   const total = sellPrice * qty
