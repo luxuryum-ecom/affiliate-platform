@@ -1,0 +1,66 @@
+---
+description: AI agent development workflow — commands to run, commit conventions, migration steps
+alwaysApply: true
+---
+
+# Development Workflow
+
+## Before every commit
+```bash
+npm run check        # tsc --noEmit + next lint (must pass)
+npm run build        # must produce exit code 0
+```
+
+## After writing a new migration file
+```bash
+npm run migrate      # supabase db push (requires CLI linked)
+npm run types        # regenerate src/types/supabase-generated.ts
+npm run check        # verify no type drift
+```
+
+## After changing schema types
+Update `src/types/database.ts` to match. Then run `npm run check`.
+
+## Cache reset (after large file rewrites during hot reload)
+```bash
+npm run reset-cache  # rm -rf .next
+# then restart: npm run dev
+```
+
+## Commit conventions
+```
+feat(scope): add wholesale order tracking
+fix(scope): guard zero-commission trigger
+chore(scope): add migration 008 delivery fee
+```
+Scopes: `auth`, `products`, `orders`, `wholesale`, `affiliate`, `admin`, `schema`, `ui`, `deps`
+
+## Migration naming
+```
+NNN_short_descriptive_name.sql   # e.g. 008_delivery_fee_and_costs.sql
+```
+Always idempotent. Never drop columns. Never destroy data.
+
+## Environment variables
+- Local dev: `.env.local` (gitignored, never commit)
+- Production: set in Vercel dashboard
+- Reference: `.env.production.example` (committed, no real values)
+
+## Supabase CLI commands (after install + link)
+```bash
+supabase db push                           # apply pending migrations
+supabase gen types typescript \
+  --project-id owvtfzxvirttrbcsiveg \
+  --schema public > src/types/supabase-generated.ts
+supabase db diff                           # preview schema diff
+```
+
+## Deployment
+Push to `main` → GitHub Actions CI runs → if green, Vercel auto-deploys.
+Never deploy manually unless CI is broken.
+
+## Debugging runtime errors
+1. Read terminal output file in `.cursor/projects/.../terminals/`
+2. Fix the code
+3. `npm run check` to verify
+4. If ENOENT manifest error → `npm run reset-cache` then restart dev server

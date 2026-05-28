@@ -1,0 +1,65 @@
+---
+description: Database schema conventions, migration rules, and RLS patterns
+globs: supabase/**,src/types/**,src/app/actions/**
+alwaysApply: false
+---
+
+# Database Conventions
+
+## Migration rules
+- Files: `supabase/migrations/NNN_descriptive_name.sql` (zero-padded, e.g. `008_`)
+- **All migrations must be idempotent**: use `IF NOT EXISTS`, `DROP … IF EXISTS`, `CREATE OR REPLACE`
+- Never DROP columns or tables in migrations — add new columns, deprecate old ones
+- Run via: `npm run migrate` (requires Supabase CLI linked)
+- Generate types after schema changes: `npm run types`
+
+## Key tables
+| Table | Purpose |
+|---|---|
+| `profiles` | Extended user data (role, status, full_name, phone) |
+| `products` | Products with cost, pricing, tiers, media, availability |
+| `orders` | COD affiliate orders |
+| `wholesale_cart_items` | Cart for wholesale buyers |
+| `wholesale_orders` | Confirmed wholesale orders |
+| `wholesale_order_items` | Line items per wholesale order |
+| `commissions` | Commission records per delivered order |
+| `payouts` | Affiliate payout batches |
+| `order_proofs` | Attachment-ready proof schema (bank receipts, delivery proofs) |
+
+## Product schema highlights
+```sql
+availability_type   text  -- 'local_stock' | 'import_on_demand'
+origin_detail       text  -- 'locally_produced' | 'imported_but_in_morocco_stock'
+affiliate_enabled   bool  -- false when import_on_demand
+purchase_currency   text  -- 'MAD' | 'USD' | 'AED' only
+media               jsonb -- [{url, type}] type: 'image'|'video'|'telegram_link'|'external_link'
+confirmation_fee_mad numeric -- default 10
+packaging_fee_mad   numeric -- default 10
+delivery_fee_mad    numeric -- default 0, set per product
+wholesale_tiers     jsonb  -- [{min_qty, max_qty?, price_per_unit}]
+```
+
+## RLS pattern
+Every table has RLS enabled. Pattern:
+- Admins: full access via `my_role() = 'admin'`
+- Affiliates: read own rows via `affiliate_id = auth.uid()`
+- Wholesalers: read own cart/orders via `buyer_id = auth.uid()`
+- Public: read active+approved products, insert COD orders (anonymous allowed)
+
+## Triggers
+- `handle_updated_at()` — auto-sets updated_at on UPDATE
+- `handle_new_user()` — creates profile row on auth.users INSERT
+- `handle_order_delivered()` — creates commission record when order status → 'delivered'
+  - Guard: only if `commission_amount > 0` AND `affiliate_id IS NOT NULL`
+
+## RPCs
+- `reserve_stock(product_id, qty)` — decrements stock with FOR UPDATE lock
+- `restore_stock(product_id, qty)` — increments stock (on cancellation)
+
+## Commission flow
+```
+order confirmed → commission_amount recorded on order
+order delivered → handle_order_delivered trigger → INSERT into commissions (status='pending')
+admin approves → commissions.status = 'approved'
+admin pays → commissions.status = 'paid', payouts table updated
+```

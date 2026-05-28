@@ -121,6 +121,8 @@ export interface Product {
   confirmation_fee_mad: number
   /** Fixed packaging cost per confirmed affiliate order (default 10 MAD). */
   packaging_fee_mad: number
+  /** Estimated delivery company fee per order (default 0, varies by product/weight). */
+  delivery_fee_mad: number
   wholesale_tiers: WholesaleTier[]
   wholesale_min_qty: number
   stock_count: number

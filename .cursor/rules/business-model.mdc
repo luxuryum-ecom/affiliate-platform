@@ -1,0 +1,52 @@
+---
+description: Morocco affiliate + wholesale platform — business model, flows, pricing rules
+alwaysApply: true
+---
+
+# Business Model — AffiPartner Morocco
+
+## Platform identity
+Morocco-focused affiliate + wholesale B2B platform. Primary currency: **MAD**.
+Allowed purchase currencies: MAD, USD, AED (convert to MAD via exchange_rate_to_mad).
+
+## Two user flows
+
+### 1. Affiliate COD (Cash on Delivery)
+- Affiliate shares a referral link `/products/[id]?ref=[affiliateId]`
+- Customer places a COD order (name, phone, city, address, quantity)
+- Platform confirms, sources, ships via a Morocco delivery company
+- Delivery company collects COD cash from customer, remits to platform after delay
+- Commission recorded at delivery, payable only after COD received and verified
+- **Affiliates set their own selling price** — platform does not control final customer price
+- Platform earns: `sell_price - cost_price - operational_fees` per order
+- Affiliate earns: `commission_amount` (fixed per product, paid after delivery)
+
+### 2. Wholesale / B2B
+- Wholesale buyer adds products to cart, submits via WhatsApp
+- Admin confirms order manually, creates internal wholesale order
+- Tier pricing applies based on quantity (min 10 units)
+- Standard tiers: 10+ pcs: cost+30%, 50+ pcs: cost+25%, 100+ pcs: cost+20%, 500+ pcs: cost+15%
+- All wholesale prices rounded to whole MAD (no decimals)
+- `import_on_demand` products are B2B/wholesale only — no affiliate access
+
+## Product availability types
+| Type | Affiliates | Wholesale | Origin |
+|---|---|---|---|
+| `local_stock` | ✅ if affiliate_enabled | ✅ | locally_produced OR imported_but_in_morocco_stock |
+| `import_on_demand` | ❌ always | ✅ | imported, sourced per order |
+
+## Operational costs per order (tracked separately)
+- `confirmation_fee_mad` — cost of confirming the order (default 10 MAD)
+- `packaging_fee_mad` — packaging cost (default 10 MAD)
+- `delivery_fee_mad` — delivery company fee estimate (default 0, set per product)
+
+## Commission model
+- `commission_amount` on `products` = fixed MAD paid to affiliate per delivered order
+- Commission status: `pending` → `approved` → `paid`
+- Dashboard shows: earned total, paid total, pending balance (earned - paid)
+
+## Roles
+- `admin` — full access, approves products and orders
+- `affiliate` — sees only affiliate-enabled products, their own orders + commissions
+- `wholesaler` — sees all active approved products, their own cart + wholesale orders
+- `agent` — reserved for future operational agents

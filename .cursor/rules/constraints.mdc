@@ -1,0 +1,41 @@
+---
+description: Hard constraints — what NOT to build, MVP-first rules, anti-patterns
+alwaysApply: true
+---
+
+# Constraints — What NOT To Do
+
+## Architecture constraints
+- ❌ No microservices — single Next.js app only
+- ❌ No separate API server — use Next.js server actions
+- ❌ No monorepo / turborepo setup
+- ❌ No GraphQL — Supabase REST + RPC only
+- ❌ No Redux / Zustand — server state via URL params, client state via useState
+- ❌ No ORM (Prisma, Drizzle) — Supabase client only
+
+## Feature constraints (not yet)
+- ❌ No AI orchestration (LangChain, Vercel AI SDK, agent loops) — YET
+- ❌ No OCR — YET
+- ❌ No n8n or automation pipelines — YET
+- ❌ No Telegram bot — YET (only support pasting Telegram media URLs)
+- ❌ No WhatsApp API (Twilio, etc.) — YET (only href WhatsApp links)
+- ❌ No payment gateway (Stripe, CMI) — YET
+- ❌ No delivery API integration — YET (manual status updates)
+- ❌ No real-time subscriptions — YET (server refresh on action)
+
+## Code quality constraints
+- ❌ No `any` types — use explicit types or `unknown`
+- ❌ No `useEffect` for data fetching — use server components
+- ❌ No client-side Supabase mutations — use server actions
+- ❌ No comments explaining WHAT code does — only WHY (non-obvious intent)
+- ❌ No unused imports
+- ❌ No hardcoded secret values — use env vars
+
+## UI constraints
+- ❌ No external UI libraries (shadcn, MUI, Chakra) — Tailwind only
+- ❌ No heavy animations — simple Tailwind transitions only
+- ❌ No pagination with JS state — use URL search params
+
+## MVP principle
+> Build the simplest thing that solves the real business problem.
+> If unsure between two approaches, pick the simpler one and document the limitation.

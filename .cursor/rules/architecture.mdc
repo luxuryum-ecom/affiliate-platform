@@ -1,0 +1,77 @@
+---
+description: Tech stack, folder structure, and coding patterns for this Next.js + Supabase project
+alwaysApply: true
+---
+
+# Architecture
+
+## Stack
+- **Next.js 15** App Router — server components by default, client only when needed
+- **Supabase** — PostgreSQL + Auth + RLS + Storage (hosted, project: owvtfzxvirttrbcsiveg)
+- **Tailwind CSS v4** — utility-first, mobile-first
+- **Vercel** — deployment target (region: cdg1 — Paris, closest to Morocco)
+
+## Folder structure
+```
+src/
+  app/
+    (admin)/          # Admin route group — role guard in layout.tsx
+    (affiliate)/      # Affiliate route group — role guard in layout.tsx
+    (wholesale)/      # Wholesale route group — role guard in layout.tsx
+    (auth)/           # Login/signup pages
+    actions/          # Server actions (auth.ts, products.ts, orders.ts, cart.ts)
+    products/[id]/    # Public product page (COD order form, no auth)
+  components/
+    admin/            # Admin-only components
+    affiliate/        # Affiliate-only components
+    wholesale/        # Wholesale-only components
+    shared/           # Shared across roles (order timeline, badges)
+    customer/         # Public-facing components
+  lib/
+    supabase/server.ts  # createClient() for server context
+    utils.ts            # cn(), formatMAD(), getWholesaleTier()
+  types/
+    database.ts         # Hand-written DB types (Product, Order, Profile, etc.)
+  middleware.ts         # Session refresh
+supabase/
+  migrations/         # Sequential SQL files: 001_initial_schema.sql … NNN_name.sql
+  config.toml         # Supabase CLI config
+```
+
+## Patterns
+
+### Data fetching — always server-side
+```typescript
+// ✅ Server component
+const { data } = await supabase.from('products').select('*')
+
+// ❌ Never fetch in useEffect for initial data
+```
+
+### Mutations — always server actions
+```typescript
+// ✅ src/app/actions/products.ts
+'use server'
+export async function upsertProduct(state, formData) { ... }
+
+// ❌ Never POST to /api routes for mutations
+```
+
+### Client components — only for interactivity
+Use `'use client'` only when you need: `useState`, `useEffect`, `useRouter`, event handlers, `useActionState`.
+
+### Forms — useActionState pattern
+```typescript
+const [state, action, isPending] = useActionState(serverAction, initialState)
+<form action={action}>
+```
+
+### Types — explicit assertions over generics
+```typescript
+const { data } = await supabase.from('products').select('*') as { data: Product[] | null; error: unknown }
+```
+
+## Key utilities
+- `formatMAD(n)` — formats number as Moroccan dirham string
+- `getWholesaleTier(tiers, qty)` — returns matching wholesale tier
+- `cn(...classes)` — Tailwind class merging

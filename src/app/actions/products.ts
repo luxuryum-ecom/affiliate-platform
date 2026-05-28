@@ -74,6 +74,7 @@ export async function upsertProduct(
 
   const confirmation_fee_mad = parseFloat(formData.get('confirmation_fee_mad') as string) || 10
   const packaging_fee_mad = parseFloat(formData.get('packaging_fee_mad') as string) || 10
+  const delivery_fee_mad = parseFloat(formData.get('delivery_fee_mad') as string) || 0
 
   // ── Computed pricing ──────────────────────────────────────────────────────
   // locally_produced → price is already in MAD
@@ -182,6 +183,7 @@ export async function upsertProduct(
     calculated_sale_price_mad,
     confirmation_fee_mad,
     packaging_fee_mad,
+    delivery_fee_mad,
     approval_status: approval_status as ProductApprovalStatus,
     active,
     sell_price,

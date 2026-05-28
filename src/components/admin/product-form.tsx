@@ -533,10 +533,10 @@ export function ProductForm({ product }: ProductFormProps) {
         </div>
 
         {/* Operational fees */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label htmlFor="confirmation_fee_mad" className={LABEL}>
-              Frais de confirmation / commande (MAD)
+              Frais de confirmation (MAD)
             </label>
             <input
               id="confirmation_fee_mad" name="confirmation_fee_mad"
@@ -544,7 +544,7 @@ export function ProductForm({ product }: ProductFormProps) {
               defaultValue={product?.confirmation_fee_mad ?? 10}
               className={INPUT}
             />
-            <p className="text-xs text-gray-400 mt-1">Coût opérationnel fixe par commande confirmée.</p>
+            <p className="text-xs text-gray-400 mt-1">Coût opérationnel par commande confirmée.</p>
           </div>
 
           <div>
@@ -557,9 +557,37 @@ export function ProductForm({ product }: ProductFormProps) {
               defaultValue={product?.packaging_fee_mad ?? 10}
               className={INPUT}
             />
-            <p className="text-xs text-gray-400 mt-1">Coût emballage fixe par commande confirmée.</p>
+            <p className="text-xs text-gray-400 mt-1">Coût emballage par commande confirmée.</p>
+          </div>
+
+          <div>
+            <label htmlFor="delivery_fee_mad" className={LABEL}>
+              Frais de livraison (MAD)
+            </label>
+            <input
+              id="delivery_fee_mad" name="delivery_fee_mad"
+              type="number" step="0.01" min="0" disabled={isPending}
+              defaultValue={product?.delivery_fee_mad ?? 0}
+              className={INPUT}
+            />
+            <p className="text-xs text-gray-400 mt-1">Frais livreur estimés par commande.</p>
           </div>
         </div>
+
+        {/* Total operational cost preview */}
+        {(() => {
+          const confFee = product?.confirmation_fee_mad ?? 10
+          const packFee = product?.packaging_fee_mad ?? 10
+          const delivFee = product?.delivery_fee_mad ?? 0
+          const totalFees = confFee + packFee + delivFee
+          return (
+            <div className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+              Coût opérationnel total estimé&nbsp;:{' '}
+              <strong className="text-gray-800">{totalFees} MAD / commande</strong>
+              <span className="text-gray-400 ml-1">(confirmation + emballage + livraison)</span>
+            </div>
+          )
+        })()}
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
