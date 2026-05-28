@@ -39,7 +39,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   if (!product) notFound()
 
-  const thumb = product.images[0]
+  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
   const extraImages = product.images.slice(1)
 
   return (

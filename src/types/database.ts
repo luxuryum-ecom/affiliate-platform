@@ -5,14 +5,29 @@
 export type UserRole = 'admin' | 'affiliate' | 'wholesaler' | 'agent'
 export type UserStatus = 'pending' | 'approved' | 'rejected'
 
-/** Source type — replaces the old two-value 'type' column. */
+/** Legacy source type — kept for backward compat. Use availability_type + origin_detail instead. */
 export type ProductSourceType = 'local_production' | 'imported'
+
+/** Commercial availability of the product. */
+export type ProductAvailabilityType = 'local_stock' | 'import_on_demand'
+
+/** Origin detail — only relevant when availability_type = 'local_stock'. */
+export type ProductOriginDetail = 'locally_produced' | 'imported_but_in_morocco_stock'
 
 /** How the product was submitted into the system. */
 export type ProductSubmittedVia = 'admin_dashboard' | 'telegram_future' | 'supplier_future'
 
 /** Product review workflow state. active can only be true when this is 'approved'. */
 export type ProductApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'rejected'
+
+/** Media type for product media items. */
+export type MediaType = 'image' | 'video' | 'telegram_link' | 'external_link'
+
+/** A single media entry in the product's media array. */
+export interface MediaItem {
+  url: string
+  type: MediaType
+}
 
 export type OrderStatus =
   | 'pending'
@@ -63,8 +78,18 @@ export interface Product {
   name: string
   description: string | null
 
-  // ── Sourcing & traceability ───────────────────────────────────────────────
+  // ── Commercial availability (migration 007) ───────────────────────────────
+  /** 'local_stock' = in Morocco stock; 'import_on_demand' = B2B wholesale only */
+  availability_type: ProductAvailabilityType
+  /** Only set when availability_type = 'local_stock' */
+  origin_detail: ProductOriginDetail | null
+  /** Affiliates can promote this product. Always false when import_on_demand. */
+  affiliate_enabled: boolean
+
+  // ── Legacy source type (kept for backward compat) ─────────────────────────
   source_type: ProductSourceType
+
+  // ── Sourcing & traceability ───────────────────────────────────────────────
   supplier_id: string | null
   supplier_name: string | null
   origin_country: string | null
@@ -73,6 +98,7 @@ export interface Product {
 
   // ── Cost inputs ───────────────────────────────────────────────────────────
   purchase_price: number | null
+  /** Restricted to MAD | USD | AED */
   purchase_currency: string
   exchange_rate_to_mad: number
   /** Computed: purchase_price in MAD (stored for audit). */
@@ -91,9 +117,16 @@ export interface Product {
   active: boolean
   sell_price: number
   commission_amount: number
+  /** Fixed operational cost per confirmed affiliate order (default 10 MAD). */
+  confirmation_fee_mad: number
+  /** Fixed packaging cost per confirmed affiliate order (default 10 MAD). */
+  packaging_fee_mad: number
   wholesale_tiers: WholesaleTier[]
   wholesale_min_qty: number
   stock_count: number
+  /** Structured media array (migration 007). Use this instead of images[]. */
+  media: MediaItem[]
+  /** Legacy image URL array (kept for backward compat). Use media instead. */
   images: string[]
 
   created_at: string
@@ -227,7 +260,7 @@ export interface OrderProof {
 // Used in query results that join related tables.
 
 export interface OrderWithProduct extends Order {
-  product: Pick<Product, 'id' | 'name' | 'images'>
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media'>
 }
 
 export interface OrderWithAffiliate extends Order {
@@ -235,13 +268,13 @@ export interface OrderWithAffiliate extends Order {
 }
 
 export interface OrderFull extends Order {
-  product: Pick<Product, 'id' | 'name' | 'images' | 'sell_price' | 'commission_amount'>
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sell_price' | 'commission_amount'>
   affiliate: Pick<Profile, 'id' | 'full_name' | 'phone'> | null
   commission: Pick<Commission, 'id' | 'status' | 'amount'> | null
 }
 
 export interface WholesaleOrderWithItems extends WholesaleOrder {
-  items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images'> })[]
+  items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> })[]
   buyer: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'>
   agent: Pick<Profile, 'id' | 'full_name' | 'phone'> | null
 }

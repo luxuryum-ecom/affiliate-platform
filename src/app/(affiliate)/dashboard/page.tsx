@@ -21,40 +21,52 @@ export default async function AffiliateDashboardPage() {
     .eq('id', user!.id)
     .single() as { data: Profile | null; error: unknown }
 
-  // Real-time stats — these will show zeros until orders are created
+  // Detailed order stats per status + commissions
   const [
-    { count: totalOrders },
-    { count: deliveredOrders },
+    { data: orderRows },
     { data: commissionRows },
   ] = await Promise.all([
     supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('affiliate_id', user!.id),
-    supabase
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('affiliate_id', user!.id)
-      .eq('status', 'delivered'),
+      .select('status')
+      .eq('affiliate_id', user!.id) as unknown as Promise<{ data: { status: string }[] | null; error: unknown }>,
     supabase
       .from('commissions')
       .select('*')
       .eq('affiliate_id', user!.id) as unknown as Promise<{ data: Commission[] | null; error: unknown }>,
   ])
 
-  const pendingCommissions = (commissionRows ?? [])
+  const orders = orderRows ?? []
+  const commissions = commissionRows ?? []
+
+  const countByStatus = (status: string) => orders.filter((o) => o.status === status).length
+
+  const pendingCommissions = commissions
     .filter((c) => c.status === 'pending')
     .reduce((sum, c) => sum + Number(c.amount), 0)
 
-  const paidCommissions = (commissionRows ?? [])
+  const approvedCommissions = commissions
+    .filter((c) => c.status === 'approved')
+    .reduce((sum, c) => sum + Number(c.amount), 0)
+
+  const paidCommissions = commissions
     .filter((c) => c.status === 'paid')
     .reduce((sum, c) => sum + Number(c.amount), 0)
 
-  const stats = [
-    { label: 'Commandes', value: String(totalOrders ?? 0) },
-    { label: 'Livrées', value: String(deliveredOrders ?? 0) },
-    { label: 'Commissions en attente', value: formatMAD(pendingCommissions) },
-    { label: 'Commissions payées', value: formatMAD(paidCommissions) },
+  const totalDue = pendingCommissions + approvedCommissions
+
+  const orderStats = [
+    { label: 'Total commandes',        value: String(orders.length) },
+    { label: 'Confirmées',             value: String(countByStatus('confirmed')) },
+    { label: 'Expédiées',              value: String(countByStatus('shipped')) },
+    { label: 'Livrées',                value: String(countByStatus('delivered')) },
+    { label: 'Retournées / Annulées',  value: String(countByStatus('returned') + countByStatus('cancelled')) },
+  ]
+
+  const commissionStats = [
+    { label: 'Commissions gagnées',    value: formatMAD(pendingCommissions + approvedCommissions + paidCommissions), highlight: false },
+    { label: 'Commissions payées',     value: formatMAD(paidCommissions),   highlight: false },
+    { label: 'Montant dû (à payer)',   value: formatMAD(totalDue),          highlight: totalDue > 0 },
   ]
 
   return (
@@ -88,17 +100,45 @@ export default async function AffiliateDashboardPage() {
           </p>
         </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-xl border border-gray-200 p-4"
-            >
-              <p className="text-xs text-gray-500 leading-tight">{stat.label}</p>
-              <p className="mt-1.5 text-xl font-bold text-gray-900 tabular-nums">{stat.value}</p>
-            </div>
-          ))}
+        {/* Order stats */}
+        <div className="mb-2">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Commandes
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
+            {orderStats.map((stat) => (
+              <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-3">
+                <p className="text-xs text-gray-500 leading-tight">{stat.label}</p>
+                <p className="mt-1 text-lg font-bold text-gray-900 tabular-nums">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Commission stats */}
+        <div className="mb-8">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Commissions
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {commissionStats.map((stat) => (
+              <div
+                key={stat.label}
+                className={`rounded-xl border p-4 ${
+                  stat.highlight
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-white border-gray-200'
+                }`}
+              >
+                <p className="text-xs text-gray-500 leading-tight">{stat.label}</p>
+                <p className={`mt-1.5 text-xl font-bold tabular-nums ${
+                  stat.highlight ? 'text-amber-700' : 'text-gray-900'
+                }`}>
+                  {stat.value}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Catalog CTA */}

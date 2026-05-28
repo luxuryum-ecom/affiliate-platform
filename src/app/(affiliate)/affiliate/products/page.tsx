@@ -26,7 +26,8 @@ export default async function AffiliateProductsPage() {
     .from('products')
     .select('*')
     .eq('active', true)
-    .eq('approval_status', 'approved')   // defense-in-depth: active alone implies approved, but be explicit
+    .eq('approval_status', 'approved')
+    .eq('affiliate_enabled', true)       // only products enabled for affiliate promotion
     .order('created_at', { ascending: false }) as { data: Product[] | null; error: unknown }
 
   const list = products ?? []
@@ -104,7 +105,7 @@ function AffiliateProductCard({
   product: Product
   referralUrl: string
 }) {
-  const thumb = product.images[0]
+  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">

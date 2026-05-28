@@ -18,7 +18,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
 }
 
-type OrderItemWithProduct = WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'stock_count'> }
+type OrderItemWithProduct = WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'stock_count'> }
 type OrderDetail = WholesaleOrder & {
   buyer: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'>
   agent: Pick<Profile, 'id' | 'full_name'> | null
@@ -111,7 +111,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Articles commandés</h2>
               <div className="divide-y divide-gray-100">
                 {items.map((item) => {
-                  const thumb = item.product.images?.[0]
+                  const thumb = item.product.media?.[0]?.url ?? item.product.images?.[0]
                   const lowStock = item.product.stock_count < 5
                   return (
                     <div key={item.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">

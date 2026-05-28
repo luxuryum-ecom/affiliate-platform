@@ -26,7 +26,7 @@ const COMMISSION_STATUS: Record<string, string> = {
   cancelled: 'Aucune commission',
 }
 
-type OrderRow = Order & { product: Pick<Product, 'id' | 'name' | 'images'> }
+type OrderRow = Order & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> }
 
 export default async function AffiliateOrdersPage() {
   const supabase = await createClient()

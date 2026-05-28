@@ -15,10 +15,10 @@ const APPROVAL_OPTIONS = [
   { value: 'rejected', label: 'Rejeté' },
 ]
 
-const SOURCE_OPTIONS = [
-  { value: '', label: 'Toutes les sources' },
-  { value: 'local_production', label: 'Production locale' },
-  { value: 'imported', label: 'Importé' },
+const AVAILABILITY_OPTIONS = [
+  { value: '', label: 'Toutes disponibilités' },
+  { value: 'local_stock', label: 'Stock local Maroc' },
+  { value: 'import_on_demand', label: 'Import sur demande' },
 ]
 
 const ACTIVE_OPTIONS = [
@@ -57,7 +57,7 @@ export function ProductFilters({ countries }: ProductFiltersProps) {
 
   const hasFilters =
     !!current('search') ||
-    !!current('source_type') ||
+    !!current('availability_type') ||
     !!current('approval_status') ||
     !!current('active') ||
     !!current('country') ||
@@ -106,8 +106,8 @@ export function ProductFilters({ countries }: ProductFiltersProps) {
 
       {/* Filter dropdowns */}
       <div className="flex flex-wrap items-center gap-2">
-        <select value={current('source_type')} onChange={(e) => set('source_type', e.target.value)} className={SELECT}>
-          {SOURCE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        <select value={current('availability_type')} onChange={(e) => set('availability_type', e.target.value)} className={SELECT}>
+          {AVAILABILITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
         <select value={current('approval_status')} onChange={(e) => set('approval_status', e.target.value)} className={SELECT}>

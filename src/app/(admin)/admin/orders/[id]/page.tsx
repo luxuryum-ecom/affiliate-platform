@@ -19,7 +19,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 }
 
 type OrderDetail = Order & {
-  product: Pick<Product, 'id' | 'name' | 'images' | 'sell_price' | 'commission_amount'>
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sell_price' | 'commission_amount'>
   affiliate: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'> | null
 }
 
@@ -34,7 +34,7 @@ export default async function AdminOrderDetailPage({ params }: Params) {
   const [orderRes, commissionRes] = await Promise.all([
     supabase
       .from('orders')
-      .select('*, product:products(id,name,images,sell_price,commission_amount), affiliate:profiles!affiliate_id(id,full_name,phone,city)')
+      .select('*, product:products(id,name,images,media,sell_price,commission_amount), affiliate:profiles!affiliate_id(id,full_name,phone,city)')
       .eq('id', id)
       .single(),
     supabase.from('commissions').select('*').eq('order_id', id).maybeSingle(),
@@ -46,7 +46,7 @@ export default async function AdminOrderDetailPage({ params }: Params) {
   if (!order) notFound()
 
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
-  const thumb = order.product?.images?.[0]
+  const thumb = order.product?.media?.[0]?.url ?? order.product?.images?.[0]
 
   const timeline = buildCodTimeline(order)
 

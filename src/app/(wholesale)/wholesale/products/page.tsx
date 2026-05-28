@@ -145,7 +145,7 @@ function WholesaleProductCard({
   hasTiers: boolean
   inCartQty: number | undefined
 }) {
-  const thumb = product.images[0]
+  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
 
   return (
     <Link
@@ -180,12 +180,12 @@ function WholesaleProductCard({
         <div className="flex items-center gap-1.5">
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
-              product.source_type === 'local_production'
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-purple-100 text-purple-700'
+              product.availability_type === 'import_on_demand'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-green-100 text-green-700'
             }`}
           >
-            {product.source_type === 'local_production' ? 'Local' : 'Importé'}
+            {product.availability_type === 'import_on_demand' ? 'Import / Demande' : 'Stock Maroc'}
           </span>
           {hasTiers && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">

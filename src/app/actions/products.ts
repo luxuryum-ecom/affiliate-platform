@@ -5,9 +5,11 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type {
   WholesaleTier,
-  ProductSourceType,
   ProductSubmittedVia,
   ProductApprovalStatus,
+  ProductAvailabilityType,
+  ProductOriginDetail,
+  MediaItem,
 } from '@/types/database'
 
 export type ProductFormState = { error: string | null }
@@ -42,9 +44,20 @@ export async function upsertProduct(
   const name = (formData.get('name') as string)?.trim()
   const description = ((formData.get('description') as string)?.trim()) || null
 
+  // ── Availability (migration 007) ──────────────────────────────────────────
+
+  const availability_type = (formData.get('availability_type') as string) || 'local_stock'
+  const origin_detail_raw = (formData.get('origin_detail') as string) || null
+  // import_on_demand has no local origin detail
+  const origin_detail: string | null =
+    availability_type === 'import_on_demand' ? null : origin_detail_raw
+
+  // affiliate_enabled is forced false for import_on_demand
+  const affiliate_enabled_raw = formData.get('affiliate_enabled') === 'on'
+  const affiliate_enabled = availability_type === 'import_on_demand' ? false : affiliate_enabled_raw
+
   // ── Sourcing ──────────────────────────────────────────────────────────────
 
-  const source_type = (formData.get('source_type') as string) || 'local_production'
   const supplier_name = ((formData.get('supplier_name') as string)?.trim()) || null
   const origin_country = ((formData.get('origin_country') as string)?.trim()) || null
   const source_notes = ((formData.get('source_notes') as string)?.trim()) || null
@@ -59,16 +72,24 @@ export async function upsertProduct(
   const exchange_rate_to_mad = parseFloat(formData.get('exchange_rate_to_mad') as string) || 1
   const margin_percentage = parseFloat(formData.get('margin_percentage') as string) || 30
 
+  const confirmation_fee_mad = parseFloat(formData.get('confirmation_fee_mad') as string) || 10
+  const packaging_fee_mad = parseFloat(formData.get('packaging_fee_mad') as string) || 10
+
   // ── Computed pricing ──────────────────────────────────────────────────────
+  // locally_produced → price is already in MAD
+  // imported_but_in_morocco_stock | import_on_demand → price needs conversion
+
+  const needsConversion =
+    origin_detail === 'imported_but_in_morocco_stock' ||
+    availability_type === 'import_on_demand'
 
   let purchase_price_mad: number | null = null
   let calculated_sale_price_mad: number | null = null
 
   if (purchase_price !== null && !isNaN(purchase_price)) {
-    purchase_price_mad =
-      source_type === 'local_production'
-        ? purchase_price
-        : parseFloat((purchase_price * exchange_rate_to_mad).toFixed(2))
+    purchase_price_mad = needsConversion
+      ? parseFloat((purchase_price * exchange_rate_to_mad).toFixed(2))
+      : purchase_price
 
     calculated_sale_price_mad = parseFloat(
       (purchase_price_mad * (1 + margin_percentage / 100)).toFixed(2)
@@ -78,7 +99,9 @@ export async function upsertProduct(
   // ── Sales fields ──────────────────────────────────────────────────────────
 
   const sell_price = parseFloat(formData.get('sell_price') as string)
-  const commission_amount = parseFloat(formData.get('commission_amount') as string) || 0
+  // commission only makes sense when affiliate_enabled
+  const commission_amount_raw = parseFloat(formData.get('commission_amount') as string) || 0
+  const commission_amount = affiliate_enabled ? commission_amount_raw : 0
   const wholesale_min_qty = parseInt(formData.get('wholesale_min_qty') as string) || 1
   const stock_count = parseInt(formData.get('stock_count') as string) || 0
 
@@ -93,12 +116,20 @@ export async function upsertProduct(
   // ── Validation ────────────────────────────────────────────────────────────
 
   if (!name) return { error: 'Le nom du produit est requis.' }
-  if (!['local_production', 'imported'].includes(source_type))
-    return { error: 'Type de source invalide.' }
+  if (!['local_stock', 'import_on_demand'].includes(availability_type))
+    return { error: 'Type de disponibilité invalide.' }
+  if (
+    availability_type === 'local_stock' &&
+    origin_detail &&
+    !['locally_produced', 'imported_but_in_morocco_stock'].includes(origin_detail)
+  )
+    return { error: "Origine du produit invalide." }
   if (!['draft', 'pending_review', 'approved', 'rejected'].includes(approval_status))
     return { error: "Statut d'approbation invalide." }
   if (!['admin_dashboard', 'telegram_future', 'supplier_future'].includes(submitted_via))
     return { error: 'Canal de soumission invalide.' }
+  if (!['MAD', 'USD', 'AED'].includes(purchase_currency))
+    return { error: 'Devise invalide. Utilisez MAD, USD ou AED.' }
   if (isNaN(sell_price) || sell_price <= 0)
     return { error: 'Le prix de vente doit être supérieur à 0 MAD.' }
   if (commission_amount < 0) return { error: 'La commission ne peut pas être négative.' }
@@ -117,14 +148,17 @@ export async function upsertProduct(
     return { error: 'Format des paliers de prix invalide.' }
   }
 
-  let images: string[] = []
+  // media — new JSONB array [{url, type}]
+  let media: MediaItem[] = []
   try {
-    images = (JSON.parse((formData.get('images') as string) || '[]') as string[]).filter(
-      (u) => u.trim().length > 0
-    )
+    const parsed = JSON.parse((formData.get('media') as string) || '[]') as MediaItem[]
+    media = parsed.filter((m) => m?.url?.trim().length > 0)
   } catch {
-    images = []
+    media = []
   }
+
+  // legacy images — derive from media for backward compat with any pages still using images[]
+  const images = media.filter((m) => m.type === 'image').map((m) => m.url)
 
   // ── Build payload ─────────────────────────────────────────────────────────
 
@@ -133,7 +167,9 @@ export async function upsertProduct(
   const base = {
     name,
     description,
-    source_type: source_type as ProductSourceType,
+    availability_type: availability_type as ProductAvailabilityType,
+    origin_detail: origin_detail as ProductOriginDetail | null,
+    affiliate_enabled,
     supplier_name,
     origin_country,
     submitted_via: submitted_via as ProductSubmittedVia,
@@ -144,6 +180,8 @@ export async function upsertProduct(
     purchase_price_mad,
     margin_percentage,
     calculated_sale_price_mad,
+    confirmation_fee_mad,
+    packaging_fee_mad,
     approval_status: approval_status as ProductApprovalStatus,
     active,
     sell_price,
@@ -151,6 +189,7 @@ export async function upsertProduct(
     wholesale_min_qty,
     wholesale_tiers,
     stock_count,
+    media,
     images,
   }
 

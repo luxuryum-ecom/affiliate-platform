@@ -18,7 +18,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; icon: string }>
 
 
 type OrderWithItems = WholesaleOrder & {
-  items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images'> })[]
+  items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> })[]
 }
 
 export default async function WholesaleOrdersPage() {
@@ -139,7 +139,7 @@ function OrderCard({ order, compact = false }: { order: OrderWithItems; compact?
       {/* Items */}
       <div className="space-y-2">
         {order.items.slice(0, compact ? 2 : 10).map((item) => {
-          const thumb = item.product.images?.[0]
+          const thumb = item.product.media?.[0]?.url ?? item.product.images?.[0]
           return (
             <div key={item.id} className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-md bg-gray-100 overflow-hidden border shrink-0">

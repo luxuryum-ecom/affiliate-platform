@@ -20,15 +20,15 @@ const APPROVAL_BADGE: Record<string, { label: string; cls: string }> = {
   rejected:       { label: 'Rejeté',      cls: 'bg-red-100 text-red-600' },
 }
 
-const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
-  local_production: { label: 'Local',    cls: 'bg-blue-100 text-blue-700' },
-  imported:         { label: 'Importé',  cls: 'bg-purple-100 text-purple-700' },
+const AVAILABILITY_BADGE: Record<string, { label: string; cls: string }> = {
+  local_stock:       { label: 'Stock Maroc',     cls: 'bg-green-100 text-green-700' },
+  import_on_demand:  { label: 'Import demande',  cls: 'bg-purple-100 text-purple-700' },
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface SearchParams {
-  source_type?: string
+  availability_type?: string
   approval_status?: string
   active?: string
   country?: string
@@ -61,7 +61,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (filters.source_type)    query = query.eq('source_type', filters.source_type)
+  if (filters.availability_type) query = query.eq('availability_type', filters.availability_type)
   if (filters.approval_status) query = query.eq('approval_status', filters.approval_status)
   if (filters.active === 'true')  query = query.eq('active', true)
   else if (filters.active === 'false') query = query.eq('active', false)
@@ -98,7 +98,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
   ].sort()
 
   const isFiltered =
-    !!filters.source_type ||
+    !!filters.availability_type ||
     !!filters.approval_status ||
     !!filters.active ||
     !!filters.country ||
@@ -216,9 +216,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
 // ─── Product row ──────────────────────────────────────────────────────────────
 
 function ProductRow({ product }: { product: Product }) {
-  const thumb = product.images[0]
+  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
   const approvalBadge = APPROVAL_BADGE[product.approval_status] ?? APPROVAL_BADGE.draft
-  const sourceBadge = SOURCE_BADGE[product.source_type] ?? SOURCE_BADGE.local_production
+  const sourceBadge = AVAILABILITY_BADGE[product.availability_type] ?? AVAILABILITY_BADGE.local_stock
 
   return (
     <div className="flex items-start gap-3 p-4">
@@ -250,6 +250,13 @@ function ProductRow({ product }: { product: Product }) {
           <span className={`text-xs px-2 py-0.5 rounded-full ${approvalBadge.cls}`}>
             {approvalBadge.label}
           </span>
+
+          {/* Affiliate enabled badge */}
+          {!product.affiliate_enabled && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
+              Gros seulement
+            </span>
+          )}
 
           {/* Active / inactive */}
           {product.approval_status === 'approved' && (

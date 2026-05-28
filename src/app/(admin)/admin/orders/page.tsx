@@ -19,7 +19,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 }
 
 type OrderRow = Order & {
-  product: Pick<Product, 'id' | 'name' | 'images'>
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media'>
   affiliate: Pick<Profile, 'id' | 'full_name'> | null
 }
 
@@ -169,7 +169,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
 function OrderRow({ order }: { order: OrderRow }) {
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
-  const thumb = order.product?.images?.[0]
+  const thumb = order.product?.media?.[0]?.url ?? order.product?.images?.[0]
   const ref   = order.id.slice(0, 8).toUpperCase()
 
   return (
