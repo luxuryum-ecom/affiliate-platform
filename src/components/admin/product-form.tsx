@@ -3,7 +3,10 @@
 import { useActionState, useState, useRef } from 'react'
 import Link from 'next/link'
 import { upsertProduct, type ProductFormState } from '@/app/actions/products'
-import { createClient } from '@/lib/supabase/client'
+import { ProductCoverUpload } from '@/components/admin/product-cover-upload'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { uploadProductImage, formatProductImageUploadError } from '@/lib/product-image-upload'
+import { isValidMediaUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
 import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem } from '@/types/database'
 
@@ -184,37 +187,40 @@ export function ProductForm({ product }: ProductFormProps) {
     setUploadingIndex(index)
     setUploadError(null)
 
-    const supabase = createClient()
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .upload(filename, file, { contentType: file.type, upsert: false })
-
-    if (error) {
-      const msg = error.message.includes('bucket')
-        ? 'Bucket "product-images" introuvable — vérifiez Supabase Storage.'
-        : error.message.includes('policy') || error.message.includes('permission')
-        ? 'Permission refusée — assurez-vous d\'être connecté en admin.'
-        : `Upload échoué : ${error.message}`
-      setUploadError(msg)
+    try {
+      const url = await uploadProductImage(file)
+      updateMediaUrl(index, url)
+      updateMediaType(index, 'image')
+    } catch (err) {
+      setUploadError(formatProductImageUploadError(err))
+    } finally {
       setUploadingIndex(null)
-      return
     }
-
-    const { data: urlData } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(data.path)
-
-    updateMediaUrl(index, urlData.publicUrl)
-    updateMediaType(index, 'image')
-    setUploadingIndex(null)
   }
+
+  const handleCoverUploaded = (url: string) => {
+    setUploadError(null)
+    setMediaItems((prev) => {
+      if (prev.length > 0 && prev[0].type === 'image') {
+        return prev.map((m, i) => (i === 0 ? { url, type: 'image' as const } : m))
+      }
+      const rest = prev.filter((m, i) => i > 0 || m.url.trim())
+      return [{ url, type: 'image' as const }, ...rest]
+    })
+  }
+
+  const coverUrl =
+    mediaItems.find((m) => m.type === 'image' && isValidMediaUrl(m.url))?.url ??
+    mediaItems[0]?.url ??
+    ''
+
+  const productDisplayName = product?.name ?? 'Produit'
 
   // ── Serialised hidden values ──────────────────────────────────────────────
   const validTiers = tiers.map(rowToTier).filter((t): t is WholesaleTier => t !== null)
-  const validMedia = mediaItems.filter((m) => m.url.trim().length > 0)
+  const validMedia = mediaItems.filter(
+    (m) => m.url.trim().length > 0 && (m.type !== 'image' || isValidMediaUrl(m.url))
+  )
 
   // Handle availability change: reset affiliate_enabled when import_on_demand
   const handleAvailabilityChange = (val: string) => {
@@ -768,12 +774,12 @@ export function ProductForm({ product }: ProductFormProps) {
       {/* ══════════════════════════════════════════════════════════════════════
           8. MÉDIAS (images, vidéos, liens Telegram)
          ══════════════════════════════════════════════════════════════════════ */}
-      <section className="space-y-3">
+      <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className={SECTION_TITLE}>Médias</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              Le premier média est utilisé comme miniature. Upload direct ou URL manuelle.
+              Image de couverture + médias additionnels (vidéo, Telegram, liens).
             </p>
           </div>
           <button
@@ -783,6 +789,14 @@ export function ProductForm({ product }: ProductFormProps) {
             + Média
           </button>
         </div>
+
+        <ProductCoverUpload
+          coverUrl={coverUrl}
+          productName={productDisplayName}
+          disabled={isPending || uploadingIndex !== null}
+          onUploaded={handleCoverUploaded}
+          onError={setUploadError}
+        />
 
         {/* Upload error banner */}
         {uploadError && (
@@ -862,13 +876,11 @@ export function ProductForm({ product }: ProductFormProps) {
                 )}
 
                 {/* Thumbnail preview */}
-                {item.type === 'image' && item.url.trim() && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                {item.type === 'image' && isValidMediaUrl(item.url) && (
+                  <ProductThumbnail
                     src={item.url}
-                    alt=""
-                    className="w-9 h-9 rounded object-cover border border-gray-200 shrink-0"
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                    name={productDisplayName}
+                    className="w-9 h-9 rounded border border-gray-200 text-[10px]"
                   />
                 )}
 

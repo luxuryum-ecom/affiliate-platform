@@ -3,6 +3,8 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderFilters } from '@/components/admin/order-filters'
 import { QuickStatusButton } from '@/components/admin/quick-status-button'
 import type { Order, Product, Profile, OrderStatus } from '@/types/database'
@@ -10,7 +12,7 @@ import type { Order, Product, Profile, OrderStatus } from '@/types/database'
 export const metadata = { title: 'Commandes COD — Administration' }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-gray-100 text-gray-500' },
+  pending_confirmation: { label: 'À confirmer', cls: 'bg-amber-100 text-amber-700' },
   confirmed: { label: 'Confirmée',   cls: 'bg-blue-100 text-blue-700' },
   shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
   delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700' },
@@ -31,7 +33,7 @@ interface PageProps {
   }>
 }
 
-const STATUSES: OrderStatus[] = ['pending', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled']
+const STATUSES: OrderStatus[] = ['pending_confirmation', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled']
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const { status: filterStatus, search, affiliate_id } = await searchParams
@@ -56,7 +58,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   // ── Build orders query ────────────────────────────────────────────────────
   let query = supabase
     .from('orders')
-    .select('*, product:products(id, name, images), affiliate:profiles!affiliate_id(id, full_name)')
+    .select('*, product:products(id, name, images, media), affiliate:profiles!affiliate_id(id, full_name)')
     .order('created_at', { ascending: false })
     .limit(300)
 
@@ -168,21 +170,19 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 // ─── Single order row / card ──────────────────────────────────────────────────
 
 function OrderRow({ order }: { order: OrderRow }) {
-  const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
-  const thumb = order.product?.media?.[0]?.url ?? order.product?.images?.[0]
+  const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending_confirmation
+  const coverUrl = order.product ? getProductCoverUrl(order.product) : null
   const ref   = order.id.slice(0, 8).toUpperCase()
 
   return (
     <div className="p-4 hover:bg-gray-50 transition-colors">
       {/* Row: thumbnail + content + actions */}
       <div className="flex items-start gap-3">
-        {/* Thumbnail */}
-        <div className="shrink-0 w-10 h-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
-          {thumb
-            ? <img src={thumb} alt={order.product?.name} className="w-full h-full object-cover" /> // eslint-disable-line @next/next/no-img-element
-            : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-300">{order.product?.name?.slice(0,2).toUpperCase()}</div>
-          }
-        </div>
+        <ProductThumbnail
+          src={coverUrl}
+          name={order.product?.name ?? 'Produit'}
+          className="w-10 h-10 rounded-lg border border-gray-200 text-[10px]"
+        />
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
@@ -247,7 +247,7 @@ function OrderRow({ order }: { order: OrderRow }) {
 
 // Quick action buttons based on current status
 function QuickActions({ order }: { order: OrderRow }) {
-  if (order.status === 'pending') {
+  if (order.status === 'pending_confirmation') {
     return (
       <>
         <QuickStatusButton orderId={order.id} newStatus="confirmed" label="✓ Confirmer" variant="confirm" />

@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { updateCartQty, removeCartItem } from '@/app/actions/cart'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { getWholesaleTier, formatMAD } from '@/lib/utils'
 import type { WholesaleCartItemWithProduct } from '@/types/database'
 
@@ -25,26 +27,17 @@ export function CartItemRow({ item }: CartItemRowProps) {
     if (!isNaN(val) && val >= 1) setQty(val)
   }
 
-  const thumb = product.images[0]
+  const coverUrl = getProductCoverUrl(product)
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row gap-4">
       {/* Thumbnail */}
       <Link href={`/wholesale/products/${product.id}`} className="shrink-0">
-        <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumb}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-gray-300">
-              {product.name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
+        <ProductThumbnail
+          src={coverUrl}
+          name={product.name}
+          className="w-20 h-20 rounded-lg text-sm"
+        />
       </Link>
 
       {/* Details */}

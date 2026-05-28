@@ -4,14 +4,40 @@ import { signOut } from '@/app/actions/auth'
 import type { Profile } from '@/types/database'
 
 export const metadata = {
-  title: 'Compte en attente — Affiliate Platform',
+  title: 'Compte en attente — AffiPartner',
 }
 
 const ROLE_REDIRECTS: Record<string, string> = {
-  affiliate: '/dashboard',
+  affiliate: '/affiliate/dashboard',
   wholesaler: '/wholesale/dashboard',
   admin: '/admin/dashboard',
   agent: '/admin/dashboard',
+}
+
+const PENDING_COPY: Record<
+  string,
+  { title: string; intro: string; steps: string[] }
+> = {
+  affiliate: {
+    title: 'Inscription affilié en cours de validation',
+    intro:
+      'Votre demande d\'accès à l\'espace affilié (dropshipping COD) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.',
+    steps: [
+      'Vérification de votre profil affilié',
+      'Notification par email une fois approuvé',
+      'Accès au catalogue, liens de parrainage et suivi des commissions',
+    ],
+  },
+  wholesaler: {
+    title: 'Inscription grossiste en cours de validation',
+    intro:
+      'Votre demande d\'accès à l\'espace grossiste (achat en gros B2B) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.',
+    steps: [
+      'Vérification de votre profil grossiste',
+      'Notification par email une fois approuvé',
+      'Accès au catalogue gros, paliers de prix et commandes B2B',
+    ],
+  },
 }
 
 export default async function PendingPage() {
@@ -22,23 +48,30 @@ export default async function PendingPage() {
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile } = (await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single() as { data: Profile | null; error: unknown }
+    .single()) as { data: Profile | null; error: unknown }
 
   if (!profile) redirect('/login')
 
-  // Already approved — route them to their dashboard
   if (profile.status === 'approved') {
     redirect(ROLE_REDIRECTS[profile.role] ?? '/login')
   }
 
+  if (profile.status === 'rejected') {
+    await supabase.auth.signOut()
+    redirect('/login?rejected=1')
+  }
+
+  const copy =
+    PENDING_COPY[profile.role] ??
+    PENDING_COPY.affiliate
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md text-center">
-        {/* Clock icon */}
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-5">
           <svg
             className="w-8 h-8 text-amber-600"
@@ -55,12 +88,11 @@ export default async function PendingPage() {
           </svg>
         </div>
 
-        <h1 className="text-xl font-semibold text-gray-900">Compte en cours de validation</h1>
+        <h1 className="text-xl font-semibold text-gray-900">{copy.title}</h1>
 
         <p className="mt-2 text-sm text-gray-500 max-w-xs mx-auto">
-          Bonjour <span className="font-medium text-gray-700">{profile.full_name}</span>,
-          votre demande a bien été reçue. Notre équipe la traitera sous{' '}
-          <strong>24 à 48 heures</strong>.
+          Bonjour <span className="font-medium text-gray-700">{profile.full_name}</span>,{' '}
+          {copy.intro}
         </p>
 
         <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5 text-left">
@@ -68,24 +100,14 @@ export default async function PendingPage() {
             Prochaines étapes
           </p>
           <ol className="space-y-2 text-sm text-gray-600">
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
-                1
-              </span>
-              Vérification de votre dossier par notre équipe
-            </li>
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
-                2
-              </span>
-              Notification par email à l&apos;adresse fournie
-            </li>
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
-                3
-              </span>
-              Accès à votre espace une fois approuvé
-            </li>
+            {copy.steps.map((step, i) => (
+              <li key={step} className="flex gap-3">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
+                  {i + 1}
+                </span>
+                {step}
+              </li>
+            ))}
           </ol>
         </div>
 

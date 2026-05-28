@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isValidMediaUrl } from '@/lib/product-media'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type {
@@ -153,7 +154,10 @@ export async function upsertProduct(
   let media: MediaItem[] = []
   try {
     const parsed = JSON.parse((formData.get('media') as string) || '[]') as MediaItem[]
-    media = parsed.filter((m) => m?.url?.trim().length > 0)
+    media = parsed.filter((m) => {
+      if (!m?.url?.trim()) return false
+      return isValidMediaUrl(m.url)
+    })
   } catch {
     media = []
   }

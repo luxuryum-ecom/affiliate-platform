@@ -1,9 +1,12 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { signOut } from '@/app/actions/auth'
 import { ProductActions } from '@/components/admin/product-actions'
 import { ProductFilters } from '@/components/admin/product-filters'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
 import type { Product } from '@/types/database'
 
@@ -48,10 +51,12 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single() as { data: { full_name: string; role: string } | null; error: unknown }
 
   // ── Build query with filters ───────────────────────────────────────────────
@@ -216,23 +221,18 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
 // ─── Product row ──────────────────────────────────────────────────────────────
 
 function ProductRow({ product }: { product: Product }) {
-  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
+  const coverUrl = getProductCoverUrl(product)
   const approvalBadge = APPROVAL_BADGE[product.approval_status] ?? APPROVAL_BADGE.draft
   const sourceBadge = AVAILABILITY_BADGE[product.availability_type] ?? AVAILABILITY_BADGE.local_stock
 
   return (
     <div className="flex items-start gap-3 p-4">
       {/* Thumbnail */}
-      <div className="shrink-0 w-12 h-12 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
-        {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumb} alt={product.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
-            {product.name.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
+      <ProductThumbnail
+        src={coverUrl}
+        name={product.name}
+        className="w-12 h-12 rounded-lg border border-gray-200 text-xs"
+      />
 
       {/* Info */}
       <div className="flex-1 min-w-0">

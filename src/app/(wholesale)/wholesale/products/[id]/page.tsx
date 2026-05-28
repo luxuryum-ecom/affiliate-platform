@@ -1,9 +1,11 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import type { Product } from '@/types/database'
 
 interface Params {
@@ -29,9 +31,11 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const [profileResult, productResult] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user!.id).single(),
-    supabase.from('products').select('*').eq('id', id).eq('active', true).single(),
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase.from('products').select('*').eq('id', id).eq('active', true).eq('approval_status', 'approved').single(),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
@@ -39,12 +43,8 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   if (!product) notFound()
 
-  const mediaImages = product.media?.filter((m) => m.type === 'image') ?? []
-  const allImageUrls = mediaImages.length > 0
-    ? mediaImages.map((m) => m.url)
-    : (product.images ?? [])
-  const thumb = allImageUrls[0] ?? null
-  const extraImages = allImageUrls.slice(1)
+  const coverUrl = getProductCoverUrl(product)
+  const galleryUrls = getProductGalleryUrls(product)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,31 +87,20 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* ── Images ── */}
           <div className="space-y-3">
-            <div className="aspect-square bg-white rounded-2xl border border-gray-200 overflow-hidden">
-              {thumb ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={thumb}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-200">
-                  {product.name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
+            <ProductThumbnail
+              src={coverUrl}
+              name={product.name}
+              className="aspect-square w-full rounded-2xl border border-gray-200 text-4xl"
+            />
 
-            {extraImages.length > 0 && (
+            {galleryUrls.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {extraImages.map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
+                {galleryUrls.map((url, i) => (
+                  <ProductThumbnail
+                    key={url}
                     src={url}
-                    alt={`${product.name} ${i + 2}`}
-                    className="h-16 w-16 shrink-0 rounded-lg object-cover border border-gray-200"
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                    name={`${product.name} ${i + 2}`}
+                    className="h-16 w-16 shrink-0 rounded-lg border border-gray-200"
                   />
                 ))}
               </div>

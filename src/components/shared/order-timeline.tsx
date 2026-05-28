@@ -77,6 +77,7 @@ export function buildCodTimeline(order: Order): TimelineStep[] {
   const { status } = order
 
   const isCancelled = status === 'cancelled'
+  const isPendingConfirmation = status === 'pending_confirmation'
 
   const reachedConfirmed = ['confirmed', 'shipped', 'delivered', 'returned'].includes(status)
   const reachedShipped   = ['shipped', 'delivered', 'returned'].includes(status)
@@ -90,13 +91,24 @@ export function buildCodTimeline(order: Order): TimelineStep[] {
       state: 'done',
     },
     {
-      label: 'Confirmée',
-      timestamp: order.confirmed_at,
+      label: 'Confirmation téléphonique',
+      timestamp: isPendingConfirmation ? order.created_at : order.confirmed_at,
       state: isCancelled && !reachedConfirmed
         ? 'skipped'
         : reachedConfirmed
         ? 'done'
-        : status === 'pending'
+        : isPendingConfirmation
+        ? 'current'
+        : 'future',
+    },
+    {
+      label: 'Confirmée',
+      timestamp: order.confirmed_at,
+      state: isCancelled && !reachedConfirmed
+        ? 'skipped'
+        : reachedConfirmed && !isPendingConfirmation
+        ? 'done'
+        : status === 'confirmed'
         ? 'current'
         : 'future',
     },

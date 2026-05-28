@@ -156,7 +156,7 @@ export default async function AdminDashboardPage() {
                 title: 'Approuver les inscriptions',
                 description: 'Valider ou rejeter les nouveaux comptes.',
                 badge: pendingUsers ?? 0,
-                href: null,
+                href: '/admin/users',
               },
               {
                 title: 'Gérer les produits',

@@ -30,7 +30,7 @@ export interface MediaItem {
 }
 
 export type OrderStatus =
-  | 'pending'
+  | 'pending_confirmation'
   | 'confirmed'
   | 'shipped'
   | 'delivered'
@@ -147,6 +147,24 @@ export interface Order {
   quantity: number
   total_amount: number
   commission_amount: number
+
+  /** Immutable unit sell price at order time. */
+  product_price_snapshot: number | null
+  /** Immutable affiliate commission total at order time. */
+  affiliate_commission_mad_snapshot: number | null
+  /** Operational fee snapshots (per order, frozen at insert). */
+  delivery_fee_snapshot: number | null
+  packaging_fee_snapshot: number | null
+  confirmation_fee_snapshot: number | null
+  /** Link to the affiliate click that led to this order. */
+  attribution_click_id: string | null
+
+  /** AI-ready risk scores (0–100, nullable until computed). */
+  fraud_score: number | null
+  duplicate_risk_score: number | null
+  spam_score: number | null
+  signals_metadata: Record<string, unknown>
+
   status: OrderStatus
   notes: string | null
 
@@ -258,6 +276,27 @@ export interface OrderProof {
   uploaded_at: string
 }
 
+export interface AffiliateClick {
+  id: string
+  affiliate_id: string
+  product_id: string
+  session_id: string | null
+  referrer_path: string | null
+  user_agent: string | null
+  created_at: string
+}
+
+export type OrderSignalType = 'fraud' | 'duplicate' | 'spam' | 'conversion'
+
+export interface OrderSignal {
+  id: string
+  order_id: string
+  signal_type: OrderSignalType
+  score: number
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
 // ─── JOINED / EXTENDED TYPES ─────────────────────────────────────────────────
 // Used in query results that join related tables.
 
@@ -352,6 +391,16 @@ export type Database = {
         OrderProof,
         Omit<OrderProof, 'id' | 'uploaded_at'>,
         Partial<OrderProof>
+      >
+      affiliate_clicks: TableDef<
+        AffiliateClick,
+        Omit<AffiliateClick, 'id' | 'created_at'>,
+        never
+      >
+      order_signals: TableDef<
+        OrderSignal,
+        Omit<OrderSignal, 'id' | 'created_at'>,
+        never
       >
     }
     Views: Record<never, never>

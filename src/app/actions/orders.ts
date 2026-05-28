@@ -2,7 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { getWholesaleTier } from '@/lib/utils'
+import {
+  scoreDuplicateOrder,
+  scoreFraudOrder,
+  scoreSpamOrder,
+} from '@/lib/order-analytics'
 import type {
   OrderStatus,
   WholesaleOrderStatus,
@@ -28,7 +34,8 @@ export async function placeOrder(
   const supabase = await createClient()
 
   const productId  = (formData.get('productId') as string)?.trim()
-  const affiliateId = (formData.get('affiliateId') as string)?.trim() || null
+  const affiliateIdRaw = (formData.get('affiliateId') as string)?.trim() || null
+  const attributionClickId = (formData.get('attributionClickId') as string)?.trim() || null
   const quantity   = parseInt(formData.get('quantity') as string, 10)
   const customerName    = (formData.get('customer_name') as string)?.trim()
   const customerPhone   = (formData.get('customer_phone') as string)?.trim()
@@ -44,10 +51,11 @@ export async function placeOrder(
   if (!customerCity)      return { error: 'Votre ville est requise.', success: false, orderId: null }
   if (!customerAddress)   return { error: 'Votre adresse est requise.', success: false, orderId: null }
 
-  // ── Fetch product ─────────────────────────────────────────────────────────
   const { data: product } = (await supabase
     .from('products')
-    .select('id, sell_price, commission_amount, stock_count, active, approval_status, name')
+    .select(
+      'id, sell_price, commission_amount, stock_count, active, approval_status, affiliate_enabled, availability_type, name, confirmation_fee_mad, packaging_fee_mad, delivery_fee_mad'
+    )
     .eq('id', productId)
     .single()) as { data: {
       id: string
@@ -56,23 +64,29 @@ export async function placeOrder(
       stock_count: number
       active: boolean
       approval_status: string
+      affiliate_enabled: boolean
+      availability_type: string
       name: string
+      confirmation_fee_mad: number
+      packaging_fee_mad: number
+      delivery_fee_mad: number
     } | null; error: unknown }
 
   if (!product) return { error: 'Produit non disponible.', success: false, orderId: null }
   if (!product.active || product.approval_status !== 'approved')
     return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
+  if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
+    return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
   if (product.stock_count < quantity)
     return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
 
   // ── Validate affiliate ID if provided ────────────────────────────────────
-  // Silently drop invalid affiliate refs — customer shouldn't see an error for this
   let validatedAffiliateId: string | null = null
-  if (affiliateId) {
+  if (affiliateIdRaw) {
     const { data: affiliate } = (await supabase
       .from('profiles')
       .select('id, role, status')
-      .eq('id', affiliateId)
+      .eq('id', affiliateIdRaw)
       .single()) as { data: { id: string; role: string; status: string } | null; error: unknown }
 
     if (affiliate?.role === 'affiliate' && affiliate.status === 'approved') {
@@ -80,26 +94,62 @@ export async function placeOrder(
     }
   }
 
-  const totalAmount      = parseFloat((product.sell_price * quantity).toFixed(2))
+  const unitPrice = product.sell_price
+  const totalAmount = parseFloat((unitPrice * quantity).toFixed(2))
+  const commissionPerUnit = product.commission_amount
   const commissionAmount = validatedAffiliateId
-    ? parseFloat((product.commission_amount * quantity).toFixed(2))
+    ? parseFloat((commissionPerUnit * quantity).toFixed(2))
     : 0
 
-  // ── Insert order ──────────────────────────────────────────────────────────
+  const deliveryFeeSnapshot = product.delivery_fee_mad ?? 0
+  const packagingFeeSnapshot = product.packaging_fee_mad ?? 10
+  const confirmationFeeSnapshot = product.confirmation_fee_mad ?? 10
+
+  // ── Duplicate / spam scoring (AI-ready pipeline) ─────────────────────────
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { count: recentDupes } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .eq('customer_phone', customerPhone)
+    .eq('product_id', productId)
+    .gte('created_at', dayAgo)
+
+  const duplicateScore = scoreDuplicateOrder(recentDupes ?? 0)
+  const spamScore = scoreSpamOrder(customerPhone, customerName)
+  const fraudScore = scoreFraudOrder({
+    duplicateScore,
+    spamScore,
+    hasAffiliate: !!validatedAffiliateId,
+  })
+
+  // ── Insert order with immutable snapshots ─────────────────────────────────
   const { data: order, error: insertError } = (await supabase
     .from('orders')
     .insert({
-      affiliate_id:     validatedAffiliateId,
-      product_id:       productId,
-      customer_name:    customerName,
-      customer_phone:   customerPhone,
-      customer_city:    customerCity,
+      affiliate_id: validatedAffiliateId,
+      product_id: productId,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      customer_city: customerCity,
       customer_address: customerAddress,
       quantity,
-      total_amount:     totalAmount,
+      total_amount: totalAmount,
       commission_amount: commissionAmount,
-      cod_expected:     totalAmount,
-      status:           'pending',
+      product_price_snapshot: unitPrice,
+      affiliate_commission_mad_snapshot: commissionAmount,
+      delivery_fee_snapshot: deliveryFeeSnapshot,
+      packaging_fee_snapshot: packagingFeeSnapshot,
+      confirmation_fee_snapshot: confirmationFeeSnapshot,
+      attribution_click_id: attributionClickId,
+      fraud_score: fraudScore,
+      duplicate_risk_score: duplicateScore,
+      spam_score: spamScore,
+      signals_metadata: {
+        scoring_version: '1.0',
+        recent_duplicate_count_24h: recentDupes ?? 0,
+      },
+      cod_expected: totalAmount,
+      status: 'pending_confirmation',
       notes,
     })
     .select('id')
@@ -109,6 +159,14 @@ export async function placeOrder(
     console.error('placeOrder insert error:', insertError)
     return { error: 'Erreur lors de la commande. Veuillez réessayer.', success: false, orderId: null }
   }
+
+  // Persist signal records for future ML / analytics
+  const signals = [
+    { order_id: order.id, signal_type: 'duplicate' as const, score: duplicateScore, metadata: { window_hours: 24, count: recentDupes ?? 0 } },
+    { order_id: order.id, signal_type: 'spam' as const, score: spamScore, metadata: {} },
+    { order_id: order.id, signal_type: 'fraud' as const, score: fraudScore, metadata: {} },
+  ]
+  await supabase.from('order_signals').insert(signals)
 
   return { error: null, success: true, orderId: order.id }
 }
@@ -157,7 +215,7 @@ export async function updateOrderStatus(
 
   // ── Stock logic ───────────────────────────────────────────────────────────
   const wasStockReserved = ['confirmed', 'shipped', 'delivered'].includes(prev)
-  const needsReserve     = newStatus === 'confirmed' && prev === 'pending'
+  const needsReserve     = newStatus === 'confirmed' && prev === 'pending_confirmation'
   const needsRestore     = ['cancelled', 'returned'].includes(newStatus) && wasStockReserved
 
   if (needsReserve) {
@@ -285,6 +343,101 @@ export async function createWholesaleOrderFromCart(
  */
 export async function createWholesaleOrderAction(formData: FormData): Promise<void> {
   await createWholesaleOrderFromCart({ error: null, success: false }, formData)
+}
+
+// =============================================================================
+// WHOLESALER — SUBMIT OWN CART AS ORDER
+// =============================================================================
+
+/**
+ * Wholesaler submits their cart as a platform wholesale order.
+ * Cart is cleared after successful creation; admin sees it in wholesale orders.
+ */
+export async function submitWholesaleOrder(
+  _prevState: ActionState,
+  _formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return fail('Non authentifié.')
+
+  const { data: profile } = (await supabase
+    .from('profiles')
+    .select('role, status')
+    .eq('id', user.id)
+    .single()) as { data: { role: string; status: string } | null; error: unknown }
+
+  if (profile?.role !== 'wholesaler' || profile?.status !== 'approved') {
+    return fail('Accès réservé aux grossistes approuvés.')
+  }
+
+  const { data: cartItems } = (await supabase
+    .from('wholesale_cart_items')
+    .select('*, product:products(*)')
+    .eq('buyer_id', user.id)) as {
+    data: WholesaleCartItemWithProduct[] | null
+    error: unknown
+  }
+
+  if (!cartItems?.length) return fail('Votre panier est vide.')
+
+  for (const item of cartItems) {
+    if (!item.product.active || item.product.approval_status !== 'approved') {
+      return fail(`« ${item.product.name} » n'est plus disponible.`)
+    }
+    if (item.quantity < item.product.wholesale_min_qty) {
+      return fail(
+        `« ${item.product.name} » : minimum ${item.product.wholesale_min_qty} unités requises.`
+      )
+    }
+  }
+
+  let total = 0
+  const lineItems = cartItems.map((item) => {
+    const tier = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
+    const unitPrice = tier ? tier.price_per_unit : item.product.sell_price
+    const subtotal = parseFloat((unitPrice * item.quantity).toFixed(2))
+    total += subtotal
+    return {
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price_snapshot: unitPrice,
+      subtotal,
+      tier_label_snapshot: tier ? tier.label : 'Prix standard',
+    }
+  })
+
+  total = parseFloat(total.toFixed(2))
+
+  const { data: newOrder, error: orderErr } = (await supabase
+    .from('wholesale_orders')
+    .insert({
+      buyer_id: user.id,
+      total_amount: total,
+      status: 'pending',
+      delivery_preference: 'delivery',
+    })
+    .select('id')
+    .single()) as { data: { id: string } | null; error: unknown }
+
+  if (orderErr || !newOrder) return fail('Erreur lors de la création de la commande.')
+
+  const items = lineItems.map((li) => ({ ...li, order_id: newOrder.id }))
+  const { error: itemsErr } = await supabase.from('wholesale_order_items').insert(items)
+  if (itemsErr) {
+    await supabase.from('wholesale_orders').delete().eq('id', newOrder.id)
+    return fail('Erreur lors de l\'enregistrement des articles.')
+  }
+
+  await supabase.from('wholesale_cart_items').delete().eq('buyer_id', user.id)
+
+  revalidatePath('/wholesale/cart')
+  revalidatePath('/wholesale/orders')
+  revalidatePath('/admin/wholesale-orders')
+  redirect('/wholesale/orders?submitted=1')
 }
 
 // =============================================================================

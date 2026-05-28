@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { SignupForm } from '@/components/auth/signup-form'
+import { cn } from '@/lib/utils'
 
 interface SignupPageProps {
   searchParams: Promise<{ type?: string }>
 }
 
 export const metadata = {
-  title: 'Inscription — Affiliate Platform',
+  title: 'Inscription — AffiPartner',
 }
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
@@ -17,10 +18,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md">
-        {/* Logo / wordmark */}
         <div className="text-center mb-8">
           <Link href="/" className="text-xl font-bold text-gray-900 tracking-tight">
-            Affiliate Platform
+            AffiPartner Morocco
           </Link>
         </div>
 
@@ -28,8 +28,33 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <div className="mb-6">
             <h1 className="text-xl font-semibold text-gray-900">Créer un compte</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Votre demande sera examinée sous 24–48h.
+              Choisissez votre type de compte. Votre demande sera examinée sous 24–48h.
             </p>
+          </div>
+
+          <div className="flex rounded-lg border border-gray-200 p-0.5 mb-6">
+            <Link
+              href="/signup?type=affiliate"
+              className={cn(
+                'flex-1 text-center py-2 text-sm font-medium rounded-md transition-colors',
+                role === 'affiliate'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              )}
+            >
+              Devenir affilié
+            </Link>
+            <Link
+              href="/signup?type=wholesale"
+              className={cn(
+                'flex-1 text-center py-2 text-sm font-medium rounded-md transition-colors',
+                role === 'wholesaler'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              )}
+            >
+              Acheter en gros
+            </Link>
           </div>
 
           <SignupForm defaultRole={role} />

@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
 import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
 import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus } from '@/types/database'
@@ -111,16 +113,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Articles commandés</h2>
               <div className="divide-y divide-gray-100">
                 {items.map((item) => {
-                  const thumb = item.product.media?.[0]?.url ?? item.product.images?.[0]
+                  const coverUrl = getProductCoverUrl(item.product)
                   const lowStock = item.product.stock_count < 5
                   return (
                     <div key={item.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                      <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden border shrink-0">
-                        {thumb
-                          ? <img src={thumb} alt={item.product.name} className="w-full h-full object-cover" /> // eslint-disable-line @next/next/no-img-element
-                          : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-300">{item.product.name.slice(0,2).toUpperCase()}</div>
-                        }
-                      </div>
+                      <ProductThumbnail
+                        src={coverUrl}
+                        name={item.product.name}
+                        className="w-10 h-10 rounded-lg border shrink-0 text-[10px]"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
                         <p className="text-xs text-gray-500">

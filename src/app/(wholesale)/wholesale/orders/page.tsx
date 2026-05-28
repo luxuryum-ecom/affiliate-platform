@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
 import type { WholesaleOrder, WholesaleOrderItem, Product, Profile } from '@/types/database'
 
@@ -21,7 +23,14 @@ type OrderWithItems = WholesaleOrder & {
   items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> })[]
 }
 
-export default async function WholesaleOrdersPage() {
+interface PageProps {
+  searchParams: Promise<{ submitted?: string }>
+}
+
+export default async function WholesaleOrdersPage({ searchParams }: PageProps) {
+  const { submitted } = await searchParams
+  const showSubmittedBanner = submitted === '1'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -60,6 +69,12 @@ export default async function WholesaleOrdersPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        {showSubmittedBanner && (
+          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
+            ✓ Votre commande grossiste a été soumise. Notre équipe la traitera sous peu.
+          </div>
+        )}
+
         {list.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <p className="text-sm text-gray-400">Aucune commande pour l&apos;instant.</p>
@@ -139,15 +154,14 @@ function OrderCard({ order, compact = false }: { order: OrderWithItems; compact?
       {/* Items */}
       <div className="space-y-2">
         {order.items.slice(0, compact ? 2 : 10).map((item) => {
-          const thumb = item.product.media?.[0]?.url ?? item.product.images?.[0]
+          const coverUrl = getProductCoverUrl(item.product)
           return (
             <div key={item.id} className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md bg-gray-100 overflow-hidden border shrink-0">
-                {thumb
-                  ? <img src={thumb} alt={item.product.name} className="w-full h-full object-cover" /> // eslint-disable-line @next/next/no-img-element
-                  : <div className="w-full h-full flex items-center justify-center text-xs text-gray-300 font-bold">{item.product.name.slice(0,1)}</div>
-                }
-              </div>
+              <ProductThumbnail
+                src={coverUrl}
+                name={item.product.name}
+                className="w-8 h-8 rounded-md border shrink-0 text-[8px]"
+              />
               <p className="text-xs text-gray-700 flex-1 truncate">
                 {item.product.name} <span className="text-gray-400">×{item.quantity}</span>
               </p>

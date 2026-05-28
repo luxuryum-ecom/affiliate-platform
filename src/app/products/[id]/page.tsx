@@ -2,7 +2,11 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatMAD } from '@/lib/utils'
+import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
+import { getDeliveryEstimate } from '@/lib/order-analytics'
 import { CodOrderForm } from '@/components/customer/cod-order-form'
+import { ProductGallery } from '@/components/customer/product-gallery'
+import { AffiliateAttributionTracker } from '@/components/customer/affiliate-attribution-tracker'
 import type { Product } from '@/types/database'
 
 interface Params {
@@ -21,7 +25,7 @@ export async function generateMetadata({ params }: Params) {
     .single()) as { data: { name: string; description: string | null } | null; error: unknown }
   if (!data) return { title: 'Produit non disponible' }
   return {
-    title: data.name,
+    title: `${data.name} — AffiPartner`,
     description: data.description ?? undefined,
   }
 }
@@ -38,120 +42,111 @@ export default async function PublicProductPage({ params, searchParams }: Params
     .eq('id', id)
     .eq('active', true)
     .eq('approval_status', 'approved')
+    .eq('affiliate_enabled', true)
     .single()) as { data: Product | null; error: unknown }
 
-  if (!product) notFound()
+  if (!product || product.availability_type === 'import_on_demand') notFound()
 
   const affiliateId = ref ?? null
-  const mediaImages = product.media?.filter((m) => m.type === 'image') ?? []
-  const allImageUrls = mediaImages.length > 0
-    ? mediaImages.map((m) => m.url)
-    : (product.images ?? [])
-  const thumb = allImageUrls[0] ?? null
-  const extraImages = allImageUrls.slice(1)
+  const coverUrl = getProductCoverUrl(product)
+  const galleryUrls = getProductGalleryUrls(product)
+  const delivery = getDeliveryEstimate(product.availability_type)
+
+  const inStock = product.stock_count > 0
+  const lowStock = product.stock_count > 0 && product.stock_count <= 5
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Minimal nav */}
-      <header className="border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50">
+      <AffiliateAttributionTracker productId={product.id} affiliateId={affiliateId} />
+
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-lg md:max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
           <Link href="/" className="text-sm font-semibold text-gray-900">
-            Boutique
+            AffiPartner
           </Link>
-          <span className="text-xs text-gray-400">Paiement à la livraison · Maroc</span>
+          <span className="text-xs text-gray-400">COD · Maroc 🇲🇦</span>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* ── Images ── */}
-          <div className="space-y-3">
-            <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
-              {thumb ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={thumb}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-gray-200">
-                  {product.name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
-            {extraImages.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {extraImages.map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
-                    src={url}
-                    alt={`${product.name} ${i + 2}`}
-                    className="h-16 w-16 shrink-0 rounded-xl object-cover border border-gray-100"
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
-                  />
-                ))}
-              </div>
-            )}
+      <main className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 pb-24">
+        <div className="md:grid md:grid-cols-2 md:gap-10 md:items-start">
+          {/* Gallery */}
+          <div className="mb-6 md:mb-0">
+            <ProductGallery
+              coverUrl={coverUrl}
+              galleryUrls={galleryUrls}
+              productName={product.name}
+            />
           </div>
 
-          {/* ── Info + COD form ── */}
+          {/* Product info + form */}
           <div className="space-y-5">
-            {/* Product info */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  product.availability_type === 'import_on_demand'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-green-100 text-green-700'
-                }`}
-              >
-                {product.availability_type === 'import_on_demand' ? 'Import' : 'Stock Maroc'}
-              </span>
-                {product.origin_country && (
-                  <span className="text-xs text-gray-400">{product.origin_country}</span>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                  Stock Maroc
+                </span>
+                {inStock ? (
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      lowStock ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {lowStock
+                      ? `Plus que ${product.stock_count} en stock`
+                      : `${product.stock_count} en stock`}
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                    Rupture de stock
+                  </span>
                 )}
               </div>
+
               <h1 className="text-2xl font-bold text-gray-900 leading-tight">{product.name}</h1>
+
               {product.description && (
-                <p className="text-sm text-gray-600 mt-2 leading-relaxed">{product.description}</p>
+                <p className="text-sm text-gray-600 mt-3 leading-relaxed whitespace-pre-line">
+                  {product.description}
+                </p>
               )}
             </div>
 
-            {/* Price */}
-            <div className="flex items-baseline gap-3">
+            <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-gray-900">
                 {formatMAD(product.sell_price)}
               </span>
-              <span className="text-sm text-gray-400">/ unité · paiement à la livraison</span>
+              <span className="text-sm text-gray-400">/ unité</span>
             </div>
 
-            {/* Stock */}
-            {product.stock_count <= 5 && product.stock_count > 0 && (
-              <p className="text-xs text-amber-600 font-medium">
-                ⚠ Plus que {product.stock_count} unité{product.stock_count !== 1 ? 's' : ''} disponible{product.stock_count !== 1 ? 's' : ''}
-              </p>
-            )}
-            {product.stock_count === 0 && (
-              <p className="text-xs text-red-600 font-medium">● Produit temporairement indisponible</p>
-            )}
+            <div className="flex items-start gap-3 bg-white border border-gray-200 rounded-xl p-4">
+              <span className="text-lg" aria-hidden>
+                🚚
+              </span>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Livraison estimée</p>
+                <p className="text-xs text-gray-500 mt-0.5">{delivery.label}</p>
+                <p className="text-xs text-gray-400 mt-1">Partout au Maroc · paiement à la réception</p>
+              </div>
+            </div>
 
-            {/* COD form */}
-            <CodOrderForm
-              productId={product.id}
-              affiliateId={affiliateId}
-              sellPrice={product.sell_price}
-              maxQty={product.stock_count}
-            />
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Commander en COD</h2>
+              <CodOrderForm
+                productId={product.id}
+                affiliateIdFromUrl={affiliateId}
+                productName={product.name}
+                sellPrice={product.sell_price}
+                maxQty={Math.max(product.stock_count, 0)}
+              />
+            </div>
           </div>
         </div>
       </main>
 
-      <footer className="border-t border-gray-100 mt-16">
-        <div className="max-w-5xl mx-auto px-4 py-6 text-center text-xs text-gray-400">
-          Livraison partout au Maroc · Paiement sécurisé à la réception
+      <footer className="border-t border-gray-100 bg-white mt-8">
+        <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 text-center text-xs text-gray-400">
+          Livraison partout au Maroc · Paiement sécurisé à la livraison
         </div>
       </footer>
     </div>

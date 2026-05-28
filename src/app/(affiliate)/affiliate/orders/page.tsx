@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
+import { OrderTimeline, buildCodTimeline } from '@/components/shared/order-timeline'
 import type { Order, Commission, Product } from '@/types/database'
 
 export const metadata = {
@@ -9,7 +12,7 @@ export const metadata = {
 }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-gray-100 text-gray-500' },
+  pending_confirmation: { label: 'À confirmer', cls: 'bg-amber-100 text-amber-700' },
   confirmed: { label: 'Confirmée',   cls: 'bg-blue-100 text-blue-700' },
   shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
   delivered: { label: 'Livrée ✓',   cls: 'bg-green-100 text-green-700' },
@@ -17,17 +20,16 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
 }
 
-const COMMISSION_STATUS: Record<string, string> = {
-  pending:   'Pending delivery',
-  confirmed: 'Shipping…',
-  shipped:   'Shipping…',
-  delivered: 'Commission confirmée',
-  returned:  'Aucune commission',
-  cancelled: 'Aucune commission',
+const PAYOUT_LABELS: Record<string, string> = {
+  pending_confirmation: 'En attente de confirmation client',
+  confirmed: 'En cours de traitement',
+  shipped: 'En cours de livraison',
+  delivered: 'Commission en attente d\'approbation',
+  returned: 'Aucune commission (retour)',
+  cancelled: 'Aucune commission (annulée)',
 }
 
 type OrderRow = Order & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> }
-
 
 export default async function AffiliateOrdersPage() {
   const supabase = await createClient()
@@ -47,21 +49,22 @@ export default async function AffiliateOrdersPage() {
       .eq('affiliate_id', user!.id),
   ])
 
-  const profile    = profileRes.data as { full_name: string } | null
-  const orders     = (ordersRes.data  ?? []) as unknown as OrderRow[]
+  const profile = profileRes.data as { full_name: string } | null
+  const orders = (ordersRes.data ?? []) as unknown as OrderRow[]
   const commissions = (commissionsRes.data ?? []) as Commission[]
 
   const commMap = new Map(commissions.map((c) => [c.order_id, c]))
 
-  // Summary stats
-  const pending   = orders.filter((o) => ['pending', 'confirmed', 'shipped'].includes(o.status)).length
+  const inProgress = orders.filter((o) =>
+    ['pending_confirmation', 'confirmed', 'shipped'].includes(o.status)
+  ).length
   const delivered = orders.filter((o) => o.status === 'delivered').length
-  const returned  = orders.filter((o) => o.status === 'returned').length
-  const totalEarned = commissions
-    .filter((c) => c.status === 'paid')
-    .reduce((s, c) => s + Number(c.amount), 0)
+  const returned = orders.filter((o) => o.status === 'returned').length
   const totalPending = commissions
     .filter((c) => c.status === 'pending')
+    .reduce((s, c) => s + Number(c.amount), 0)
+  const totalEarned = commissions
+    .filter((c) => c.status === 'paid')
     .reduce((s, c) => s + Number(c.amount), 0)
 
   return (
@@ -87,12 +90,11 @@ export default async function AffiliateOrdersPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Summary stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'En cours',         value: String(pending) },
-            { label: 'Livrées',          value: String(delivered) },
-            { label: 'Retournées',       value: String(returned) },
+            { label: 'En cours', value: String(inProgress) },
+            { label: 'Livrées', value: String(delivered) },
+            { label: 'Retournées', value: String(returned) },
             { label: 'Commissions dues', value: formatMAD(totalPending) },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
@@ -104,7 +106,7 @@ export default async function AffiliateOrdersPage() {
 
         {totalEarned > 0 && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700">
-            🎉 Total commissions payées&nbsp;: <strong>{formatMAD(totalEarned)}</strong>
+            Total commissions payées&nbsp;: <strong>{formatMAD(totalEarned)}</strong>
           </div>
         )}
 
@@ -121,72 +123,83 @@ export default async function AffiliateOrdersPage() {
             </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="space-y-4">
             {orders.map((order) => {
-              const badge    = STATUS_BADGE[order.status]  ?? STATUS_BADGE.pending
-              const commNote = COMMISSION_STATUS[order.status] ?? ''
-              const comm     = commMap.get(order.id)
-              const thumb = order.product.media?.[0]?.url ?? order.product.images?.[0] ?? null
+              const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending_confirmation
+              const comm = commMap.get(order.id)
+              const coverUrl = getProductCoverUrl(order.product)
+              const commissionAmount =
+                order.affiliate_commission_mad_snapshot ?? order.commission_amount
+              const timeline = buildCodTimeline(order)
 
               return (
-                <div key={order.id} className="flex items-start gap-3 p-4">
-                  {/* Thumbnail */}
-                  <div className="shrink-0 w-10 h-10 rounded-lg bg-gray-100 overflow-hidden border">
-                    {thumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumb} alt={order.product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-300">
-                        {order.product.name.slice(0, 2).toUpperCase()}
+                <article
+                  key={order.id}
+                  className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+                >
+                  <div className="flex items-start gap-3 p-4">
+                    <ProductThumbnail
+                      src={coverUrl}
+                      name={order.product.name}
+                      className="w-12 h-12 rounded-lg border text-[10px] shrink-0"
+                    />
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-mono text-gray-400">
+                          #{order.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
+                          {badge.label}
+                        </span>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                      <span className="text-xs font-mono text-gray-400">
-                        #{order.id.slice(0, 8).toUpperCase()}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                        {badge.label}
-                      </span>
+                      <p className="text-sm font-medium text-gray-900">
+                        {order.product.name} × {order.quantity}
+                      </p>
+
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {order.customer_city} · {formatMAD(order.total_amount)} ·{' '}
+                        {new Date(order.created_at).toLocaleDateString('fr-MA', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </p>
+
+                      <p className="text-xs mt-1.5">
+                        {comm ? (
+                          <span
+                            className={`font-medium ${
+                              comm.status === 'paid'
+                                ? 'text-green-600'
+                                : comm.status === 'approved'
+                                ? 'text-blue-600'
+                                : 'text-amber-600'
+                            }`}
+                          >
+                            Commission&nbsp;: {formatMAD(Number(comm.amount))} —{' '}
+                            {comm.status === 'paid'
+                              ? 'Payée'
+                              : comm.status === 'approved'
+                              ? 'Approuvée'
+                              : 'En attente'}
+                          </span>
+                        ) : commissionAmount > 0 ? (
+                          <span className="text-gray-400">
+                            Commission prévue&nbsp;: {formatMAD(commissionAmount)} —{' '}
+                            {PAYOUT_LABELS[order.status]}
+                          </span>
+                        ) : null}
+                      </p>
                     </div>
-
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {order.product.name} × {order.quantity}
-                    </p>
-
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {order.customer_city} ·{' '}
-                      <span className="font-medium text-gray-700">
-                        {formatMAD(order.total_amount)}
-                      </span>
-                    </p>
-
-                    {/* Commission preview */}
-                    <p className="text-xs mt-1">
-                      {comm ? (
-                        <span className={`font-medium ${
-                          comm.status === 'paid'    ? 'text-green-600' :
-                          comm.status === 'approved' ? 'text-blue-600' :
-                          'text-amber-600'
-                        }`}>
-                          Commission&nbsp;: {formatMAD(Number(comm.amount))} ({comm.status})
-                        </span>
-                      ) : order.commission_amount > 0 ? (
-                        <span className="text-gray-400">
-                          Commission prévue&nbsp;: {formatMAD(order.commission_amount)} — {commNote}
-                        </span>
-                      ) : null}
-                    </p>
                   </div>
 
-                  <span className="shrink-0 text-xs text-gray-400 tabular-nums">
-                    {new Date(order.created_at).toLocaleDateString('fr-MA', {
-                      day: '2-digit', month: 'short'
-                    })}
-                  </span>
-                </div>
+                  <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Suivi</p>
+                    <OrderTimeline steps={timeline} />
+                  </div>
+                </article>
               )
             })}
           </div>

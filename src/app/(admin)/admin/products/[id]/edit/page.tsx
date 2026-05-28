@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { signOut } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/server'
@@ -22,8 +22,10 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const [profileResult, productResult] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user!.id).single(),
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('products').select('*').eq('id', id).single(),
   ])
 

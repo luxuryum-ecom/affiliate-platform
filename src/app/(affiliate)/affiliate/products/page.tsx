@@ -1,7 +1,10 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
 import type { Product } from '@/types/database'
 
@@ -16,10 +19,12 @@ export default async function AffiliateProductsPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single() as { data: { full_name: string } | null; error: unknown }
 
   const { data: products } = await supabase
@@ -80,7 +85,7 @@ export default async function AffiliateProductsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {list.map((product) => {
-              const referralUrl = `${APP_URL}/products/${product.id}?ref=${user!.id}`
+              const referralUrl = `${APP_URL}/products/${product.id}?ref=${user.id}`
               return (
                 <AffiliateProductCard
                   key={product.id}
@@ -105,25 +110,16 @@ function AffiliateProductCard({
   product: Product
   referralUrl: string
 }) {
-  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
+  const coverUrl = getProductCoverUrl(product)
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
       {/* Thumbnail */}
-      <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
-        {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumb}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-300">
-            {product.name.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
+      <ProductThumbnail
+        src={coverUrl}
+        name={product.name}
+        className="aspect-[4/3] w-full text-2xl"
+      />
 
       {/* Info */}
       <div className="p-4 flex flex-col gap-3 flex-1">
