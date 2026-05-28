@@ -40,7 +40,7 @@ export default async function AffiliateProductsPage() {
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Link
-              href="/dashboard"
+              href="/affiliate/dashboard"
               className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
             >
               ← Dashboard
@@ -129,15 +129,15 @@ function AffiliateProductCard({
       <div className="p-4 flex flex-col gap-3 flex-1">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      product.source_type === 'local_production'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-purple-100 text-purple-700'
-                    }`}
-                  >
-                    {product.source_type === 'local_production' ? 'Local' : 'Importé'}
-                  </span>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full ${
+                product.availability_type === 'import_on_demand'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'bg-green-100 text-green-700'
+              }`}
+            >
+              {product.availability_type === 'import_on_demand' ? 'Import' : 'Stock Maroc'}
+            </span>
           </div>
           <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2">
             {product.name}
@@ -150,7 +150,7 @@ function AffiliateProductCard({
         {/* Pricing */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-400">Prix de vente</p>
+            <p className="text-xs text-gray-400">Prix de base</p>
             <p className="text-sm font-medium text-gray-700">{formatMAD(product.sell_price)}</p>
           </div>
           <div className="text-right">
@@ -159,6 +159,24 @@ function AffiliateProductCard({
               {formatMAD(product.commission_amount)}
             </p>
           </div>
+        </div>
+
+        {/* Operational fees */}
+        <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-2.5 py-1.5 space-y-0.5">
+          <div className="flex justify-between">
+            <span>Confirmation</span>
+            <span className="text-gray-600">{product.confirmation_fee_mad} MAD</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Emballage</span>
+            <span className="text-gray-600">{product.packaging_fee_mad} MAD</span>
+          </div>
+          {product.delivery_fee_mad > 0 && (
+            <div className="flex justify-between">
+              <span>Livraison</span>
+              <span className="text-gray-600">{product.delivery_fee_mad} MAD</span>
+            </div>
+          )}
         </div>
 
         {/* Stock indicator */}

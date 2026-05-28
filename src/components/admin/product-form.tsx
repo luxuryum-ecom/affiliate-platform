@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useRef } from 'react'
 import Link from 'next/link'
 import { upsertProduct, type ProductFormState } from '@/app/actions/products'
+import { createClient } from '@/lib/supabase/client'
 import { formatMAD } from '@/lib/utils'
 import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem } from '@/types/database'
 
@@ -126,6 +127,11 @@ export function ProductForm({ product }: ProductFormProps) {
     return [{ url: '', type: 'image' as const }]
   })
 
+  // ── Upload state ──────────────────────────────────────────────────────────
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
   // ── Live pricing calculation ──────────────────────────────────────────────
   const pp = parseFloat(purchasePrice)
   const er = parseFloat(exchangeRate) || 1
@@ -172,6 +178,39 @@ export function ProductForm({ product }: ProductFormProps) {
     setMediaItems((prev) => prev.map((m, idx) => (idx === i ? { ...m, url } : m)))
   const updateMediaType = (i: number, type: MediaItem['type']) =>
     setMediaItems((prev) => prev.map((m, idx) => (idx === i ? { ...m, type } : m)))
+
+  // ── Image upload ─────────────────────────────────────────────────────────
+  const handleFileUpload = async (index: number, file: File) => {
+    setUploadingIndex(index)
+    setUploadError(null)
+
+    const supabase = createClient()
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .upload(filename, file, { contentType: file.type, upsert: false })
+
+    if (error) {
+      const msg = error.message.includes('bucket')
+        ? 'Bucket "product-images" introuvable — vérifiez Supabase Storage.'
+        : error.message.includes('policy') || error.message.includes('permission')
+        ? 'Permission refusée — assurez-vous d\'être connecté en admin.'
+        : `Upload échoué : ${error.message}`
+      setUploadError(msg)
+      setUploadingIndex(null)
+      return
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(data.path)
+
+    updateMediaUrl(index, urlData.publicUrl)
+    updateMediaType(index, 'image')
+    setUploadingIndex(null)
+  }
 
   // ── Serialised hidden values ──────────────────────────────────────────────
   const validTiers = tiers.map(rowToTier).filter((t): t is WholesaleTier => t !== null)
@@ -734,7 +773,7 @@ export function ProductForm({ product }: ProductFormProps) {
           <div>
             <h2 className={SECTION_TITLE}>Médias</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              Le premier média est utilisé comme miniature. Accepte images, vidéos, liens Telegram ou externes.
+              Le premier média est utilisé comme miniature. Upload direct ou URL manuelle.
             </p>
           </div>
           <button
@@ -745,56 +784,110 @@ export function ProductForm({ product }: ProductFormProps) {
           </button>
         </div>
 
+        {/* Upload error banner */}
+        {uploadError && (
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+            <span className="shrink-0 mt-0.5">⚠</span>
+            <span>{uploadError}</span>
+            <button
+              type="button"
+              onClick={() => setUploadError(null)}
+              className="ml-auto shrink-0 text-red-400 hover:text-red-600"
+              aria-label="Fermer"
+            >×</button>
+          </div>
+        )}
+
         <div className="space-y-2">
           {mediaItems.map((item, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              {/* Type selector */}
-              <select
-                value={item.type}
-                onChange={(e) => updateMediaType(i, e.target.value as MediaItem['type'])}
-                className="shrink-0 text-xs px-2 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
-                aria-label="Type de média"
-              >
-                {(Object.entries(MEDIA_TYPE_LABELS) as [MediaItem['type'], string][]).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
+            <div key={i} className="space-y-1.5">
+              <div className="flex gap-2 items-center">
+                {/* Type selector */}
+                <select
+                  value={item.type}
+                  onChange={(e) => updateMediaType(i, e.target.value as MediaItem['type'])}
+                  className="shrink-0 text-xs px-2 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
+                  aria-label="Type de média"
+                >
+                  {(Object.entries(MEDIA_TYPE_LABELS) as [MediaItem['type'], string][]).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
 
-              {/* URL input */}
-              <input
-                type="text"
-                value={item.url}
-                onChange={(e) => updateMediaUrl(i, e.target.value)}
-                placeholder={
-                  item.type === 'telegram_link'
-                    ? 'https://t.me/... ou lien Telegram direct'
-                    : 'https://…'
-                }
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 min-w-0"
-                aria-label={`URL média ${i + 1}`}
-              />
-
-              {/* Thumbnail preview */}
-              {item.type === 'image' && item.url.trim() && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={item.url}
-                  alt=""
-                  className="w-8 h-8 rounded object-cover border border-gray-200 shrink-0"
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
+                {/* URL input */}
+                <input
+                  type="text"
+                  value={item.url}
+                  onChange={(e) => updateMediaUrl(i, e.target.value)}
+                  placeholder={
+                    item.type === 'telegram_link'
+                      ? 'https://t.me/... ou lien Telegram direct'
+                      : item.type === 'image'
+                      ? 'URL image ou utilisez ↑ Upload'
+                      : 'https://…'
+                  }
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 min-w-0"
+                  aria-label={`URL média ${i + 1}`}
                 />
-              )}
 
-              {mediaItems.length > 1 && (
-                <button
-                  type="button" onClick={() => removeMedia(i)}
-                  className="shrink-0 text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
-                  aria-label="Supprimer le média"
-                >×</button>
-              )}
+                {/* Upload button (images only) */}
+                {item.type === 'image' && (
+                  <>
+                    <input
+                      ref={(el) => { fileInputRefs.current[i] = el }}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleFileUpload(i, file)
+                        e.target.value = ''
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingIndex !== null || isPending}
+                      onClick={() => fileInputRefs.current[i]?.click()}
+                      className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                      title="Uploader une image vers Supabase Storage"
+                    >
+                      {uploadingIndex === i ? (
+                        <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <span>↑</span>
+                      )}
+                      {uploadingIndex === i ? 'Upload…' : 'Upload'}
+                    </button>
+                  </>
+                )}
+
+                {/* Thumbnail preview */}
+                {item.type === 'image' && item.url.trim() && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.url}
+                    alt=""
+                    className="w-9 h-9 rounded object-cover border border-gray-200 shrink-0"
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
+                )}
+
+                {mediaItems.length > 1 && (
+                  <button
+                    type="button" onClick={() => removeMedia(i)}
+                    className="shrink-0 text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
+                    aria-label="Supprimer le média"
+                  >×</button>
+                )}
+              </div>
             </div>
           ))}
         </div>
+
+        <p className="text-xs text-gray-400">
+          Upload direct → Supabase Storage bucket <code className="font-mono bg-gray-100 px-1 rounded">product-images</code>.
+          URL manuelle acceptée en secours (ex : lien CDN externe, Telegram).
+        </p>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════

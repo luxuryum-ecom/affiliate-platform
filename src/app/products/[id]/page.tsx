@@ -43,8 +43,12 @@ export default async function PublicProductPage({ params, searchParams }: Params
   if (!product) notFound()
 
   const affiliateId = ref ?? null
-  const thumb = product.images[0]
-  const extraImages = product.images.slice(1)
+  const mediaImages = product.media?.filter((m) => m.type === 'image') ?? []
+  const allImageUrls = mediaImages.length > 0
+    ? mediaImages.map((m) => m.url)
+    : (product.images ?? [])
+  const thumb = allImageUrls[0] ?? null
+  const extraImages = allImageUrls.slice(1)
 
   return (
     <div className="min-h-screen bg-white">
@@ -78,13 +82,14 @@ export default async function PublicProductPage({ params, searchParams }: Params
             </div>
             {extraImages.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {extraImages.map((img, i) => (
+                {extraImages.map((url, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={i}
-                    src={img}
+                    src={url}
                     alt={`${product.name} ${i + 2}`}
                     className="h-16 w-16 shrink-0 rounded-xl object-cover border border-gray-100"
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 ))}
               </div>
@@ -97,14 +102,14 @@ export default async function PublicProductPage({ params, searchParams }: Params
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
-                    product.source_type === 'local_production'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  {product.source_type === 'local_production' ? 'Local' : 'Importé'}
-                </span>
+                className={`text-xs px-2 py-0.5 rounded-full ${
+                  product.availability_type === 'import_on_demand'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-green-100 text-green-700'
+                }`}
+              >
+                {product.availability_type === 'import_on_demand' ? 'Import' : 'Stock Maroc'}
+              </span>
                 {product.origin_country && (
                   <span className="text-xs text-gray-400">{product.origin_country}</span>
                 )}

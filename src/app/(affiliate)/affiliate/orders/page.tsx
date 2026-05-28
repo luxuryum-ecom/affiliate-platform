@@ -28,6 +28,7 @@ const COMMISSION_STATUS: Record<string, string> = {
 
 type OrderRow = Order & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> }
 
+
 export default async function AffiliateOrdersPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,7 +37,7 @@ export default async function AffiliateOrdersPage() {
     supabase.from('profiles').select('full_name').eq('id', user!.id).single(),
     supabase
       .from('orders')
-      .select('*, product:products(id, name, images)')
+      .select('*, product:products(id, name, images, media)')
       .eq('affiliate_id', user!.id)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -68,7 +69,7 @@ export default async function AffiliateOrdersPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
+            <Link href="/affiliate/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
               ← Dashboard
             </Link>
             <span className="text-gray-300">/</span>
@@ -125,7 +126,7 @@ export default async function AffiliateOrdersPage() {
               const badge    = STATUS_BADGE[order.status]  ?? STATUS_BADGE.pending
               const commNote = COMMISSION_STATUS[order.status] ?? ''
               const comm     = commMap.get(order.id)
-              const thumb    = order.product.images?.[0]
+              const thumb = order.product.media?.[0]?.url ?? order.product.images?.[0] ?? null
 
               return (
                 <div key={order.id} className="flex items-start gap-3 p-4">

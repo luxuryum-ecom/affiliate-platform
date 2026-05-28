@@ -7,7 +7,7 @@ import type { Profile } from '@/types/database'
 export type AuthState = { error: string | null }
 
 const ROLE_REDIRECTS: Record<string, string> = {
-  affiliate: '/dashboard',
+  affiliate: '/affiliate/dashboard',
   wholesaler: '/wholesale/dashboard',
   admin: '/admin/dashboard',
   agent: '/admin/dashboard',
