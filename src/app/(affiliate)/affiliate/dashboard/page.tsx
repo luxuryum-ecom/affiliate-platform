@@ -231,6 +231,19 @@ export default async function AffiliateDashboardPage() {
               Voir mes commandes →
             </Link>
           </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Mes commissions</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Historique détaillé et virements reçus.</p>
+            </div>
+            <Link
+              href="/affiliate/commissions"
+              className="text-xs px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+            >
+              Voir mes commissions →
+            </Link>
+          </div>
         </section>
       </main>
     </div>

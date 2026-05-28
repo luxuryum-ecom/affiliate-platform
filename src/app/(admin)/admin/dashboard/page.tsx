@@ -197,6 +197,12 @@ export default async function AdminDashboardPage() {
                 badge: pendingCommissionCount,
                 href: '/admin/commissions',
               },
+              {
+                title: 'Paiements affiliés',
+                description: "Enregistrer les virements et suivre l'historique des paiements.",
+                badge: null,
+                href: '/admin/payouts',
+              },
             ].map((action) => (
               <div
                 key={action.title}

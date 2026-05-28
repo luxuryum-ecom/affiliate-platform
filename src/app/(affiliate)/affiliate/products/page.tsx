@@ -13,6 +13,13 @@ export const metadata = {
   title: 'Catalogue produits — Espace Affilié',
 }
 
+interface ProductStats {
+  clicks: number
+  orders: number
+  delivered: number
+  commissionEarned: number
+}
+
 export default async function AffiliateProductsPage() {
   const supabase = await createClient()
 
@@ -28,7 +35,7 @@ export default async function AffiliateProductsPage() {
     .eq('id', user.id)
     .single() as { data: { full_name: string } | null; error: unknown }
 
-  const [productsRes, customPricesRes] = await Promise.all([
+  const [productsRes, customPricesRes, clicksRes, ordersRes, commissionsRes] = await Promise.all([
     supabase
       .from('products')
       .select('*')
@@ -43,12 +50,66 @@ export default async function AffiliateProductsPage() {
         data: { product_id: string; custom_sell_price_mad: number }[] | null
         error: unknown
       }>,
+    supabase
+      .from('affiliate_clicks')
+      .select('product_id')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { product_id: string }[] | null
+        error: unknown
+      }>,
+    supabase
+      .from('orders')
+      .select('product_id, status')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { product_id: string; status: string }[] | null
+        error: unknown
+      }>,
+    supabase
+      .from('commissions')
+      .select('amount, order:orders!order_id(product_id)')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { amount: number; order: { product_id: string } | null }[] | null
+        error: unknown
+      }>,
   ])
 
   const list = productsRes.data ?? []
   const customPriceMap = new Map(
     (customPricesRes.data ?? []).map((r) => [r.product_id, Number(r.custom_sell_price_mad)])
   )
+
+  // Build per-product stats maps
+  const clicksMap = new Map<string, number>()
+  for (const c of clicksRes.data ?? []) {
+    clicksMap.set(c.product_id, (clicksMap.get(c.product_id) ?? 0) + 1)
+  }
+
+  const ordersMap = new Map<string, { orders: number; delivered: number }>()
+  for (const o of ordersRes.data ?? []) {
+    const cur = ordersMap.get(o.product_id) ?? { orders: 0, delivered: 0 }
+    cur.orders += 1
+    if (o.status === 'delivered') cur.delivered += 1
+    ordersMap.set(o.product_id, cur)
+  }
+
+  const commissionMap = new Map<string, number>()
+  for (const c of commissionsRes.data ?? []) {
+    const pid = c.order?.product_id
+    if (!pid) continue
+    commissionMap.set(pid, (commissionMap.get(pid) ?? 0) + Number(c.amount))
+  }
+
+  const statsMap = new Map<string, ProductStats>()
+  for (const product of list) {
+    const pid = product.id
+    statsMap.set(pid, {
+      clicks: clicksMap.get(pid) ?? 0,
+      orders: ordersMap.get(pid)?.orders ?? 0,
+      delivered: ordersMap.get(pid)?.delivered ?? 0,
+      commissionEarned: commissionMap.get(pid) ?? 0,
+    })
+  }
+
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://yourapp.com'
 
   return (
@@ -100,12 +161,14 @@ export default async function AffiliateProductsPage() {
             {list.map((product) => {
               const referralUrl = `${APP_URL}/products/${product.id}?ref=${user.id}`
               const customPrice = customPriceMap.get(product.id) ?? null
+              const stats = statsMap.get(product.id) ?? { clicks: 0, orders: 0, delivered: 0, commissionEarned: 0 }
               return (
                 <AffiliateProductCard
                   key={product.id}
                   product={product}
                   referralUrl={referralUrl}
                   customPrice={customPrice}
+                  stats={stats}
                 />
               )
             })}
@@ -122,12 +185,16 @@ function AffiliateProductCard({
   product,
   referralUrl,
   customPrice,
+  stats,
 }: {
   product: Product
   referralUrl: string
   customPrice: number | null
+  stats: ProductStats
 }) {
   const coverUrl = getProductCoverUrl(product)
+  const convRate =
+    stats.clicks > 0 ? `${((stats.orders / stats.clicks) * 100).toFixed(0)}%` : '—'
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
@@ -214,6 +281,28 @@ function AffiliateProductCard({
           platformPrice={product.sell_price}
           currentCustomPrice={customPrice}
         />
+
+        {/* Per-product performance stats */}
+        <div className="grid grid-cols-4 gap-1 bg-gray-50 rounded-lg px-2 py-2">
+          <div className="text-center">
+            <p className="text-xs font-bold text-gray-800 tabular-nums">{stats.clicks}</p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Clics</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-bold text-gray-800 tabular-nums">{stats.orders}</p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Cmdes</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-bold text-gray-800 tabular-nums">{convRate}</p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Conv.</p>
+          </div>
+          <div className="text-center">
+            <p className={`text-xs font-bold tabular-nums ${stats.commissionEarned > 0 ? 'text-green-600' : 'text-gray-800'}`}>
+              {stats.commissionEarned > 0 ? formatMAD(stats.commissionEarned) : '—'}
+            </p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Gagné</p>
+          </div>
+        </div>
 
         {/* Copy link — pushed to bottom */}
         <div className="mt-auto pt-3">
