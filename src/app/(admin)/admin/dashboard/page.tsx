@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
+import { formatMAD } from '@/lib/utils'
 import type { Profile } from '@/types/database'
 
 export const metadata = {
@@ -30,6 +31,7 @@ export default async function AdminDashboardPage() {
     { count: totalOrders },
     { count: todayOrders },
     { count: pendingWholesaleOrders },
+    pendingCommissionsRes,
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -54,7 +56,15 @@ export default async function AdminDashboardPage() {
       .from('wholesale_orders')
       .select('*', { count: 'exact', head: true })
       .in('status', ['pending', 'confirmed', 'sourcing']),
+    supabase
+      .from('commissions')
+      .select('amount')
+      .in('status', ['pending', 'approved']),
   ])
+
+  const pendingCommissionRows = (pendingCommissionsRes.data ?? []) as { amount: number }[]
+  const pendingCommissionTotal = pendingCommissionRows.reduce((s, c) => s + Number(c.amount), 0)
+  const pendingCommissionCount = pendingCommissionRows.length
 
   const platformStats = [
     {
@@ -73,7 +83,7 @@ export default async function AdminDashboardPage() {
       highlight: (pendingUsers ?? 0) > 0,
     },
     {
-      label: 'Commandes aujourd\'hui',
+      label: "Commandes aujourd'hui",
       value: String(todayOrders ?? 0),
       highlight: false,
     },
@@ -86,6 +96,11 @@ export default async function AdminDashboardPage() {
       label: 'Commandes gros à traiter',
       value: String(pendingWholesaleOrders ?? 0),
       highlight: (pendingWholesaleOrders ?? 0) > 0,
+    },
+    {
+      label: 'Commissions dues',
+      value: formatMAD(pendingCommissionTotal),
+      highlight: pendingCommissionCount > 0,
     },
   ]
 
@@ -150,7 +165,7 @@ export default async function AdminDashboardPage() {
 
         {/* Quick actions */}
           {isAdmin && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               {
                 title: 'Approuver les inscriptions',
@@ -175,6 +190,12 @@ export default async function AdminDashboardPage() {
                 description: 'Gérer les commandes B2B et convertir les paniers.',
                 badge: pendingWholesaleOrders ?? 0,
                 href: '/admin/wholesale-orders',
+              },
+              {
+                title: 'Commissions affiliés',
+                description: 'Approuver et marquer les commissions comme payées.',
+                badge: pendingCommissionCount,
+                href: '/admin/commissions',
               },
             ].map((action) => (
               <div

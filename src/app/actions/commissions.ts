@@ -28,6 +28,8 @@ export async function updateCommissionStatus(
   if (updateErr) return { error: updateErr.message }
 
   revalidatePath('/admin/orders')
+  revalidatePath('/admin/commissions')
+  revalidatePath('/admin/dashboard')
   return { error: null }
 }
 
