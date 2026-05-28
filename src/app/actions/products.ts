@@ -1,9 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { isValidMediaUrl } from '@/lib/product-media'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { requireAdmin } from './_guards'
 import type {
   WholesaleTier,
   ProductSubmittedVia,
@@ -32,12 +32,8 @@ export async function upsertProduct(
   _prevState: ProductFormState,
   formData: FormData
 ): Promise<ProductFormState> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié.' }
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return { error: authError ?? 'Erreur.' }
 
   // ── Basic fields ──────────────────────────────────────────────────────────
 
@@ -225,9 +221,9 @@ export async function upsertProduct(
       // Set approved_by/at when transitioning to approved
       approved_by:
         isNowApproved && !wasApproved
-          ? user.id
+          ? userId
           : isNowApproved
-          ? (existing?.approved_by ?? user.id)
+          ? (existing?.approved_by ?? userId)
           : null,
       approved_at:
         isNowApproved && !wasApproved
@@ -244,8 +240,8 @@ export async function upsertProduct(
 
     const insertPayload = {
       ...base,
-      submitted_by: user.id,
-      approved_by: approval_status === 'approved' ? user.id : null,
+      submitted_by: userId,
+      approved_by: approval_status === 'approved' ? userId : null,
       approved_at: approval_status === 'approved' ? now : null,
     }
 
@@ -264,7 +260,8 @@ export async function upsertProduct(
  * Refuses to activate a product that is not yet approved.
  */
 export async function toggleProductActive(id: string, newActive: boolean): Promise<void> {
-  const supabase = await createClient()
+  const { supabase, error } = await requireAdmin()
+  if (error) return
 
   if (newActive) {
     // Guard: only allow activation if product is approved
@@ -284,7 +281,9 @@ export async function toggleProductActive(id: string, newActive: boolean): Promi
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 export async function deleteProduct(id: string): Promise<void> {
-  const supabase = await createClient()
+  const { supabase, error } = await requireAdmin()
+  if (error) return
+
   await supabase.from('products').delete().eq('id', id)
   revalidatePath('/admin/products')
 }

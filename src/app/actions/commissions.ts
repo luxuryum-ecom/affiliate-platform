@@ -1,27 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { CommissionStatus, ProofType } from '@/types/database'
-
-async function requireAdmin() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { supabase, error: 'Non authentifié.' }
-
-  const { data: profile } = (await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()) as { data: { role: string } | null; error: unknown }
-
-  if (profile?.role !== 'admin' && profile?.role !== 'agent') {
-    return { supabase, error: 'Accès réservé aux administrateurs.' }
-  }
-  return { supabase, error: null, userId: user.id }
-}
+import { requireAdmin } from './_guards'
 
 export async function updateCommissionStatus(
   commissionId: string,
@@ -31,7 +12,7 @@ export async function updateCommissionStatus(
     return { error: 'Statut invalide.' }
   }
 
-  const { supabase, error, userId } = await requireAdmin()
+  const { supabase, error, userId } = await requireAdmin({ allowAgent: true })
   if (error || !userId) return { error: error ?? 'Erreur.' }
 
   const update: Record<string, unknown> = { status: newStatus }
@@ -68,7 +49,7 @@ export async function addOrderProof(formData: FormData): Promise<{ error: string
   ]
   if (!validTypes.includes(proofType)) return { error: 'Type de preuve invalide.' }
 
-  const { supabase, error, userId } = await requireAdmin()
+  const { supabase, error, userId } = await requireAdmin({ allowAgent: true })
   if (error || !userId) return { error: error ?? 'Erreur.' }
 
   const { error: insertErr } = await supabase.from('order_proofs').insert({

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getWholesaleTier } from '@/lib/utils'
+import { requireAdmin } from './_guards'
 import {
   scoreDuplicateOrder,
   scoreFraudOrder,
@@ -191,7 +192,8 @@ export async function updateOrderStatus(
     returnReason?: string
   }
 ): Promise<ActionState> {
-  const supabase = await createClient()
+  const { supabase, error: authError } = await requireAdmin({ allowAgent: true })
+  if (authError) return fail(authError)
 
   // ── Fetch current state ───────────────────────────────────────────────────
   const { data: order } = (await supabase
@@ -273,7 +275,9 @@ export async function createWholesaleOrderFromCart(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await createClient()
+  const { supabase, error: authError } = await requireAdmin({ allowAgent: true })
+  if (authError) return fail(authError)
+
   const buyerId = (formData.get('buyerId') as string)?.trim()
   if (!buyerId) return fail('Acheteur non spécifié.')
 
@@ -453,7 +457,8 @@ export async function updateWholesaleOrderStatus(
   newStatus: WholesaleOrderStatus,
   notes?: string
 ): Promise<ActionState> {
-  const supabase = await createClient()
+  const { supabase, error: authError } = await requireAdmin({ allowAgent: true })
+  if (authError) return fail(authError)
 
   const { data: order } = (await supabase
     .from('wholesale_orders')
