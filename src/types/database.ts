@@ -276,6 +276,16 @@ export interface OrderProof {
   uploaded_at: string
 }
 
+export interface AffiliateProductPrice {
+  id: string
+  affiliate_id: string
+  product_id: string
+  /** Custom sell price set by the affiliate (MAD). Must be >= product.sell_price. */
+  custom_sell_price_mad: number
+  created_at: string
+  updated_at: string
+}
+
 export interface AffiliateClick {
   id: string
   affiliate_id: string
@@ -391,6 +401,11 @@ export type Database = {
         OrderProof,
         Omit<OrderProof, 'id' | 'uploaded_at'>,
         Partial<OrderProof>
+      >
+      affiliate_product_prices: TableDef<
+        AffiliateProductPrice,
+        Omit<AffiliateProductPrice, 'id' | 'created_at' | 'updated_at'>,
+        Partial<AffiliateProductPrice>
       >
       affiliate_clicks: TableDef<
         AffiliateClick,

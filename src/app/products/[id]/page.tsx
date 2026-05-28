@@ -6,7 +6,6 @@ import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getDeliveryEstimate } from '@/lib/order-analytics'
 import { CodOrderForm } from '@/components/customer/cod-order-form'
 import { ProductGallery } from '@/components/customer/product-gallery'
-import { AffiliateAttributionTracker } from '@/components/customer/affiliate-attribution-tracker'
 import type { Product } from '@/types/database'
 
 interface Params {
@@ -48,6 +47,25 @@ export default async function PublicProductPage({ params, searchParams }: Params
   if (!product || product.availability_type === 'import_on_demand') notFound()
 
   const affiliateId = ref ?? null
+
+  // Look up affiliate's custom sell price if a referral is present.
+  // Falls back to product.sell_price when no custom price is set.
+  let customSellPrice: number | null = null
+  if (affiliateId) {
+    const { data: priceRow } = (await supabase
+      .from('affiliate_product_prices')
+      .select('custom_sell_price_mad')
+      .eq('affiliate_id', affiliateId)
+      .eq('product_id', product.id)
+      .maybeSingle()) as {
+      data: { custom_sell_price_mad: number } | null
+      error: unknown
+    }
+    customSellPrice = priceRow ? Number(priceRow.custom_sell_price_mad) : null
+  }
+
+  const displayPrice = customSellPrice ?? product.sell_price
+
   const coverUrl = getProductCoverUrl(product)
   const galleryUrls = getProductGalleryUrls(product)
   const delivery = getDeliveryEstimate(product.availability_type)
@@ -57,8 +75,6 @@ export default async function PublicProductPage({ params, searchParams }: Params
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AffiliateAttributionTracker productId={product.id} affiliateId={affiliateId} />
-
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-lg md:max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
           <Link href="/" className="text-sm font-semibold text-gray-900">
@@ -114,7 +130,7 @@ export default async function PublicProductPage({ params, searchParams }: Params
 
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-gray-900">
-                {formatMAD(product.sell_price)}
+                {formatMAD(displayPrice)}
               </span>
               <span className="text-sm text-gray-400">/ unité</span>
             </div>
@@ -136,7 +152,7 @@ export default async function PublicProductPage({ params, searchParams }: Params
                 productId={product.id}
                 affiliateIdFromUrl={affiliateId}
                 productName={product.name}
-                sellPrice={product.sell_price}
+                sellPrice={displayPrice}
                 maxQty={Math.max(product.stock_count, 0)}
               />
             </div>

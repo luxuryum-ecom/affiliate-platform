@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
+import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
@@ -27,15 +28,27 @@ export default async function AffiliateProductsPage() {
     .eq('id', user.id)
     .single() as { data: { full_name: string } | null; error: unknown }
 
-  const { data: products } = await supabase
-    .from('products')
-    .select('*')
-    .eq('active', true)
-    .eq('approval_status', 'approved')
-    .eq('affiliate_enabled', true)       // only products enabled for affiliate promotion
-    .order('created_at', { ascending: false }) as { data: Product[] | null; error: unknown }
+  const [productsRes, customPricesRes] = await Promise.all([
+    supabase
+      .from('products')
+      .select('*')
+      .eq('active', true)
+      .eq('approval_status', 'approved')
+      .eq('affiliate_enabled', true)
+      .order('created_at', { ascending: false }) as unknown as Promise<{ data: Product[] | null; error: unknown }>,
+    supabase
+      .from('affiliate_product_prices')
+      .select('product_id, custom_sell_price_mad')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { product_id: string; custom_sell_price_mad: number }[] | null
+        error: unknown
+      }>,
+  ])
 
-  const list = products ?? []
+  const list = productsRes.data ?? []
+  const customPriceMap = new Map(
+    (customPricesRes.data ?? []).map((r) => [r.product_id, Number(r.custom_sell_price_mad)])
+  )
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://yourapp.com'
 
   return (
@@ -86,11 +99,13 @@ export default async function AffiliateProductsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {list.map((product) => {
               const referralUrl = `${APP_URL}/products/${product.id}?ref=${user.id}`
+              const customPrice = customPriceMap.get(product.id) ?? null
               return (
                 <AffiliateProductCard
                   key={product.id}
                   product={product}
                   referralUrl={referralUrl}
+                  customPrice={customPrice}
                 />
               )
             })}
@@ -106,9 +121,11 @@ export default async function AffiliateProductsPage() {
 function AffiliateProductCard({
   product,
   referralUrl,
+  customPrice,
 }: {
   product: Product
   referralUrl: string
+  customPrice: number | null
 }) {
   const coverUrl = getProductCoverUrl(product)
 
@@ -146,16 +163,24 @@ function AffiliateProductCard({
         {/* Pricing */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-400">Prix de base</p>
+            <p className="text-xs text-gray-400">Prix catalogue</p>
             <p className="text-sm font-medium text-gray-700">{formatMAD(product.sell_price)}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-400">Votre commission</p>
+            <p className="text-xs text-gray-400">Commission de base</p>
             <p className="text-base font-bold text-green-600">
               {formatMAD(product.commission_amount)}
             </p>
           </div>
         </div>
+
+        {/* Custom price indicator */}
+        {customPrice !== null && (
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 text-xs">
+            <span className="text-blue-700">Prix personnalisé actif</span>
+            <span className="font-bold text-blue-800 tabular-nums">{formatMAD(customPrice)}</span>
+          </div>
+        )}
 
         {/* Operational fees */}
         <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-2.5 py-1.5 space-y-0.5">
@@ -183,8 +208,15 @@ function AffiliateProductCard({
           </span>
         </p>
 
+        {/* Custom price setter */}
+        <AffiliatePriceForm
+          productId={product.id}
+          platformPrice={product.sell_price}
+          currentCustomPrice={customPrice}
+        />
+
         {/* Copy link — pushed to bottom */}
-        <div className="mt-auto">
+        <div className="mt-auto pt-3">
           <CopyLinkButton url={referralUrl} />
         </div>
       </div>

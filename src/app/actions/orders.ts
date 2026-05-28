@@ -95,9 +95,29 @@ export async function placeOrder(
     }
   }
 
-  const unitPrice = product.sell_price
+  // Look up affiliate's custom sell price server-side — do not trust the form value.
+  // Commission = (custom_price − platform_price + commission_amount) × qty,
+  // so the affiliate earns their markup on top of the base commission.
+  let unitPrice = product.sell_price
+  let commissionPerUnit = product.commission_amount
+
+  if (validatedAffiliateId) {
+    const { data: priceRow } = (await supabase
+      .from('affiliate_product_prices')
+      .select('custom_sell_price_mad')
+      .eq('affiliate_id', validatedAffiliateId)
+      .eq('product_id', productId)
+      .maybeSingle()) as { data: { custom_sell_price_mad: number } | null; error: unknown }
+
+    if (priceRow?.custom_sell_price_mad) {
+      const customPrice = Number(priceRow.custom_sell_price_mad)
+      unitPrice = customPrice
+      // Affiliate earns base commission + any markup above platform price
+      commissionPerUnit = product.commission_amount + Math.max(0, customPrice - product.sell_price)
+    }
+  }
+
   const totalAmount = parseFloat((unitPrice * quantity).toFixed(2))
-  const commissionPerUnit = product.commission_amount
   const commissionAmount = validatedAffiliateId
     ? parseFloat((commissionPerUnit * quantity).toFixed(2))
     : 0
