@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "check": "tsc --noEmit && next lint",
+    "safe-check": "bash scripts/safe-check.sh",
     "migrate": "supabase db push",
     "types": "supabase gen types typescript --project-id owvtfzxvirttrbcsiveg --schema public > src/types/supabase-generated.ts",
     "reset-cache": "rm -rf .next"

@@ -1,0 +1,83 @@
+---
+description: Deployment, env vars, CI, and production safety gates
+globs: vercel.json,.github/**,.env*,package.json
+alwaysApply: false
+---
+
+# Deployment Safety
+
+## Environments
+| Environment | Config source | Deploy trigger |
+|---|---|---|
+| Local | `.env.local` (gitignored) | `npm run dev` |
+| Production | Vercel dashboard env vars | Push to `main` → Vercel auto-deploy |
+| CI | GitHub Actions secrets | Push / PR to `main` |
+
+## Required env vars (production)
+Reference: `.env.production.example`
+```
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY        # server-only, never in client bundle
+NEXT_PUBLIC_APP_URL
+NEXT_PUBLIC_WHATSAPP_PHONE
+```
+
+## Agent rules for secrets
+- **NEVER** commit `.env.local`, real API keys, or service role keys
+- **NEVER** read or display secret values in chat output
+- **NEVER** add secrets to committed files
+- **ASK USER** before: setting Vercel env vars, updating GitHub secrets, modifying auth keys
+
+## Pre-deploy checklist (agent runs autonomously)
+```bash
+npm run safe-check    # typecheck + lint + build
+git status            # no unintended files staged
+```
+
+## Production deploy — approval required
+The agent must **ask user** before:
+- Pushing to `main` with intent to deploy
+- Manual Vercel deploy
+- Changing `vercel.json` region or build settings
+- Adding/removing production env vars
+
+Autonomous (no approval needed):
+- Local `npm run build` verification
+- Fixing CI failures on a feature branch
+- Updating `.env.production.example` (names only, no values)
+
+## Vercel config
+```json
+// vercel.json — region cdg1 (Paris, closest to Morocco)
+{ "framework": "nextjs", "regions": ["cdg1"] }
+```
+
+## CI workflow
+File: `.github/workflows/ci.yml` (requires GitHub PAT with `workflow` scope to push)
+Runs on push/PR to `main`:
+1. `npm run typecheck`
+2. `npm run build` (with secrets)
+
+## Git safety
+- Never `git push --force` to `main`
+- Never skip hooks (`--no-verify`) unless user explicitly requests
+- Commit only when user asks (unless creating explicit checkpoint before risky work)
+- Use conventional commits: `feat(scope):`, `fix(scope):`, `chore(scope):`
+
+## Supabase project
+- Project ref: `owvtfzxvirttrbcsiveg`
+- Migrations via CLI: `npm run migrate` (not manual paste unless user prefers)
+- Storage bucket `product-images` must exist (public) for admin image upload
+
+## Rollback
+- Vercel: redeploy previous deployment from dashboard
+- Database: forward-only migrations — write new migration to revert
+- Code: `git revert <commit>`
+
+## Health check after deploy
+Agent should tell user to verify:
+1. Login as admin → `/admin/dashboard`
+2. Product list loads → `/admin/products`
+3. Public product page → `/products/[id]`
+4. Affiliate dashboard → `/affiliate/dashboard` (approved affiliate account)
