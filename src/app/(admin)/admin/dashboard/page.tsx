@@ -203,6 +203,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/payouts',
               },
+              {
+                title: 'Analytiques',
+                description: 'Revenus, profit, top produits et performance affiliés.',
+                badge: null,
+                href: '/admin/analytics',
+              },
             ].map((action) => (
               <div
                 key={action.title}
