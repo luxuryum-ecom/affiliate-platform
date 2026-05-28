@@ -1,161 +1,130 @@
 -- =============================================================================
--- Migration: 001_initial_schema
--- Project:   Affiliate + Wholesale Platform
--- Created:   2026-05-26
---
--- Run this in: Supabase dashboard → SQL Editor → New query → Run
---
--- Tables (8):
---   profiles, products, orders,
---   wholesale_cart_items, wholesale_orders, wholesale_order_items,
---   commissions, payouts
+-- Migration: 001_initial_schema  (idempotent — safe to re-run)
 -- =============================================================================
 
 -- Extensions
-create extension if not exists "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =============================================================================
--- TABLES
+-- TABLES (all CREATE TABLE IF NOT EXISTS)
 -- =============================================================================
 
--- 1. profiles ─────────────────────────────────────────────────────────────────
---    One row per authenticated user. Created automatically by the
---    handle_new_user trigger when a user signs up via Supabase Auth.
-create table public.profiles (
-  id           uuid        primary key references auth.users(id) on delete cascade,
-  role         text        not null
-                           check (role in ('admin', 'affiliate', 'wholesaler', 'agent')),
-  full_name    text        not null default '',
+-- 1. profiles
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id           uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role         text        NOT NULL
+                           CHECK (role IN ('admin', 'affiliate', 'wholesaler', 'agent')),
+  full_name    text        NOT NULL DEFAULT '',
   phone        text,
   city         text,
   bank_account text,
-  status       text        not null default 'pending'
-                           check (status in ('pending', 'approved', 'rejected')),
-  created_at   timestamptz not null default now()
+  status       text        NOT NULL DEFAULT 'pending'
+                           CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at   timestamptz NOT NULL DEFAULT now()
 );
 
--- 2. products ─────────────────────────────────────────────────────────────────
---    Single product table shared by both journeys.
---    commission_amount is shown to affiliates only.
---    wholesale_tiers (JSONB) is shown to wholesale buyers only.
-create table public.products (
-  id                uuid          primary key default uuid_generate_v4(),
-  name              text          not null,
+-- 2. products
+CREATE TABLE IF NOT EXISTS public.products (
+  id                uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name              text          NOT NULL,
   description       text,
-  sell_price        numeric(10,2) not null check (sell_price > 0),
-  commission_amount numeric(10,2) not null default 0 check (commission_amount >= 0),
-  -- Array of {min_qty, max_qty?, price_per_unit} objects.
-  -- Last tier always omits max_qty (open-ended).
-  wholesale_tiers   jsonb         not null default '[]'::jsonb,
-  wholesale_min_qty integer       not null default 1 check (wholesale_min_qty >= 1),
-  stock_count       integer       not null default 0 check (stock_count >= 0),
-  images            text[]        not null default '{}',
-  type              text          not null check (type in ('local', 'imported')),
-  active            boolean       not null default true,
-  created_at        timestamptz   not null default now()
+  sell_price        numeric(10,2) NOT NULL CHECK (sell_price > 0),
+  commission_amount numeric(10,2) NOT NULL DEFAULT 0 CHECK (commission_amount >= 0),
+  wholesale_tiers   jsonb         NOT NULL DEFAULT '[]'::jsonb,
+  wholesale_min_qty integer       NOT NULL DEFAULT 1 CHECK (wholesale_min_qty >= 1),
+  stock_count       integer       NOT NULL DEFAULT 0 CHECK (stock_count >= 0),
+  images            text[]        NOT NULL DEFAULT '{}',
+  type              text          CHECK (type IN ('local', 'imported')),
+  active            boolean       NOT NULL DEFAULT true,
+  created_at        timestamptz   NOT NULL DEFAULT now()
 );
 
--- 3. orders ───────────────────────────────────────────────────────────────────
---    COD affiliate orders. No wholesale fields here.
-create table public.orders (
-  id                uuid          primary key default uuid_generate_v4(),
-  affiliate_id      uuid          not null references public.profiles(id),
-  product_id        uuid          not null references public.products(id),
-  customer_name     text          not null,
-  customer_phone    text          not null,
-  customer_city     text          not null,
-  customer_address  text          not null,
-  quantity          integer       not null default 1 check (quantity > 0),
-  total_amount      numeric(10,2) not null check (total_amount > 0),
-  commission_amount numeric(10,2) not null check (commission_amount >= 0),
-  status            text          not null default 'pending'
-                                  check (status in (
+-- 3. orders
+CREATE TABLE IF NOT EXISTS public.orders (
+  id                uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  affiliate_id      uuid          REFERENCES public.profiles(id),
+  product_id        uuid          NOT NULL REFERENCES public.products(id),
+  customer_name     text          NOT NULL,
+  customer_phone    text          NOT NULL,
+  customer_city     text          NOT NULL,
+  customer_address  text          NOT NULL,
+  quantity          integer       NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  total_amount      numeric(10,2) NOT NULL CHECK (total_amount > 0),
+  commission_amount numeric(10,2) NOT NULL CHECK (commission_amount >= 0),
+  status            text          NOT NULL DEFAULT 'pending'
+                                  CHECK (status IN (
                                     'pending', 'confirmed', 'shipped',
                                     'delivered', 'returned', 'cancelled'
                                   )),
   notes             text,
-  created_at        timestamptz   not null default now(),
-  updated_at        timestamptz   not null default now()
+  created_at        timestamptz   NOT NULL DEFAULT now(),
+  updated_at        timestamptz   NOT NULL DEFAULT now()
 );
 
--- 4. wholesale_cart_items ─────────────────────────────────────────────────────
---    DB-backed cart (not localStorage). Persists across sessions.
---    UNIQUE constraint prevents duplicate product rows per buyer.
-create table public.wholesale_cart_items (
-  id         uuid        primary key default uuid_generate_v4(),
-  buyer_id   uuid        not null references public.profiles(id) on delete cascade,
-  product_id uuid        not null references public.products(id) on delete cascade,
-  quantity   integer     not null check (quantity > 0),
-  added_at   timestamptz not null default now(),
-  unique (buyer_id, product_id)
+-- 4. wholesale_cart_items
+CREATE TABLE IF NOT EXISTS public.wholesale_cart_items (
+  id         uuid        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  buyer_id   uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  product_id uuid        NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+  quantity   integer     NOT NULL CHECK (quantity > 0),
+  added_at   timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (buyer_id, product_id)
 );
 
--- 5. wholesale_orders ─────────────────────────────────────────────────────────
---    Order header. Line items are in wholesale_order_items.
---    agent_id is set by admin after submission.
-create table public.wholesale_orders (
-  id                  uuid          primary key default uuid_generate_v4(),
-  buyer_id            uuid          not null references public.profiles(id),
-  agent_id            uuid          references public.profiles(id),
-  delivery_preference text          not null
-                                    check (delivery_preference in ('pickup', 'delivery')),
+-- 5. wholesale_orders
+CREATE TABLE IF NOT EXISTS public.wholesale_orders (
+  id                  uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  buyer_id            uuid          NOT NULL REFERENCES public.profiles(id),
+  agent_id            uuid          REFERENCES public.profiles(id),
+  delivery_preference text          NOT NULL
+                                    CHECK (delivery_preference IN ('pickup', 'delivery')),
   city                text,
   address             text,
   buyer_notes         text,
-  -- agent_notes: internal only, never shown to the buyer
   agent_notes         text,
-  total_amount        numeric(10,2) not null default 0 check (total_amount >= 0),
-  status              text          not null default 'submitted'
-                                    check (status in (
-                                      'submitted', 'contacted', 'validated',
-                                      'awaiting_payment', 'paid', 'ready',
-                                      'completed', 'cancelled'
+  total_amount        numeric(10,2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
+  status              text          NOT NULL DEFAULT 'pending'
+                                    CHECK (status IN (
+                                      'pending', 'confirmed', 'sourcing',
+                                      'shipped', 'delivered', 'cancelled'
                                     )),
-  created_at          timestamptz   not null default now(),
-  updated_at          timestamptz   not null default now()
+  created_at          timestamptz   NOT NULL DEFAULT now(),
+  updated_at          timestamptz   NOT NULL DEFAULT now()
 );
 
--- 6. wholesale_order_items ────────────────────────────────────────────────────
---    Line items with price snapshot. unit_price_snapshot and tier_label_snapshot
---    are written once at submission and NEVER updated — price changes to products
---    do not retroactively affect existing orders.
-create table public.wholesale_order_items (
-  id                  uuid          primary key default uuid_generate_v4(),
-  order_id            uuid          not null references public.wholesale_orders(id) on delete cascade,
-  product_id          uuid          not null references public.products(id),
-  quantity            integer       not null check (quantity > 0),
-  unit_price_snapshot numeric(10,2) not null check (unit_price_snapshot > 0),
-  subtotal            numeric(10,2) not null check (subtotal > 0),
-  -- Human-readable tier label captured at submission, e.g. "10–49 unités @ 120 MAD/u"
-  tier_label_snapshot text          not null
+-- 6. wholesale_order_items
+CREATE TABLE IF NOT EXISTS public.wholesale_order_items (
+  id                  uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  order_id            uuid          NOT NULL REFERENCES public.wholesale_orders(id) ON DELETE CASCADE,
+  product_id          uuid          NOT NULL REFERENCES public.products(id),
+  quantity            integer       NOT NULL CHECK (quantity > 0),
+  unit_price_snapshot numeric(10,2) NOT NULL CHECK (unit_price_snapshot > 0),
+  subtotal            numeric(10,2) NOT NULL CHECK (subtotal > 0),
+  tier_label_snapshot text          NOT NULL
 );
 
--- 7. commissions ──────────────────────────────────────────────────────────────
---    Created automatically by the handle_order_delivered trigger.
---    One row per delivered COD order. Affiliate journey only.
-create table public.commissions (
-  id           uuid          primary key default uuid_generate_v4(),
-  affiliate_id uuid          not null references public.profiles(id),
-  order_id     uuid          not null references public.orders(id),
-  amount       numeric(10,2) not null check (amount > 0),
-  status       text          not null default 'pending'
-                             check (status in ('pending', 'approved', 'paid')),
-  created_at   timestamptz   not null default now(),
+-- 7. commissions
+CREATE TABLE IF NOT EXISTS public.commissions (
+  id           uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  affiliate_id uuid          NOT NULL REFERENCES public.profiles(id),
+  order_id     uuid          NOT NULL REFERENCES public.orders(id),
+  amount       numeric(10,2) NOT NULL CHECK (amount > 0),
+  status       text          NOT NULL DEFAULT 'pending'
+                             CHECK (status IN ('pending', 'approved', 'paid')),
+  created_at   timestamptz   NOT NULL DEFAULT now(),
   paid_at      timestamptz
 );
 
--- 8. payouts ──────────────────────────────────────────────────────────────────
---    Manually created by admin when transferring commission funds.
---    Affiliate journey only. Wholesale payments are tracked outside the app.
-create table public.payouts (
-  id           uuid          primary key default uuid_generate_v4(),
-  affiliate_id uuid          not null references public.profiles(id),
-  amount       numeric(10,2) not null check (amount > 0),
-  status       text          not null default 'pending'
-                             check (status in ('pending', 'processing', 'paid')),
+-- 8. payouts
+CREATE TABLE IF NOT EXISTS public.payouts (
+  id           uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  affiliate_id uuid          NOT NULL REFERENCES public.profiles(id),
+  amount       numeric(10,2) NOT NULL CHECK (amount > 0),
+  status       text          NOT NULL DEFAULT 'pending'
+                             CHECK (status IN ('pending', 'processing', 'paid')),
   reference    text,
   notes        text,
-  created_at   timestamptz   not null default now(),
+  created_at   timestamptz   NOT NULL DEFAULT now(),
   paid_at      timestamptz
 );
 
@@ -163,322 +132,274 @@ create table public.payouts (
 -- INDEXES
 -- =============================================================================
 
-create index idx_orders_affiliate_id      on public.orders(affiliate_id);
-create index idx_orders_product_id        on public.orders(product_id);
-create index idx_orders_status            on public.orders(status);
-create index idx_orders_created_at        on public.orders(created_at desc);
+CREATE INDEX IF NOT EXISTS idx_orders_affiliate_id      ON public.orders(affiliate_id);
+CREATE INDEX IF NOT EXISTS idx_orders_product_id        ON public.orders(product_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status            ON public.orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at        ON public.orders(created_at DESC);
 
-create index idx_cart_buyer_id            on public.wholesale_cart_items(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_cart_buyer_id            ON public.wholesale_cart_items(buyer_id);
 
-create index idx_wo_buyer_id              on public.wholesale_orders(buyer_id);
-create index idx_wo_agent_id              on public.wholesale_orders(agent_id);
-create index idx_wo_status                on public.wholesale_orders(status);
-create index idx_wo_created_at            on public.wholesale_orders(created_at desc);
+CREATE INDEX IF NOT EXISTS idx_wo_buyer_id              ON public.wholesale_orders(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_wo_agent_id              ON public.wholesale_orders(agent_id);
+CREATE INDEX IF NOT EXISTS idx_wo_status                ON public.wholesale_orders(status);
+CREATE INDEX IF NOT EXISTS idx_wo_created_at            ON public.wholesale_orders(created_at DESC);
 
-create index idx_woi_order_id             on public.wholesale_order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_woi_order_id             ON public.wholesale_order_items(order_id);
 
-create index idx_commissions_affiliate_id on public.commissions(affiliate_id);
-create index idx_commissions_order_id     on public.commissions(order_id);
-create index idx_commissions_status       on public.commissions(status);
+CREATE INDEX IF NOT EXISTS idx_commissions_affiliate_id ON public.commissions(affiliate_id);
+CREATE INDEX IF NOT EXISTS idx_commissions_order_id     ON public.commissions(order_id);
+CREATE INDEX IF NOT EXISTS idx_commissions_status       ON public.commissions(status);
 
-create index idx_payouts_affiliate_id     on public.payouts(affiliate_id);
-create index idx_payouts_status           on public.payouts(status);
+CREATE INDEX IF NOT EXISTS idx_payouts_affiliate_id     ON public.payouts(affiliate_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_status           ON public.payouts(status);
 
 -- =============================================================================
--- TRIGGERS
+-- FUNCTIONS
 -- =============================================================================
 
--- updated_at: auto-bump on any row update ─────────────────────────────────────
-create or replace function public.handle_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
 $$;
 
-create trigger orders_updated_at
-  before update on public.orders
-  for each row execute function public.handle_updated_at();
-
-create trigger wholesale_orders_updated_at
-  before update on public.wholesale_orders
-  for each row execute function public.handle_updated_at();
-
--- handle_new_user: create profile row on auth signup ──────────────────────────
---
--- When a user signs up via supabase.auth.signUp(), they pass metadata:
---   { full_name: '...', role: 'affiliate' | 'wholesaler' }
--- This trigger reads that metadata and inserts the profile row.
--- Admin and agent accounts are created directly in the DB (no public signup).
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, role, full_name, status)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'role', 'affiliate'),
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.profiles (id, role, full_name, status)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'role', 'affiliate'),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
     'pending'
   );
-  return new;
-end;
+  RETURN NEW;
+END;
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
-
--- handle_order_delivered: auto-create commission when order is delivered ───────
---
--- This runs as a DB trigger (not application code) to guarantee
--- commission creation is atomic with the status change and cannot be skipped.
--- Uses ON CONFLICT DO NOTHING to prevent duplicate commissions if the trigger
--- fires more than once (e.g. delivered → other status → delivered again).
-create or replace function public.handle_order_delivered()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if new.status = 'delivered' and old.status <> 'delivered' then
-    insert into public.commissions (affiliate_id, order_id, amount, status)
-    values (new.affiliate_id, new.id, new.commission_amount, 'pending')
-    on conflict do nothing;
-  end if;
-  return new;
-end;
+CREATE OR REPLACE FUNCTION public.handle_order_delivered()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.status = 'delivered'
+     AND OLD.status <> 'delivered'
+     AND NEW.affiliate_id IS NOT NULL
+     AND NEW.commission_amount > 0
+  THEN
+    INSERT INTO public.commissions (affiliate_id, order_id, amount, status)
+    VALUES (NEW.affiliate_id, NEW.id, NEW.commission_amount, 'pending')
+    ON CONFLICT DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
 $$;
 
-create trigger on_order_delivered
-  after update on public.orders
-  for each row execute function public.handle_order_delivered();
+CREATE OR REPLACE FUNCTION public.my_role()
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid()
+$$;
+
+-- =============================================================================
+-- TRIGGERS  (DROP IF EXISTS → CREATE)
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS orders_updated_at ON public.orders;
+CREATE TRIGGER orders_updated_at
+  BEFORE UPDATE ON public.orders
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+DROP TRIGGER IF EXISTS wholesale_orders_updated_at ON public.wholesale_orders;
+CREATE TRIGGER wholesale_orders_updated_at
+  BEFORE UPDATE ON public.wholesale_orders
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+DROP TRIGGER IF EXISTS on_order_delivered ON public.orders;
+CREATE TRIGGER on_order_delivered
+  AFTER UPDATE ON public.orders
+  FOR EACH ROW EXECUTE FUNCTION public.handle_order_delivered();
 
 -- =============================================================================
 -- ROW LEVEL SECURITY
 -- =============================================================================
 
-alter table public.profiles             enable row level security;
-alter table public.products             enable row level security;
-alter table public.orders               enable row level security;
-alter table public.wholesale_cart_items enable row level security;
-alter table public.wholesale_orders     enable row level security;
-alter table public.wholesale_order_items enable row level security;
-alter table public.commissions          enable row level security;
-alter table public.payouts              enable row level security;
+ALTER TABLE public.profiles              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wholesale_cart_items  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wholesale_orders      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wholesale_order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.commissions           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payouts               ENABLE ROW LEVEL SECURITY;
 
--- Helper function: returns the current user's role from profiles.
--- STABLE: result is constant within a single query, so Postgres can cache it.
--- SECURITY DEFINER: bypasses RLS on profiles so the function always works.
-create or replace function public.my_role()
-returns text
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select role from public.profiles where id = auth.uid()
-$$;
+-- ── profiles ──────────────────────────────────────────────────────────────────
 
--- ─── profiles ─────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "profiles: read own or admin" ON public.profiles;
+CREATE POLICY "profiles: read own or admin"
+  ON public.profiles FOR SELECT TO authenticated
+  USING (id = auth.uid() OR public.my_role() = 'admin');
 
--- Users can read their own profile; admins can read all.
-create policy "profiles: read own or admin"
-  on public.profiles for select
-  to authenticated
-  using (id = auth.uid() or public.my_role() = 'admin');
-
--- Users can update their own non-sensitive fields.
--- The WITH CHECK prevents any user from changing their own role or status.
-create policy "profiles: update own (no role/status change)"
-  on public.profiles for update
-  to authenticated
-  using (id = auth.uid())
-  with check (
+DROP POLICY IF EXISTS "profiles: update own (no role/status change)" ON public.profiles;
+CREATE POLICY "profiles: update own (no role/status change)"
+  ON public.profiles FOR UPDATE TO authenticated
+  USING (id = auth.uid())
+  WITH CHECK (
     id = auth.uid()
-    and role   = (select role   from public.profiles where id = auth.uid())
-    and status = (select status from public.profiles where id = auth.uid())
+    AND role   = (SELECT role   FROM public.profiles WHERE id = auth.uid())
+    AND status = (SELECT status FROM public.profiles WHERE id = auth.uid())
   );
 
--- Admin can update any profile (role and status changes go through here).
-create policy "profiles: admin update any"
-  on public.profiles for update
-  to authenticated
-  using (public.my_role() = 'admin');
+DROP POLICY IF EXISTS "profiles: admin update any" ON public.profiles;
+CREATE POLICY "profiles: admin update any"
+  ON public.profiles FOR UPDATE TO authenticated
+  USING (public.my_role() = 'admin');
 
--- ─── products ─────────────────────────────────────────────────────────────────
+-- ── products ──────────────────────────────────────────────────────────────────
 
--- All authenticated users can read active products.
-create policy "products: authenticated read active"
-  on public.products for select
-  to authenticated
-  using (active = true or public.my_role() = 'admin');
+DROP POLICY IF EXISTS "products: authenticated read active" ON public.products;
+CREATE POLICY "products: authenticated read active"
+  ON public.products FOR SELECT TO authenticated
+  USING (active = true OR public.my_role() = 'admin');
 
-create policy "products: admin insert"
-  on public.products for insert
-  to authenticated
-  with check (public.my_role() = 'admin');
+DROP POLICY IF EXISTS "products: admin insert" ON public.products;
+CREATE POLICY "products: admin insert"
+  ON public.products FOR INSERT TO authenticated
+  WITH CHECK (public.my_role() = 'admin');
 
-create policy "products: admin update"
-  on public.products for update
-  to authenticated
-  using (public.my_role() = 'admin')
-  with check (public.my_role() = 'admin');
+DROP POLICY IF EXISTS "products: admin update" ON public.products;
+CREATE POLICY "products: admin update"
+  ON public.products FOR UPDATE TO authenticated
+  USING (public.my_role() = 'admin')
+  WITH CHECK (public.my_role() = 'admin');
 
-create policy "products: admin delete"
-  on public.products for delete
-  to authenticated
-  using (public.my_role() = 'admin');
+DROP POLICY IF EXISTS "products: admin delete" ON public.products;
+CREATE POLICY "products: admin delete"
+  ON public.products FOR DELETE TO authenticated
+  USING (public.my_role() = 'admin');
 
--- ─── orders (COD affiliate) ───────────────────────────────────────────────────
+-- ── orders ────────────────────────────────────────────────────────────────────
 
-create policy "orders: affiliates read own"
-  on public.orders for select
-  to authenticated
-  using (affiliate_id = auth.uid() or public.my_role() = 'admin');
+DROP POLICY IF EXISTS "orders: affiliates read own" ON public.orders;
+CREATE POLICY "orders: affiliates read own"
+  ON public.orders FOR SELECT TO authenticated
+  USING (affiliate_id = auth.uid() OR public.my_role() = 'admin');
 
-create policy "orders: affiliates insert own"
-  on public.orders for insert
-  to authenticated
-  with check (
+DROP POLICY IF EXISTS "orders: affiliates insert own" ON public.orders;
+CREATE POLICY "orders: affiliates insert own"
+  ON public.orders FOR INSERT TO authenticated
+  WITH CHECK (
     affiliate_id = auth.uid()
-    and public.my_role() = 'affiliate'
+    AND public.my_role() = 'affiliate'
   );
 
-create policy "orders: admin update status"
-  on public.orders for update
-  to authenticated
-  using (public.my_role() = 'admin');
+DROP POLICY IF EXISTS "orders: admin update status" ON public.orders;
+CREATE POLICY "orders: admin update status"
+  ON public.orders FOR UPDATE TO authenticated
+  USING (public.my_role() = 'admin');
 
--- ─── wholesale_cart_items ──────────────────────────────────────────────────────
+-- ── wholesale_cart_items ──────────────────────────────────────────────────────
 
-create policy "cart: wholesalers read own"
-  on public.wholesale_cart_items for select
-  to authenticated
-  using (buyer_id = auth.uid() or public.my_role() = 'admin');
+DROP POLICY IF EXISTS "cart: wholesalers read own" ON public.wholesale_cart_items;
+CREATE POLICY "cart: wholesalers read own"
+  ON public.wholesale_cart_items FOR SELECT TO authenticated
+  USING (buyer_id = auth.uid() OR public.my_role() = 'admin');
 
-create policy "cart: wholesalers insert"
-  on public.wholesale_cart_items for insert
-  to authenticated
-  with check (buyer_id = auth.uid() and public.my_role() = 'wholesaler');
+DROP POLICY IF EXISTS "cart: wholesalers insert" ON public.wholesale_cart_items;
+CREATE POLICY "cart: wholesalers insert"
+  ON public.wholesale_cart_items FOR INSERT TO authenticated
+  WITH CHECK (buyer_id = auth.uid() AND public.my_role() = 'wholesaler');
 
-create policy "cart: wholesalers update own"
-  on public.wholesale_cart_items for update
-  to authenticated
-  using  (buyer_id = auth.uid() and public.my_role() = 'wholesaler')
-  with check (buyer_id = auth.uid());
+DROP POLICY IF EXISTS "cart: wholesalers update own" ON public.wholesale_cart_items;
+CREATE POLICY "cart: wholesalers update own"
+  ON public.wholesale_cart_items FOR UPDATE TO authenticated
+  USING  (buyer_id = auth.uid() AND public.my_role() = 'wholesaler')
+  WITH CHECK (buyer_id = auth.uid());
 
-create policy "cart: wholesalers delete own"
-  on public.wholesale_cart_items for delete
-  to authenticated
-  using (buyer_id = auth.uid() and public.my_role() = 'wholesaler');
+DROP POLICY IF EXISTS "cart: wholesalers delete own" ON public.wholesale_cart_items;
+CREATE POLICY "cart: wholesalers delete own"
+  ON public.wholesale_cart_items FOR DELETE TO authenticated
+  USING (buyer_id = auth.uid() AND public.my_role() = 'wholesaler');
 
--- ─── wholesale_orders ─────────────────────────────────────────────────────────
+-- ── wholesale_orders ──────────────────────────────────────────────────────────
 
--- Buyers see their own orders; agents see their assigned orders; admin sees all.
-create policy "wholesale_orders: read"
-  on public.wholesale_orders for select
-  to authenticated
-  using (
+DROP POLICY IF EXISTS "wholesale_orders: read" ON public.wholesale_orders;
+CREATE POLICY "wholesale_orders: read"
+  ON public.wholesale_orders FOR SELECT TO authenticated
+  USING (
     buyer_id = auth.uid()
-    or agent_id = auth.uid()
-    or public.my_role() = 'admin'
+    OR agent_id = auth.uid()
+    OR public.my_role() = 'admin'
   );
 
-create policy "wholesale_orders: buyers insert"
-  on public.wholesale_orders for insert
-  to authenticated
-  with check (buyer_id = auth.uid() and public.my_role() = 'wholesaler');
+DROP POLICY IF EXISTS "wholesale_orders: buyers insert" ON public.wholesale_orders;
+CREATE POLICY "wholesale_orders: buyers insert"
+  ON public.wholesale_orders FOR INSERT TO authenticated
+  WITH CHECK (buyer_id = auth.uid() AND public.my_role() = 'wholesaler');
 
--- Agents can update their assigned orders (status, agent_notes).
--- Admin can update any order (including assigning agents).
-create policy "wholesale_orders: agents and admin update"
-  on public.wholesale_orders for update
-  to authenticated
-  using (agent_id = auth.uid() or public.my_role() = 'admin');
+DROP POLICY IF EXISTS "wholesale_orders: agents and admin update" ON public.wholesale_orders;
+CREATE POLICY "wholesale_orders: agents and admin update"
+  ON public.wholesale_orders FOR UPDATE TO authenticated
+  USING (agent_id = auth.uid() OR public.my_role() = 'admin');
 
--- ─── wholesale_order_items ────────────────────────────────────────────────────
+-- ── wholesale_order_items ─────────────────────────────────────────────────────
 
--- Read: buyer who owns the order, assigned agent, or admin.
-create policy "wholesale_order_items: read"
-  on public.wholesale_order_items for select
-  to authenticated
-  using (
-    exists (
-      select 1 from public.wholesale_orders wo
-      where wo.id = order_id
-        and (
+DROP POLICY IF EXISTS "wholesale_order_items: read" ON public.wholesale_order_items;
+CREATE POLICY "wholesale_order_items: read"
+  ON public.wholesale_order_items FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.wholesale_orders wo
+      WHERE wo.id = order_id
+        AND (
           wo.buyer_id = auth.uid()
-          or wo.agent_id = auth.uid()
-          or public.my_role() = 'admin'
+          OR wo.agent_id = auth.uid()
+          OR public.my_role() = 'admin'
         )
     )
   );
 
--- Insert: only the buyer who owns the parent order (at cart submission time).
-create policy "wholesale_order_items: buyers insert"
-  on public.wholesale_order_items for insert
-  to authenticated
-  with check (
-    exists (
-      select 1 from public.wholesale_orders wo
-      where wo.id = order_id and wo.buyer_id = auth.uid()
+DROP POLICY IF EXISTS "wholesale_order_items: buyers insert" ON public.wholesale_order_items;
+CREATE POLICY "wholesale_order_items: buyers insert"
+  ON public.wholesale_order_items FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.wholesale_orders wo
+      WHERE wo.id = order_id AND wo.buyer_id = auth.uid()
     )
   );
 
--- ─── commissions ──────────────────────────────────────────────────────────────
+-- ── commissions ───────────────────────────────────────────────────────────────
 
--- Commissions are created by the handle_order_delivered trigger (service role).
--- Affiliates can read their own; admin can read and update all.
-create policy "commissions: affiliates read own"
-  on public.commissions for select
-  to authenticated
-  using (affiliate_id = auth.uid() or public.my_role() = 'admin');
+DROP POLICY IF EXISTS "commissions: affiliates read own" ON public.commissions;
+CREATE POLICY "commissions: affiliates read own"
+  ON public.commissions FOR SELECT TO authenticated
+  USING (affiliate_id = auth.uid() OR public.my_role() = 'admin');
 
-create policy "commissions: admin update"
-  on public.commissions for update
-  to authenticated
-  using (public.my_role() = 'admin')
-  with check (public.my_role() = 'admin');
+DROP POLICY IF EXISTS "commissions: admin update" ON public.commissions;
+CREATE POLICY "commissions: admin update"
+  ON public.commissions FOR UPDATE TO authenticated
+  USING (public.my_role() = 'admin')
+  WITH CHECK (public.my_role() = 'admin');
 
--- ─── payouts ──────────────────────────────────────────────────────────────────
+-- ── payouts ───────────────────────────────────────────────────────────────────
 
-create policy "payouts: affiliates read own"
-  on public.payouts for select
-  to authenticated
-  using (affiliate_id = auth.uid() or public.my_role() = 'admin');
+DROP POLICY IF EXISTS "payouts: affiliates read own" ON public.payouts;
+CREATE POLICY "payouts: affiliates read own"
+  ON public.payouts FOR SELECT TO authenticated
+  USING (affiliate_id = auth.uid() OR public.my_role() = 'admin');
 
-create policy "payouts: admin insert"
-  on public.payouts for insert
-  to authenticated
-  with check (public.my_role() = 'admin');
+DROP POLICY IF EXISTS "payouts: admin insert" ON public.payouts;
+CREATE POLICY "payouts: admin insert"
+  ON public.payouts FOR INSERT TO authenticated
+  WITH CHECK (public.my_role() = 'admin');
 
-create policy "payouts: admin update"
-  on public.payouts for update
-  to authenticated
-  using (public.my_role() = 'admin')
-  with check (public.my_role() = 'admin');
-
--- =============================================================================
--- FIRST ADMIN SETUP (run manually after applying this migration)
--- =============================================================================
---
--- 1. Go to Supabase dashboard → Authentication → Users → Add user
---    Email: your-admin@email.com, Password: (strong password)
---    Copy the UUID of the created user.
---
--- 2. Run this SQL with your UUID:
---
---    UPDATE public.profiles
---    SET role = 'admin', status = 'approved'
---    WHERE id = 'PASTE-YOUR-UUID-HERE';
---
--- Now you can log in as admin and approve other users.
--- =============================================================================
+DROP POLICY IF EXISTS "payouts: admin update" ON public.payouts;
+CREATE POLICY "payouts: admin update"
+  ON public.payouts FOR UPDATE TO authenticated
+  USING (public.my_role() = 'admin')
+  WITH CHECK (public.my_role() = 'admin');
