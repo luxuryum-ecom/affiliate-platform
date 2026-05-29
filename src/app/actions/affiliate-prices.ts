@@ -10,9 +10,6 @@ export interface AffiliatePriceState {
   cleared: boolean
 }
 
-const initialState: AffiliatePriceState = { error: null, success: false, cleared: false }
-export { initialState as affiliatePriceInitialState }
-
 /**
  * Upsert or clear an affiliate's custom sell price for a product.
  *

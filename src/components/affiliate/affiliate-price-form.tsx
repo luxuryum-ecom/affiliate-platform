@@ -1,7 +1,9 @@
 'use client'
 
 import { useActionState } from 'react'
-import { saveAffiliateProductPrice, affiliatePriceInitialState } from '@/app/actions/affiliate-prices'
+import { saveAffiliateProductPrice, type AffiliatePriceState } from '@/app/actions/affiliate-prices'
+
+const affiliatePriceInitialState: AffiliatePriceState = { error: null, success: false, cleared: false }
 import { formatMAD } from '@/lib/utils'
 
 interface AffiliatePriceFormProps {
