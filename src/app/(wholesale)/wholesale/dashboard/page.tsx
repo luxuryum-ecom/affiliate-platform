@@ -151,6 +151,22 @@ export default async function WholesaleDashboardPage() {
             Voir mes commandes →
           </Link>
         </div>
+
+        {/* Account / billing */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Mon compte &amp; facturation</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Gérez vos informations de facturation (ICE, RC, adresse).
+            </p>
+          </div>
+          <Link
+            href="/wholesale/account"
+            className="text-xs px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+          >
+            Modifier →
+          </Link>
+        </div>
       </main>
     </div>
   )

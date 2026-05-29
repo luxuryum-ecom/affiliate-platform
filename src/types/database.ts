@@ -40,6 +40,9 @@ export type OrderStatus =
   | 'returned'
   | 'cancelled'
 
+/** How the affiliate captured the order. Null for legacy public-page orders. */
+export type OrderSource = 'whatsapp' | 'phone' | 'manual' | 'sheet_import' | 'api'
+
 /** Simplified 5-state lifecycle for wholesale orders (updated in migration 004). */
 export type WholesaleOrderStatus =
   | 'pending'
@@ -74,6 +77,16 @@ export interface Profile {
   bank_account: string | null
   status: UserStatus
   created_at: string
+
+  // ── Wholesaler billing fields (migration 017) ─────────────────────────────
+  /** Optional company name for wholesale invoices. */
+  company_name: string | null
+  /** Identifiant Commun de l'Entreprise — optional. */
+  ice: string | null
+  /** Registre de commerce number — optional. */
+  registre_commerce: string | null
+  /** Billing address for wholesale invoices — optional. */
+  billing_address: string | null
 }
 
 export interface Product {
@@ -187,6 +200,8 @@ export interface Order {
   signals_metadata: Record<string, unknown>
 
   status: OrderStatus
+  /** How the affiliate captured this order. Null for legacy public-page orders. */
+  order_source: OrderSource | null
   notes: string | null
 
   // ── COD traceability (added migration 004) ────────────────────────────────

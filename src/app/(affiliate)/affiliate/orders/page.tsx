@@ -75,7 +75,13 @@ export default async function AffiliateOrdersPage() {
             <span className="text-gray-300">/</span>
             <span className="font-semibold text-gray-900 text-sm">Mes commandes</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link
+              href="/affiliate/orders/new"
+              className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+            >
+              + Nouvelle commande
+            </Link>
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">

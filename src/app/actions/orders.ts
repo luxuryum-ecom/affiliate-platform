@@ -14,6 +14,7 @@ import {
 } from '@/lib/order-analytics'
 import type {
   OrderStatus,
+  OrderSource,
   WholesaleOrderStatus,
   WholesaleCartItemWithProduct,
 } from '@/types/database'
@@ -204,6 +205,158 @@ export async function placeOrder(
   ]
   await supabase.from('order_signals').insert(signals)
 
+  return { error: null, success: true, orderId: order.id }
+}
+
+// =============================================================================
+// AFFILIATE — SELF-ORDER ENTRY
+// =============================================================================
+
+/**
+ * Affiliate manually creates a COD order from their own account.
+ * affiliate_id is always set to the authenticated user — never from the form.
+ * Sell price is provided by the affiliate (their own customer price).
+ * Commission is calculated using the same formula as placeOrder.
+ * Status starts as 'pending_confirmation'.
+ */
+export async function createAffiliateOrder(
+  _prevState: OrderFormState,
+  formData: FormData
+): Promise<OrderFormState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.', success: false, orderId: null }
+
+  const { data: profile } = (await supabase
+    .from('profiles')
+    .select('role, status')
+    .eq('id', user.id)
+    .single()) as { data: { role: string; status: string } | null; error: unknown }
+
+  if (profile?.role !== 'affiliate' || profile?.status !== 'approved') {
+    return { error: 'Accès réservé aux affiliés approuvés.', success: false, orderId: null }
+  }
+
+  const productId      = (formData.get('product_id') as string)?.trim()
+  const quantity       = parseInt(formData.get('quantity') as string, 10)
+  const sellPriceRaw   = parseFloat(formData.get('sell_price') as string)
+  const customerName   = (formData.get('customer_name') as string)?.trim()
+  const customerPhone  = (formData.get('customer_phone') as string)?.trim()
+  const customerCity   = (formData.get('customer_city') as string)?.trim()
+  const customerAddress = (formData.get('customer_address') as string)?.trim()
+  const notes          = ((formData.get('notes') as string)?.trim()) || null
+  const orderSource    = ((formData.get('order_source') as string)?.trim() || 'manual') as OrderSource
+
+  if (!productId)                     return { error: 'Produit requis.', success: false, orderId: null }
+  if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.', success: false, orderId: null }
+  if (isNaN(sellPriceRaw) || sellPriceRaw <= 0)
+    return { error: 'Prix de vente invalide.', success: false, orderId: null }
+  if (!customerName)   return { error: 'Nom du client requis.', success: false, orderId: null }
+  if (!customerPhone)  return { error: 'Téléphone du client requis.', success: false, orderId: null }
+  if (!customerCity)   return { error: 'Ville du client requise.', success: false, orderId: null }
+  if (!customerAddress) return { error: 'Adresse du client requise.', success: false, orderId: null }
+  if (!['whatsapp', 'phone', 'manual', 'sheet_import', 'api'].includes(orderSource))
+    return { error: 'Source invalide.', success: false, orderId: null }
+
+  const { data: product } = (await supabase
+    .from('products')
+    .select(
+      'id, sell_price, stock_count, active, approval_status, affiliate_enabled, availability_type, name, confirmation_fee_mad, packaging_fee_mad, delivery_fee_mad, factory_cost_mad, platform_margin_type, platform_margin_value'
+    )
+    .eq('id', productId)
+    .single()) as {
+    data: {
+      id: string
+      sell_price: number
+      stock_count: number
+      active: boolean
+      approval_status: string
+      affiliate_enabled: boolean
+      availability_type: string
+      name: string
+      confirmation_fee_mad: number
+      packaging_fee_mad: number
+      delivery_fee_mad: number
+      factory_cost_mad: number | null
+      platform_margin_type: 'percentage' | 'fixed'
+      platform_margin_value: number | null
+    } | null
+    error: unknown
+  }
+
+  if (!product)
+    return { error: 'Produit introuvable.', success: false, orderId: null }
+  if (!product.active || product.approval_status !== 'approved')
+    return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
+  if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
+    return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
+  if (product.stock_count < quantity)
+    return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
+  if (sellPriceRaw < product.sell_price)
+    return {
+      error: `Le prix de vente doit être ≥ ${product.sell_price} MAD (prix de base).`,
+      success: false,
+      orderId: null,
+    }
+
+  const [deliveryFeeResolved, logisticsSettings] = await Promise.all([
+    resolveDeliveryFeeByCity(customerCity),
+    getLogisticsSettings(),
+  ])
+  const returnFeeResolved = logisticsSettings ? Number(logisticsSettings.return_fee_mad) : 10
+
+  const totalAmount = parseFloat((sellPriceRaw * quantity).toFixed(2))
+  const commissionAmount = calculateNetAffiliateCommission({
+    affiliateSellPrice: sellPriceRaw,
+    factoryCostMad: product.factory_cost_mad ?? 0,
+    marginType: product.platform_margin_type,
+    marginValue: product.platform_margin_value ?? 0,
+    deliveryFee: deliveryFeeResolved,
+    confirmationFee: product.confirmation_fee_mad ?? 10,
+    packagingFee: product.packaging_fee_mad ?? 10,
+    quantity,
+  })
+
+  const { data: order, error: insertError } = (await supabase
+    .from('orders')
+    .insert({
+      affiliate_id:          user.id,
+      product_id:            productId,
+      customer_name:         customerName,
+      customer_phone:        customerPhone,
+      customer_city:         customerCity,
+      customer_address:      customerAddress,
+      quantity,
+      total_amount:          totalAmount,
+      commission_amount:     Math.max(0, commissionAmount),
+      product_price_snapshot: sellPriceRaw,
+      affiliate_commission_mad_snapshot: Math.max(0, commissionAmount),
+      delivery_fee_snapshot:   deliveryFeeResolved,
+      packaging_fee_snapshot:  product.packaging_fee_mad ?? 10,
+      confirmation_fee_snapshot: product.confirmation_fee_mad ?? 10,
+      return_fee_snapshot:     returnFeeResolved,
+      cod_expected:            totalAmount,
+      order_source:            orderSource,
+      status:                  'pending_confirmation',
+      notes,
+      fraud_score:             0,
+      duplicate_risk_score:    0,
+      spam_score:              0,
+      signals_metadata:        { source: 'affiliate_manual_entry' },
+    })
+    .select('id')
+    .single()) as { data: { id: string } | null; error: unknown }
+
+  if (insertError || !order) {
+    console.error('createAffiliateOrder insert error:', insertError)
+    return { error: 'Erreur lors de la création de la commande.', success: false, orderId: null }
+  }
+
+  revalidatePath('/affiliate/orders')
+  revalidatePath('/admin/orders')
   return { error: null, success: true, orderId: order.id }
 }
 
