@@ -29,6 +29,12 @@ export type ImportPriceUnit = 'kg' | 'cbm'
 /** Allowed origin country values for import_on_demand products. */
 export type ImportOriginCountry = 'Turquie' | 'Chine' | 'Égypte' | 'Dubai' | 'Autre' | 'Mixte'
 
+/** How a product resolves its import tariff. */
+export type TariffMode = 'global' | 'custom'
+
+/** Allowed country values for import_tariffs table. */
+export type TariffCountry = 'Turquie' | 'Chine' | 'Égypte' | 'Dubai' | 'Autre'
+
 /** Product review workflow state. active can only be true when this is 'approved'. */
 export type ProductApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'rejected'
 
@@ -191,6 +197,27 @@ export interface Product {
   /** Optional notes shown to wholesalers. Recommended when origin_country = 'Mixte'. */
   import_notes: string | null
 
+  // ── Tariff mode (migration 021) ───────────────────────────────────────────
+  /** 'global' = inherit from import_tariffs by origin_country. 'custom' = use product fields. */
+  tariff_mode: TariffMode
+
+  created_at: string
+  updated_at: string
+}
+
+// ─── IMPORT TARIFFS ───────────────────────────────────────────────────────────
+// Admin-managed table of per-country import pricing rates.
+// Products with tariff_mode = 'global' inherit from here by origin_country.
+
+export interface ImportTariff {
+  id: string
+  country: TariffCountry
+  pricing_mode: ImportPricingMode
+  price_mad: number
+  unit: ImportPriceUnit
+  delivery_days: number | null
+  notes: string | null
+  active: boolean
   created_at: string
   updated_at: string
 }
@@ -547,6 +574,11 @@ export type Database = {
         OrderSignal,
         Omit<OrderSignal, 'id' | 'created_at'>,
         never
+      >
+      import_tariffs: TableDef<
+        ImportTariff,
+        Omit<ImportTariff, 'id' | 'created_at' | 'updated_at'>,
+        Partial<ImportTariff>
       >
     }
     Views: Record<never, never>

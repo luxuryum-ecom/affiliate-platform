@@ -8,7 +8,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { uploadProductImage, formatProductImageUploadError } from '@/lib/product-image-upload'
 import { isValidMediaUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
-import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportPricingMode, ImportPriceUnit } from '@/types/database'
+import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportPricingMode, ImportPriceUnit, ImportTariff, TariffMode } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,11 +83,12 @@ const MEDIA_TYPE_LABELS: Record<MediaItem['type'], string> = {
 
 interface ProductFormProps {
   product?: Product
+  tariffs?: ImportTariff[]
 }
 
 const initialState: ProductFormState = { error: null }
 
-export function ProductForm({ product }: ProductFormProps) {
+export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
   const [state, action, isPending] = useActionState(upsertProduct, initialState)
 
   // ── Availability state ────────────────────────────────────────────────────
@@ -122,6 +123,11 @@ export function ProductForm({ product }: ProductFormProps) {
     product?.estimated_delivery_days != null ? String(product.estimated_delivery_days) : ''
   )
   const [importNotes, setImportNotes] = useState<string>(product?.import_notes ?? '')
+
+  // ── Tariff mode (migration 021) ───────────────────────────────────────────
+  const [tariffMode, setTariffMode] = useState<TariffMode>(
+    product?.tariff_mode ?? 'global'
+  )
 
   // ── Cost/margin state (for live preview + auto-tier) ──────────────────────
   const [purchasePrice, setPurchasePrice] = useState<string>(
@@ -323,6 +329,7 @@ export function ProductForm({ product }: ProductFormProps) {
       <input type="hidden" name="wholesale_tiers" value={JSON.stringify(validTiers)} />
       <input type="hidden" name="media" value={JSON.stringify(validMedia)} />
       <input type="hidden" name="submitted_via" value="admin_dashboard" />
+      <input type="hidden" name="tariff_mode" value={availabilityType === 'import_on_demand' ? tariffMode : 'global'} />
 
       {/* Error banner */}
       {state?.error && (
@@ -439,7 +446,113 @@ export function ProductForm({ product }: ProductFormProps) {
               Informations import — affichées aux grossistes
             </p>
 
-            {/* Row 1: Origin + pricing mode */}
+            {/* Tariff mode selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(
+                [
+                  {
+                    val: 'global' as TariffMode,
+                    title: 'Tarif global',
+                    desc: 'Hérite du tarif centralisé pour ce pays (recommandé)',
+                  },
+                  {
+                    val: 'custom' as TariffMode,
+                    title: 'Tarif personnalisé',
+                    desc: 'Définit des tarifs spécifiques à ce produit',
+                  },
+                ] as const
+              ).map(({ val, title, desc }) => (
+                <label
+                  key={val}
+                  className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    tariffMode === val
+                      ? 'border-purple-600 bg-purple-100 ring-2 ring-purple-400'
+                      : 'border-purple-200 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="_tariff_mode_ui"
+                    value={val}
+                    checked={tariffMode === val}
+                    onChange={() => setTariffMode(val)}
+                    disabled={isPending}
+                    className="mt-0.5 w-4 h-4 accent-purple-700 shrink-0"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {/* Global tariff preview */}
+            {tariffMode === 'global' && (() => {
+              const matchingTariff = tariffs.find(
+                (t) => t.country === importOriginCountry && t.active
+              )
+              return (
+                <div className="rounded-lg border border-purple-200 bg-white px-4 py-3 space-y-1.5 text-sm">
+                  <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">
+                    Tarif global actif
+                    {importOriginCountry ? ` — ${importOriginCountry}` : ''}
+                  </p>
+                  {!importOriginCountry ? (
+                    <p className="text-xs text-gray-400 italic">
+                      Sélectionnez un pays d&apos;origine pour voir le tarif global.
+                    </p>
+                  ) : matchingTariff ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Mode</span>
+                        <span className="font-medium text-gray-900">
+                          {matchingTariff.pricing_mode === 'door_to_door_per_kg'
+                            ? 'Porte-à-porte / kg'
+                            : 'Fret maritime (CBM ou kg)'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Prix</span>
+                        <span className="font-medium text-gray-900">
+                          {Number(matchingTariff.price_mad).toFixed(2)} MAD&nbsp;
+                          <span className="text-gray-400 font-normal text-xs">
+                            / {matchingTariff.unit === 'cbm' ? 'CBM' : 'kg'}
+                          </span>
+                        </span>
+                      </div>
+                      {matchingTariff.delivery_days != null && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Délai</span>
+                          <span className="font-medium text-gray-900">
+                            {matchingTariff.delivery_days} jour{matchingTariff.delivery_days > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+                      {matchingTariff.notes && (
+                        <p className="text-xs text-gray-500 pt-1 border-t border-purple-100 mt-1">
+                          {matchingTariff.notes}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-amber-600">
+                      Aucun tarif global actif pour ce pays.{' '}
+                      <a
+                        href="/admin/import-tariffs"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        Configurer →
+                      </a>
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* Row 1: Origin country — always visible */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="import_origin_country" className={LABEL}>
@@ -462,105 +575,113 @@ export function ProductForm({ product }: ProductFormProps) {
                   <option value="Mixte">Mixte (plusieurs origines)</option>
                 </select>
               </div>
-
-              <div>
-                <label htmlFor="import_pricing_mode" className={LABEL}>
-                  Mode de tarification import
-                </label>
-                <select
-                  id="import_pricing_mode"
-                  name="import_pricing_mode"
-                  disabled={isPending}
-                  value={importPricingMode}
-                  onChange={(e) => setImportPricingMode(e.target.value as ImportPricingMode)}
-                  className={INPUT}
-                >
-                  <option value="door_to_door_per_kg">Porte-à-porte / kg</option>
-                  <option value="sea_freight_cbm_or_kg">Fret maritime — CBM ou kg</option>
-                </select>
-              </div>
             </div>
 
-            {/* Row 2: Price + unit + delivery days */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-1">
-                <label htmlFor="estimated_import_price_mad" className={LABEL}>
-                  Prix import estimé (MAD)
-                </label>
-                <input
-                  id="estimated_import_price_mad"
-                  name="estimated_import_price_mad"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  disabled={isPending}
-                  value={estimatedImportPriceMad}
-                  onChange={(e) => setEstimatedImportPriceMad(e.target.value)}
-                  className={INPUT}
-                  placeholder="0.00"
-                />
-              </div>
+            {/* Custom tariff fields — only shown when tariffMode = 'custom' */}
+            {tariffMode === 'custom' && (
+              <>
+                {/* Pricing mode */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="import_pricing_mode" className={LABEL}>
+                      Mode de tarification import
+                    </label>
+                    <select
+                      id="import_pricing_mode"
+                      name="import_pricing_mode"
+                      disabled={isPending}
+                      value={importPricingMode}
+                      onChange={(e) => setImportPricingMode(e.target.value as ImportPricingMode)}
+                      className={INPUT}
+                    >
+                      <option value="door_to_door_per_kg">Porte-à-porte / kg</option>
+                      <option value="sea_freight_cbm_or_kg">Fret maritime — CBM ou kg</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div>
-                <label htmlFor="import_price_unit" className={LABEL}>
-                  Unité
-                </label>
-                <select
-                  id="import_price_unit"
-                  name="import_price_unit"
-                  disabled={isPending}
-                  value={importPriceUnit}
-                  onChange={(e) => setImportPriceUnit(e.target.value as ImportPriceUnit)}
-                  className={INPUT}
-                >
-                  <option value="kg">par kg</option>
-                  <option value="cbm">par CBM</option>
-                </select>
-              </div>
+                {/* Price + unit + delivery days */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-1">
+                    <label htmlFor="estimated_import_price_mad" className={LABEL}>
+                      Prix import estimé (MAD)
+                    </label>
+                    <input
+                      id="estimated_import_price_mad"
+                      name="estimated_import_price_mad"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      disabled={isPending}
+                      value={estimatedImportPriceMad}
+                      onChange={(e) => setEstimatedImportPriceMad(e.target.value)}
+                      className={INPUT}
+                      placeholder="0.00"
+                    />
+                  </div>
 
-              <div>
-                <label htmlFor="estimated_delivery_days" className={LABEL}>
-                  Délai estimé (jours)
-                </label>
-                <input
-                  id="estimated_delivery_days"
-                  name="estimated_delivery_days"
-                  type="number"
-                  step="1"
-                  min="1"
-                  disabled={isPending}
-                  value={estimatedDeliveryDays}
-                  onChange={(e) => setEstimatedDeliveryDays(e.target.value)}
-                  className={INPUT}
-                  placeholder="Ex : 21"
-                />
-              </div>
-            </div>
+                  <div>
+                    <label htmlFor="import_price_unit" className={LABEL}>
+                      Unité
+                    </label>
+                    <select
+                      id="import_price_unit"
+                      name="import_price_unit"
+                      disabled={isPending}
+                      value={importPriceUnit}
+                      onChange={(e) => setImportPriceUnit(e.target.value as ImportPriceUnit)}
+                      className={INPUT}
+                    >
+                      <option value="kg">par kg</option>
+                      <option value="cbm">par CBM</option>
+                    </select>
+                  </div>
 
-            {/* Notes — always visible, flagged as important when origin = Mixte */}
-            <div>
-              <label htmlFor="import_notes" className={LABEL}>
-                Notes import
-                {importOriginCountry === 'Mixte' && (
-                  <span className="ml-1.5 text-amber-600 font-semibold">(recommandé — origines multiples)</span>
-                )}
-              </label>
-              <textarea
-                id="import_notes"
-                name="import_notes"
-                rows={2}
-                disabled={isPending}
-                value={importNotes}
-                onChange={(e) => setImportNotes(e.target.value)}
-                className={`${INPUT} resize-none ${importOriginCountry === 'Mixte' ? 'border-amber-400 ring-1 ring-amber-300' : ''}`}
-                placeholder="Ex : Mélange Turquie + Chine selon disponibilité, délais variables…"
-              />
-              {importOriginCountry === 'Mixte' && (
-                <p className="text-xs text-amber-600 mt-1">
-                  Origine mixte détectée — précisez les pays et conditions dans les notes.
-                </p>
-              )}
-            </div>
+                  <div>
+                    <label htmlFor="estimated_delivery_days" className={LABEL}>
+                      Délai estimé (jours)
+                    </label>
+                    <input
+                      id="estimated_delivery_days"
+                      name="estimated_delivery_days"
+                      type="number"
+                      step="1"
+                      min="1"
+                      disabled={isPending}
+                      value={estimatedDeliveryDays}
+                      onChange={(e) => setEstimatedDeliveryDays(e.target.value)}
+                      className={INPUT}
+                      placeholder="Ex : 21"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label htmlFor="import_notes" className={LABEL}>
+                    Notes import
+                    {importOriginCountry === 'Mixte' && (
+                      <span className="ml-1.5 text-amber-600 font-semibold">(recommandé — origines multiples)</span>
+                    )}
+                  </label>
+                  <textarea
+                    id="import_notes"
+                    name="import_notes"
+                    rows={2}
+                    disabled={isPending}
+                    value={importNotes}
+                    onChange={(e) => setImportNotes(e.target.value)}
+                    className={`${INPUT} resize-none ${importOriginCountry === 'Mixte' ? 'border-amber-400 ring-1 ring-amber-300' : ''}`}
+                    placeholder="Ex : Mélange Turquie + Chine selon disponibilité, délais variables…"
+                  />
+                  {importOriginCountry === 'Mixte' && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Origine mixte détectée — précisez les pays et conditions dans les notes.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 

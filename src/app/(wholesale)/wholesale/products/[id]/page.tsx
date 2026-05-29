@@ -6,7 +6,8 @@ import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
-import type { Product } from '@/types/database'
+import { getActiveTariffByCountry } from '@/app/actions/tariffs'
+import type { Product, ImportTariff } from '@/types/database'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -42,6 +43,16 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const product = productResult.data as Product | null
 
   if (!product) notFound()
+
+  // Fetch global tariff when product uses global tariff mode
+  let globalTariff: ImportTariff | null = null
+  if (
+    product.availability_type === 'import_on_demand' &&
+    product.tariff_mode === 'global' &&
+    product.origin_country
+  ) {
+    globalTariff = await getActiveTariffByCountry(product.origin_country)
+  }
 
   const coverUrl = getProductCoverUrl(product)
   const galleryUrls = getProductGalleryUrls(product)
@@ -142,69 +153,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
             {/* Import-on-demand sourcing details */}
             {product.availability_type === 'import_on_demand' && (
-              <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 space-y-2 text-sm">
-                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                  Informations import
-                </p>
-
-                {product.origin_country && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Pays d&apos;origine</span>
-                    <span className="font-medium text-gray-900">{product.origin_country}</span>
-                  </div>
-                )}
-
-                {product.import_pricing_mode && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Mode de tarification</span>
-                    <span className="font-medium text-gray-900">
-                      {product.import_pricing_mode === 'door_to_door_per_kg'
-                        ? 'Porte-à-porte / kg'
-                        : 'Fret maritime (CBM ou kg)'}
-                    </span>
-                  </div>
-                )}
-
-                {product.estimated_import_price_mad != null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Coût import estimé</span>
-                    <span className="font-medium text-gray-900">
-                      {formatMAD(product.estimated_import_price_mad)}{' '}
-                      <span className="text-gray-500 font-normal">
-                        / {product.import_price_unit === 'cbm' ? 'CBM' : 'kg'}
-                      </span>
-                    </span>
-                  </div>
-                )}
-
-                {/* Fallback to legacy estimated_cost_mad if new field not set */}
-                {product.estimated_import_price_mad == null && product.estimated_cost_mad != null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Coût estimé porte-à-porte</span>
-                    <span className="font-medium text-gray-900">
-                      {formatMAD(product.estimated_cost_mad)} / unité
-                    </span>
-                  </div>
-                )}
-
-                {product.estimated_delivery_days != null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Délai de livraison estimé</span>
-                    <span className="font-medium text-gray-900">
-                      {product.estimated_delivery_days} jour{product.estimated_delivery_days > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                )}
-
-                {product.import_notes && (
-                  <div className="pt-2 border-t border-purple-200">
-                    <p className="text-xs text-purple-700 font-medium mb-1">Notes</p>
-                    <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line">
-                      {product.import_notes}
-                    </p>
-                  </div>
-                )}
-              </div>
+              <ImportInfoBlock product={product} globalTariff={globalTariff} />
             )}
 
             {/* Public price reference */}
@@ -224,6 +173,95 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+
+// ─── Import info block ────────────────────────────────────────────────────────
+// Displays import pricing data — from the global tariff table when tariff_mode='global',
+// or from the product's own custom fields when tariff_mode='custom'.
+
+function ImportInfoBlock({
+  product,
+  globalTariff,
+}: {
+  product: Product
+  globalTariff: ImportTariff | null
+}) {
+  const tariff = product.tariff_mode === 'global' ? globalTariff : null
+
+  const pricingMode = tariff?.pricing_mode ?? product.import_pricing_mode
+  const priceMad =
+    tariff != null
+      ? Number(tariff.price_mad)
+      : product.estimated_import_price_mad ?? product.estimated_cost_mad
+  const unit = tariff?.unit ?? product.import_price_unit
+  const deliveryDays = tariff?.delivery_days ?? product.estimated_delivery_days
+  const notes = tariff?.notes ?? product.import_notes
+
+  const pricingModeLabel =
+    pricingMode === 'door_to_door_per_kg'
+      ? 'Porte-à-porte / kg'
+      : pricingMode === 'sea_freight_cbm_or_kg'
+      ? 'Fret maritime (CBM ou kg)'
+      : null
+
+  return (
+    <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 space-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+          Informations import
+        </p>
+        {product.tariff_mode === 'global' && globalTariff && (
+          <span className="text-xs text-purple-500 bg-purple-100 px-2 py-0.5 rounded-full">
+            Tarif global
+          </span>
+        )}
+      </div>
+
+      {product.origin_country && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Pays d&apos;origine</span>
+          <span className="font-medium text-gray-900">{product.origin_country}</span>
+        </div>
+      )}
+
+      {pricingModeLabel && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Mode de tarification</span>
+          <span className="font-medium text-gray-900">{pricingModeLabel}</span>
+        </div>
+      )}
+
+      {priceMad != null && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Coût import estimé</span>
+          <span className="font-medium text-gray-900">
+            {formatMAD(priceMad)}{' '}
+            {unit && (
+              <span className="text-gray-500 font-normal">
+                / {unit === 'cbm' ? 'CBM' : 'kg'}
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {deliveryDays != null && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Délai de livraison estimé</span>
+          <span className="font-medium text-gray-900">
+            {deliveryDays} jour{deliveryDays > 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
+      {notes && (
+        <div className="pt-2 border-t border-purple-200">
+          <p className="text-xs text-purple-700 font-medium mb-1">Notes</p>
+          <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line">{notes}</p>
+        </div>
+      )}
     </div>
   )
 }

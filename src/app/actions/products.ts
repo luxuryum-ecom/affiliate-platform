@@ -14,6 +14,7 @@ import type {
   MediaItem,
   ImportPricingMode,
   ImportPriceUnit,
+  TariffMode,
 } from '@/types/database'
 import { calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
 
@@ -184,6 +185,15 @@ export async function upsertProduct(
   // Keep estimated_cost_mad in sync with estimated_import_price_mad for backward compat
   const estimated_cost_mad: number | null = estimated_import_price_mad
 
+  // ── Tariff mode (migration 021) ───────────────────────────────────────────
+  // Only meaningful for import_on_demand; local_stock always defaults to 'global'.
+  const tariff_mode_raw = (formData.get('tariff_mode') as string) || 'global'
+  const tariff_mode: TariffMode =
+    availability_type === 'import_on_demand' &&
+    (tariff_mode_raw === 'global' || tariff_mode_raw === 'custom')
+      ? tariff_mode_raw
+      : 'global'
+
   // ── Approval ──────────────────────────────────────────────────────────────
 
   const approval_status = (formData.get('approval_status') as string) || 'draft'
@@ -281,12 +291,13 @@ export async function upsertProduct(
     stock_count,
     media,
     images,
-    estimated_cost_mad,
-    estimated_delivery_days,
-    import_pricing_mode,
-    estimated_import_price_mad,
-    import_price_unit,
-    import_notes,
+    estimated_cost_mad: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_cost_mad,
+    estimated_delivery_days: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_delivery_days,
+    import_pricing_mode: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_pricing_mode,
+    estimated_import_price_mad: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_import_price_mad,
+    import_price_unit: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_price_unit,
+    import_notes: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_notes,
+    tariff_mode,
   }
 
   if (id) {
