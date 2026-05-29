@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getWholesaleTier } from '@/lib/utils'
+import { calculateNetAffiliateCommission, getWholesaleTier } from '@/lib/utils'
 import { requireAdmin } from './_guards'
 import {
   scoreDuplicateOrder,
@@ -53,13 +53,12 @@ export async function placeOrder(
   const { data: product } = (await supabase
     .from('products')
     .select(
-      'id, sell_price, commission_amount, stock_count, active, approval_status, affiliate_enabled, availability_type, name, confirmation_fee_mad, packaging_fee_mad, delivery_fee_mad'
+      'id, sell_price, stock_count, active, approval_status, affiliate_enabled, availability_type, name, confirmation_fee_mad, packaging_fee_mad, delivery_fee_mad, purchase_price_mad, platform_margin_type, platform_margin_value'
     )
     .eq('id', productId)
     .single()) as { data: {
       id: string
       sell_price: number
-      commission_amount: number
       stock_count: number
       active: boolean
       approval_status: string
@@ -69,6 +68,9 @@ export async function placeOrder(
       confirmation_fee_mad: number
       packaging_fee_mad: number
       delivery_fee_mad: number
+      purchase_price_mad: number | null
+      platform_margin_type: 'percentage' | 'fixed'
+      platform_margin_value: number | null
     } | null; error: unknown }
 
   if (!product) return { error: 'Produit non disponible.', success: false, orderId: null }
@@ -94,10 +96,7 @@ export async function placeOrder(
   }
 
   // Look up affiliate's custom sell price server-side — do not trust the form value.
-  // Commission = (custom_price − platform_price + commission_amount) × qty,
-  // so the affiliate earns their markup on top of the base commission.
   let unitPrice = product.sell_price
-  let commissionPerUnit = product.commission_amount
 
   if (validatedAffiliateId) {
     const { data: priceRow } = (await supabase
@@ -108,16 +107,22 @@ export async function placeOrder(
       .maybeSingle()) as { data: { custom_sell_price_mad: number } | null; error: unknown }
 
     if (priceRow?.custom_sell_price_mad) {
-      const customPrice = Number(priceRow.custom_sell_price_mad)
-      unitPrice = customPrice
-      // Affiliate earns base commission + any markup above platform price
-      commissionPerUnit = product.commission_amount + Math.max(0, customPrice - product.sell_price)
+      unitPrice = Number(priceRow.custom_sell_price_mad)
     }
   }
 
   const totalAmount = parseFloat((unitPrice * quantity).toFixed(2))
   const commissionAmount = validatedAffiliateId
-    ? parseFloat((commissionPerUnit * quantity).toFixed(2))
+    ? calculateNetAffiliateCommission({
+        affiliateSellPrice: unitPrice,
+        factoryCostMad: product.purchase_price_mad ?? 0,
+        marginType: product.platform_margin_type,
+        marginValue: product.platform_margin_value ?? 0,
+        deliveryFee: product.delivery_fee_mad ?? 0,
+        confirmationFee: product.confirmation_fee_mad ?? 10,
+        packagingFee: product.packaging_fee_mad ?? 10,
+        quantity,
+      })
     : 0
 
   const deliveryFeeSnapshot = product.delivery_fee_mad ?? 0

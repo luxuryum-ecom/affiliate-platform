@@ -59,9 +59,9 @@ export function calculateNetAffiliateCommission(params: {
     params.affiliateSellPrice -
     params.factoryCostMad -
     platformMargin -
-    params.packagingFee -
     params.deliveryFee -
-    params.confirmationFee
+    params.confirmationFee -
+    params.packagingFee
 
   return parseFloat((netPerUnit * params.quantity).toFixed(2))
 }
