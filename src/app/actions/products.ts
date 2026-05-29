@@ -15,7 +15,12 @@ import type {
   ImportPricingMode,
   ImportPriceUnit,
   TariffMode,
+  ImportShippingMode,
 } from '@/types/database'
+
+function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
+  return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
+}
 import { calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
 
 export type ProductFormState = { error: string | null }
@@ -157,25 +162,34 @@ export async function upsertProduct(
       ? parseInt(estimated_delivery_days_raw) || null
       : null
 
-  // Migration 020 — structured import cost model
-  const import_pricing_mode_raw = formData.get('import_pricing_mode') as string
-  const import_pricing_mode: ImportPricingMode | null =
+  // ── Tariff mode (migration 021) ───────────────────────────────────────────
+  const tariff_mode_raw = (formData.get('tariff_mode') as string) || 'global'
+  const tariff_mode: TariffMode =
     availability_type === 'import_on_demand' &&
-    (import_pricing_mode_raw === 'door_to_door_per_kg' || import_pricing_mode_raw === 'sea_freight_cbm_or_kg')
-      ? import_pricing_mode_raw
+    (tariff_mode_raw === 'global' || tariff_mode_raw === 'custom')
+      ? tariff_mode_raw
+      : 'global'
+
+  // ── Import shipping mode (migration 022) — must be declared before import_price_unit ──
+  const import_shipping_mode_raw = (formData.get('import_shipping_mode') as string) || null
+  const import_shipping_mode: ImportShippingMode | null =
+    availability_type === 'import_on_demand' &&
+    import_shipping_mode_raw !== null &&
+    ['air_door_to_door_kg', 'sea_textile_kg', 'sea_volume_cbm'].includes(import_shipping_mode_raw)
+      ? (import_shipping_mode_raw as ImportShippingMode)
       : null
 
+  // ── Migration 020 — import cost model (legacy fields kept for backward compat) ──
   const estimated_import_price_mad_raw = formData.get('estimated_import_price_mad') as string
   const estimated_import_price_mad: number | null =
     availability_type === 'import_on_demand' && estimated_import_price_mad_raw
       ? parseFloat(estimated_import_price_mad_raw) || null
       : null
 
-  const import_price_unit_raw = formData.get('import_price_unit') as string
+  // Unit auto-derived from shipping mode
   const import_price_unit: ImportPriceUnit | null =
-    availability_type === 'import_on_demand' &&
-    (import_price_unit_raw === 'kg' || import_price_unit_raw === 'cbm')
-      ? import_price_unit_raw
+    availability_type === 'import_on_demand' && import_shipping_mode !== null
+      ? shippingModeToUnit(import_shipping_mode)
       : null
 
   const import_notes_raw = ((formData.get('import_notes') as string) || '').trim()
@@ -184,15 +198,6 @@ export async function upsertProduct(
 
   // Keep estimated_cost_mad in sync with estimated_import_price_mad for backward compat
   const estimated_cost_mad: number | null = estimated_import_price_mad
-
-  // ── Tariff mode (migration 021) ───────────────────────────────────────────
-  // Only meaningful for import_on_demand; local_stock always defaults to 'global'.
-  const tariff_mode_raw = (formData.get('tariff_mode') as string) || 'global'
-  const tariff_mode: TariffMode =
-    availability_type === 'import_on_demand' &&
-    (tariff_mode_raw === 'global' || tariff_mode_raw === 'custom')
-      ? tariff_mode_raw
-      : 'global'
 
   // ── Approval ──────────────────────────────────────────────────────────────
 
@@ -293,11 +298,12 @@ export async function upsertProduct(
     images,
     estimated_cost_mad: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_cost_mad,
     estimated_delivery_days: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_delivery_days,
-    import_pricing_mode: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_pricing_mode,
+    import_pricing_mode: null as ImportPricingMode | null,
     estimated_import_price_mad: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_import_price_mad,
     import_price_unit: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_price_unit,
     import_notes: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_notes,
     tariff_mode,
+    import_shipping_mode: availability_type === 'import_on_demand' ? import_shipping_mode : null,
   }
 
   if (id) {

@@ -6,7 +6,7 @@ import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
-import { getActiveTariffByCountry } from '@/app/actions/tariffs'
+import { getActiveTariff, SHIPPING_MODE_LABELS } from '@/app/actions/tariffs'
 import type { Product, ImportTariff } from '@/types/database'
 
 interface Params {
@@ -49,9 +49,10 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   if (
     product.availability_type === 'import_on_demand' &&
     product.tariff_mode === 'global' &&
-    product.origin_country
+    product.origin_country &&
+    product.import_shipping_mode
   ) {
-    globalTariff = await getActiveTariffByCountry(product.origin_country)
+    globalTariff = await getActiveTariff(product.origin_country, product.import_shipping_mode)
   }
 
   const coverUrl = getProductCoverUrl(product)
@@ -178,8 +179,9 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 }
 
 // ─── Import info block ────────────────────────────────────────────────────────
-// Displays import pricing data — from the global tariff table when tariff_mode='global',
-// or from the product's own custom fields when tariff_mode='custom'.
+// Displays transport & customs info — from the global tariff table (tariff_mode='global')
+// or from the product's own custom fields (tariff_mode='custom').
+// Clearly labelled as transport/customs costs, separate from product purchase price.
 
 function ImportInfoBlock({
   product,
@@ -190,30 +192,33 @@ function ImportInfoBlock({
 }) {
   const tariff = product.tariff_mode === 'global' ? globalTariff : null
 
-  const pricingMode = tariff?.pricing_mode ?? product.import_pricing_mode
-  const priceMad =
+  // Shipping mode label — prefer new shipping_mode, fall back to legacy
+  const shippingMode = tariff?.shipping_mode ?? product.import_shipping_mode
+  const shippingModeLabel = shippingMode ? (SHIPPING_MODE_LABELS[shippingMode] ?? null) : null
+
+  // Transport cost — prefer new transport_customs_price_mad, fall back to legacy
+  const transportCostMad =
     tariff != null
-      ? Number(tariff.price_mad)
+      ? Number(tariff.transport_customs_price_mad)
       : product.estimated_import_price_mad ?? product.estimated_cost_mad
   const unit = tariff?.unit ?? product.import_price_unit
+
   const deliveryDays = tariff?.delivery_days ?? product.estimated_delivery_days
   const notes = tariff?.notes ?? product.import_notes
-
-  const pricingModeLabel =
-    pricingMode === 'door_to_door_per_kg'
-      ? 'Porte-à-porte / kg'
-      : pricingMode === 'sea_freight_cbm_or_kg'
-      ? 'Fret maritime (CBM ou kg)'
-      : null
 
   return (
     <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 space-y-2 text-sm">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-          Informations import
-        </p>
+        <div>
+          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+            Frais transport &amp; douane
+          </p>
+          <p className="text-xs text-purple-500 mt-0.5">
+            Non inclus dans le prix produit
+          </p>
+        </div>
         {product.tariff_mode === 'global' && globalTariff && (
-          <span className="text-xs text-purple-500 bg-purple-100 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-purple-500 bg-purple-100 px-2 py-0.5 rounded-full shrink-0">
             Tarif global
           </span>
         )}
@@ -226,18 +231,18 @@ function ImportInfoBlock({
         </div>
       )}
 
-      {pricingModeLabel && (
+      {shippingModeLabel && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Mode de tarification</span>
-          <span className="font-medium text-gray-900">{pricingModeLabel}</span>
+          <span className="text-gray-500">Mode de transport</span>
+          <span className="font-medium text-gray-900">{shippingModeLabel}</span>
         </div>
       )}
 
-      {priceMad != null && (
+      {transportCostMad != null && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Coût import estimé</span>
+          <span className="text-gray-500">Frais transport &amp; douane estimés</span>
           <span className="font-medium text-gray-900">
-            {formatMAD(priceMad)}{' '}
+            {formatMAD(transportCostMad)}{' '}
             {unit && (
               <span className="text-gray-500 font-normal">
                 / {unit === 'cbm' ? 'CBM' : 'kg'}
@@ -249,7 +254,7 @@ function ImportInfoBlock({
 
       {deliveryDays != null && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Délai de livraison estimé</span>
+          <span className="text-gray-500">Délai estimé</span>
           <span className="font-medium text-gray-900">
             {deliveryDays} jour{deliveryDays > 1 ? 's' : ''}
           </span>

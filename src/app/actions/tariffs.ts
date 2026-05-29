@@ -3,34 +3,49 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './_guards'
-import type { ImportTariff, TariffCountry, ImportPricingMode, ImportPriceUnit } from '@/types/database'
+import type { ImportTariff, TariffCountry, ImportShippingMode, ImportPriceUnit } from '@/types/database'
 
 export type TariffFormState = { error: string | null }
 
-// ─── Fetch all tariffs (admin reads all; others read active via RLS) ──────────
+// ─── Shipping mode helpers ────────────────────────────────────────────────────
+
+export const SHIPPING_MODE_LABELS: Record<ImportShippingMode, string> = {
+  air_door_to_door_kg: 'Aérien door-to-door / kg',
+  sea_textile_kg:      'Maritime textile / kg',
+  sea_volume_cbm:      'Maritime volume carton / CBM',
+}
+
+/** Unit is deterministic from shipping mode — never ask the user. */
+export function unitFromShippingMode(mode: ImportShippingMode): ImportPriceUnit {
+  return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
+}
+
+// ─── Fetch all tariffs (admin sees all; others see active via RLS) ─────────────
 
 export async function getTariffs(): Promise<ImportTariff[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('import_tariffs')
     .select('*')
     .order('country')
-    .order('created_at') as { data: ImportTariff[] | null; error: unknown }
+    .order('shipping_mode') as { data: ImportTariff[] | null; error: unknown }
 
-  if (error) return []
   return data ?? []
 }
 
-// ─── Fetch active tariffs by country (used on wholesale pages) ────────────────
+// ─── Fetch active tariff by country + shipping mode ───────────────────────────
 
-export async function getActiveTariffByCountry(country: string): Promise<ImportTariff | null> {
+export async function getActiveTariff(
+  country: string,
+  shippingMode: string
+): Promise<ImportTariff | null> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('import_tariffs')
     .select('*')
     .eq('country', country)
+    .eq('shipping_mode', shippingMode)
     .eq('active', true)
-    .order('created_at', { ascending: false })
     .limit(1)
     .single() as { data: ImportTariff | null; error: unknown }
 
@@ -40,8 +55,7 @@ export async function getActiveTariffByCountry(country: string): Promise<ImportT
 // ─── Upsert (create or update) ────────────────────────────────────────────────
 
 const VALID_COUNTRIES: TariffCountry[] = ['Turquie', 'Chine', 'Égypte', 'Dubai', 'Autre']
-const VALID_PRICING_MODES: ImportPricingMode[] = ['door_to_door_per_kg', 'sea_freight_cbm_or_kg']
-const VALID_UNITS: ImportPriceUnit[] = ['kg', 'cbm']
+const VALID_MODES: ImportShippingMode[] = ['air_door_to_door_kg', 'sea_textile_kg', 'sea_volume_cbm']
 
 export async function upsertTariff(
   _prevState: TariffFormState,
@@ -52,10 +66,9 @@ export async function upsertTariff(
 
   const id = (formData.get('id') as string) || null
   const country = (formData.get('country') as string)?.trim() as TariffCountry
-  const pricing_mode = (formData.get('pricing_mode') as string) as ImportPricingMode
-  const price_mad_raw = formData.get('price_mad') as string
-  const price_mad = parseFloat(price_mad_raw)
-  const unit = (formData.get('unit') as string) as ImportPriceUnit
+  const shipping_mode = (formData.get('shipping_mode') as string) as ImportShippingMode
+  const price_raw = formData.get('transport_customs_price_mad') as string
+  const transport_customs_price_mad = parseFloat(price_raw)
   const delivery_days_raw = formData.get('delivery_days') as string
   const delivery_days = delivery_days_raw ? parseInt(delivery_days_raw) || null : null
   const notes_raw = (formData.get('notes') as string)?.trim()
@@ -64,21 +77,41 @@ export async function upsertTariff(
 
   if (!VALID_COUNTRIES.includes(country))
     return { error: 'Pays invalide.' }
-  if (!VALID_PRICING_MODES.includes(pricing_mode))
-    return { error: 'Mode de tarification invalide.' }
-  if (isNaN(price_mad) || price_mad < 0)
-    return { error: 'Le prix doit être un nombre positif.' }
-  if (!VALID_UNITS.includes(unit))
-    return { error: 'Unité invalide.' }
+  if (!VALID_MODES.includes(shipping_mode))
+    return { error: 'Mode de transport invalide.' }
+  if (isNaN(transport_customs_price_mad) || transport_customs_price_mad < 0)
+    return { error: 'Le prix transport & douane doit être un nombre positif.' }
 
-  const payload = { country, pricing_mode, price_mad, unit, delivery_days, notes, active }
+  // Unit is auto-derived from shipping mode
+  const unit = unitFromShippingMode(shipping_mode)
+
+  const payload = {
+    country,
+    shipping_mode,
+    transport_customs_price_mad,
+    unit,
+    delivery_days,
+    notes,
+    active,
+    // Keep legacy fields in sync for backward compat
+    pricing_mode: null,
+    price_mad: transport_customs_price_mad,
+  }
 
   if (id) {
     const { error } = await supabase.from('import_tariffs').update(payload).eq('id', id)
-    if (error) return { error: error.message }
+    if (error) {
+      if (error.message.includes('import_tariffs_active_country_mode_uidx'))
+        return { error: `Un tarif actif pour ${country} — ${SHIPPING_MODE_LABELS[shipping_mode]} existe déjà.` }
+      return { error: error.message }
+    }
   } else {
     const { error } = await supabase.from('import_tariffs').insert(payload)
-    if (error) return { error: error.message }
+    if (error) {
+      if (error.message.includes('import_tariffs_active_country_mode_uidx'))
+        return { error: `Un tarif actif pour ${country} — ${SHIPPING_MODE_LABELS[shipping_mode]} existe déjà.` }
+      return { error: error.message }
+    }
   }
 
   revalidatePath('/admin/import-tariffs')
@@ -87,12 +120,23 @@ export async function upsertTariff(
 
 // ─── Toggle active ────────────────────────────────────────────────────────────
 
-export async function toggleTariffActive(id: string, active: boolean): Promise<void> {
+export async function toggleTariffActive(id: string, active: boolean): Promise<{ error: string | null }> {
   const { supabase, error } = await requireAdmin()
-  if (error) return
+  if (error) return { error }
 
-  await supabase.from('import_tariffs').update({ active }).eq('id', id)
+  const { error: dbError } = await supabase
+    .from('import_tariffs')
+    .update({ active })
+    .eq('id', id)
+
+  if (dbError) {
+    if (dbError.message.includes('import_tariffs_active_country_mode_uidx'))
+      return { error: 'Un tarif actif pour ce pays/mode existe déjà. Désactivez-le d\'abord.' }
+    return { error: dbError.message }
+  }
+
   revalidatePath('/admin/import-tariffs')
+  return { error: null }
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────

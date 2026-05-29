@@ -8,7 +8,8 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { uploadProductImage, formatProductImageUploadError } from '@/lib/product-image-upload'
 import { isValidMediaUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
-import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportPricingMode, ImportPriceUnit, ImportTariff, TariffMode } from '@/types/database'
+import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportTariff, TariffMode, ImportShippingMode } from '@/types/database'
+import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/app/actions/tariffs'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,22 +103,27 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
     product?.affiliate_enabled ?? true
   )
 
-  // ── Import-on-demand fields (migrations 019 + 020) ───────────────────────
+  // ── Import-on-demand fields (migrations 019 + 020 + 022) ────────────────
   const [importOriginCountry, setImportOriginCountry] = useState<string>(
     product?.origin_country ?? ''
   )
-  const [importPricingMode, setImportPricingMode] = useState<ImportPricingMode>(
-    product?.import_pricing_mode ?? 'door_to_door_per_kg'
+
+  // Shipping mode (migration 022) — replaces importPricingMode
+  const [importShippingMode, setImportShippingMode] = useState<ImportShippingMode>(
+    product?.import_shipping_mode ??
+    (product?.import_pricing_mode === 'sea_freight_cbm_or_kg' && product?.import_price_unit === 'cbm'
+      ? 'sea_volume_cbm'
+      : product?.import_pricing_mode === 'sea_freight_cbm_or_kg'
+      ? 'sea_textile_kg'
+      : 'air_door_to_door_kg')
   )
+
   const [estimatedImportPriceMad, setEstimatedImportPriceMad] = useState<string>(
     product?.estimated_import_price_mad != null
       ? String(product.estimated_import_price_mad)
       : product?.estimated_cost_mad != null
       ? String(product.estimated_cost_mad)
       : ''
-  )
-  const [importPriceUnit, setImportPriceUnit] = useState<ImportPriceUnit>(
-    product?.import_price_unit ?? 'kg'
   )
   const [estimatedDeliveryDays, setEstimatedDeliveryDays] = useState<string>(
     product?.estimated_delivery_days != null ? String(product.estimated_delivery_days) : ''
@@ -330,6 +336,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
       <input type="hidden" name="media" value={JSON.stringify(validMedia)} />
       <input type="hidden" name="submitted_via" value="admin_dashboard" />
       <input type="hidden" name="tariff_mode" value={availabilityType === 'import_on_demand' ? tariffMode : 'global'} />
+      <input type="hidden" name="import_shipping_mode" value={availabilityType === 'import_on_demand' ? importShippingMode : ''} />
 
       {/* Error banner */}
       {state?.error && (
@@ -442,9 +449,15 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
         {/* import_on_demand display fields — only shown when relevant */}
         {availabilityType === 'import_on_demand' && (
           <div className="space-y-4 p-4 rounded-xl border border-purple-200 bg-purple-50">
-            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-              Informations import — affichées aux grossistes
-            </p>
+            <div>
+              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                Transport &amp; douane — affiché aux grossistes
+              </p>
+              <p className="text-xs text-purple-500 mt-0.5">
+                Ces champs représentent les <strong>frais de transport et douane</strong> uniquement —
+                séparés du coût d&apos;achat fournisseur (saisi dans la section « Coût usine » ci-dessous).
+              </p>
+            </div>
 
             {/* Tariff mode selector */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -490,32 +503,33 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
             {/* Global tariff preview */}
             {tariffMode === 'global' && (() => {
               const matchingTariff = tariffs.find(
-                (t) => t.country === importOriginCountry && t.active
+                (t) =>
+                  t.country === importOriginCountry &&
+                  t.shipping_mode === importShippingMode &&
+                  t.active
               )
+              const needsCountry = !importOriginCountry
               return (
                 <div className="rounded-lg border border-purple-200 bg-white px-4 py-3 space-y-1.5 text-sm">
                   <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">
-                    Tarif global actif
-                    {importOriginCountry ? ` — ${importOriginCountry}` : ''}
+                    Tarif global actif (frais transport &amp; douane)
                   </p>
-                  {!importOriginCountry ? (
+                  {needsCountry ? (
                     <p className="text-xs text-gray-400 italic">
-                      Sélectionnez un pays d&apos;origine pour voir le tarif global.
+                      Sélectionnez un pays et un mode de transport pour voir le tarif global.
                     </p>
                   ) : matchingTariff ? (
                     <>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Mode</span>
                         <span className="font-medium text-gray-900">
-                          {matchingTariff.pricing_mode === 'door_to_door_per_kg'
-                            ? 'Porte-à-porte / kg'
-                            : 'Fret maritime (CBM ou kg)'}
+                          {SHIPPING_MODE_LABELS[matchingTariff.shipping_mode]}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Prix</span>
+                        <span className="text-gray-500">Frais transport &amp; douane</span>
                         <span className="font-medium text-gray-900">
-                          {Number(matchingTariff.price_mad).toFixed(2)} MAD&nbsp;
+                          {Number(matchingTariff.transport_customs_price_mad).toFixed(2)} MAD&nbsp;
                           <span className="text-gray-400 font-normal text-xs">
                             / {matchingTariff.unit === 'cbm' ? 'CBM' : 'kg'}
                           </span>
@@ -523,7 +537,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                       </div>
                       {matchingTariff.delivery_days != null && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Délai</span>
+                          <span className="text-gray-500">Délai estimé</span>
                           <span className="font-medium text-gray-900">
                             {matchingTariff.delivery_days} jour{matchingTariff.delivery_days > 1 ? 's' : ''}
                           </span>
@@ -537,7 +551,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                     </>
                   ) : (
                     <p className="text-xs text-amber-600">
-                      Aucun tarif global actif pour ce pays.{' '}
+                      Aucun tarif actif pour {importOriginCountry} — {SHIPPING_MODE_LABELS[importShippingMode]}.{' '}
                       <a
                         href="/admin/import-tariffs"
                         target="_blank"
@@ -552,7 +566,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
               )
             })()}
 
-            {/* Row 1: Origin country — always visible */}
+            {/* Row: Origin country + Shipping mode — always visible */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="import_origin_country" className={LABEL}>
@@ -575,36 +589,40 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                   <option value="Mixte">Mixte (plusieurs origines)</option>
                 </select>
               </div>
+
+              <div>
+                <label htmlFor="import_shipping_mode_ui" className={LABEL}>
+                  Mode de transport
+                </label>
+                <select
+                  id="import_shipping_mode_ui"
+                  disabled={isPending}
+                  value={importShippingMode}
+                  onChange={(e) => setImportShippingMode(e.target.value as ImportShippingMode)}
+                  className={INPUT}
+                >
+                  {(Object.entries(SHIPPING_MODE_LABELS) as [ImportShippingMode, string][]).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Unité auto : <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'}</strong>
+                </p>
+              </div>
             </div>
 
             {/* Custom tariff fields — only shown when tariffMode = 'custom' */}
             {tariffMode === 'custom' && (
               <>
-                {/* Pricing mode */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="import_pricing_mode" className={LABEL}>
-                      Mode de tarification import
-                    </label>
-                    <select
-                      id="import_pricing_mode"
-                      name="import_pricing_mode"
-                      disabled={isPending}
-                      value={importPricingMode}
-                      onChange={(e) => setImportPricingMode(e.target.value as ImportPricingMode)}
-                      className={INPUT}
-                    >
-                      <option value="door_to_door_per_kg">Porte-à-porte / kg</option>
-                      <option value="sea_freight_cbm_or_kg">Fret maritime — CBM ou kg</option>
-                    </select>
-                  </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                  Frais de <strong>transport &amp; douane uniquement</strong> — ne pas inclure le prix d&apos;achat du produit.
                 </div>
 
-                {/* Price + unit + delivery days */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="sm:col-span-1">
+                {/* Price + delivery days */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
                     <label htmlFor="estimated_import_price_mad" className={LABEL}>
-                      Prix import estimé (MAD)
+                      Frais transport &amp; douane (MAD / {unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'})
                     </label>
                     <input
                       id="estimated_import_price_mad"
@@ -618,23 +636,9 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                       className={INPUT}
                       placeholder="0.00"
                     />
-                  </div>
-
-                  <div>
-                    <label htmlFor="import_price_unit" className={LABEL}>
-                      Unité
-                    </label>
-                    <select
-                      id="import_price_unit"
-                      name="import_price_unit"
-                      disabled={isPending}
-                      value={importPriceUnit}
-                      onChange={(e) => setImportPriceUnit(e.target.value as ImportPriceUnit)}
-                      className={INPUT}
-                    >
-                      <option value="kg">par kg</option>
-                      <option value="cbm">par CBM</option>
-                    </select>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Unité auto-sélectionnée depuis le mode : <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'}</strong>
+                    </p>
                   </div>
 
                   <div>
@@ -659,7 +663,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                 {/* Notes */}
                 <div>
                   <label htmlFor="import_notes" className={LABEL}>
-                    Notes import
+                    Notes transport &amp; douane
                     {importOriginCountry === 'Mixte' && (
                       <span className="ml-1.5 text-amber-600 font-semibold">(recommandé — origines multiples)</span>
                     )}
@@ -672,7 +676,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                     value={importNotes}
                     onChange={(e) => setImportNotes(e.target.value)}
                     className={`${INPUT} resize-none ${importOriginCountry === 'Mixte' ? 'border-amber-400 ring-1 ring-amber-300' : ''}`}
-                    placeholder="Ex : Mélange Turquie + Chine selon disponibilité, délais variables…"
+                    placeholder="Ex : taxe douanière variable, inspection aléatoire…"
                   />
                   {importOriginCountry === 'Mixte' && (
                     <p className="text-xs text-amber-600 mt-1">

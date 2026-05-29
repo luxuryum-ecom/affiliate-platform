@@ -35,6 +35,15 @@ export type TariffMode = 'global' | 'custom'
 /** Allowed country values for import_tariffs table. */
 export type TariffCountry = 'Turquie' | 'Chine' | 'Égypte' | 'Dubai' | 'Autre'
 
+/**
+ * Shipping/transport modes for import_tariffs (migration 022).
+ * Each mode implies a fixed unit:
+ *   air_door_to_door_kg → kg
+ *   sea_textile_kg      → kg
+ *   sea_volume_cbm      → cbm
+ */
+export type ImportShippingMode = 'air_door_to_door_kg' | 'sea_textile_kg' | 'sea_volume_cbm'
+
 /** Product review workflow state. active can only be true when this is 'approved'. */
 export type ProductApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'rejected'
 
@@ -198,8 +207,16 @@ export interface Product {
   import_notes: string | null
 
   // ── Tariff mode (migration 021) ───────────────────────────────────────────
-  /** 'global' = inherit from import_tariffs by origin_country. 'custom' = use product fields. */
+  /** 'global' = inherit from import_tariffs by origin_country + shipping_mode. 'custom' = use product fields. */
   tariff_mode: TariffMode
+
+  // ── Import shipping mode (migration 022) ──────────────────────────────────
+  /**
+   * Shipping/transport mode for import_on_demand products.
+   * Used to look up the matching global tariff (country + shipping_mode).
+   * Also determines the unit for custom transport costs.
+   */
+  import_shipping_mode: ImportShippingMode | null
 
   created_at: string
   updated_at: string
@@ -212,8 +229,19 @@ export interface Product {
 export interface ImportTariff {
   id: string
   country: TariffCountry
-  pricing_mode: ImportPricingMode
-  price_mad: number
+
+  // ── New fields (migration 022) — primary ──────────────────────────────────
+  /** Transport/shipping mode. Unit is auto-derived: kg for air+sea_textile, cbm for sea_volume. */
+  shipping_mode: ImportShippingMode
+  /** Total transport + customs cost in MAD per unit. Does NOT include product purchase cost. */
+  transport_customs_price_mad: number
+
+  // ── Legacy fields (kept for backward compat) ─────────────────────────────
+  /** @deprecated Use shipping_mode instead. */
+  pricing_mode: ImportPricingMode | null
+  /** @deprecated Use transport_customs_price_mad instead. */
+  price_mad: number | null
+
   unit: ImportPriceUnit
   delivery_days: number | null
   notes: string | null
@@ -577,7 +605,10 @@ export type Database = {
       >
       import_tariffs: TableDef<
         ImportTariff,
-        Omit<ImportTariff, 'id' | 'created_at' | 'updated_at'>,
+        Omit<ImportTariff, 'id' | 'created_at' | 'updated_at' | 'pricing_mode' | 'price_mad'> & {
+          pricing_mode?: ImportPricingMode | null
+          price_mad?: number | null
+        },
         Partial<ImportTariff>
       >
     }
