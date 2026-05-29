@@ -277,7 +277,10 @@ function ProductRow({ product }: { product: Product }) {
             <strong className="text-gray-700">{formatMAD(product.sell_price)}</strong>
           </span>
           <span className="text-gray-300">·</span>
-          <span>Commission&nbsp;: {formatMAD(product.commission_amount)}</span>
+          <span>
+            Commission&nbsp;:{' '}
+            <strong className="text-green-700">{formatMAD(product.commission_amount)}</strong>
+          </span>
           <span className="text-gray-300">·</span>
           <span>Stock&nbsp;: {product.stock_count}</span>
           {product.wholesale_tiers.length > 0 && (
@@ -291,24 +294,45 @@ function ProductRow({ product }: { product: Product }) {
           )}
         </p>
 
-        {/* Sourcing mini-line */}
-        {(product.supplier_name || product.origin_country || product.purchase_price_mad) && (
+        {/* Cost breakdown mini-line */}
+        {(product.factory_cost_mad != null || product.purchase_price_mad != null || product.supplier_name || product.origin_country) && (
           <p className="text-xs text-gray-400 leading-relaxed flex flex-wrap gap-x-2 mt-0.5">
-            {product.supplier_name && (
-              <span>Fournisseur&nbsp;: {product.supplier_name}</span>
-            )}
-            {product.origin_country && (
-              <span>Pays&nbsp;: {product.origin_country}</span>
-            )}
-            {product.purchase_price_mad != null && (
+            {(product.factory_cost_mad != null || product.purchase_price_mad != null) && (
               <>
+                <span>
+                  Coût&nbsp;: {formatMAD(product.factory_cost_mad ?? product.purchase_price_mad ?? 0)}
+                </span>
+                {product.platform_margin_value != null && (
+                  <>
+                    <span className="text-gray-200">·</span>
+                    <span>
+                      Marge&nbsp;:{' '}
+                      {product.platform_margin_type === 'percentage'
+                        ? `${product.platform_margin_value}%`
+                        : `${formatMAD(product.platform_margin_value)}`}
+                    </span>
+                  </>
+                )}
                 <span className="text-gray-200">·</span>
                 <span>
-                  Coût&nbsp;: {formatMAD(product.purchase_price_mad)}
-                  {product.margin_percentage
-                    ? ` (+${product.margin_percentage}%)`
-                    : ''}
+                  Frais&nbsp;: {formatMAD(
+                    (product.confirmation_fee_mad ?? 0) +
+                    (product.packaging_fee_mad ?? 0) +
+                    (product.delivery_fee_mad ?? 0)
+                  )}
                 </span>
+              </>
+            )}
+            {product.supplier_name && (
+              <>
+                <span className="text-gray-200">·</span>
+                <span>{product.supplier_name}</span>
+              </>
+            )}
+            {product.origin_country && (
+              <>
+                <span className="text-gray-200">·</span>
+                <span>{product.origin_country}</span>
               </>
             )}
           </p>

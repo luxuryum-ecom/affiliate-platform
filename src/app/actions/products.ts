@@ -13,7 +13,7 @@ import type {
   PlatformMarginType,
   MediaItem,
 } from '@/types/database'
-import { calculatePlatformPrice } from '@/lib/utils'
+import { calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
 
 export type ProductFormState = { error: string | null }
 
@@ -111,14 +111,39 @@ export async function upsertProduct(
     )
   }
 
+  // ── Factory cost (migration 016) — explicit MAD cost set by admin ────────
+
+  const factory_cost_mad_raw = formData.get('factory_cost_mad') as string
+  // Fall back to computed purchase_price_mad when not explicitly set
+  const factory_cost_mad: number | null =
+    factory_cost_mad_raw && !isNaN(parseFloat(factory_cost_mad_raw))
+      ? parseFloat(factory_cost_mad_raw)
+      : purchase_price_mad
+
   // ── Sales fields ──────────────────────────────────────────────────────────
 
   const sell_price = parseFloat(formData.get('sell_price') as string)
-  // commission only makes sense when affiliate_enabled
-  const commission_amount_raw = parseFloat(formData.get('commission_amount') as string) || 0
-  const commission_amount = affiliate_enabled ? commission_amount_raw : 0
   const wholesale_min_qty = parseInt(formData.get('wholesale_min_qty') as string) || 1
   const stock_count = parseInt(formData.get('stock_count') as string) || 0
+
+  // ── Auto-compute commission from cost formula ─────────────────────────────
+  // commission = sell_price − factory_cost − platform_margin − delivery_fee − confirmation_fee − packaging_fee
+  // Returns 0 when affiliate is disabled or factory_cost_mad is not set yet.
+
+  const commission_amount: number = (() => {
+    if (!affiliate_enabled || factory_cost_mad === null) return 0
+    const raw = calculateNetAffiliateCommission({
+      affiliateSellPrice: sell_price,
+      factoryCostMad: factory_cost_mad,
+      marginType: platform_margin_type,
+      marginValue: platform_margin_value,
+      packagingFee: packaging_fee_mad,
+      deliveryFee: delivery_fee_mad,
+      confirmationFee: confirmation_fee_mad,
+      quantity: 1,
+    })
+    return Math.max(0, raw)
+  })()
 
   // ── Approval ──────────────────────────────────────────────────────────────
 
@@ -147,7 +172,8 @@ export async function upsertProduct(
     return { error: 'Devise invalide. Utilisez MAD, USD ou AED.' }
   if (isNaN(sell_price) || sell_price <= 0)
     return { error: 'Le prix de vente doit être supérieur à 0 MAD.' }
-  if (commission_amount < 0) return { error: 'La commission ne peut pas être négative.' }
+  if (factory_cost_mad !== null && factory_cost_mad < 0)
+    return { error: 'Le coût usine ne peut pas être négatif.' }
   if (wholesale_min_qty < 1) return { error: 'La quantité minimale doit être ≥ 1.' }
   if (stock_count < 0) return { error: 'Le stock ne peut pas être négatif.' }
   if (exchange_rate_to_mad <= 0)
@@ -203,6 +229,7 @@ export async function upsertProduct(
     calculated_sale_price_mad,
     platform_margin_type,
     platform_margin_value,
+    factory_cost_mad,
     confirmation_fee_mad,
     packaging_fee_mad,
     delivery_fee_mad,

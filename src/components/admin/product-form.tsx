@@ -115,6 +115,37 @@ export function ProductForm({ product }: ProductFormProps) {
     String(product?.margin_percentage ?? 30)
   )
 
+  // ── Platform margin type & value (migration 013) ──────────────────────────
+  const [platformMarginType, setPlatformMarginType] = useState<string>(
+    product?.platform_margin_type ?? 'percentage'
+  )
+  const [platformMarginValue, setPlatformMarginValue] = useState<string>(
+    product?.platform_margin_value != null ? String(product.platform_margin_value) : '30'
+  )
+
+  // ── Factory cost (migration 016) ───────────────────────────────────────────
+  const [factoryCostMad, setFactoryCostMad] = useState<string>(
+    product?.factory_cost_mad != null
+      ? String(product.factory_cost_mad)
+      : product?.purchase_price_mad != null
+      ? String(product.purchase_price_mad)
+      : ''
+  )
+
+  // ── Sell price + operational fees (for commission preview) ────────────────
+  const [sellPrice, setSellPrice] = useState<string>(
+    product?.sell_price != null ? String(product.sell_price) : ''
+  )
+  const [confirmationFee, setConfirmationFee] = useState<string>(
+    String(product?.confirmation_fee_mad ?? 10)
+  )
+  const [packagingFee, setPackagingFee] = useState<string>(
+    String(product?.packaging_fee_mad ?? 10)
+  )
+  const [deliveryFee, setDeliveryFee] = useState<string>(
+    String(product?.delivery_fee_mad ?? 0)
+  )
+
   // ── Approval state ────────────────────────────────────────────────────────
   const [approvalStatus, setApprovalStatus] = useState<ProductApprovalStatus>(
     product?.approval_status ?? 'draft'
@@ -156,6 +187,40 @@ export function ProductForm({ product }: ProductFormProps) {
       ? parseFloat((purchasePriceMad * (1 + mg / 100)).toFixed(2))
       : null
 
+  // ── Platform cost & commission preview ────────────────────────────────────
+  const fCost = parseFloat(factoryCostMad)
+  const pmType = platformMarginType
+  const pmValue = parseFloat(platformMarginValue) || 0
+  const spVal = parseFloat(sellPrice)
+  const confFeeVal = parseFloat(confirmationFee) || 0
+  const packFeeVal = parseFloat(packagingFee) || 0
+  const delivFeeVal = parseFloat(deliveryFee) || 0
+
+  const platformMarginMad =
+    !isNaN(fCost) && fCost > 0
+      ? pmType === 'percentage'
+        ? parseFloat((fCost * (pmValue / 100)).toFixed(2))
+        : pmValue
+      : null
+
+  const platformCostMad =
+    !isNaN(fCost) && fCost > 0 && platformMarginMad !== null
+      ? parseFloat((fCost + platformMarginMad).toFixed(2))
+      : null
+
+  const estimatedCommission =
+    affiliateEnabled &&
+    !isNaN(fCost) && fCost > 0 &&
+    !isNaN(spVal) && spVal > 0 &&
+    platformMarginMad !== null
+      ? Math.max(
+          0,
+          parseFloat(
+            (spVal - fCost - platformMarginMad - delivFeeVal - confFeeVal - packFeeVal).toFixed(2)
+          )
+        )
+      : null
+
   // ── Tier helpers ──────────────────────────────────────────────────────────
   const addTier = () =>
     setTiers((prev) => [...prev, { min_qty: '', max_qty: '', price_per_unit: '' }])
@@ -163,14 +228,15 @@ export function ProductForm({ product }: ProductFormProps) {
   const updateTier = (i: number, key: keyof TierRow, val: string) =>
     setTiers((prev) => prev.map((t, idx) => (idx === i ? { ...t, [key]: val } : t)))
 
-  // Auto-generate standard tiers from cost price (10+/50+/100+/500+ pieces)
+  // Auto-generate standard tiers from factory cost (10+/50+/100+/500+ pieces)
   const autoGenerateTiers = () => {
-    if (!purchasePriceMad) return
+    const base = !isNaN(fCost) && fCost > 0 ? fCost : purchasePriceMad
+    if (!base) return
     setTiers([
-      { min_qty: '10',  max_qty: '49',  price_per_unit: String(Math.round(purchasePriceMad * 1.30)) },
-      { min_qty: '50',  max_qty: '99',  price_per_unit: String(Math.round(purchasePriceMad * 1.25)) },
-      { min_qty: '100', max_qty: '499', price_per_unit: String(Math.round(purchasePriceMad * 1.20)) },
-      { min_qty: '500', max_qty: '',    price_per_unit: String(Math.round(purchasePriceMad * 1.15)) },
+      { min_qty: '10',  max_qty: '49',  price_per_unit: String(Math.round(base * 1.30)) },
+      { min_qty: '50',  max_qty: '99',  price_per_unit: String(Math.round(base * 1.25)) },
+      { min_qty: '100', max_qty: '499', price_per_unit: String(Math.round(base * 1.20)) },
+      { min_qty: '500', max_qty: '',    price_per_unit: String(Math.round(base * 1.15)) },
     ])
   }
 
@@ -446,14 +512,15 @@ export function ProductForm({ product }: ProductFormProps) {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          4. COÛT D'ACHAT & MARGE
+          4. COÛT USINE & MARGE PLATEFORME
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Coût d&apos;achat & marge</h2>
+        <h2 className={SECTION_TITLE}>Coût usine & marge plateforme</h2>
 
+        {/* Sourcing / traceability row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="purchase_price" className={LABEL}>Prix d&apos;achat / coût</label>
+            <label htmlFor="purchase_price" className={LABEL}>Prix d&apos;achat fournisseur</label>
             <input
               id="purchase_price" name="purchase_price" type="number"
               step="0.01" min="0" disabled={isPending}
@@ -478,7 +545,6 @@ export function ProductForm({ product }: ProductFormProps) {
             </select>
           </div>
 
-          {/* Exchange rate — only relevant for imported/demand products */}
           <div className={!needsConversion ? 'opacity-40' : ''}>
             <label htmlFor="exchange_rate_to_mad" className={LABEL}>
               Taux de change → MAD
@@ -498,37 +564,101 @@ export function ProductForm({ product }: ProductFormProps) {
           </div>
         </div>
 
+        {/* Factory cost MAD — the operative cost used for commission */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="margin_percentage" className={LABEL}>Marge cible (%)</label>
-            <input
-              id="margin_percentage" name="margin_percentage"
-              type="number" step="0.5" min="0" max="1000"
-              disabled={isPending}
-              value={margin}
-              onChange={(e) => setMargin(e.target.value)}
-              className={INPUT}
-              placeholder="30"
-            />
+            <label htmlFor="factory_cost_mad" className={LABEL}>
+              Coût usine (MAD) <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="factory_cost_mad" name="factory_cost_mad" type="number"
+                step="0.01" min="0" disabled={isPending}
+                value={factoryCostMad}
+                onChange={(e) => setFactoryCostMad(e.target.value)}
+                className={INPUT}
+                placeholder="0.00"
+              />
+              {purchasePriceMad !== null && (
+                <button
+                  type="button"
+                  onClick={() => setFactoryCostMad(String(purchasePriceMad))}
+                  disabled={isPending}
+                  className="shrink-0 text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                  title="Remplir depuis le prix d'achat converti"
+                >
+                  ← Auto
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Coût réel en MAD. Base de calcul de la commission affilié.
+              {purchasePriceMad !== null && (
+                <> Calculé&nbsp;: <strong>{formatMAD(purchasePriceMad)}</strong></>
+              )}
+            </p>
           </div>
 
-          {purchasePriceMad !== null && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Calcul automatique
-              </p>
-              <CalcRow label="Coût en MAD" value={formatMAD(purchasePriceMad)} />
+          {/* Legacy margin for auto-tier — hidden from main display but kept for backward compat */}
+          <input type="hidden" name="margin_percentage" value={margin} />
+        </div>
+
+        {/* Platform margin type + value */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="platform_margin_type" className={LABEL}>
+              Type de marge plateforme
+            </label>
+            <select
+              id="platform_margin_type" name="platform_margin_type" disabled={isPending}
+              value={platformMarginType}
+              onChange={(e) => setPlatformMarginType(e.target.value)}
+              className={INPUT}
+            >
+              <option value="percentage">Pourcentage (%)</option>
+              <option value="fixed">Montant fixe (MAD)</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="platform_margin_value" className={LABEL}>
+              {platformMarginType === 'percentage' ? 'Marge (%)' : 'Marge fixe (MAD)'}
+            </label>
+            <input
+              id="platform_margin_value" name="platform_margin_value"
+              type="number" step="0.5" min="0"
+              disabled={isPending}
+              value={platformMarginValue}
+              onChange={(e) => {
+                setPlatformMarginValue(e.target.value)
+                if (platformMarginType === 'percentage') setMargin(e.target.value)
+              }}
+              className={INPUT}
+              placeholder={platformMarginType === 'percentage' ? '30' : '0.00'}
+            />
+          </div>
+        </div>
+
+        {/* Cost breakdown preview */}
+        {!isNaN(fCost) && fCost > 0 && platformMarginMad !== null && (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Décomposition des coûts
+            </p>
+            <CalcRow label="Coût usine" value={formatMAD(fCost)} />
+            <CalcRow
+              label={`Marge plateforme (${pmType === 'percentage' ? `${pmValue}%` : `fixe`})`}
+              value={formatMAD(platformMarginMad)}
+            />
+            <div className="pt-1 border-t border-gray-200">
               <CalcRow
-                label={`Prix suggéré (+${margin}%)`}
-                value={suggestedSellPrice ? formatMAD(suggestedSellPrice) : '—'}
+                label="Prix plateforme (coût + marge)"
+                value={platformCostMad !== null ? formatMAD(platformCostMad) : '—'}
                 highlight
               />
-              <p className="text-xs text-gray-400 pt-1 border-t border-gray-200">
-                Vous pouvez fixer un prix de vente différent ci-dessous.
-              </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -537,44 +667,24 @@ export function ProductForm({ product }: ProductFormProps) {
       <section className="space-y-4">
         <h2 className={SECTION_TITLE}>Prix de vente & commissions</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="sell_price" className={LABEL}>
-              Prix de base plateforme (MAD) <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="sell_price" name="sell_price" type="number"
-              step="0.01" min="0.01" required disabled={isPending}
-              defaultValue={product?.sell_price ?? suggestedSellPrice ?? undefined}
-              className={INPUT}
-              placeholder={suggestedSellPrice ? String(suggestedSellPrice) : '0.00'}
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Prix affiché aux affiliés / prix de référence plateforme.
-              {suggestedSellPrice && (
-                <> Suggéré&nbsp;: <strong>{formatMAD(suggestedSellPrice)}</strong></>
-              )}
-            </p>
-          </div>
-
-          <div className={!affiliateEnabled ? 'opacity-40' : ''}>
-            <label htmlFor="commission_amount" className={LABEL}>
-              Commission affilié (MAD)
-            </label>
-            <input
-              id="commission_amount" name="commission_amount"
-              type="number" step="0.01" min="0"
-              disabled={isPending || !affiliateEnabled}
-              defaultValue={product?.commission_amount ?? 0}
-              className={INPUT}
-              placeholder="0.00"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              {affiliateEnabled
-                ? 'Montant versé à l\'affilié à chaque livraison confirmée.'
-                : 'Non applicable (affiliés désactivés pour ce produit).'}
-            </p>
-          </div>
+        <div>
+          <label htmlFor="sell_price" className={LABEL}>
+            Prix de vente plateforme (MAD) <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="sell_price" name="sell_price" type="number"
+            step="0.01" min="0.01" required disabled={isPending}
+            value={sellPrice}
+            onChange={(e) => setSellPrice(e.target.value)}
+            className={INPUT}
+            placeholder={suggestedSellPrice ? String(suggestedSellPrice) : '0.00'}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Prix affiché aux affiliés / prix de référence plateforme.
+            {suggestedSellPrice && (
+              <> Suggéré depuis coût+marge&nbsp;: <strong>{formatMAD(suggestedSellPrice)}</strong></>
+            )}
+          </p>
         </div>
 
         {/* Operational fees */}
@@ -586,7 +696,8 @@ export function ProductForm({ product }: ProductFormProps) {
             <input
               id="confirmation_fee_mad" name="confirmation_fee_mad"
               type="number" step="0.01" min="0" disabled={isPending}
-              defaultValue={product?.confirmation_fee_mad ?? 10}
+              value={confirmationFee}
+              onChange={(e) => setConfirmationFee(e.target.value)}
               className={INPUT}
             />
             <p className="text-xs text-gray-400 mt-1">Coût opérationnel par commande confirmée.</p>
@@ -599,7 +710,8 @@ export function ProductForm({ product }: ProductFormProps) {
             <input
               id="packaging_fee_mad" name="packaging_fee_mad"
               type="number" step="0.01" min="0" disabled={isPending}
-              defaultValue={product?.packaging_fee_mad ?? 10}
+              value={packagingFee}
+              onChange={(e) => setPackagingFee(e.target.value)}
               className={INPUT}
             />
             <p className="text-xs text-gray-400 mt-1">Coût emballage par commande confirmée.</p>
@@ -612,27 +724,56 @@ export function ProductForm({ product }: ProductFormProps) {
             <input
               id="delivery_fee_mad" name="delivery_fee_mad"
               type="number" step="0.01" min="0" disabled={isPending}
-              defaultValue={product?.delivery_fee_mad ?? 0}
+              value={deliveryFee}
+              onChange={(e) => setDeliveryFee(e.target.value)}
               className={INPUT}
             />
             <p className="text-xs text-gray-400 mt-1">Frais livreur estimés par commande.</p>
           </div>
         </div>
 
-        {/* Total operational cost preview */}
-        {(() => {
-          const confFee = product?.confirmation_fee_mad ?? 10
-          const packFee = product?.packaging_fee_mad ?? 10
-          const delivFee = product?.delivery_fee_mad ?? 0
-          const totalFees = confFee + packFee + delivFee
-          return (
-            <div className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
-              Coût opérationnel total estimé&nbsp;:{' '}
-              <strong className="text-gray-800">{totalFees} MAD / commande</strong>
-              <span className="text-gray-400 ml-1">(confirmation + emballage + livraison)</span>
-            </div>
-          )
-        })()}
+        {/* Auto-computed commission — read-only preview, no manual input */}
+        <div className={`rounded-xl border p-4 space-y-2 ${
+          !affiliateEnabled ? 'bg-gray-50 border-gray-100 opacity-60' : 'bg-green-50 border-green-100'
+        }`}>
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            Commission affilié — calculée automatiquement
+          </p>
+          {affiliateEnabled ? (
+            <>
+              <div className="space-y-1">
+                <CalcRow
+                  label="Prix de vente"
+                  value={!isNaN(spVal) && spVal > 0 ? formatMAD(spVal) : '—'}
+                />
+                <CalcRow label="− Coût usine" value={!isNaN(fCost) && fCost > 0 ? `−${formatMAD(fCost)}` : '—'} />
+                <CalcRow
+                  label={`− Marge plateforme (${pmType === 'percentage' ? `${pmValue}%` : 'fixe'})`}
+                  value={platformMarginMad !== null ? `−${formatMAD(platformMarginMad)}` : '—'}
+                />
+                <CalcRow label="− Frais de livraison" value={delivFeeVal > 0 ? `−${formatMAD(delivFeeVal)}` : `−${formatMAD(0)}`} />
+                <CalcRow label="− Frais de confirmation" value={`−${formatMAD(confFeeVal)}`} />
+                <CalcRow label="− Frais d'emballage" value={`−${formatMAD(packFeeVal)}`} />
+              </div>
+              <div className="pt-2 border-t border-green-200">
+                <CalcRow
+                  label="Commission nette affilié"
+                  value={estimatedCommission !== null ? formatMAD(estimatedCommission) : '—'}
+                  highlight
+                />
+              </div>
+              {estimatedCommission !== null && estimatedCommission <= 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Commission nulle ou négative — ajustez le prix de vente ou réduisez les frais.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-gray-400">
+              Les affiliés sont désactivés pour ce produit — aucune commission n&apos;est versée.
+            </p>
+          )}
+        </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -683,12 +824,12 @@ export function ProductForm({ product }: ProductFormProps) {
             </p>
           </div>
           <div className="flex gap-2">
-            {purchasePriceMad !== null && (
+            {(!isNaN(fCost) && fCost > 0 || purchasePriceMad !== null) && (
               <button
                 type="button"
                 onClick={autoGenerateTiers}
                 className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
-                title="Génère 4 paliers standards à partir du coût MAD"
+                title="Génère 4 paliers standards à partir du coût usine MAD"
               >
                 ✦ Auto (coût + marges)
               </button>
@@ -706,9 +847,9 @@ export function ProductForm({ product }: ProductFormProps) {
         {tiers.length === 0 ? (
           <p className="text-xs text-gray-400 py-3 bg-gray-50 rounded-lg text-center">
             Aucun palier.
-            {purchasePriceMad
+            {(!isNaN(fCost) && fCost > 0) || purchasePriceMad
               ? ' Cliquez « ✦ Auto » pour générer les 4 paliers standards.'
-              : ' Entrez un coût d\'achat pour activer la génération automatique.'}
+              : ' Entrez un coût usine pour activer la génération automatique.'}
           </p>
         ) : (
           <div className="space-y-2">
@@ -751,13 +892,14 @@ export function ProductForm({ product }: ProductFormProps) {
         )}
 
         {/* Tier preview */}
-        {tiers.length > 0 && purchasePriceMad !== null && (
+        {tiers.length > 0 && (!isNaN(fCost) && fCost > 0 || purchasePriceMad !== null) && (
           <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 text-xs text-indigo-700 space-y-0.5">
             <p className="font-semibold mb-1">Aperçu des marges grossiste :</p>
             {tiers.map((t, i) => {
+              const costBase = !isNaN(fCost) && fCost > 0 ? fCost : (purchasePriceMad ?? 0)
               const price = parseFloat(t.price_per_unit)
-              const marginPct = purchasePriceMad > 0 && !isNaN(price)
-                ? (((price - purchasePriceMad) / purchasePriceMad) * 100).toFixed(0)
+              const marginPct = costBase > 0 && !isNaN(price)
+                ? (((price - costBase) / costBase) * 100).toFixed(0)
                 : '—'
               const label = t.max_qty ? `${t.min_qty}–${t.max_qty} u` : `${t.min_qty}+ u`
               return (
