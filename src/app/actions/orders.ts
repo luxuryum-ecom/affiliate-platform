@@ -266,10 +266,11 @@ export async function updateOrderStatus(
   if (options?.codReceived != null) update.cod_received = options.codReceived
   if (options?.returnReason)    update.return_reason    = options.returnReason
 
-  if (newStatus === 'confirmed')  update.confirmed_at = now
-  if (newStatus === 'shipped')    update.shipped_at   = now
-  if (newStatus === 'delivered')  update.delivered_at = now
-  if (newStatus === 'returned')   update.returned_at  = now
+  if (newStatus === 'confirmed')  update.confirmed_at  = now
+  if (newStatus === 'shipped')    update.shipped_at    = now
+  if (newStatus === 'delivered')  update.delivered_at  = now
+  if (newStatus === 'returned')   update.returned_at   = now
+  if (newStatus === 'cancelled')  update.cancelled_at  = now
 
   const { error } = await supabase.from('orders').update(update).eq('id', orderId)
   if (error) return fail(error.message)

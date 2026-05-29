@@ -3,6 +3,9 @@
 // If you change a constraint in SQL, update the union type here too.
 
 export type UserRole = 'admin' | 'affiliate' | 'wholesaler' | 'agent'
+
+/** How the platform margin is applied to factory cost. */
+export type PlatformMarginType = 'percentage' | 'fixed'
 export type UserStatus = 'pending' | 'approved' | 'rejected'
 
 /** Legacy source type — kept for backward compat. Use availability_type + origin_detail instead. */
@@ -101,12 +104,23 @@ export interface Product {
   /** Restricted to MAD | USD | AED */
   purchase_currency: string
   exchange_rate_to_mad: number
-  /** Computed: purchase_price in MAD (stored for audit). */
+  /** Computed: purchase_price in MAD (factory cost). Stored for audit. */
   purchase_price_mad: number | null
+  /** Legacy margin column kept for backward compat. Use platform_margin_value instead. */
   margin_percentage: number
-  /** Computed: purchase_price_mad × (1 + margin/100), stored for audit. */
+  /** Computed: factory_cost + platform_margin, stored for audit. */
   calculated_sale_price_mad: number | null
   source_notes: string | null
+
+  // ── Platform margin (migration 013) ───────────────────────────────────────
+  /** 'percentage' — platform_price = factory_cost × (1 + value/100).
+   *  'fixed' — platform_price = factory_cost + value (MAD). */
+  platform_margin_type: PlatformMarginType
+  /** The margin amount. % when type='percentage', MAD when type='fixed'. */
+  platform_margin_value: number | null
+  /** JSONB reserved for future courier API integration.
+   *  Shape: {carrier_code?, zone_overrides?: [{city, fee_mad}], api_enabled?: bool} */
+  delivery_fee_config: Record<string, unknown>
 
   // ── Approval workflow ─────────────────────────────────────────────────────
   approval_status: ProductApprovalStatus
@@ -185,6 +199,8 @@ export interface Order {
   shipped_at: string | null
   delivered_at: string | null
   returned_at: string | null
+  /** Set when order status transitions to 'cancelled'. Added migration 013. */
+  cancelled_at: string | null
 
   created_at: string
   updated_at: string
@@ -208,6 +224,9 @@ export interface WholesaleOrder {
   buyer_notes: string | null
   agent_notes: string | null
   total_amount: number
+  /** Delivery cost for the whole order in MAD. Separate from product tier prices.
+   *  total_amount = sum(line subtotals) + delivery_cost. Added migration 013. */
+  delivery_cost: number
   status: WholesaleOrderStatus
 
   // ── Audit timestamps (added migration 004) ────────────────────────────────
@@ -237,6 +256,11 @@ export interface Commission {
   order_id: string
   amount: number
   status: CommissionStatus
+  /** True when the related order was returned or cancelled after delivery.
+   *  Reversed commissions are excluded from payout calculations. Added migration 013. */
+  reversed: boolean
+  /** Timestamp when the commission was reversed. Null for active commissions. */
+  reversed_at: string | null
   created_at: string
   paid_at: string | null
 }

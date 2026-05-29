@@ -31,12 +31,14 @@ export async function createPayout(
   const { supabase, error, userId } = await requireAdmin()
   if (error || !userId) return { error: error ?? 'Erreur.', success: false, payoutId: null }
 
-  // Fetch all approved commissions for this affiliate
+  // Fetch all approved, non-reversed commissions for this affiliate.
+  // Reversed commissions belong to returned or cancelled orders and must never be paid.
   const { data: commissions, error: fetchErr } = await supabase
     .from('commissions')
     .select('id')
     .eq('affiliate_id', affiliateId)
     .eq('status', 'approved')
+    .eq('reversed', false)
 
   if (fetchErr) return { error: fetchErr.message, success: false, payoutId: null }
   if (!commissions || commissions.length === 0)

@@ -10,8 +10,10 @@ import type {
   ProductApprovalStatus,
   ProductAvailabilityType,
   ProductOriginDetail,
+  PlatformMarginType,
   MediaItem,
 } from '@/types/database'
+import { calculatePlatformPrice } from '@/lib/utils'
 
 export type ProductFormState = { error: string | null }
 
@@ -67,7 +69,20 @@ export async function upsertProduct(
 
   const purchase_currency = (formData.get('purchase_currency') as string) || 'MAD'
   const exchange_rate_to_mad = parseFloat(formData.get('exchange_rate_to_mad') as string) || 1
-  const margin_percentage = parseFloat(formData.get('margin_percentage') as string) || 30
+
+  // platform_margin_type: 'percentage' | 'fixed'
+  // Accept both the new field name and legacy 'margin_percentage' form field.
+  const platform_margin_type = (
+    (formData.get('platform_margin_type') as string) || 'percentage'
+  ) as PlatformMarginType
+
+  // platform_margin_value: preferred new field; fall back to legacy margin_percentage
+  const margin_value_raw =
+    formData.get('platform_margin_value') ?? formData.get('margin_percentage')
+  const platform_margin_value = parseFloat(margin_value_raw as string) || 30
+
+  // Keep margin_percentage in sync for backward compat with any legacy reads
+  const margin_percentage = platform_margin_type === 'percentage' ? platform_margin_value : 0
 
   const confirmation_fee_mad = parseFloat(formData.get('confirmation_fee_mad') as string) || 10
   const packaging_fee_mad = parseFloat(formData.get('packaging_fee_mad') as string) || 10
@@ -89,8 +104,10 @@ export async function upsertProduct(
       ? parseFloat((purchase_price * exchange_rate_to_mad).toFixed(2))
       : purchase_price
 
-    calculated_sale_price_mad = parseFloat(
-      (purchase_price_mad * (1 + margin_percentage / 100)).toFixed(2)
+    calculated_sale_price_mad = calculatePlatformPrice(
+      purchase_price_mad,
+      platform_margin_type,
+      platform_margin_value
     )
   }
 
@@ -135,6 +152,9 @@ export async function upsertProduct(
   if (stock_count < 0) return { error: 'Le stock ne peut pas être négatif.' }
   if (exchange_rate_to_mad <= 0)
     return { error: "Le taux de change doit être supérieur à 0." }
+  if (!['percentage', 'fixed'].includes(platform_margin_type))
+    return { error: 'Type de marge invalide. Utilisez percentage ou fixed.' }
+  if (platform_margin_value < 0) return { error: 'La marge ne peut pas être négative.' }
   if (margin_percentage < 0) return { error: 'La marge ne peut pas être négative.' }
 
   // ── Parse JSON fields ─────────────────────────────────────────────────────
@@ -181,6 +201,8 @@ export async function upsertProduct(
     purchase_price_mad,
     margin_percentage,
     calculated_sale_price_mad,
+    platform_margin_type,
+    platform_margin_value,
     confirmation_fee_mad,
     packaging_fee_mad,
     delivery_fee_mad,
