@@ -101,6 +101,14 @@ export function ProductForm({ product }: ProductFormProps) {
     product?.affiliate_enabled ?? true
   )
 
+  // ── Import-on-demand display fields (migration 019) ──────────────────────
+  const [estimatedCostMad, setEstimatedCostMad] = useState<string>(
+    product?.estimated_cost_mad != null ? String(product.estimated_cost_mad) : ''
+  )
+  const [estimatedDeliveryDays, setEstimatedDeliveryDays] = useState<string>(
+    product?.estimated_delivery_days != null ? String(product.estimated_delivery_days) : ''
+  )
+
   // ── Cost/margin state (for live preview + auto-tier) ──────────────────────
   const [purchasePrice, setPurchasePrice] = useState<string>(
     product?.purchase_price != null ? String(product.purchase_price) : ''
@@ -410,6 +418,63 @@ export function ProductForm({ product }: ProductFormProps) {
           </div>
         )}
 
+        {/* import_on_demand display fields — only shown when relevant */}
+        {availabilityType === 'import_on_demand' && (
+          <div className="space-y-3 p-3 rounded-xl border border-purple-200 bg-purple-50">
+            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+              Informations import affichées aux grossistes
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="origin_country" className={LABEL}>
+                  Pays d&apos;origine <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="origin_country" name="origin_country" type="text" disabled={isPending}
+                  defaultValue={product?.origin_country ?? ''}
+                  className={INPUT}
+                  placeholder="Ex : Chine, Turquie, EAU…"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="estimated_cost_mad" className={LABEL}>
+                  Coût estimé porte-à-porte (MAD)
+                </label>
+                <input
+                  id="estimated_cost_mad" name="estimated_cost_mad" type="number"
+                  step="0.01" min="0" disabled={isPending}
+                  value={estimatedCostMad}
+                  onChange={(e) => setEstimatedCostMad(e.target.value)}
+                  className={INPUT}
+                  placeholder="0.00"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Coût import total estimé par unité, livraison incluse.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="estimated_delivery_days" className={LABEL}>
+                  Délai de livraison estimé (jours)
+                </label>
+                <input
+                  id="estimated_delivery_days" name="estimated_delivery_days" type="number"
+                  step="1" min="1" disabled={isPending}
+                  value={estimatedDeliveryDays}
+                  onChange={(e) => setEstimatedDeliveryDays(e.target.value)}
+                  className={INPUT}
+                  placeholder="Ex : 21"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Délai porte-à-porte depuis le pays d&apos;origine.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Channel availability toggles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className={`flex items-center justify-between px-3 py-2.5 border rounded-lg ${
@@ -473,15 +538,18 @@ export function ProductForm({ product }: ProductFormProps) {
             />
           </div>
 
-          <div>
-            <label htmlFor="origin_country" className={LABEL}>Pays d&apos;origine</label>
-            <input
-              id="origin_country" name="origin_country" type="text" disabled={isPending}
-              defaultValue={product?.origin_country ?? ''}
-              className={INPUT}
-              placeholder="Ex : Maroc, Chine, Turquie, EAU…"
-            />
-          </div>
+          {/* origin_country shown here for local_stock; for import_on_demand it is in the availability section */}
+          {availabilityType === 'local_stock' && (
+            <div>
+              <label htmlFor="origin_country" className={LABEL}>Pays d&apos;origine</label>
+              <input
+                id="origin_country" name="origin_country" type="text" disabled={isPending}
+                defaultValue={product?.origin_country ?? ''}
+                className={INPUT}
+                placeholder="Ex : Maroc, Chine, Turquie, EAU…"
+              />
+            </div>
+          )}
         </div>
 
         <div>

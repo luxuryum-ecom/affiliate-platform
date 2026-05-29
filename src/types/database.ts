@@ -166,6 +166,12 @@ export interface Product {
   /** Legacy image URL array (kept for backward compat). Use media instead. */
   images: string[]
 
+  // ── Import-on-demand display fields (migration 019) ──────────────────────
+  /** Estimated door-to-door import cost in MAD. Null for local_stock products. */
+  estimated_cost_mad: number | null
+  /** Estimated delivery delay in days. Null for local_stock products. */
+  estimated_delivery_days: number | null
+
   created_at: string
   updated_at: string
 }

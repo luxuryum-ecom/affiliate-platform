@@ -145,6 +145,21 @@ export async function upsertProduct(
     return Math.max(0, raw)
   })()
 
+  // ── Import-on-demand display fields (migration 019) ──────────────────────
+  // Only stored when availability_type = 'import_on_demand'; cleared otherwise.
+
+  const estimated_cost_mad_raw = formData.get('estimated_cost_mad') as string
+  const estimated_cost_mad: number | null =
+    availability_type === 'import_on_demand' && estimated_cost_mad_raw
+      ? parseFloat(estimated_cost_mad_raw) || null
+      : null
+
+  const estimated_delivery_days_raw = formData.get('estimated_delivery_days') as string
+  const estimated_delivery_days: number | null =
+    availability_type === 'import_on_demand' && estimated_delivery_days_raw
+      ? parseInt(estimated_delivery_days_raw) || null
+      : null
+
   // ── Approval ──────────────────────────────────────────────────────────────
 
   const approval_status = (formData.get('approval_status') as string) || 'draft'
@@ -242,6 +257,8 @@ export async function upsertProduct(
     stock_count,
     media,
     images,
+    estimated_cost_mad,
+    estimated_delivery_days,
   }
 
   if (id) {
