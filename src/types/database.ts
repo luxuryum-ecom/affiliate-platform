@@ -20,6 +20,15 @@ export type ProductOriginDetail = 'locally_produced' | 'imported_but_in_morocco_
 /** How the product was submitted into the system. */
 export type ProductSubmittedVia = 'admin_dashboard' | 'telegram_future' | 'supplier_future'
 
+/** Import pricing mode for import_on_demand products (migration 020). */
+export type ImportPricingMode = 'door_to_door_per_kg' | 'sea_freight_cbm_or_kg'
+
+/** Unit used for import price (migration 020). */
+export type ImportPriceUnit = 'kg' | 'cbm'
+
+/** Allowed origin country values for import_on_demand products. */
+export type ImportOriginCountry = 'Turquie' | 'Chine' | 'Égypte' | 'Dubai' | 'Autre' | 'Mixte'
+
 /** Product review workflow state. active can only be true when this is 'approved'. */
 export type ProductApprovalStatus = 'draft' | 'pending_review' | 'approved' | 'rejected'
 
@@ -171,6 +180,16 @@ export interface Product {
   estimated_cost_mad: number | null
   /** Estimated delivery delay in days. Null for local_stock products. */
   estimated_delivery_days: number | null
+
+  // ── Import cost model (migration 020) ────────────────────────────────────
+  /** Structured pricing mode. Only for import_on_demand products. */
+  import_pricing_mode: ImportPricingMode | null
+  /** Estimated import price in MAD per unit (per kg or cbm). Only for import_on_demand. */
+  estimated_import_price_mad: number | null
+  /** Unit for estimated_import_price_mad: 'kg' | 'cbm'. Only for import_on_demand. */
+  import_price_unit: ImportPriceUnit | null
+  /** Optional notes shown to wholesalers. Recommended when origin_country = 'Mixte'. */
+  import_notes: string | null
 
   created_at: string
   updated_at: string

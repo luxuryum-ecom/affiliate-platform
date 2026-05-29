@@ -146,13 +146,39 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                 <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
                   Informations import
                 </p>
+
                 {product.origin_country && (
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Pays d&apos;origine</span>
                     <span className="font-medium text-gray-900">{product.origin_country}</span>
                   </div>
                 )}
-                {product.estimated_cost_mad != null && (
+
+                {product.import_pricing_mode && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Mode de tarification</span>
+                    <span className="font-medium text-gray-900">
+                      {product.import_pricing_mode === 'door_to_door_per_kg'
+                        ? 'Porte-à-porte / kg'
+                        : 'Fret maritime (CBM ou kg)'}
+                    </span>
+                  </div>
+                )}
+
+                {product.estimated_import_price_mad != null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Coût import estimé</span>
+                    <span className="font-medium text-gray-900">
+                      {formatMAD(product.estimated_import_price_mad)}{' '}
+                      <span className="text-gray-500 font-normal">
+                        / {product.import_price_unit === 'cbm' ? 'CBM' : 'kg'}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                {/* Fallback to legacy estimated_cost_mad if new field not set */}
+                {product.estimated_import_price_mad == null && product.estimated_cost_mad != null && (
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Coût estimé porte-à-porte</span>
                     <span className="font-medium text-gray-900">
@@ -160,12 +186,22 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                     </span>
                   </div>
                 )}
+
                 {product.estimated_delivery_days != null && (
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Délai de livraison estimé</span>
                     <span className="font-medium text-gray-900">
                       {product.estimated_delivery_days} jour{product.estimated_delivery_days > 1 ? 's' : ''}
                     </span>
+                  </div>
+                )}
+
+                {product.import_notes && (
+                  <div className="pt-2 border-t border-purple-200">
+                    <p className="text-xs text-purple-700 font-medium mb-1">Notes</p>
+                    <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line">
+                      {product.import_notes}
+                    </p>
                   </div>
                 )}
               </div>

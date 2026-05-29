@@ -12,6 +12,8 @@ import type {
   ProductOriginDetail,
   PlatformMarginType,
   MediaItem,
+  ImportPricingMode,
+  ImportPriceUnit,
 } from '@/types/database'
 import { calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
 
@@ -145,20 +147,42 @@ export async function upsertProduct(
     return Math.max(0, raw)
   })()
 
-  // ── Import-on-demand display fields (migration 019) ──────────────────────
+  // ── Import-on-demand display fields (migrations 019 + 020) ──────────────
   // Only stored when availability_type = 'import_on_demand'; cleared otherwise.
-
-  const estimated_cost_mad_raw = formData.get('estimated_cost_mad') as string
-  const estimated_cost_mad: number | null =
-    availability_type === 'import_on_demand' && estimated_cost_mad_raw
-      ? parseFloat(estimated_cost_mad_raw) || null
-      : null
 
   const estimated_delivery_days_raw = formData.get('estimated_delivery_days') as string
   const estimated_delivery_days: number | null =
     availability_type === 'import_on_demand' && estimated_delivery_days_raw
       ? parseInt(estimated_delivery_days_raw) || null
       : null
+
+  // Migration 020 — structured import cost model
+  const import_pricing_mode_raw = formData.get('import_pricing_mode') as string
+  const import_pricing_mode: ImportPricingMode | null =
+    availability_type === 'import_on_demand' &&
+    (import_pricing_mode_raw === 'door_to_door_per_kg' || import_pricing_mode_raw === 'sea_freight_cbm_or_kg')
+      ? import_pricing_mode_raw
+      : null
+
+  const estimated_import_price_mad_raw = formData.get('estimated_import_price_mad') as string
+  const estimated_import_price_mad: number | null =
+    availability_type === 'import_on_demand' && estimated_import_price_mad_raw
+      ? parseFloat(estimated_import_price_mad_raw) || null
+      : null
+
+  const import_price_unit_raw = formData.get('import_price_unit') as string
+  const import_price_unit: ImportPriceUnit | null =
+    availability_type === 'import_on_demand' &&
+    (import_price_unit_raw === 'kg' || import_price_unit_raw === 'cbm')
+      ? import_price_unit_raw
+      : null
+
+  const import_notes_raw = ((formData.get('import_notes') as string) || '').trim()
+  const import_notes: string | null =
+    availability_type === 'import_on_demand' && import_notes_raw ? import_notes_raw : null
+
+  // Keep estimated_cost_mad in sync with estimated_import_price_mad for backward compat
+  const estimated_cost_mad: number | null = estimated_import_price_mad
 
   // ── Approval ──────────────────────────────────────────────────────────────
 
@@ -259,6 +283,10 @@ export async function upsertProduct(
     images,
     estimated_cost_mad,
     estimated_delivery_days,
+    import_pricing_mode,
+    estimated_import_price_mad,
+    import_price_unit,
+    import_notes,
   }
 
   if (id) {
