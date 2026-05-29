@@ -76,15 +76,14 @@ import type { Order } from '@/types/database'
 export function buildCodTimeline(order: Order): TimelineStep[] {
   const { status } = order
 
-  const isCancelled = status === 'cancelled'
+  const isCancelled           = status === 'cancelled'
   const isPendingConfirmation = status === 'pending_confirmation'
+  const reachedConfirmed      = ['confirmed', 'shipped', 'delivered', 'returned'].includes(status)
+  const reachedShipped        = ['shipped', 'delivered', 'returned'].includes(status)
+  const reachedDelivered      = ['delivered', 'returned'].includes(status) && !!order.delivered_at
+  const isReturned            = status === 'returned'
 
-  const reachedConfirmed = ['confirmed', 'shipped', 'delivered', 'returned'].includes(status)
-  const reachedShipped   = ['shipped', 'delivered', 'returned'].includes(status)
-  const reachedDelivered = status === 'delivered'
-  const reachedReturned  = status === 'returned'
-
-  return [
+  const steps: TimelineStep[] = [
     {
       label: 'Commande reçue',
       timestamp: order.created_at,
@@ -124,19 +123,34 @@ export function buildCodTimeline(order: Order): TimelineStep[] {
         : 'future',
     },
     {
-      label: reachedReturned ? 'Retournée' : 'Livrée',
-      timestamp: reachedReturned ? order.returned_at : order.delivered_at,
-      state: reachedReturned
-        ? 'skipped'
-        : isCancelled
+      label: 'Livrée',
+      timestamp: order.delivered_at,
+      state: isCancelled
         ? 'skipped'
         : reachedDelivered
+        ? 'done'
+        : isReturned && !order.delivered_at
+        ? 'skipped'
+        : status === 'delivered'
         ? 'done'
         : status === 'shipped'
         ? 'current'
         : 'future',
     },
   ]
+
+  // Append a "Retournée" step only when the order is actually returned.
+  // This handles both shipped→returned (delivered step shows skipped) and
+  // delivered→returned (delivered step shows done, then Retournée appended).
+  if (isReturned) {
+    steps.push({
+      label: 'Retournée',
+      timestamp: order.returned_at,
+      state: 'skipped',
+    })
+  }
+
+  return steps
 }
 
 // ─── Helper: build wholesale order timeline steps ─────────────────────────────

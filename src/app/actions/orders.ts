@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { calculateNetAffiliateCommission, getWholesaleTier } from '@/lib/utils'
+import { getLogisticsSettings } from './logistics'
+import { resolveDeliveryFeeByCity } from './cities'
 import { requireAdmin } from './_guards'
 import {
   scoreDuplicateOrder,
@@ -111,6 +113,15 @@ export async function placeOrder(
     }
   }
 
+  // ── Resolve delivery fee: cities table → logistics_settings default ──────
+  const [deliveryFeeResolved, logisticsSettings] = await Promise.all([
+    resolveDeliveryFeeByCity(customerCity),
+    getLogisticsSettings(),
+  ])
+  const returnFeeResolved = logisticsSettings
+    ? Number(logisticsSettings.return_fee_mad)
+    : 10
+
   const totalAmount = parseFloat((unitPrice * quantity).toFixed(2))
   const commissionAmount = validatedAffiliateId
     ? calculateNetAffiliateCommission({
@@ -118,14 +129,14 @@ export async function placeOrder(
         factoryCostMad: product.purchase_price_mad ?? 0,
         marginType: product.platform_margin_type,
         marginValue: product.platform_margin_value ?? 0,
-        deliveryFee: product.delivery_fee_mad ?? 0,
+        deliveryFee: deliveryFeeResolved,
         confirmationFee: product.confirmation_fee_mad ?? 10,
         packagingFee: product.packaging_fee_mad ?? 10,
         quantity,
       })
     : 0
 
-  const deliveryFeeSnapshot = product.delivery_fee_mad ?? 0
+  const deliveryFeeSnapshot = deliveryFeeResolved
   const packagingFeeSnapshot = product.packaging_fee_mad ?? 10
   const confirmationFeeSnapshot = product.confirmation_fee_mad ?? 10
 
@@ -164,6 +175,7 @@ export async function placeOrder(
       delivery_fee_snapshot: deliveryFeeSnapshot,
       packaging_fee_snapshot: packagingFeeSnapshot,
       confirmation_fee_snapshot: confirmationFeeSnapshot,
+      return_fee_snapshot: returnFeeResolved,
       attribution_click_id: attributionClickId,
       fraud_score: fraudScore,
       duplicate_risk_score: duplicateScore,

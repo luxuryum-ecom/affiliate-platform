@@ -33,7 +33,7 @@ interface PageProps {
   }>
 }
 
-const STATUSES: OrderStatus[] = ['pending_confirmation', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled']
+const STATUSES: OrderStatus[] = ['pending_confirmation', 'confirmed', 'shipped', 'delivered', 'returned']
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const { status: filterStatus, search, affiliate_id } = await searchParams
@@ -249,10 +249,7 @@ function OrderRow({ order }: { order: OrderRow }) {
 function QuickActions({ order }: { order: OrderRow }) {
   if (order.status === 'pending_confirmation') {
     return (
-      <>
-        <QuickStatusButton orderId={order.id} newStatus="confirmed" label="✓ Confirmer" variant="confirm" />
-        <QuickStatusButton orderId={order.id} newStatus="cancelled" label="✗ Annuler" variant="cancel" />
-      </>
+      <QuickStatusButton orderId={order.id} newStatus="confirmed" label="✓ Confirmer" variant="confirm" />
     )
   }
   if (order.status === 'confirmed') {

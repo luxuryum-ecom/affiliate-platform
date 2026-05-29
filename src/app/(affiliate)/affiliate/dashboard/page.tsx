@@ -80,21 +80,22 @@ export default async function AffiliateDashboardPage() {
 
   const count = (s: string) => orders.filter((o) => o.status === s).length
   const delivered = count('delivered')
-  const cancelled = count('cancelled')
   const returned = count('returned')
   const totalOrders = orders.length
 
-  const sum = (filter: (c: Commission) => boolean) =>
-    commissions.filter(filter).reduce((acc, c) => acc + Number(c.amount), 0)
+  // Reversed commissions (returned orders) are excluded from all financial totals.
+  const activeCommissions = commissions.filter((c) => !c.reversed)
+  const sumActive = (filter: (c: Commission) => boolean) =>
+    activeCommissions.filter(filter).reduce((acc, c) => acc + Number(c.amount), 0)
 
-  const earnedCommissions = sum(() => true)
-  const paidCommissions = sum((c) => c.status === 'paid')
-  const pendingCommissions = sum((c) => c.status === 'pending')
-  const approvedCommissions = sum((c) => c.status === 'approved')
+  const earnedCommissions = sumActive(() => true)
+  const paidCommissions   = sumActive((c) => c.status === 'paid')
+  const pendingCommissions  = sumActive((c) => c.status === 'pending')
+  const approvedCommissions = sumActive((c) => c.status === 'approved')
   const pendingBalance = pendingCommissions + approvedCommissions
 
   const conversionRate = formatConversionRate(clicks, totalOrders)
-  const returnRate = formatReturnRate(delivered, returned)
+  const returnRate     = formatReturnRate(delivered, returned)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -146,13 +147,12 @@ export default async function AffiliateDashboardPage() {
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
             Commandes
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            <StatCard label="À confirmer" value={String(count('pending_confirmation'))} variant="warning" />
-            <StatCard label="Confirmées" value={String(count('confirmed'))} />
-            <StatCard label="Expédiées" value={String(count('shipped'))} />
-            <StatCard label="Livrées" value={String(delivered)} variant={delivered > 0 ? 'success' : 'default'} />
-            <StatCard label="Retournées" value={String(returned)} variant={returned > 0 ? 'warning' : 'muted'} />
-            <StatCard label="Annulées" value={String(cancelled)} variant={cancelled > 0 ? 'warning' : 'muted'} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <StatCard label="À confirmer"  value={String(count('pending_confirmation'))} variant="warning" />
+            <StatCard label="Confirmées"   value={String(count('confirmed'))} />
+            <StatCard label="Expédiées"    value={String(count('shipped'))} />
+            <StatCard label="Livrées"      value={String(delivered)} variant={delivered > 0 ? 'success' : 'default'} />
+            <StatCard label="Retournées"   value={String(returned)}  variant={returned > 0 ? 'warning' : 'muted'} />
           </div>
         </section>
 

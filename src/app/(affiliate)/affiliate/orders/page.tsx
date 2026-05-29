@@ -17,16 +17,14 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
   delivered: { label: 'Livrée ✓',   cls: 'bg-green-100 text-green-700' },
   returned:  { label: 'Retournée',   cls: 'bg-red-100 text-red-600' },
-  cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
 }
 
 const PAYOUT_LABELS: Record<string, string> = {
-  pending_confirmation: 'En attente de confirmation client',
-  confirmed: 'En cours de traitement',
-  shipped: 'En cours de livraison',
-  delivered: 'Commission en attente d\'approbation',
-  returned: 'Aucune commission (retour)',
-  cancelled: 'Aucune commission (annulée)',
+  pending_confirmation: 'Commission après livraison',
+  confirmed:            'Commission après livraison',
+  shipped:              'Commission après livraison',
+  delivered:            'Commission en attente d\'approbation',
+  returned:             'Aucune commission (retour)',
 }
 
 type OrderRow = Order & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> }
@@ -55,16 +53,14 @@ export default async function AffiliateOrdersPage() {
 
   const commMap = new Map(commissions.map((c) => [c.order_id, c]))
 
-  const inProgress = orders.filter((o) =>
-    ['pending_confirmation', 'confirmed', 'shipped'].includes(o.status)
-  ).length
-  const delivered = orders.filter((o) => o.status === 'delivered').length
-  const returned = orders.filter((o) => o.status === 'returned').length
-  // pending + approved = owed but not yet paid (matches dashboard pendingBalance)
-  const totalPending = commissions
+  const count = (s: string) => orders.filter((o) => o.status === s).length
+
+  // Reversed commissions (returned orders) excluded from all financial totals.
+  const activeCommissions = commissions.filter((c) => !c.reversed)
+  const totalPending = activeCommissions
     .filter((c) => c.status === 'pending' || c.status === 'approved')
     .reduce((s, c) => s + Number(c.amount), 0)
-  const totalEarned = commissions
+  const totalEarned = activeCommissions
     .filter((c) => c.status === 'paid')
     .reduce((s, c) => s + Number(c.amount), 0)
 
@@ -91,12 +87,13 @@ export default async function AffiliateOrdersPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {[
-            { label: 'En cours', value: String(inProgress) },
-            { label: 'Livrées', value: String(delivered) },
-            { label: 'Retournées', value: String(returned) },
-            { label: 'Commissions dues', value: formatMAD(totalPending) },
+            { label: 'À confirmer',     value: String(count('pending_confirmation')) },
+            { label: 'Confirmées',       value: String(count('confirmed')) },
+            { label: 'Expédiées',        value: String(count('shipped')) },
+            { label: 'Livrées',          value: String(count('delivered')) },
+            { label: 'Retournées',       value: String(count('returned')) },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
               <p className="text-xs text-gray-500">{s.label}</p>
@@ -104,12 +101,18 @@ export default async function AffiliateOrdersPage() {
             </div>
           ))}
         </div>
-
-        {totalEarned > 0 && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700">
-            Total commissions payées&nbsp;: <strong>{formatMAD(totalEarned)}</strong>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-500">Commissions dues</p>
+            <p className="mt-1 text-xl font-bold text-amber-700 tabular-nums">{formatMAD(totalPending)}</p>
           </div>
-        )}
+          {totalEarned > 0 && (
+            <div className="bg-green-50 rounded-xl border border-green-200 p-4">
+              <p className="text-xs text-gray-500">Total payées</p>
+              <p className="mt-1 text-xl font-bold text-green-700 tabular-nums">{formatMAD(totalEarned)}</p>
+            </div>
+          )}
+        </div>
 
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Historique ({orders.length})</h2>
 
@@ -170,26 +173,32 @@ export default async function AffiliateOrdersPage() {
 
                       <p className="text-xs mt-1.5">
                         {comm ? (
-                          <span
-                            className={`font-medium ${
-                              comm.status === 'paid'
-                                ? 'text-green-600'
+                          comm.reversed ? (
+                            <span className="text-red-500 font-medium">
+                              Commission annulée (retour) — {formatMAD(Number(comm.amount))}
+                            </span>
+                          ) : (
+                            <span
+                              className={`font-medium ${
+                                comm.status === 'paid'
+                                  ? 'text-green-600'
+                                  : comm.status === 'approved'
+                                  ? 'text-blue-600'
+                                  : 'text-amber-600'
+                              }`}
+                            >
+                              Commission&nbsp;: {formatMAD(Number(comm.amount))} —{' '}
+                              {comm.status === 'paid'
+                                ? 'Payée'
                                 : comm.status === 'approved'
-                                ? 'text-blue-600'
-                                : 'text-amber-600'
-                            }`}
-                          >
-                            Commission&nbsp;: {formatMAD(Number(comm.amount))} —{' '}
-                            {comm.status === 'paid'
-                              ? 'Payée'
-                              : comm.status === 'approved'
-                              ? 'Approuvée'
-                              : 'En attente'}
-                          </span>
+                                ? 'Approuvée'
+                                : 'En attente'}
+                            </span>
+                          )
                         ) : commissionAmount > 0 ? (
                           <span className="text-gray-400">
                             Commission prévue&nbsp;: {formatMAD(commissionAmount)} —{' '}
-                            {PAYOUT_LABELS[order.status]}
+                            {PAYOUT_LABELS[order.status] ?? 'Commission après livraison'}
                           </span>
                         ) : null}
                       </p>

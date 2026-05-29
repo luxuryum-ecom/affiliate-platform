@@ -122,6 +122,11 @@ export interface Product {
    *  Shape: {carrier_code?, zone_overrides?: [{city, fee_mad}], api_enabled?: bool} */
   delivery_fee_config: Record<string, unknown>
 
+  // ── Factory cost (migration 016) ──────────────────────────────────────────
+  /** Explicit admin-set factory cost in MAD. Used as the commission base.
+   *  commission = sell_price − factory_cost_mad − platform_margin − delivery_fee_mad − confirmation_fee_mad − packaging_fee_mad */
+  factory_cost_mad: number | null
+
   // ── Approval workflow ─────────────────────────────────────────────────────
   approval_status: ProductApprovalStatus
   approved_by: string | null
@@ -170,6 +175,8 @@ export interface Order {
   delivery_fee_snapshot: number | null
   packaging_fee_snapshot: number | null
   confirmation_fee_snapshot: number | null
+  /** Return fee snapshot from logistics_settings at order creation. */
+  return_fee_snapshot: number | null
   /** Link to the affiliate click that led to this order. */
   attribution_click_id: string | null
 
@@ -263,6 +270,49 @@ export interface Commission {
   reversed_at: string | null
   created_at: string
   paid_at: string | null
+}
+
+// ─── CITIES ───────────────────────────────────────────────────────────────────
+// Admin-managed city list with per-city COD delivery fees.
+// courier_* fields are populated by future courier API sync jobs.
+
+export interface City {
+  id: string
+  name: string
+  /** Operative delivery fee in MAD — always used for commission calculation. */
+  delivery_fee_mad: number
+  is_active: boolean
+
+  // ── Future courier API integration ──────────────────────────────────────────
+  /** Carrier city code (e.g. "CMN" for Casablanca). */
+  courier_code: string | null
+  /** Carrier zone classification. */
+  courier_zone: string | null
+  /** Fee last reported by courier API (advisory only — admin overrides via delivery_fee_mad). */
+  courier_fee_mad: number | null
+  courier_sync_enabled: boolean
+  courier_last_synced_at: string | null
+  courier_metadata: Record<string, unknown>
+
+  created_at: string
+  updated_at: string
+}
+
+// ─── LOGISTICS SETTINGS ───────────────────────────────────────────────────────
+// Singleton row (id = 'default') — global COD delivery and return fee config.
+
+export interface LogisticsSettings {
+  id: string
+  /** Delivery fee in MAD for Casablanca orders. */
+  casablanca_delivery_fee_mad: number
+  /** Delivery fee in MAD for all other Moroccan cities. */
+  default_delivery_fee_mad: number
+  /** Return fee in MAD applied to returned orders regardless of city. */
+  return_fee_mad: number
+  /** Reserved for future courier API integration. */
+  api_config: Record<string, unknown>
+  updated_at: string
+  updated_by: string | null
 }
 
 export interface Payout {
