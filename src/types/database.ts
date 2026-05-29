@@ -87,6 +87,9 @@ export interface Profile {
   registre_commerce: string | null
   /** Billing address for wholesale invoices — optional. */
   billing_address: string | null
+  /** When true, user has access to wholesale features regardless of role.
+   *  Allows a user to be both affiliate and wholesaler simultaneously. */
+  wholesale_access: boolean
 }
 
 export interface Product {
@@ -257,6 +260,20 @@ export interface WholesaleOrder {
   shipped_at: string | null
   delivered_at: string | null
   cancelled_at: string | null
+
+  // ── Invoice request (added migration 018) ────────────────────────────────
+  /** True when buyer has submitted an invoice request. */
+  invoice_requested: boolean
+  /** Timestamp when the invoice was requested. */
+  invoice_requested_at: string | null
+  /** Company name provided at invoice request time. */
+  invoice_company_name: string | null
+  /** ICE provided at invoice request time. */
+  invoice_ice: string | null
+  /** Registre de commerce at invoice request time. */
+  invoice_registre_commerce: string | null
+  /** Billing address at invoice request time. */
+  invoice_billing_address: string | null
 
   created_at: string
   updated_at: string
@@ -448,7 +465,7 @@ export type Database = {
     Tables: {
       profiles: TableDef<
         Profile,
-        Omit<Profile, 'created_at'>,
+        Omit<Profile, 'created_at' | 'wholesale_access'> & { wholesale_access?: boolean },
         Partial<Profile>
       >
       products: TableDef<
@@ -468,7 +485,7 @@ export type Database = {
       >
       wholesale_orders: TableDef<
         WholesaleOrder,
-        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at'>,
+        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested'> & { invoice_requested?: boolean },
         Partial<WholesaleOrder>
       >
       wholesale_order_items: TableDef<

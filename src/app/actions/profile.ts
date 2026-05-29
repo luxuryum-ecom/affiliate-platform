@@ -25,11 +25,13 @@ export async function updateWholesalerBilling(
 
   const { data: profile } = (await supabase
     .from('profiles')
-    .select('role, status')
+    .select('role, status, wholesale_access')
     .eq('id', user.id)
-    .single()) as { data: { role: string; status: string } | null; error: unknown }
+    .single()) as { data: { role: string; status: string; wholesale_access: boolean } | null; error: unknown }
 
-  if (profile?.role !== 'wholesaler') return fail('Accès réservé aux grossistes.')
+  if (profile?.role !== 'wholesaler' && !profile?.wholesale_access) {
+    return fail('Accès réservé aux grossistes.')
+  }
 
   const company_name      = ((formData.get('company_name') as string)?.trim()) || null
   const ice               = ((formData.get('ice') as string)?.trim()) || null

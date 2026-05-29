@@ -548,7 +548,7 @@ export async function createWholesaleOrderAction(formData: FormData): Promise<vo
  */
 export async function submitWholesaleOrder(
   _prevState: ActionState,
-  _formData: FormData
+  formData: FormData
 ): Promise<ActionState> {
   const supabase = await createClient()
 
@@ -559,11 +559,12 @@ export async function submitWholesaleOrder(
 
   const { data: profile } = (await supabase
     .from('profiles')
-    .select('role, status')
+    .select('role, status, wholesale_access')
     .eq('id', user.id)
-    .single()) as { data: { role: string; status: string } | null; error: unknown }
+    .single()) as { data: { role: string; status: string; wholesale_access: boolean } | null; error: unknown }
 
-  if (profile?.role !== 'wholesaler' || profile?.status !== 'approved') {
+  const hasWholesaleAccess = profile?.role === 'wholesaler' || profile?.wholesale_access === true
+  if (!hasWholesaleAccess || profile?.status !== 'approved') {
     return fail('Accès réservé aux grossistes approuvés.')
   }
 
@@ -605,6 +606,10 @@ export async function submitWholesaleOrder(
 
   total = parseFloat(total.toFixed(2))
 
+  const city         = ((formData.get('city') as string)?.trim()) || null
+  const address      = ((formData.get('address') as string)?.trim()) || null
+  const buyer_notes  = ((formData.get('buyer_notes') as string)?.trim()) || null
+
   const { data: newOrder, error: orderErr } = (await supabase
     .from('wholesale_orders')
     .insert({
@@ -612,6 +617,9 @@ export async function submitWholesaleOrder(
       total_amount: total,
       status: 'pending',
       delivery_preference: 'delivery',
+      city,
+      address,
+      buyer_notes,
     })
     .select('id')
     .single()) as { data: { id: string } | null; error: unknown }
@@ -630,7 +638,7 @@ export async function submitWholesaleOrder(
   revalidatePath('/wholesale/cart')
   revalidatePath('/wholesale/orders')
   revalidatePath('/admin/wholesale-orders')
-  redirect('/wholesale/orders?submitted=1')
+  redirect(`/wholesale/orders/${newOrder.id}?submitted=1`)
 }
 
 // =============================================================================

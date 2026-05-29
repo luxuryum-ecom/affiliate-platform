@@ -10,8 +10,44 @@ export function SubmitWholesaleOrderForm() {
   const [state, action, isPending] = useActionState(submitWholesaleOrder, initialState)
 
   return (
-    <div className="space-y-2">
-      <form action={action}>
+    <div className="space-y-4">
+      <form action={action} className="space-y-4">
+        {/* Delivery details */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Informations de livraison <span className="font-normal normal-case text-gray-400">(optionnel)</span>
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Ville</label>
+              <input
+                name="city"
+                placeholder="Ex: Casablanca"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Adresse</label>
+              <input
+                name="address"
+                placeholder="Ex: 123 Rue Mohammed V"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Note pour l&apos;équipe</label>
+            <textarea
+              name="buyer_notes"
+              rows={2}
+              placeholder="Délai souhaité, instructions spéciales, variantes…"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+            />
+          </div>
+        </div>
+
         <button
           type="submit"
           disabled={isPending}

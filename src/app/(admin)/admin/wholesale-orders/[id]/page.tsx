@@ -162,6 +162,34 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 <p className="text-sm font-medium text-gray-900 mt-0.5">{order.agent.full_name}</p>
               </div>
             )}
+
+            {/* Invoice request */}
+            {order.invoice_requested && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold text-indigo-800">Demande de facture</p>
+                  {order.invoice_requested_at && (
+                    <p className="text-xs text-indigo-500">
+                      {new Date(order.invoice_requested_at).toLocaleDateString('fr-MA')}
+                    </p>
+                  )}
+                </div>
+                <dl className="space-y-1.5 text-sm">
+                  {order.invoice_company_name && (
+                    <div><dt className="text-xs text-indigo-500">Raison sociale</dt><dd className="font-medium text-indigo-900">{order.invoice_company_name}</dd></div>
+                  )}
+                  {order.invoice_ice && (
+                    <div><dt className="text-xs text-indigo-500">ICE</dt><dd className="font-medium text-indigo-900">{order.invoice_ice}</dd></div>
+                  )}
+                  {order.invoice_registre_commerce && (
+                    <div><dt className="text-xs text-indigo-500">RC</dt><dd className="font-medium text-indigo-900">{order.invoice_registre_commerce}</dd></div>
+                  )}
+                  {order.invoice_billing_address && (
+                    <div><dt className="text-xs text-indigo-500">Adresse de facturation</dt><dd className="font-medium text-indigo-900">{order.invoice_billing_address}</dd></div>
+                  )}
+                </dl>
+              </div>
+            )}
           </div>
         </div>
       </main>

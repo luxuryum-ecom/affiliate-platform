@@ -26,7 +26,7 @@ export default async function WholesaleLayout({ children }: { children: React.Re
 
   if (!profile || profile.status === 'pending') redirect('/pending')
   if (profile.status === 'rejected') redirect('/login')
-  if (profile.role !== 'wholesaler') redirect('/login')
+  if (profile.role !== 'wholesaler' && !profile.wholesale_access) redirect('/login')
 
   return <>{children}</>
 }
