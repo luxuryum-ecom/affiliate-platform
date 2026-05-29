@@ -1,7 +1,8 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { placeOrder, type OrderFormState } from '@/app/actions/orders'
+import { placeOrder } from '@/app/actions/orders'
+import type { OrderFormState } from '@/types/orders'
 import { recordAffiliateClick } from '@/app/actions/affiliate-clicks'
 import { formatMAD } from '@/lib/utils'
 import {

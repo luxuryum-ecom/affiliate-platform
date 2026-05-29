@@ -16,8 +16,6 @@ import type {
   WholesaleCartItemWithProduct,
 } from '@/types/database'
 
-// ─── Re-export types (defined in src/types/orders.ts to avoid 'use server' restrictions) ─
-export type { ActionState, OrderFormState } from '@/types/orders'
 import type { ActionState, OrderFormState } from '@/types/orders'
 
 const ok: ActionState = { error: null, success: true }

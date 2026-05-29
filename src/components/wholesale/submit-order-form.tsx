@@ -1,7 +1,8 @@
 'use client'
 
 import { useActionState } from 'react'
-import { submitWholesaleOrder, type ActionState } from '@/app/actions/orders'
+import { submitWholesaleOrder } from '@/app/actions/orders'
+import type { ActionState } from '@/types/orders'
 
 const initialState: ActionState = { error: null, success: false }
 
