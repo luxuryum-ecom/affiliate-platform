@@ -1,6 +1,7 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useTransition, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { updateOrderStatus } from '@/app/actions/orders'
 import type { OrderStatus } from '@/types/database'
 
@@ -25,21 +26,34 @@ export function QuickStatusButton({
   variant = 'confirm',
 }: QuickStatusButtonProps) {
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   const handleClick = () => {
+    setError(null)
     startTransition(async () => {
-      await updateOrderStatus(orderId, newStatus)
+      const result = await updateOrderStatus(orderId, newStatus)
+      if (!result.success) {
+        setError(result.error ?? 'Erreur inconnue.')
+      } else {
+        router.refresh()
+      }
     })
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={isPending}
-      className={`text-xs px-2 py-1 rounded border font-medium transition-colors disabled:opacity-50 shrink-0 ${VARIANTS[variant]}`}
-    >
-      {isPending ? '…' : label}
-    </button>
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isPending}
+        className={`text-xs px-2 py-1 rounded border font-medium transition-colors disabled:opacity-50 shrink-0 ${VARIANTS[variant]}`}
+      >
+        {isPending ? '…' : label}
+      </button>
+      {error && (
+        <span className="text-[10px] text-red-600 leading-tight max-w-[160px]">{error}</span>
+      )}
+    </span>
   )
 }
