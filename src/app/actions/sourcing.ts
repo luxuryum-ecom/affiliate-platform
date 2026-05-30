@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
+import { autoRunRfqForSourcing } from './rfq-engine'
 import type {
   SourcingRequest,
   SourcingRequestStatus,
@@ -64,6 +65,19 @@ export async function submitSourcingRequest(
   })
 
   if (error) return fail('Erreur lors de la soumission.')
+
+  // Auto-run RFQ matching engine (non-blocking)
+  const { data: newReq } = await supabase
+    .from('sourcing_requests')
+    .select('id')
+    .eq('wholesaler_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (newReq?.id) {
+    void autoRunRfqForSourcing(newReq.id)
+  }
 
   revalidatePath('/wholesale/sourcing')
   return ok

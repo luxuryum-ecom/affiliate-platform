@@ -797,6 +797,78 @@ export interface SupplierPayoutHistory {
   changed_at: string
 }
 
+// ─── RFQ MATCHING ENGINE (migration 037) ─────────────────────────────────────
+
+export type SupplierMatchingType = 'morocco' | 'international'
+
+export type RfqMatchStatus =
+  | 'new'
+  | 'notified'
+  | 'offer_received'
+  | 'declined'
+  | 'clarification'
+  | 'selected'
+  | 'expired'
+
+export type RfqOfferResponseType = 'offer' | 'decline' | 'clarification'
+
+/** Supplier's self-declared capabilities used by the scoring engine. */
+export interface SupplierMatchingProfile {
+  id: string
+  supplier_id: string
+  categories: string[]
+  countries_served: string[]
+  moq_min: number | null
+  moq_max: number | null
+  production_capacity: number | null
+  lead_time_days_min: number | null
+  lead_time_days_max: number | null
+  export_capable: boolean
+  supplier_type: SupplierMatchingType
+  response_rate: number
+  reliability_score: number
+  total_offers_sent: number
+  total_offers_accepted: number
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** One match record per (sourcing_request | quote_request) × supplier. */
+export interface RfqMatch {
+  id: string
+  sourcing_request_id: string | null
+  quote_request_id: string | null
+  supplier_id: string
+  total_score: number
+  score_category: number
+  score_country: number
+  score_moq: number
+  score_lead_time: number
+  score_reliability: number
+  score_response_rate: number
+  status: RfqMatchStatus
+  notified_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Supplier's response to an RFQ match. */
+export interface RfqOffer {
+  id: string
+  rfq_match_id: string
+  supplier_id: string
+  response_type: RfqOfferResponseType
+  unit_price_usd: number | null
+  moq_offered: number | null
+  lead_time_days: number | null
+  notes: string | null
+  message: string | null
+  admin_notes: string | null
+  admin_reviewed: boolean
+  created_at: string
+}
+
 // ─── SUPPLIER CATALOGS & SAMPLE REQUESTS (migration 036) ─────────────────────
 
 export type CatalogFileType = 'pdf' | 'xlsx' | 'zip'
@@ -1230,6 +1302,32 @@ export type Database = {
           admin_notes?: string | null
         },
         Partial<SampleRequestFile>
+      >
+      supplier_matching_profiles: TableDef<
+        SupplierMatchingProfile,
+        Omit<SupplierMatchingProfile, 'id' | 'created_at' | 'updated_at' | 'response_rate' | 'reliability_score' | 'total_offers_sent' | 'total_offers_accepted'> & {
+          response_rate?: number
+          reliability_score?: number
+          total_offers_sent?: number
+          total_offers_accepted?: number
+        },
+        Partial<SupplierMatchingProfile>
+      >
+      rfq_matches: TableDef<
+        RfqMatch,
+        Omit<RfqMatch, 'id' | 'created_at' | 'updated_at' | 'status' | 'notified_at'> & {
+          status?: RfqMatchStatus
+          notified_at?: string | null
+        },
+        Partial<RfqMatch>
+      >
+      rfq_offers: TableDef<
+        RfqOffer,
+        Omit<RfqOffer, 'id' | 'created_at' | 'admin_notes' | 'admin_reviewed'> & {
+          admin_notes?: string | null
+          admin_reviewed?: boolean
+        },
+        Partial<RfqOffer>
       >
     }
     Views: Record<never, never>

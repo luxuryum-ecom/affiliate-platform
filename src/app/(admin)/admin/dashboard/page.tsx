@@ -254,6 +254,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/samples',
               },
+              {
+                title: 'Moteur RFQ',
+                description: 'Matching automatique RFQ → fournisseurs. Scores et offres.',
+                badge: null,
+                href: '/admin/rfq',
+              },
             ].map((action) => (
               <div
                 key={action.title}

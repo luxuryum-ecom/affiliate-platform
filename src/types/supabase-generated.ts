@@ -867,6 +867,142 @@ export type Database = {
           },
         ]
       }
+      rfq_matches: {
+        Row: {
+          created_at: string
+          id: string
+          notified_at: string | null
+          quote_request_id: string | null
+          score_category: number
+          score_country: number
+          score_lead_time: number
+          score_moq: number
+          score_reliability: number
+          score_response_rate: number
+          sourcing_request_id: string | null
+          status: string
+          supplier_id: string
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notified_at?: string | null
+          quote_request_id?: string | null
+          score_category?: number
+          score_country?: number
+          score_lead_time?: number
+          score_moq?: number
+          score_reliability?: number
+          score_response_rate?: number
+          sourcing_request_id?: string | null
+          status?: string
+          supplier_id: string
+          total_score?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notified_at?: string | null
+          quote_request_id?: string | null
+          score_category?: number
+          score_country?: number
+          score_lead_time?: number
+          score_moq?: number
+          score_reliability?: number
+          score_response_rate?: number
+          sourcing_request_id?: string | null
+          status?: string
+          supplier_id?: string
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_matches_quote_request_id_fkey"
+            columns: ["quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "quote_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_matches_sourcing_request_id_fkey"
+            columns: ["sourcing_request_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_matches_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfq_offers: {
+        Row: {
+          admin_notes: string | null
+          admin_reviewed: boolean
+          created_at: string
+          id: string
+          lead_time_days: number | null
+          message: string | null
+          moq_offered: number | null
+          notes: string | null
+          response_type: string
+          rfq_match_id: string
+          supplier_id: string
+          unit_price_usd: number | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          admin_reviewed?: boolean
+          created_at?: string
+          id?: string
+          lead_time_days?: number | null
+          message?: string | null
+          moq_offered?: number | null
+          notes?: string | null
+          response_type: string
+          rfq_match_id: string
+          supplier_id: string
+          unit_price_usd?: number | null
+        }
+        Update: {
+          admin_notes?: string | null
+          admin_reviewed?: boolean
+          created_at?: string
+          id?: string
+          lead_time_days?: number | null
+          message?: string | null
+          moq_offered?: number | null
+          notes?: string | null
+          response_type?: string
+          rfq_match_id?: string
+          supplier_id?: string
+          unit_price_usd?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_offers_rfq_match_id_fkey"
+            columns: ["rfq_match_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_offers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sample_request_files: {
         Row: {
           admin_approved: boolean
@@ -1172,6 +1308,77 @@ export type Database = {
             foreignKeyName: "supplier_issues_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_matching_profiles: {
+        Row: {
+          active: boolean
+          categories: string[]
+          countries_served: string[]
+          created_at: string
+          export_capable: boolean
+          id: string
+          lead_time_days_max: number | null
+          lead_time_days_min: number | null
+          moq_max: number | null
+          moq_min: number | null
+          production_capacity: number | null
+          reliability_score: number
+          response_rate: number
+          supplier_id: string
+          supplier_type: string
+          total_offers_accepted: number
+          total_offers_sent: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          categories?: string[]
+          countries_served?: string[]
+          created_at?: string
+          export_capable?: boolean
+          id?: string
+          lead_time_days_max?: number | null
+          lead_time_days_min?: number | null
+          moq_max?: number | null
+          moq_min?: number | null
+          production_capacity?: number | null
+          reliability_score?: number
+          response_rate?: number
+          supplier_id: string
+          supplier_type?: string
+          total_offers_accepted?: number
+          total_offers_sent?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          categories?: string[]
+          countries_served?: string[]
+          created_at?: string
+          export_capable?: boolean
+          id?: string
+          lead_time_days_max?: number | null
+          lead_time_days_min?: number | null
+          moq_max?: number | null
+          moq_min?: number | null
+          production_capacity?: number | null
+          reliability_score?: number
+          response_rate?: number
+          supplier_id?: string
+          supplier_type?: string
+          total_offers_accepted?: number
+          total_offers_sent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_matching_profiles_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

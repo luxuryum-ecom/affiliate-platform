@@ -46,6 +46,13 @@ export default async function SupplierDashboardPage() {
       .order('created_at', { ascending: false }),
   ])
 
+  // RFQ match counters
+  const { count: rfqOpportunities } = await supabase
+    .from('rfq_matches')
+    .select('*', { count: 'exact', head: true })
+    .eq('supplier_id', user.id)
+    .in('status', ['new', 'notified'])
+
   // Sample request counters (supplier sees requests for their products, not buyer identity)
   const { data: ownProductIds } = await supabase
     .from('supplier_products')
@@ -149,6 +156,19 @@ export default async function SupplierDashboardPage() {
           </div>
         </div>
 
+        {/* RFQ widget */}
+        {(rfqOpportunities ?? 0) > 0 && (
+          <div className={`rounded-xl border p-4 flex items-center justify-between gap-3 ${(rfqOpportunities ?? 0) > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200'}`}>
+            <div>
+              <p className="text-xs text-gray-500">Opportunités RFQ en attente</p>
+              <p className="text-2xl font-bold text-indigo-700 mt-1">{rfqOpportunities ?? 0}</p>
+            </div>
+            <Link href="/supplier/opportunities" className="text-xs px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+              Voir →
+            </Link>
+          </div>
+        )}
+
         {/* Sample request counters */}
         {sampleTotalCount > 0 && (
           <div className="grid grid-cols-2 gap-3">
@@ -237,6 +257,16 @@ export default async function SupplierDashboardPage() {
             <div>
               <p className="font-medium text-sm text-gray-900">Demandes d&apos;échantillons</p>
               <p className="text-xs text-gray-500 mt-0.5">Répondre aux demandes grossistes</p>
+            </div>
+          </Link>
+          <Link
+            href="/supplier/opportunities"
+            className="flex items-center gap-3 bg-white rounded-xl border border-indigo-200 p-5 hover:shadow-sm transition-shadow"
+          >
+            <span className="text-2xl">⚡</span>
+            <div>
+              <p className="font-medium text-sm text-gray-900">Opportunités RFQ</p>
+              <p className="text-xs text-gray-500 mt-0.5">Demandes d&apos;achat matchées pour vous</p>
             </div>
           </Link>
         </div>
