@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
-import type { SupplierProduct, SupplierProductStatus, Profile } from '@/types/database'
+import type { SupplierProduct, SupplierProductStatus, SupplierType, Profile } from '@/types/database'
 
 export const metadata = { title: 'Produits fournisseurs — Administration' }
 
@@ -10,6 +10,11 @@ const STATUS_BADGE: Record<SupplierProductStatus, { label: string; cls: string }
   pending:  { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
   approved: { label: 'Approuvé',    cls: 'bg-green-100 text-green-700' },
   rejected: { label: 'Rejeté',      cls: 'bg-red-100 text-red-600' },
+}
+
+const SUPPLIER_TYPE_BADGE: Record<SupplierType, { label: string; cls: string }> = {
+  morocco:       { label: '🇲🇦 Maroc',        cls: 'bg-emerald-100 text-emerald-700' },
+  international: { label: '🌍 International', cls: 'bg-blue-100 text-blue-700' },
 }
 
 type SupplierProductRow = SupplierProduct & {
@@ -129,6 +134,9 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
                         {badge.label}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SUPPLIER_TYPE_BADGE[product.supplier_type ?? 'morocco'].cls}`}>
+                        {SUPPLIER_TYPE_BADGE[product.supplier_type ?? 'morocco'].label}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         product.availability_type === 'import_on_demand'

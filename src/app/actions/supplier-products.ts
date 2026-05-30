@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import type { SupplierProduct, SupplierProductStatus, PlatformMarginType } from '@/types/database'
+import type { SupplierProduct, SupplierProductStatus, PlatformMarginType, SupplierType } from '@/types/database'
 
 export type SupplierProductState = { error: string | null; success?: boolean }
 
@@ -24,6 +24,7 @@ export async function submitSupplierProduct(
   const photos = photosRaw ? photosRaw.split('\n').map((u) => u.trim()).filter(Boolean) : []
   const min_quantity = parseInt(formData.get('min_quantity') as string, 10) || 1
   const origin_country = (formData.get('origin_country') as string)?.trim() ?? ''
+  const supplier_type = (formData.get('supplier_type') as string) || 'morocco'
   const availability_type = (formData.get('availability_type') as string) || 'local_stock'
   const target_buyer_type = (formData.get('target_buyer_type') as string) || 'wholesaler'
   const suggested_price = parseFloat(formData.get('suggested_wholesale_price_mad') as string)
@@ -34,6 +35,7 @@ export async function submitSupplierProduct(
 
   const { error } = await supabase.from('supplier_products').insert({
     supplier_id: user.id,
+    supplier_type: supplier_type as SupplierType,
     product_name,
     category,
     niche,

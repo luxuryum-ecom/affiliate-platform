@@ -26,6 +26,35 @@ export type SupplierProductStatus = 'pending' | 'approved' | 'rejected'
 /** Target buyer type for supplier products. */
 export type SupplierTargetBuyerType = 'wholesaler' | 'both'
 
+/**
+ * Morocco supplier: local stock, no customs, wholesale only, price shown directly.
+ * International supplier: supplier cost hidden, platform adds margin + transport/customs, final price only.
+ */
+export type SupplierType = 'morocco' | 'international'
+
+/** Predefined supplier product categories. */
+export const SUPPLIER_CATEGORIES = [
+  'Textile Homme',
+  'Textile Femme',
+  'Textile Enfant',
+  'Sous-vêtements',
+  'Burkini',
+  'Hijab',
+  'Sportswear',
+  'Tissus vrac',
+  'Maille vrac',
+  'Chaussures',
+  'Accessoires',
+  'Cosmétique',
+  'Produits alimentaires',
+  'Papier hygiénique',
+  'Artisanat',
+  'Électronique',
+  'Autres',
+] as const
+
+export type SupplierCategory = typeof SUPPLIER_CATEGORIES[number]
+
 /** Import pricing mode for import_on_demand products (migration 020). */
 export type ImportPricingMode = 'door_to_door_per_kg' | 'sea_freight_cbm_or_kg'
 
@@ -614,6 +643,11 @@ export interface SupplierProduct {
   id: string
   /** Supplier user id — admin only, never exposed to wholesalers. */
   supplier_id: string
+  /**
+   * morocco: local stock, no customs, wholesale only, price shown directly.
+   * international: supplier cost hidden, admin sets final price incl. margin + transport/customs.
+   */
+  supplier_type: SupplierType
 
   // Supplier submission fields
   product_name: string
@@ -861,7 +895,8 @@ export type Database = {
       >
       supplier_products: TableDef<
         SupplierProduct,
-        Omit<SupplierProduct, 'id' | 'created_at' | 'updated_at' | 'approval_status' | 'admin_notes' | 'approved_by' | 'approved_at' | 'rejected_at' | 'public_name' | 'public_description' | 'platform_margin_type' | 'platform_margin_value'> & {
+        Omit<SupplierProduct, 'id' | 'created_at' | 'updated_at' | 'approval_status' | 'admin_notes' | 'approved_by' | 'approved_at' | 'rejected_at' | 'public_name' | 'public_description' | 'platform_margin_type' | 'platform_margin_value' | 'supplier_type'> & {
+          supplier_type?: SupplierType
           approval_status?: SupplierProductStatus
           admin_notes?: string | null
           approved_by?: string | null

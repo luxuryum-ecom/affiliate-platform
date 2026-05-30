@@ -6,7 +6,7 @@ import {
   ApproveSupplierProductForm,
   RejectSupplierProductForm,
 } from '@/components/admin/supplier-product-review'
-import type { SupplierProduct, Profile, SupplierProductStatus } from '@/types/database'
+import type { SupplierProduct, Profile, SupplierProductStatus, SupplierType } from '@/types/database'
 
 export const metadata = { title: 'Examen produit fournisseur — Administration' }
 
@@ -14,6 +14,11 @@ const STATUS_BADGE: Record<SupplierProductStatus, { label: string; cls: string }
   pending:  { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
   approved: { label: 'Approuvé',    cls: 'bg-green-100 text-green-700' },
   rejected: { label: 'Rejeté',      cls: 'bg-red-100 text-red-600' },
+}
+
+const SUPPLIER_TYPE_BADGE: Record<SupplierType, { label: string; cls: string }> = {
+  morocco:       { label: '🇲🇦 Fournisseur Maroc',        cls: 'bg-emerald-100 text-emerald-700' },
+  international: { label: '🌍 Fournisseur International', cls: 'bg-blue-100 text-blue-700' },
 }
 
 type SupplierProductFull = SupplierProduct & {
@@ -85,7 +90,15 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
                 <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
                   {badge.label}
                 </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SUPPLIER_TYPE_BADGE[product.supplier_type].cls}`}>
+                  {SUPPLIER_TYPE_BADGE[product.supplier_type].label}
+                </span>
               </div>
+              {product.supplier_type === 'international' && (
+                <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700">
+                  Fournisseur international — définir le prix final (inclure marge + transport + douane). Le coût fournisseur ne sera jamais affiché aux acheteurs.
+                </div>
+              )}
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <div>
