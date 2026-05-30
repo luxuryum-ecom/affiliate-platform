@@ -3,6 +3,8 @@ interface TimelineStep {
   timestamp: string | null
   /** 'done' = past step; 'current' = current status; 'future' = not yet reached; 'skipped' = cancelled/returned */
   state: 'done' | 'current' | 'future' | 'skipped'
+  /** Optional note shown below the timestamp. */
+  note?: string | null
 }
 
 interface OrderTimelineProps {
@@ -61,6 +63,9 @@ export function OrderTimeline({ steps }: OrderTimelineProps) {
               ) : step.state === 'future' ? (
                 <p className="text-xs text-gray-300 mt-0.5">En attente</p>
               ) : null}
+              {step.note && (
+                <p className="text-xs text-gray-400 italic mt-0.5">{step.note}</p>
+              )}
             </div>
           </li>
         )
@@ -220,4 +225,33 @@ export function buildWholesaleTimeline(order: WholesaleOrder): TimelineStep[] {
         : 'future',
     },
   ]
+}
+
+// ─── Helper: build import history as timeline steps ───────────────────────────
+
+import type { WholesaleOrderImportHistory, WholesaleImportStatus } from '@/types/database'
+
+const IMPORT_LABELS: Record<WholesaleImportStatus, string> = {
+  awaiting_supplier: 'En attente fournisseur',
+  purchased:         'Acheté',
+  in_production:     'En production',
+  ready_to_ship:     'Prêt à expédier',
+  shipped:           'Expédié (import)',
+  customs_clearance: 'Dédouanement',
+  delivered:         'Livré (import)',
+}
+
+/**
+ * Converts import history entries (newest first) into timeline steps.
+ * Most recent entry = 'current'; all others = 'done'.
+ */
+export function buildImportHistoryTimeline(
+  history: WholesaleOrderImportHistory[]
+): TimelineStep[] {
+  return history.map((entry, i) => ({
+    label:     IMPORT_LABELS[entry.import_status as WholesaleImportStatus] ?? entry.import_status,
+    timestamp: entry.changed_at,
+    state:     i === 0 ? 'current' : 'done',
+    note:      entry.notes ?? null,
+  }))
 }

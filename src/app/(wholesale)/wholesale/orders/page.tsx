@@ -5,7 +5,7 @@ import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
-import type { WholesaleOrder, WholesaleOrderItem, Product, Profile } from '@/types/database'
+import type { WholesaleOrder, WholesaleOrderItem, Product, Profile, WholesaleImportStatus } from '@/types/database'
 
 export const metadata = { title: 'Mes commandes — Espace Grossiste' }
 
@@ -16,6 +16,16 @@ const STATUS_BADGE: Record<string, { label: string; cls: string; icon: string }>
   shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700', icon: '🚚' },
   delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700',   icon: '✓✓' },
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400',     icon: '✗' },
+}
+
+const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
+  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-600' },
+  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
+  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
+  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
+  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
+  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
+  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
 }
 
 type OrderWithItems = WholesaleOrder & {
@@ -131,6 +141,9 @@ function OrderCard({
   compact?: boolean
 }) {
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
+  const importBadge = order.import_status
+    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus]
+    : null
   const isDelivered = order.status === 'delivered'
 
   return (
@@ -148,6 +161,11 @@ function OrderCard({
             <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
               {badge.icon} {badge.label}
             </span>
+            {importBadge && (
+              <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
+                {importBadge.label}
+              </span>
+            )}
             {isDelivered && order.invoice_requested && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
                 Facture demandée

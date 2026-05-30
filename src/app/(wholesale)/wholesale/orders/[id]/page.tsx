@@ -5,11 +5,13 @@ import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
-import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
+import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline } from '@/components/shared/order-timeline'
 import { InvoiceRequestForm } from '@/components/wholesale/invoice-request-form'
 import type {
   WholesaleOrder,
   WholesaleOrderItem,
+  WholesaleOrderImportHistory,
+  WholesaleImportStatus,
   Product,
   Profile,
 } from '@/types/database'
@@ -37,6 +39,16 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
 }
 
+const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
+  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-600' },
+  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
+  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
+  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
+  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
+  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
+  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+}
+
 export async function generateMetadata({ params }: Params) {
   const { id } = await params
   return { title: `Commande #${id.slice(0, 8).toUpperCase()} — Espace Grossiste` }
@@ -50,7 +62,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [profileRes, orderRes, itemsRes] = await Promise.all([
+  const [profileRes, orderRes, itemsRes, importHistoryRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('full_name, company_name, ice, registre_commerce, billing_address')
@@ -66,16 +78,26 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
       .from('wholesale_order_items')
       .select('*, product:products(id,name,images,media)')
       .eq('order_id', id),
+    supabase
+      .from('wholesale_order_import_history')
+      .select('*')
+      .eq('order_id', id)
+      .order('changed_at', { ascending: false }),
   ])
 
   const profile = profileRes.data as BillingProfile | null
   const order = orderRes.data as WholesaleOrder | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
+  const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
 
   if (!order) notFound()
 
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
+  const importBadge = order.import_status
+    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus]
+    : null
   const timeline = buildWholesaleTimeline(order)
+  const importTimeline = buildImportHistoryTimeline(importHistory)
   const isDelivered = order.status === 'delivered'
 
   return (
@@ -118,6 +140,11 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                 <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
                   {badge.label}
                 </span>
+                {importBadge && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
+                    {importBadge.label}
+                  </span>
+                )}
                 {isDelivered && order.invoice_requested && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
                     Facture demandée
@@ -260,6 +287,14 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de commande</h2>
               <OrderTimeline steps={timeline} />
             </div>
+
+            {/* Import progress history */}
+            {importTimeline.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi import</h2>
+                <OrderTimeline steps={importTimeline} />
+              </div>
+            )}
 
             {/* Link back to source quote */}
             {order.quote_request_id && (

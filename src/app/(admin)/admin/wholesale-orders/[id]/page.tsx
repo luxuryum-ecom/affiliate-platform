@@ -6,9 +6,10 @@ import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
-import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
+import { WholesaleImportStatusForm, IMPORT_STATUS_BADGE } from '@/components/admin/wholesale-import-status-form'
+import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline } from '@/components/shared/order-timeline'
 import { WholesaleCostForm } from '@/components/admin/wholesale-cost-form'
-import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, QuoteRequest } from '@/types/database'
+import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, QuoteRequest } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -37,7 +38,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = adminProfileRes.data as { full_name: string } | null
 
-  const [orderRes, itemsRes] = await Promise.all([
+  const [orderRes, itemsRes, importHistoryRes] = await Promise.all([
     supabase
       .from('wholesale_orders')
       .select('*, buyer:profiles!buyer_id(id,full_name,phone,city), agent:profiles!agent_id(id,full_name)')
@@ -47,10 +48,16 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       .from('wholesale_order_items')
       .select('*, product:products(id,name,images,stock_count)')
       .eq('order_id', id),
+    supabase
+      .from('wholesale_order_import_history')
+      .select('*')
+      .eq('order_id', id)
+      .order('changed_at', { ascending: false }),
   ])
 
   const order = orderRes.data as unknown as OrderDetail | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
+  const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
 
   // Fetch linked quote if this order was created from a quote
   let linkedQuote: LinkedQuote | null = null
@@ -66,8 +73,12 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   if (!order) notFound()
 
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
+  const importBadge = order.import_status
+    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus]
+    : null
 
   const timeline = buildWholesaleTimeline(order)
+  const importTimeline = buildImportHistoryTimeline(importHistory)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -96,7 +107,14 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                    {importBadge && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
+                        {importBadge.label}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-2 text-xs text-gray-400">
                     Créée le {new Date(order.created_at).toLocaleString('fr-MA')}
                   </p>
@@ -158,6 +176,18 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de la commande</h2>
               <OrderTimeline steps={timeline} />
             </div>
+
+            {/* Import progress history */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Historique import</h2>
+              {importTimeline.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">
+                  Aucun statut import enregistré. Utilisez le panneau de droite pour commencer le suivi.
+                </p>
+              ) : (
+                <OrderTimeline steps={importTimeline} />
+              )}
+            </div>
           </div>
 
           {/* ── Right: status update + cost breakdown ── */}
@@ -167,6 +197,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               <WholesaleOrderStatusForm
                 orderId={order.id}
                 currentStatus={order.status as WholesaleOrderStatus}
+              />
+            </div>
+
+            {/* Import status form */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Statut import</h2>
+              <WholesaleImportStatusForm
+                orderId={order.id}
+                currentImportStatus={order.import_status as WholesaleImportStatus | null}
               />
             </div>
 

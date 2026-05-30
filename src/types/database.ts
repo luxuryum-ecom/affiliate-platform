@@ -76,6 +76,16 @@ export type WholesaleOrderStatus =
   | 'delivered'
   | 'cancelled'
 
+/** Import progress tracking for wholesale orders (migration 026). */
+export type WholesaleImportStatus =
+  | 'awaiting_supplier'
+  | 'purchased'
+  | 'in_production'
+  | 'ready_to_ship'
+  | 'shipped'
+  | 'customs_clearance'
+  | 'delivered'
+
 export type DeliveryPreference = 'pickup' | 'delivery'
 export type CommissionStatus = 'pending' | 'approved' | 'paid'
 export type PayoutStatus = 'pending' | 'processing' | 'paid'
@@ -359,6 +369,10 @@ export interface WholesaleOrder {
   /** Set when this order was created from a quote request conversion. */
   quote_request_id: string | null
 
+  // ── Import progress tracking (migration 026) ─────────────────────────────
+  /** Current import progress status. Null until admin first sets it. */
+  import_status: WholesaleImportStatus | null
+
   // ── Import cost breakdown (added migration 025) ───────────────────────────
   /** Supplier/purchase cost in MAD for this order. Admin-entered. */
   supplier_cost_mad: number
@@ -385,6 +399,16 @@ export interface WholesaleOrderItem {
   unit_price_snapshot: number
   subtotal: number
   tier_label_snapshot: string
+}
+
+/** Single import status change entry (migration 026). */
+export interface WholesaleOrderImportHistory {
+  id: string
+  order_id: string
+  import_status: WholesaleImportStatus
+  changed_by: string | null
+  notes: string | null
+  changed_at: string
 }
 
 export interface Commission {
@@ -617,18 +641,24 @@ export type Database = {
       >
       wholesale_orders: TableDef<
         WholesaleOrder,
-        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id' | 'supplier_cost_mad' | 'transport_customs_cost_mad' | 'additional_cost_mad' | 'total_cost_mad' | 'gross_profit_mad' | 'gross_margin_percent'> & {
+        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id' | 'supplier_cost_mad' | 'transport_customs_cost_mad' | 'additional_cost_mad' | 'total_cost_mad' | 'gross_profit_mad' | 'gross_margin_percent' | 'import_status'> & {
           invoice_requested?: boolean
           quote_request_id?: string | null
           supplier_cost_mad?: number
           transport_customs_cost_mad?: number
           additional_cost_mad?: number
+          import_status?: WholesaleImportStatus | null
         },
         Partial<WholesaleOrder>
       >
       wholesale_order_items: TableDef<
         WholesaleOrderItem,
         Omit<WholesaleOrderItem, 'id'>,
+        never
+      >
+      wholesale_order_import_history: TableDef<
+        WholesaleOrderImportHistory,
+        Omit<WholesaleOrderImportHistory, 'id' | 'changed_at'> & { changed_at?: string },
         never
       >
       commissions: TableDef<

@@ -16,6 +16,7 @@ import type {
   OrderStatus,
   OrderSource,
   WholesaleOrderStatus,
+  WholesaleImportStatus,
   WholesaleCartItemWithProduct,
 } from '@/types/database'
 
@@ -762,5 +763,43 @@ export async function updateWholesaleOrderStatus(
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
   revalidatePath(`/wholesale/orders`)
+  return ok
+}
+
+// =============================================================================
+// ADMIN — UPDATE WHOLESALE ORDER IMPORT STATUS
+// =============================================================================
+
+/**
+ * Admin sets / updates the import progress status for a wholesale order.
+ * Every change is appended to wholesale_order_import_history for full audit.
+ */
+export async function updateWholesaleImportStatus(
+  orderId: string,
+  importStatus: WholesaleImportStatus,
+  notes?: string
+): Promise<ActionState> {
+  const { supabase, error: authError } = await requireAdmin({ allowAgent: true })
+  if (authError) return fail(authError)
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { error: updateErr } = await supabase
+    .from('wholesale_orders')
+    .update({ import_status: importStatus })
+    .eq('id', orderId)
+
+  if (updateErr) return fail(updateErr.message)
+
+  await supabase.from('wholesale_order_import_history').insert({
+    order_id:      orderId,
+    import_status: importStatus,
+    changed_by:    user?.id ?? null,
+    notes:         notes || null,
+  })
+
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath(`/wholesale/orders/${orderId}`)
   return ok
 }

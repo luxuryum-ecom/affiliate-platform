@@ -104,11 +104,11 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     (since
       ? supabase
           .from('wholesale_orders')
-          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent')
+          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent, import_status')
           .gte('created_at', since)
       : supabase
           .from('wholesale_orders')
-          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent')
+          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent, import_status')
     ) as unknown as Promise<{
       data: {
         id: string
@@ -117,6 +117,7 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
         total_cost_mad: number | null
         gross_profit_mad: number | null
         gross_margin_percent: number | null
+        import_status: string | null
       }[] | null
       error: unknown
     }>,
@@ -137,6 +138,15 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
   const wsAvgMargin     = wsDelivered.length > 0
     ? wsDelivered.reduce((s, o) => s + (o.gross_margin_percent ?? 0), 0) / wsDelivered.length
     : 0
+
+  // ── Wholesale import status breakdown ─────────────────────────────────────
+  const importStatusCounts = new Map<string, number>()
+  for (const o of wholesaleOrders) {
+    if (o.import_status) {
+      importStatusCounts.set(o.import_status, (importStatusCounts.get(o.import_status) ?? 0) + 1)
+    }
+  }
+  const wsWithImportStatus = wholesaleOrders.filter((o) => o.import_status != null).length
 
   const productMap   = new Map(products.map((p) => [p.id, p.name]))
   const affiliateMap = new Map(affiliates.map((a) => [a.id, a.full_name]))
@@ -379,6 +389,34 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
             </div>
           )}
         </section>
+
+        {/* Import status breakdown */}
+        {wsWithImportStatus > 0 && (
+          <section>
+            <SectionLabel>Grossiste — Suivi import (par statut)</SectionLabel>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { key: 'awaiting_supplier', label: 'Attente fournisseur' },
+                { key: 'purchased',         label: 'Acheté' },
+                { key: 'in_production',     label: 'En production' },
+                { key: 'ready_to_ship',     label: 'Prêt à expédier' },
+                { key: 'shipped',           label: 'Expédié' },
+                { key: 'customs_clearance', label: 'Dédouanement' },
+                { key: 'delivered',         label: 'Livré (import)' },
+              ].map(({ key, label }) => {
+                const cnt = importStatusCounts.get(key) ?? 0
+                return (
+                  <StatCard
+                    key={key}
+                    label={label}
+                    value={String(cnt)}
+                    variant={cnt > 0 ? 'default' : 'muted'}
+                  />
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Top products & top affiliates */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

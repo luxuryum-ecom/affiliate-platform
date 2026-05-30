@@ -879,6 +879,41 @@ export type Database = {
           },
         ]
       }
+      wholesale_order_import_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          import_status: string
+          notes: string | null
+          order_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          import_status: string
+          notes?: string | null
+          order_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          import_status?: string
+          notes?: string | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wholesale_order_import_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "wholesale_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wholesale_order_items: {
         Row: {
           id: string
@@ -926,6 +961,7 @@ export type Database = {
       }
       wholesale_orders: {
         Row: {
+          additional_cost_mad: number
           address: string | null
           agent_id: string | null
           agent_notes: string | null
@@ -938,20 +974,28 @@ export type Database = {
           delivered_at: string | null
           delivery_cost: number
           delivery_preference: string
+          gross_margin_percent: number | null
+          gross_profit_mad: number | null
           id: string
+          import_status: string | null
           invoice_billing_address: string | null
           invoice_company_name: string | null
           invoice_ice: string | null
           invoice_registre_commerce: string | null
           invoice_requested: boolean
           invoice_requested_at: string | null
+          quote_request_id: string | null
           shipped_at: string | null
           sourcing_at: string | null
           status: string
+          supplier_cost_mad: number
           total_amount: number
+          total_cost_mad: number | null
+          transport_customs_cost_mad: number
           updated_at: string
         }
         Insert: {
+          additional_cost_mad?: number
           address?: string | null
           agent_id?: string | null
           agent_notes?: string | null
@@ -964,20 +1008,28 @@ export type Database = {
           delivered_at?: string | null
           delivery_cost?: number
           delivery_preference: string
+          gross_margin_percent?: number | null
+          gross_profit_mad?: number | null
           id?: string
+          import_status?: string | null
           invoice_billing_address?: string | null
           invoice_company_name?: string | null
           invoice_ice?: string | null
           invoice_registre_commerce?: string | null
           invoice_requested?: boolean
           invoice_requested_at?: string | null
+          quote_request_id?: string | null
           shipped_at?: string | null
           sourcing_at?: string | null
           status?: string
+          supplier_cost_mad?: number
           total_amount?: number
+          total_cost_mad?: number | null
+          transport_customs_cost_mad?: number
           updated_at?: string
         }
         Update: {
+          additional_cost_mad?: number
           address?: string | null
           agent_id?: string | null
           agent_notes?: string | null
@@ -990,17 +1042,24 @@ export type Database = {
           delivered_at?: string | null
           delivery_cost?: number
           delivery_preference?: string
+          gross_margin_percent?: number | null
+          gross_profit_mad?: number | null
           id?: string
+          import_status?: string | null
           invoice_billing_address?: string | null
           invoice_company_name?: string | null
           invoice_ice?: string | null
           invoice_registre_commerce?: string | null
           invoice_requested?: boolean
           invoice_requested_at?: string | null
+          quote_request_id?: string | null
           shipped_at?: string | null
           sourcing_at?: string | null
           status?: string
+          supplier_cost_mad?: number
           total_amount?: number
+          total_cost_mad?: number | null
+          transport_customs_cost_mad?: number
           updated_at?: string
         }
         Relationships: [
@@ -1016,6 +1075,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_orders_quote_request_id_fkey"
+            columns: ["quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "quote_requests"
             referencedColumns: ["id"]
           },
         ]
