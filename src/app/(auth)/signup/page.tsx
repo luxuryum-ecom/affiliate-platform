@@ -12,8 +12,12 @@ export const metadata = {
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const params = await searchParams
-  const role: 'affiliate' | 'wholesaler' =
-    params.type === 'wholesale' ? 'wholesaler' : 'affiliate'
+  const role: 'affiliate' | 'wholesaler' | 'supplier' =
+    params.type === 'wholesale'
+      ? 'wholesaler'
+      : params.type === 'supplier'
+      ? 'supplier'
+      : 'affiliate'
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
@@ -42,7 +46,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                   : 'text-gray-600 hover:text-gray-900'
               )}
             >
-              Devenir affilié
+              Affilié
             </Link>
             <Link
               href="/signup?type=wholesale"
@@ -53,7 +57,18 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                   : 'text-gray-600 hover:text-gray-900'
               )}
             >
-              Acheter en gros
+              Grossiste
+            </Link>
+            <Link
+              href="/signup?type=supplier"
+              className={cn(
+                'flex-1 text-center py-2 text-sm font-medium rounded-md transition-colors',
+                role === 'supplier'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              )}
+            >
+              Fournisseur
             </Link>
           </div>
 

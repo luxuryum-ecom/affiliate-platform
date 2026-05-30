@@ -33,6 +33,7 @@ export default async function AdminDashboardPage() {
     { count: pendingWholesaleOrders },
     { count: newQuoteRequests },
     pendingCommissionsRes,
+    { count: pendingSupplierProducts },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -65,6 +66,10 @@ export default async function AdminDashboardPage() {
       .from('commissions')
       .select('amount')
       .in('status', ['pending', 'approved']),
+    supabase
+      .from('supplier_products')
+      .select('*', { count: 'exact', head: true })
+      .eq('approval_status', 'pending'),
   ])
 
   const pendingCommissionRows = (pendingCommissionsRes.data ?? []) as { amount: number }[]
@@ -213,6 +218,12 @@ export default async function AdminDashboardPage() {
                 description: 'Devis import-on-demand des grossistes.',
                 badge: newQuoteRequests ?? 0,
                 href: '/admin/quote-requests',
+              },
+              {
+                title: 'Produits fournisseurs',
+                description: 'Examiner et approuver les soumissions des fournisseurs.',
+                badge: pendingSupplierProducts ?? 0,
+                href: '/admin/supplier-products',
               },
               {
                 title: 'Analytiques',

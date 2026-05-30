@@ -11,6 +11,7 @@ const ROLE_REDIRECTS: Record<string, string> = {
   wholesaler: '/wholesale/dashboard',
   admin: '/admin/dashboard',
   agent: '/admin/dashboard',
+  supplier: '/supplier/dashboard',
 }
 
 export async function signUp(
@@ -30,7 +31,7 @@ export async function signUp(
     return { error: 'Le mot de passe doit contenir au moins 8 caractères.' }
   }
 
-  if (!['affiliate', 'wholesaler'].includes(role)) {
+  if (!['affiliate', 'wholesaler', 'supplier'].includes(role)) {
     return { error: 'Type de compte invalide.' }
   }
 

@@ -602,8 +602,6 @@ export interface QuoteRequest {
   quote_prepared_at: string | null
   /** Client decision — set by wholesaler after reviewing quote_prepared document */
   client_decision_at: string | null
-  /** Set when quote originated from wholesale marketplace (supplier product). Supplier identity hidden. */
-  supplier_product_id: string | null
   created_at: string
   updated_at: string
 }
@@ -655,6 +653,27 @@ export type SupplierProductPublic = Omit<
   SupplierProduct,
   'supplier_id' | 'supplier_private_notes' | 'admin_notes' | 'approved_by' | 'platform_margin_type' | 'platform_margin_value'
 >
+
+/** Status for supplier marketplace quote requests. */
+export type SupplierQuoteRequestStatus = 'new' | 'studying' | 'quoted' | 'approved' | 'rejected'
+
+/** Quote request from a wholesaler for a marketplace supplier product. Supplier identity hidden. */
+export interface SupplierQuoteRequest {
+  id: string
+  supplier_product_id: string
+  buyer_id: string
+  quantity_requested: number
+  destination_country: string
+  destination_city: string | null
+  buyer_notes: string | null
+  whatsapp_number: string
+  status: SupplierQuoteRequestStatus
+  /** Admin internal notes — never shown to buyer or supplier. */
+  admin_notes: string | null
+  quoted_unit_price_mad: number | null
+  created_at: string
+  updated_at: string
+}
 
 export type OrderSignalType = 'fraud' | 'duplicate' | 'spam' | 'conversion'
 
@@ -830,6 +849,30 @@ export type Database = {
           client_decision_at?: string | null
         },
         Partial<QuoteRequest>
+      >
+      supplier_quote_requests: TableDef<
+        SupplierQuoteRequest,
+        Omit<SupplierQuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'quoted_unit_price_mad'> & {
+          status?: SupplierQuoteRequestStatus
+          admin_notes?: string | null
+          quoted_unit_price_mad?: number | null
+        },
+        Partial<SupplierQuoteRequest>
+      >
+      supplier_products: TableDef<
+        SupplierProduct,
+        Omit<SupplierProduct, 'id' | 'created_at' | 'updated_at' | 'approval_status' | 'admin_notes' | 'approved_by' | 'approved_at' | 'rejected_at' | 'public_name' | 'public_description' | 'platform_margin_type' | 'platform_margin_value'> & {
+          approval_status?: SupplierProductStatus
+          admin_notes?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          rejected_at?: string | null
+          public_name?: string | null
+          public_description?: string | null
+          platform_margin_type?: PlatformMarginType
+          platform_margin_value?: number | null
+        },
+        Partial<SupplierProduct>
       >
     }
     Views: Record<never, never>

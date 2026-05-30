@@ -170,6 +170,22 @@ export default async function WholesaleDashboardPage() {
           </Link>
         </div>
 
+        {/* Supplier marketplace */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Marketplace fournisseurs</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Découvrez des produits proposés par nos fournisseurs et demandez un devis.
+            </p>
+          </div>
+          <Link
+            href="/wholesale/marketplace"
+            className="text-xs px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
+          >
+            Explorer →
+          </Link>
+        </div>
+
         {/* Quote requests */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">

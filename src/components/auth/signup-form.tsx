@@ -9,10 +9,11 @@ const initialState: AuthState = { error: null }
 const ROLE_LABELS: Record<string, string> = {
   affiliate: 'Affiliation — dropshipping COD',
   wholesaler: 'Achat en gros — B2B',
+  supplier: 'Fournisseur — proposer des produits',
 }
 
 interface SignupFormProps {
-  defaultRole: 'affiliate' | 'wholesaler'
+  defaultRole: 'affiliate' | 'wholesaler' | 'supplier'
 }
 
 export function SignupForm({ defaultRole }: SignupFormProps) {

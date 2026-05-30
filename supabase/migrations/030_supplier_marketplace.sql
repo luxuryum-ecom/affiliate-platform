@@ -15,7 +15,7 @@ ALTER TABLE public.profiles
 -- ── 2. Create supplier_products table ────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.supplier_products (
-  id                          uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                          uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Supplier identity (internal — never exposed to wholesalers)
   supplier_id                 uuid          NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -71,13 +71,35 @@ CREATE TRIGGER supplier_products_updated_at
   BEFORE UPDATE ON public.supplier_products
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
--- ── 5. Add supplier_product_id to quote_requests (nullable, for marketplace quotes) ──
+-- ── 5. Supplier marketplace quote requests (separate from existing quote_requests) ──
+-- Does not touch existing quote_requests table to preserve existing flow.
 
-ALTER TABLE public.quote_requests
-  ADD COLUMN IF NOT EXISTS supplier_product_id uuid REFERENCES public.supplier_products(id);
+CREATE TABLE IF NOT EXISTS public.supplier_quote_requests (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_product_id   uuid        NOT NULL REFERENCES public.supplier_products(id),
+  buyer_id              uuid        NOT NULL REFERENCES public.profiles(id),
+  quantity_requested    integer     NOT NULL CHECK (quantity_requested > 0),
+  destination_country   text        NOT NULL DEFAULT 'Maroc',
+  destination_city      text,
+  buyer_notes           text,
+  whatsapp_number       text        NOT NULL,
+  status                text        NOT NULL DEFAULT 'new'
+                        CHECK (status IN ('new', 'studying', 'quoted', 'approved', 'rejected')),
+  -- Admin internal fields — never exposed to buyer or supplier
+  admin_notes           text,
+  quoted_unit_price_mad numeric(10,2),
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now()
+);
 
-CREATE INDEX IF NOT EXISTS idx_qr_supplier_product_id
-  ON public.quote_requests(supplier_product_id);
+CREATE INDEX IF NOT EXISTS idx_sqr_supplier_product_id ON public.supplier_quote_requests(supplier_product_id);
+CREATE INDEX IF NOT EXISTS idx_sqr_buyer_id            ON public.supplier_quote_requests(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_sqr_status              ON public.supplier_quote_requests(status);
+
+DROP TRIGGER IF EXISTS supplier_quote_requests_updated_at ON public.supplier_quote_requests;
+CREATE TRIGGER supplier_quote_requests_updated_at
+  BEFORE UPDATE ON public.supplier_quote_requests
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 -- ── 6. RLS ────────────────────────────────────────────────────────────────────
 
@@ -126,3 +148,21 @@ CREATE POLICY "supplier_products: wholesaler read approved"
       OR (SELECT wholesale_access FROM public.profiles WHERE id = auth.uid()) = true
     )
   );
+
+-- ── RLS for supplier_quote_requests ──────────────────────────────────────────
+
+ALTER TABLE public.supplier_quote_requests ENABLE ROW LEVEL SECURITY;
+
+-- Buyer can read/insert their own quote requests
+DROP POLICY IF EXISTS "sqr: buyer own" ON public.supplier_quote_requests;
+CREATE POLICY "sqr: buyer own"
+  ON public.supplier_quote_requests FOR ALL TO authenticated
+  USING (buyer_id = auth.uid())
+  WITH CHECK (buyer_id = auth.uid());
+
+-- Admin can read/update all
+DROP POLICY IF EXISTS "sqr: admin all" ON public.supplier_quote_requests;
+CREATE POLICY "sqr: admin all"
+  ON public.supplier_quote_requests FOR ALL TO authenticated
+  USING (public.my_role() = 'admin')
+  WITH CHECK (public.my_role() = 'admin');
