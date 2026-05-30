@@ -32,28 +32,58 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileResult, productsResult] = await Promise.all([
+  const [profileResult, productsResult, premiumSubsResult] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
       .from('supplier_products')
       .select(
-        'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status)'
+        'id, supplier_id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status)'
       )
       .eq('approval_status', 'approved')
       .is('archived_at', null)
       .order('created_at', { ascending: false }),
+    // Fetch active premium subscriptions with badge flags — server-side only
+    supabase
+      .from('supplier_subscriptions')
+      .select('supplier_id, plan:premium_plans(featured_badge, verified_badge)')
+      .eq('status', 'active'),
   ])
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
+
+  // Build premium badge lookup (supplier_id → flags) — never exposed to client
+  type PremiumFlags = { featured_badge: boolean; verified_badge: boolean }
+  type PremiumSubRow = { supplier_id: string; plan: PremiumFlags | PremiumFlags[] | null }
+  const premiumMap = new Map<string, PremiumFlags>()
+  for (const sub of (premiumSubsResult.data ?? []) as PremiumSubRow[]) {
+    const flags = Array.isArray(sub.plan) ? sub.plan[0] : sub.plan
+    if (flags) premiumMap.set(sub.supplier_id, flags)
+  }
+
   type MarketplaceProduct = SupplierProductPublic & {
+    supplier_id: string
     supplier_type: SupplierType
     unit: string
     stock_quantity: number | null
     lead_time_days: number | null
     export_countries: string[]
     supplier_product_attachments: { attachment_type: string; admin_status: string }[]
+    is_featured: boolean
+    is_verified: boolean
   }
-  let products = (productsResult.data ?? []) as MarketplaceProduct[]
+  let products = ((productsResult.data ?? []) as (MarketplaceProduct & { supplier_id: string })[])
+    .map((p) => ({
+      ...p,
+      is_featured: premiumMap.get(p.supplier_id)?.featured_badge ?? false,
+      is_verified: premiumMap.get(p.supplier_id)?.verified_badge ?? false,
+    }))
+
+  // Premium suppliers appear first (featured > verified > rest)
+  products.sort((a, b) => {
+    const scoreA = (a.is_verified ? 2 : 0) + (a.is_featured ? 1 : 0)
+    const scoreB = (b.is_verified ? 2 : 0) + (b.is_featured ? 1 : 0)
+    return scoreB - scoreA
+  })
 
   // Apply filters
   if (filters.category) {
@@ -306,7 +336,12 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {products.map((product) => (
-              <MarketplaceProductCard key={product.id} product={product} />
+              <MarketplaceProductCard
+                key={product.id}
+                product={product}
+                isFeatured={product.is_featured}
+                isVerified={product.is_verified}
+              />
             ))}
           </div>
         )}
@@ -322,6 +357,8 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 
 function MarketplaceProductCard({
   product,
+  isFeatured = false,
+  isVerified = false,
 }: {
   product: SupplierProductPublic & {
     supplier_type: SupplierType
@@ -330,6 +367,8 @@ function MarketplaceProductCard({
     lead_time_days?: number | null
     supplier_product_attachments?: { attachment_type: string; admin_status: string }[]
   }
+  isFeatured?: boolean
+  isVerified?: boolean
 }) {
   const approvedAttachments = (product.supplier_product_attachments ?? []).filter(
     (a) => a.admin_status === 'approved'
@@ -342,7 +381,7 @@ function MarketplaceProductCard({
   const isMorocco = product.supplier_type === 'morocco'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
+    <div className={`bg-white rounded-xl border overflow-hidden flex flex-col ${isVerified ? 'border-amber-300 ring-1 ring-amber-200' : isFeatured ? 'border-indigo-300 ring-1 ring-indigo-100' : 'border-gray-200'}`}>
       {/* Photo */}
       {product.photos.length > 0 ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -361,6 +400,18 @@ function MarketplaceProductCard({
       <div className="p-4 flex flex-col gap-2 flex-1">
         {/* Badges */}
         <div className="flex flex-wrap gap-1.5">
+          {/* Premium badges — shown before origin badge */}
+          {isVerified && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
+              ✓ Vérifié
+            </span>
+          )}
+          {isFeatured && !isVerified && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-700">
+              ★ Vedette
+            </span>
+          )}
+
           {/* Supplier type badge */}
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
             isMorocco

@@ -269,6 +269,16 @@ export default async function SupplierDashboardPage() {
               <p className="text-xs text-gray-500 mt-0.5">Demandes d&apos;achat matchées pour vous</p>
             </div>
           </Link>
+          <Link
+            href="/supplier/premium"
+            className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-amber-50 rounded-xl border border-amber-200 p-5 hover:shadow-sm transition-shadow"
+          >
+            <span className="text-2xl">★</span>
+            <div>
+              <p className="font-medium text-sm text-gray-900">Mon abonnement</p>
+              <p className="text-xs text-gray-500 mt-0.5">Plans premium & visibilité marketplace</p>
+            </div>
+          </Link>
         </div>
 
         {/* Approved products with order & payout tracking */}

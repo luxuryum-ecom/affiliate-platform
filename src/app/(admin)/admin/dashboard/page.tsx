@@ -260,6 +260,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/rfq',
               },
+              {
+                title: 'Monétisation Premium',
+                description: 'Abonnements fournisseurs, badges Vedette/Vérifié, boost RFQ, MRR.',
+                badge: null,
+                href: '/admin/premium',
+              },
             ].map((action) => (
               <div
                 key={action.title}

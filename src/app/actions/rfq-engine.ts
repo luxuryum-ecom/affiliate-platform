@@ -89,12 +89,28 @@ async function scoreSuppliers(
 ): Promise<ScoredMatch[]> {
   const supabase = await createClient()
 
-  const { data: profiles } = await supabase
-    .from('supplier_matching_profiles')
-    .select('*, supplier:profiles!supplier_id(id, full_name)')
-    .eq('active', true)
+  const [profilesRes, premiumSubsRes] = await Promise.all([
+    supabase
+      .from('supplier_matching_profiles')
+      .select('*, supplier:profiles!supplier_id(id, full_name)')
+      .eq('active', true),
+    // Fetch premium boost values for all active subscriptions
+    supabase
+      .from('supplier_subscriptions')
+      .select('supplier_id, plan:premium_plans(rfq_priority_boost)')
+      .eq('status', 'active'),
+  ])
 
+  const profiles = profilesRes.data
   if (!profiles?.length) return []
+
+  // Build boost lookup: supplier_id → rfq_priority_boost
+  type BoostRow = { supplier_id: string; plan: { rfq_priority_boost: number } | { rfq_priority_boost: number }[] | null }
+  const boostMap = new Map<string, number>()
+  for (const sub of (premiumSubsRes.data ?? []) as BoostRow[]) {
+    const planData = Array.isArray(sub.plan) ? sub.plan[0] : sub.plan
+    if (planData?.rfq_priority_boost) boostMap.set(sub.supplier_id, planData.rfq_priority_boost)
+  }
 
   const results: ScoredMatch[] = []
 
@@ -140,17 +156,20 @@ async function scoreSuppliers(
     // Response rate (0–8)
     const responseRate = Math.round((sup.response_rate / 100) * 8)
 
-    const total = catMatch + countryMatch + moqScore + leadScore + reliability + responseRate
+    // Premium boost (0–40 per plan tier)
+    const premiumBoost = boostMap.get(sup.supplier_id) ?? 0
+
+    const total = catMatch + countryMatch + moqScore + leadScore + reliability + responseRate + premiumBoost
 
     results.push({
-      supplierId:       sup.supplier_id,
-      supplierName:     sup.supplier?.full_name ?? 'Fournisseur',
-      totalScore:       total,
-      scoreCategory:    catMatch,
-      scoreCountry:     countryMatch,
-      scoreMoq:         moqScore,
-      scoreLeadTime:    leadScore,
-      scoreReliability: reliability,
+      supplierId:        sup.supplier_id,
+      supplierName:      sup.supplier?.full_name ?? 'Fournisseur',
+      totalScore:        total,
+      scoreCategory:     catMatch,
+      scoreCountry:      countryMatch,
+      scoreMoq:          moqScore,
+      scoreLeadTime:     leadScore,
+      scoreReliability:  reliability,
       scoreResponseRate: responseRate,
     })
   }

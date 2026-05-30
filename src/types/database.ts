@@ -1032,6 +1032,67 @@ export interface OrderSignal {
   created_at: string
 }
 
+// ─── PREMIUM MONETIZATION (migration 038) ────────────────────────────────────
+
+export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'trial'
+
+/** Platform-defined subscription tier. */
+export interface PremiumPlan {
+  id: string
+  slug: string
+  name: string
+  price_mad_monthly: number
+  /** Maximum number of active supplier products allowed. 0 = unlimited. */
+  max_products: number
+  /** Score points added to RFQ matching total_score for this supplier (0–40). */
+  rfq_priority_boost: number
+  /** Show a "Vedette" badge in the wholesaler marketplace. */
+  featured_badge: boolean
+  /** Show a "Vérifié" badge — credibility signal. */
+  verified_badge: boolean
+  /** Unlocks the full analytics page for the supplier. */
+  full_analytics: boolean
+  priority_support: boolean
+  description: string | null
+  active: boolean
+  display_order: number
+  created_at: string
+}
+
+/** Links one supplier to their current plan. One row per supplier (UNIQUE). */
+export interface SupplierSubscription {
+  id: string
+  supplier_id: string
+  plan_id: string
+  status: SubscriptionStatus
+  started_at: string
+  /** Null = open-ended (manually managed). */
+  expires_at: string | null
+  notes: string | null
+  assigned_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Immutable audit record for every plan change. */
+export interface SubscriptionAuditLog {
+  id: string
+  supplier_id: string
+  old_plan_slug: string | null
+  new_plan_slug: string
+  old_status: string | null
+  new_status: string
+  changed_by: string | null
+  notes: string | null
+  changed_at: string
+}
+
+/** Admin view: subscription joined with plan and supplier profile. */
+export interface SupplierSubscriptionWithDetails extends SupplierSubscription {
+  plan: PremiumPlan
+  supplier: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'>
+}
+
 // ─── JOINED / EXTENDED TYPES ─────────────────────────────────────────────────
 // Used in query results that join related tables.
 
@@ -1329,10 +1390,42 @@ export type Database = {
         },
         Partial<RfqOffer>
       >
+      premium_plans: TableDef<
+        PremiumPlan,
+        Omit<PremiumPlan, 'id' | 'created_at' | 'active' | 'display_order' | 'rfq_priority_boost' | 'featured_badge' | 'verified_badge' | 'full_analytics' | 'priority_support' | 'max_products' | 'price_mad_monthly'> & {
+          price_mad_monthly?: number
+          max_products?: number
+          rfq_priority_boost?: number
+          featured_badge?: boolean
+          verified_badge?: boolean
+          full_analytics?: boolean
+          priority_support?: boolean
+          active?: boolean
+          display_order?: number
+        },
+        Partial<PremiumPlan>
+      >
+      supplier_subscriptions: TableDef<
+        SupplierSubscription,
+        Omit<SupplierSubscription, 'id' | 'created_at' | 'updated_at' | 'status' | 'started_at' | 'expires_at' | 'notes' | 'assigned_by'> & {
+          status?: SubscriptionStatus
+          started_at?: string
+          expires_at?: string | null
+          notes?: string | null
+          assigned_by?: string | null
+        },
+        Partial<SupplierSubscription>
+      >
+      subscription_audit_log: TableDef<
+        SubscriptionAuditLog,
+        Omit<SubscriptionAuditLog, 'id' | 'changed_at'> & { changed_at?: string },
+        never
+      >
     }
     Views: Record<never, never>
     Functions: {
       my_role: { Args: Record<string, never>; Returns: UserRole }
+      get_supplier_plan: { Args: { p_supplier_id: string }; Returns: string }
     }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>
