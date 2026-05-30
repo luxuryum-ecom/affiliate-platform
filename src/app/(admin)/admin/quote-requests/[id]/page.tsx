@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { QuoteRequestStatusForm } from '@/components/admin/quote-request-status-form'
 import { ConvertQuoteButton } from '@/components/admin/convert-quote-button'
+import { PrepareQuoteForm } from '@/components/admin/prepare-quote-form'
 import type { QuoteRequestWithDetails, QuoteRequestStatus, WholesaleOrder } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
@@ -12,6 +13,7 @@ const STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> =
   new:                { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
   studying:           { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
   quoted:             { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
+  quote_prepared:     { label: 'Devis préparé',        cls: 'bg-indigo-100 text-indigo-700' },
   negotiating:        { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
   approved:           { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
   rejected:           { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
@@ -86,6 +88,14 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
                     → Commande #{linkedOrder.id.slice(0, 8).toUpperCase()}
                   </Link>
                 )}
+                {req.status === 'quote_prepared' && (
+                  <Link
+                    href={`/admin/quote-requests/${id}/quote-preview`}
+                    className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                  >
+                    Aperçu du devis →
+                  </Link>
+                )}
               </div>
               <h1 className="text-base font-semibold text-gray-900 mb-1">
                 {req.buyer?.company_name ?? req.buyer?.full_name}
@@ -146,6 +156,8 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
 
           {/* ── Right: admin actions ── */}
           <div className="space-y-5">
+
+            {/* Status management */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
                 Gestion du statut
@@ -157,6 +169,39 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
                 currentNotesPublic={req.admin_notes_public}
               />
             </div>
+
+            {/* Prepare quote — available until converted */}
+            {req.status !== 'converted_to_order' && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Préparer le devis
+                </h2>
+                <p className="text-xs text-gray-400 mb-4">
+                  Remplis les montants pour générer le document client.
+                </p>
+                <PrepareQuoteForm
+                  requestId={id}
+                  quantityRequested={req.quantity_requested}
+                  currentQuote={{
+                    quoted_unit_price_mad:     req.quoted_unit_price_mad,
+                    quoted_quantity:           req.quoted_quantity,
+                    quoted_transport_total_mad: req.quoted_transport_total_mad,
+                    quoted_shipping_mode:      req.quoted_shipping_mode,
+                    quoted_delivery_delay:     req.quoted_delivery_delay,
+                    quote_validity_date:       req.quote_validity_date,
+                    quote_public_note:         req.quote_public_note,
+                  }}
+                />
+                {req.status === 'quote_prepared' && (
+                  <Link
+                    href={`/admin/quote-requests/${id}/quote-preview`}
+                    className="mt-3 flex items-center justify-center gap-2 w-full py-2 border border-indigo-300 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-50 transition-colors"
+                  >
+                    Aperçu du document client
+                  </Link>
+                )}
+              </div>
+            )}
 
             {/* Convert to order — only when approved and not yet converted */}
             {req.status === 'approved' && !linkedOrder && (

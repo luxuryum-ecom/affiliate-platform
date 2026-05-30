@@ -8,6 +8,7 @@ import { getWholesaleTier } from '@/lib/utils'
 import type { QuoteRequest, Product, QuoteRequestStatus } from '@/types/database'
 
 export type QuoteRequestFormState = { error: string | null; success?: boolean }
+export type PrepareQuoteFormState = { error: string | null; success?: boolean }
 export type ConvertQuoteFormState = { error: string | null }
 
 // ─── Submit quote request (wholesaler) ────────────────────────────────────────
@@ -79,6 +80,55 @@ export async function updateQuoteRequestStatus(
   revalidatePath(`/admin/quote-requests/${requestId}`)
   revalidatePath('/wholesale/quote-requests')
   return { success: true }
+}
+
+// ─── Prepare formal quote document (admin) ────────────────────────────────────
+
+export async function prepareQuote(
+  _prev: PrepareQuoteFormState,
+  formData: FormData,
+): Promise<PrepareQuoteFormState> {
+  const { supabase, error, userId } = await requireAdmin()
+  if (error || !userId) return { error: error ?? 'Erreur.' }
+
+  const requestId = (formData.get('request_id') as string)?.trim()
+  if (!requestId) return { error: 'Identifiant manquant.' }
+
+  const unitPrice = parseFloat(formData.get('quoted_unit_price_mad') as string)
+  const quantity = parseInt(formData.get('quoted_quantity') as string, 10)
+  const transportTotal = parseFloat(formData.get('quoted_transport_total_mad') as string)
+
+  if (isNaN(unitPrice) || unitPrice <= 0) return { error: 'Prix unitaire invalide.' }
+  if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.' }
+  if (isNaN(transportTotal) || transportTotal < 0) return { error: 'Frais de transport invalides.' }
+
+  const shippingMode = (formData.get('quoted_shipping_mode') as string)?.trim() || null
+  const deliveryDelay = (formData.get('quoted_delivery_delay') as string)?.trim() || null
+  const validityDate = (formData.get('quote_validity_date') as string)?.trim() || null
+  const publicNote = (formData.get('quote_public_note') as string)?.trim() || null
+
+  const { error: dbError } = await supabase
+    .from('quote_requests')
+    .update({
+      status:                    'quote_prepared',
+      quoted_unit_price_mad:     unitPrice,
+      quoted_quantity:           quantity,
+      quoted_transport_total_mad: transportTotal,
+      quoted_shipping_mode:      shippingMode,
+      quoted_delivery_delay:     deliveryDelay,
+      quote_validity_date:       validityDate || null,
+      quote_public_note:         publicNote,
+      quote_prepared_at:         new Date().toISOString(),
+    })
+    .eq('id', requestId)
+
+  if (dbError) return { error: dbError.message }
+
+  revalidatePath('/admin/quote-requests')
+  revalidatePath(`/admin/quote-requests/${requestId}`)
+  revalidatePath('/wholesale/quote-requests')
+  revalidatePath(`/wholesale/quote-requests/${requestId}`)
+  return { error: null, success: true }
 }
 
 // ─── Convert approved quote to wholesale order (admin) ────────────────────────

@@ -9,6 +9,7 @@ const STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> =
   new:                { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
   studying:           { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
   quoted:             { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
+  quote_prepared:     { label: 'Devis préparé',        cls: 'bg-indigo-100 text-indigo-700' },
   negotiating:        { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
   approved:           { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
   rejected:           { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },

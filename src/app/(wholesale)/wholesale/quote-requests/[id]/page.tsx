@@ -15,6 +15,7 @@ const STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> =
   new:                { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
   studying:           { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
   quoted:             { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
+  quote_prepared:     { label: 'Devis prêt',           cls: 'bg-indigo-100 text-indigo-700' },
   negotiating:        { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
   approved:           { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
   rejected:           { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
@@ -101,6 +102,22 @@ export default async function WholesaleQuoteRequestDetailPage({ params }: Params
             })}
           </p>
         </div>
+
+        {/* Devis prêt — shown when admin has prepared the formal quote */}
+        {req.status === 'quote_prepared' && (
+          <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-5">
+            <p className="text-xs font-semibold text-indigo-800 mb-2">Votre devis est prêt</p>
+            <p className="text-xs text-indigo-700 mb-3">
+              Mozouna Group a préparé votre devis. Consultez le document pour connaître les prix, frais et délais estimés.
+            </p>
+            <Link
+              href={`/wholesale/quote-requests/${id}/quote`}
+              className="inline-block text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors px-4 py-2 rounded-lg"
+            >
+              Consulter le devis →
+            </Link>
+          </div>
+        )}
 
         {/* Commande disponible — shown when quote was converted */}
         {req.status === 'converted_to_order' && linkedOrder && (

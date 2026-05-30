@@ -529,6 +529,7 @@ export type QuoteRequestStatus =
   | 'new'
   | 'studying'
   | 'quoted'
+  | 'quote_prepared'
   | 'negotiating'
   | 'approved'
   | 'rejected'
@@ -549,6 +550,15 @@ export interface QuoteRequest {
   status: QuoteRequestStatus
   admin_notes: string | null
   admin_notes_public: boolean
+  /** Structured quote document fields — set by admin via "Préparer le devis" */
+  quoted_unit_price_mad: number | null
+  quoted_quantity: number | null
+  quoted_transport_total_mad: number | null
+  quoted_shipping_mode: string | null
+  quoted_delivery_delay: string | null
+  quote_validity_date: string | null
+  quote_public_note: string | null
+  quote_prepared_at: string | null
   created_at: string
   updated_at: string
 }
@@ -701,10 +711,18 @@ export type Database = {
       >
       quote_requests: TableDef<
         QuoteRequest,
-        Omit<QuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'admin_notes_public'> & {
+        Omit<QuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'admin_notes_public' | 'quoted_unit_price_mad' | 'quoted_quantity' | 'quoted_transport_total_mad' | 'quoted_shipping_mode' | 'quoted_delivery_delay' | 'quote_validity_date' | 'quote_public_note' | 'quote_prepared_at'> & {
           status?: QuoteRequestStatus
           admin_notes?: string | null
           admin_notes_public?: boolean
+          quoted_unit_price_mad?: number | null
+          quoted_quantity?: number | null
+          quoted_transport_total_mad?: number | null
+          quoted_shipping_mode?: string | null
+          quoted_delivery_delay?: string | null
+          quote_validity_date?: string | null
+          quote_public_note?: string | null
+          quote_prepared_at?: string | null
         },
         Partial<QuoteRequest>
       >

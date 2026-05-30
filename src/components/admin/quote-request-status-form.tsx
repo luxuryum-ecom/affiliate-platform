@@ -5,13 +5,14 @@ import { updateQuoteRequestStatus } from '@/app/actions/quote-requests'
 import type { QuoteRequestStatus } from '@/types/database'
 
 const ALL_STATUSES: QuoteRequestStatus[] = [
-  'new', 'studying', 'quoted', 'negotiating', 'approved', 'rejected', 'converted_to_order',
+  'new', 'studying', 'quoted', 'quote_prepared', 'negotiating', 'approved', 'rejected', 'converted_to_order',
 ]
 
 const LABELS: Record<QuoteRequestStatus, string> = {
   new:                'Nouveau',
   studying:           'En étude',
   quoted:             'Devisé',
+  quote_prepared:     'Devis préparé',
   negotiating:        'En négociation',
   approved:           'Approuvé',
   rejected:           'Refusé',
