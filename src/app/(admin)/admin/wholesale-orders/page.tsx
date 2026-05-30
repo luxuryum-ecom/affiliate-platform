@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { createWholesaleOrderAction } from '@/app/actions/orders'
-import type { WholesaleOrder, Profile, WholesaleCartItemWithProduct, WholesaleImportStatus } from '@/types/database'
+import type { WholesaleOrder, Profile, WholesaleCartItemWithProduct, WholesaleImportStatus, WholesalePaymentStatus } from '@/types/database'
 
 export const metadata = { title: 'Commandes grossiste — Administration' }
 
@@ -24,6 +24,13 @@ const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: s
   shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
   customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
   delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+}
+
+const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
+  no_deposit:        { label: 'Aucun acompte',     cls: 'bg-gray-100 text-gray-500' },
+  deposit_requested: { label: 'Acompte demandé',   cls: 'bg-amber-100 text-amber-700' },
+  deposit_received:  { label: 'Acompte reçu',      cls: 'bg-blue-100 text-blue-700' },
+  fully_paid:        { label: 'Entièrement réglé', cls: 'bg-green-100 text-green-700' },
 }
 
 type OrderWithBuyer = WholesaleOrder & { buyer: Pick<Profile, 'id' | 'full_name' | 'phone'> }
@@ -155,6 +162,9 @@ export default async function AdminWholesaleOrdersPage() {
                 const importBadge = order.import_status
                   ? IMPORT_STATUS_BADGE[order.import_status]
                   : null
+                const paymentBadge = order.payment_status
+                  ? PAYMENT_STATUS_BADGE[order.payment_status as WholesalePaymentStatus]
+                  : PAYMENT_STATUS_BADGE.no_deposit
                 return (
                   <div key={order.id} className="flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex-1 min-w-0">
@@ -166,6 +176,9 @@ export default async function AdminWholesaleOrdersPage() {
                             {importBadge.label}
                           </span>
                         )}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
+                          {paymentBadge.label}
+                        </span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{order.buyer?.full_name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">

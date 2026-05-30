@@ -774,6 +774,7 @@ export type Database = {
           admin_notes_public: boolean
           buyer_id: string
           buyer_notes: string | null
+          client_decision_at: string | null
           colors_or_variants: string | null
           created_at: string
           destination_city: string | null
@@ -782,6 +783,14 @@ export type Database = {
           preferred_shipping_mode: string | null
           product_id: string
           quantity_requested: number
+          quote_prepared_at: string | null
+          quote_public_note: string | null
+          quote_validity_date: string | null
+          quoted_delivery_delay: string | null
+          quoted_quantity: number | null
+          quoted_shipping_mode: string | null
+          quoted_transport_total_mad: number | null
+          quoted_unit_price_mad: number | null
           sizes: string | null
           status: string
           updated_at: string
@@ -792,6 +801,7 @@ export type Database = {
           admin_notes_public?: boolean
           buyer_id: string
           buyer_notes?: string | null
+          client_decision_at?: string | null
           colors_or_variants?: string | null
           created_at?: string
           destination_city?: string | null
@@ -800,6 +810,14 @@ export type Database = {
           preferred_shipping_mode?: string | null
           product_id: string
           quantity_requested: number
+          quote_prepared_at?: string | null
+          quote_public_note?: string | null
+          quote_validity_date?: string | null
+          quoted_delivery_delay?: string | null
+          quoted_quantity?: number | null
+          quoted_shipping_mode?: string | null
+          quoted_transport_total_mad?: number | null
+          quoted_unit_price_mad?: number | null
           sizes?: string | null
           status?: string
           updated_at?: string
@@ -810,6 +828,7 @@ export type Database = {
           admin_notes_public?: boolean
           buyer_id?: string
           buyer_notes?: string | null
+          client_decision_at?: string | null
           colors_or_variants?: string | null
           created_at?: string
           destination_city?: string | null
@@ -818,6 +837,14 @@ export type Database = {
           preferred_shipping_mode?: string | null
           product_id?: string
           quantity_requested?: number
+          quote_prepared_at?: string | null
+          quote_public_note?: string | null
+          quote_validity_date?: string | null
+          quoted_delivery_delay?: string | null
+          quoted_quantity?: number | null
+          quoted_shipping_mode?: string | null
+          quoted_transport_total_mad?: number | null
+          quoted_unit_price_mad?: number | null
           sizes?: string | null
           status?: string
           updated_at?: string
@@ -959,6 +986,47 @@ export type Database = {
           },
         ]
       }
+      wholesale_order_payment_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          deposit_amount: number | null
+          deposit_received_amount: number | null
+          id: string
+          notes: string | null
+          order_id: string
+          payment_status: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          deposit_amount?: number | null
+          deposit_received_amount?: number | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          payment_status: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          deposit_amount?: number | null
+          deposit_received_amount?: number | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          payment_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wholesale_order_payment_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "wholesale_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wholesale_orders: {
         Row: {
           additional_cost_mad: number
@@ -974,6 +1042,11 @@ export type Database = {
           delivered_at: string | null
           delivery_cost: number
           delivery_preference: string
+          deposit_amount: number | null
+          deposit_received_amount: number
+          deposit_received_at: string | null
+          deposit_requested_at: string | null
+          fully_paid_at: string | null
           gross_margin_percent: number | null
           gross_profit_mad: number | null
           id: string
@@ -984,6 +1057,7 @@ export type Database = {
           invoice_registre_commerce: string | null
           invoice_requested: boolean
           invoice_requested_at: string | null
+          payment_status: string
           quote_request_id: string | null
           shipped_at: string | null
           sourcing_at: string | null
@@ -1008,6 +1082,11 @@ export type Database = {
           delivered_at?: string | null
           delivery_cost?: number
           delivery_preference: string
+          deposit_amount?: number | null
+          deposit_received_amount?: number
+          deposit_received_at?: string | null
+          deposit_requested_at?: string | null
+          fully_paid_at?: string | null
           gross_margin_percent?: number | null
           gross_profit_mad?: number | null
           id?: string
@@ -1018,6 +1097,7 @@ export type Database = {
           invoice_registre_commerce?: string | null
           invoice_requested?: boolean
           invoice_requested_at?: string | null
+          payment_status?: string
           quote_request_id?: string | null
           shipped_at?: string | null
           sourcing_at?: string | null
@@ -1042,6 +1122,11 @@ export type Database = {
           delivered_at?: string | null
           delivery_cost?: number
           delivery_preference?: string
+          deposit_amount?: number | null
+          deposit_received_amount?: number
+          deposit_received_at?: string | null
+          deposit_requested_at?: string | null
+          fully_paid_at?: string | null
           gross_margin_percent?: number | null
           gross_profit_mad?: number | null
           id?: string
@@ -1052,6 +1137,7 @@ export type Database = {
           invoice_registre_commerce?: string | null
           invoice_requested?: boolean
           invoice_requested_at?: string | null
+          payment_status?: string
           quote_request_id?: string | null
           shipped_at?: string | null
           sourcing_at?: string | null

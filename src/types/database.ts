@@ -2,7 +2,7 @@
 // These mirror the CHECK constraints in the SQL schema exactly.
 // If you change a constraint in SQL, update the union type here too.
 
-export type UserRole = 'admin' | 'affiliate' | 'wholesaler' | 'agent'
+export type UserRole = 'admin' | 'affiliate' | 'wholesaler' | 'agent' | 'supplier'
 
 /** How the platform margin is applied to factory cost. */
 export type PlatformMarginType = 'percentage' | 'fixed'
@@ -19,6 +19,12 @@ export type ProductOriginDetail = 'locally_produced' | 'imported_but_in_morocco_
 
 /** How the product was submitted into the system. */
 export type ProductSubmittedVia = 'admin_dashboard' | 'telegram_future' | 'supplier_future'
+
+/** Approval status for supplier-submitted products. */
+export type SupplierProductStatus = 'pending' | 'approved' | 'rejected'
+
+/** Target buyer type for supplier products. */
+export type SupplierTargetBuyerType = 'wholesaler' | 'both'
 
 /** Import pricing mode for import_on_demand products (migration 020). */
 export type ImportPricingMode = 'door_to_door_per_kg' | 'sea_freight_cbm_or_kg'
@@ -75,6 +81,13 @@ export type WholesaleOrderStatus =
   | 'shipped'
   | 'delivered'
   | 'cancelled'
+
+/** Payment workflow status for wholesale orders (migration 029). */
+export type WholesalePaymentStatus =
+  | 'no_deposit'
+  | 'deposit_requested'
+  | 'deposit_received'
+  | 'fully_paid'
 
 /** Import progress tracking for wholesale orders (migration 026). */
 export type WholesaleImportStatus =
@@ -387,6 +400,20 @@ export interface WholesaleOrder {
   /** Auto-computed: (gross_profit_mad / total_amount) × 100. */
   gross_margin_percent: number | null
 
+  // ── Payment tracking (migration 029) ─────────────────────────────────────
+  /** Current payment status. Default 'no_deposit'. */
+  payment_status: WholesalePaymentStatus
+  /** Deposit amount requested by admin in MAD. Null until set. */
+  deposit_amount: number | null
+  /** Deposit amount actually received in MAD. Default 0. */
+  deposit_received_amount: number
+  /** Timestamp when deposit was requested. */
+  deposit_requested_at: string | null
+  /** Timestamp when deposit was received. */
+  deposit_received_at: string | null
+  /** Timestamp when order was fully paid. */
+  fully_paid_at: string | null
+
   created_at: string
   updated_at: string
 }
@@ -406,6 +433,18 @@ export interface WholesaleOrderImportHistory {
   id: string
   order_id: string
   import_status: WholesaleImportStatus
+  changed_by: string | null
+  notes: string | null
+  changed_at: string
+}
+
+/** Single payment status change entry (migration 029). */
+export interface WholesaleOrderPaymentHistory {
+  id: string
+  order_id: string
+  payment_status: WholesalePaymentStatus
+  deposit_amount: number | null
+  deposit_received_amount: number | null
   changed_by: string | null
   notes: string | null
   changed_at: string
@@ -563,9 +602,59 @@ export interface QuoteRequest {
   quote_prepared_at: string | null
   /** Client decision — set by wholesaler after reviewing quote_prepared document */
   client_decision_at: string | null
+  /** Set when quote originated from wholesale marketplace (supplier product). Supplier identity hidden. */
+  supplier_product_id: string | null
   created_at: string
   updated_at: string
 }
+
+// ─── SUPPLIER PRODUCTS ───────────────────────────────────────────────────────
+// Submitted by suppliers — supplier identity is never exposed to wholesalers.
+// Admin approves, edits public fields, and sets platform margin.
+
+export interface SupplierProduct {
+  id: string
+  /** Supplier user id — admin only, never exposed to wholesalers. */
+  supplier_id: string
+
+  // Supplier submission fields
+  product_name: string
+  category: string
+  niche: string
+  description: string | null
+  photos: string[]
+  min_quantity: number
+  origin_country: string
+  availability_type: ProductAvailabilityType
+  target_buyer_type: SupplierTargetBuyerType
+  suggested_wholesale_price_mad: number | null
+  /** Internal supplier notes — admin only, never shown to wholesalers. */
+  supplier_private_notes: string | null
+
+  // Approval workflow
+  approval_status: SupplierProductStatus
+  admin_notes: string | null
+  approved_by: string | null
+  approved_at: string | null
+  rejected_at: string | null
+
+  // Admin-editable public fields
+  public_name: string | null
+  public_description: string | null
+
+  // Platform margin (admin-set)
+  platform_margin_type: PlatformMarginType
+  platform_margin_value: number | null
+
+  created_at: string
+  updated_at: string
+}
+
+/** Safe public view of a supplier product — strips all supplier identity fields. */
+export type SupplierProductPublic = Omit<
+  SupplierProduct,
+  'supplier_id' | 'supplier_private_notes' | 'admin_notes' | 'approved_by' | 'platform_margin_type' | 'platform_margin_value'
+>
 
 export type OrderSignalType = 'fraud' | 'duplicate' | 'spam' | 'conversion'
 
@@ -655,13 +744,19 @@ export type Database = {
       >
       wholesale_orders: TableDef<
         WholesaleOrder,
-        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id' | 'supplier_cost_mad' | 'transport_customs_cost_mad' | 'additional_cost_mad' | 'total_cost_mad' | 'gross_profit_mad' | 'gross_margin_percent' | 'import_status'> & {
+        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id' | 'supplier_cost_mad' | 'transport_customs_cost_mad' | 'additional_cost_mad' | 'total_cost_mad' | 'gross_profit_mad' | 'gross_margin_percent' | 'import_status' | 'payment_status' | 'deposit_amount' | 'deposit_received_amount' | 'deposit_requested_at' | 'deposit_received_at' | 'fully_paid_at'> & {
           invoice_requested?: boolean
           quote_request_id?: string | null
           supplier_cost_mad?: number
           transport_customs_cost_mad?: number
           additional_cost_mad?: number
           import_status?: WholesaleImportStatus | null
+          payment_status?: WholesalePaymentStatus
+          deposit_amount?: number | null
+          deposit_received_amount?: number
+          deposit_requested_at?: string | null
+          deposit_received_at?: string | null
+          fully_paid_at?: string | null
         },
         Partial<WholesaleOrder>
       >
@@ -673,6 +768,11 @@ export type Database = {
       wholesale_order_import_history: TableDef<
         WholesaleOrderImportHistory,
         Omit<WholesaleOrderImportHistory, 'id' | 'changed_at'> & { changed_at?: string },
+        never
+      >
+      wholesale_order_payment_history: TableDef<
+        WholesaleOrderPaymentHistory,
+        Omit<WholesaleOrderPaymentHistory, 'id' | 'changed_at'> & { changed_at?: string },
         never
       >
       commissions: TableDef<

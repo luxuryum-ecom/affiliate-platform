@@ -104,11 +104,11 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     (since
       ? supabase
           .from('wholesale_orders')
-          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent, import_status')
+          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent, import_status, payment_status, deposit_received_amount')
           .gte('created_at', since)
       : supabase
           .from('wholesale_orders')
-          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent, import_status')
+          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent, import_status, payment_status, deposit_received_amount')
     ) as unknown as Promise<{
       data: {
         id: string
@@ -118,6 +118,8 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
         gross_profit_mad: number | null
         gross_margin_percent: number | null
         import_status: string | null
+        payment_status: string
+        deposit_received_amount: number
       }[] | null
       error: unknown
     }>,
@@ -147,6 +149,18 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     }
   }
   const wsWithImportStatus = wholesaleOrders.filter((o) => o.import_status != null).length
+
+  // ── Wholesale payment analytics ───────────────────────────────────────────
+  const wsActiveOrders   = wholesaleOrders.filter((o) => o.status !== 'cancelled')
+  const wsFullyPaid      = wsActiveOrders.filter((o) => o.payment_status === 'fully_paid')
+  const wsDepositReceived = wsActiveOrders.filter((o) => o.payment_status === 'deposit_received')
+  const wsTotalDepositsReceived = wsActiveOrders.reduce(
+    (s, o) => s + (o.deposit_received_amount ?? 0), 0
+  )
+  const wsOutstandingBalance = wsActiveOrders.reduce(
+    (s, o) => s + Math.max(0, o.total_amount - (o.deposit_received_amount ?? 0)), 0
+  )
+  const wsFullyPaidRevenue = wsFullyPaid.reduce((s, o) => s + o.total_amount, 0)
 
   const productMap   = new Map(products.map((p) => [p.id, p.name]))
   const affiliateMap = new Map(affiliates.map((a) => [a.id, a.full_name]))
@@ -411,6 +425,51 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
                     label={label}
                     value={String(cnt)}
                     variant={cnt > 0 ? 'default' : 'muted'}
+                  />
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Payment analytics */}
+        {wsActiveOrders.length > 0 && (
+          <section>
+            <SectionLabel>Grossiste — Paiements</SectionLabel>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <StatCard
+                label="Acomptes reçus"
+                value={formatMAD(wsTotalDepositsReceived)}
+                sub={`${wsDepositReceived.length + wsFullyPaid.length} cmde${wsDepositReceived.length + wsFullyPaid.length !== 1 ? 's' : ''} avec acompte`}
+                variant="success"
+              />
+              <StatCard
+                label="Soldes en attente"
+                value={formatMAD(wsOutstandingBalance)}
+                sub={`${wsActiveOrders.filter((o) => o.payment_status !== 'fully_paid').length} cmde${wsActiveOrders.filter((o) => o.payment_status !== 'fully_paid').length !== 1 ? 's' : ''} non soldées`}
+                variant={wsOutstandingBalance > 0 ? 'warning' : 'muted'}
+              />
+              <StatCard
+                label="Entièrement réglé"
+                value={formatMAD(wsFullyPaidRevenue)}
+                sub={`${wsFullyPaid.length} commande${wsFullyPaid.length !== 1 ? 's' : ''}`}
+                variant={wsFullyPaid.length > 0 ? 'success' : 'muted'}
+              />
+            </div>
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { key: 'no_deposit',        label: 'Aucun acompte' },
+                { key: 'deposit_requested', label: 'Acompte demandé' },
+                { key: 'deposit_received',  label: 'Acompte reçu' },
+                { key: 'fully_paid',        label: 'Entièrement réglé' },
+              ].map(({ key, label }) => {
+                const cnt = wsActiveOrders.filter((o) => o.payment_status === key).length
+                return (
+                  <StatCard
+                    key={key}
+                    label={label}
+                    value={String(cnt)}
+                    variant={key === 'fully_paid' && cnt > 0 ? 'success' : key === 'deposit_requested' && cnt > 0 ? 'warning' : 'muted'}
                   />
                 )
               })}

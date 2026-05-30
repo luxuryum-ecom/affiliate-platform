@@ -7,9 +7,10 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
 import { WholesaleImportStatusForm, IMPORT_STATUS_BADGE } from '@/components/admin/wholesale-import-status-form'
-import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline } from '@/components/shared/order-timeline'
+import { WholesalePaymentForm, PAYMENT_STATUS_BADGE } from '@/components/admin/wholesale-payment-form'
+import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
 import { WholesaleCostForm } from '@/components/admin/wholesale-cost-form'
-import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, QuoteRequest } from '@/types/database'
+import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, WholesaleOrderPaymentHistory, WholesalePaymentStatus, QuoteRequest } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -38,7 +39,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = adminProfileRes.data as { full_name: string } | null
 
-  const [orderRes, itemsRes, importHistoryRes] = await Promise.all([
+  const [orderRes, itemsRes, importHistoryRes, paymentHistoryRes] = await Promise.all([
     supabase
       .from('wholesale_orders')
       .select('*, buyer:profiles!buyer_id(id,full_name,phone,city), agent:profiles!agent_id(id,full_name)')
@@ -53,11 +54,17 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       .select('*')
       .eq('order_id', id)
       .order('changed_at', { ascending: false }),
+    supabase
+      .from('wholesale_order_payment_history')
+      .select('*')
+      .eq('order_id', id)
+      .order('changed_at', { ascending: false }),
   ])
 
   const order = orderRes.data as unknown as OrderDetail | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
+  const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
 
   // Fetch linked quote if this order was created from a quote
   let linkedQuote: LinkedQuote | null = null
@@ -76,9 +83,11 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const importBadge = order.import_status
     ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus]
     : null
+  const paymentBadge = PAYMENT_STATUS_BADGE[order.payment_status as WholesalePaymentStatus] ?? PAYMENT_STATUS_BADGE.no_deposit
 
   const timeline = buildWholesaleTimeline(order)
   const importTimeline = buildImportHistoryTimeline(importHistory)
+  const paymentTimeline = buildPaymentHistoryTimeline(paymentHistory)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -114,6 +123,9 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                         {importBadge.label}
                       </span>
                     )}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
+                      {paymentBadge.label}
+                    </span>
                   </div>
                   <p className="mt-2 text-xs text-gray-400">
                     Créée le {new Date(order.created_at).toLocaleString('fr-MA')}
@@ -188,6 +200,18 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 <OrderTimeline steps={importTimeline} />
               )}
             </div>
+
+            {/* Payment history */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Historique paiement</h2>
+              {paymentTimeline.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">
+                  Aucun événement de paiement enregistré.
+                </p>
+              ) : (
+                <OrderTimeline steps={paymentTimeline} />
+              )}
+            </div>
           </div>
 
           {/* ── Right: status update + cost breakdown ── */}
@@ -216,6 +240,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               transportCost={order.transport_customs_cost_mad ?? 0}
               additionalCost={order.additional_cost_mad ?? 0}
               totalAmount={order.total_amount}
+            />
+
+            {/* Payment management */}
+            <WholesalePaymentForm
+              orderId={order.id}
+              totalAmount={order.total_amount}
+              currentStatus={(order.payment_status as WholesalePaymentStatus) ?? 'no_deposit'}
+              depositAmount={order.deposit_amount ?? null}
+              depositReceived={order.deposit_received_amount ?? 0}
             />
 
             {/* Linked quote */}

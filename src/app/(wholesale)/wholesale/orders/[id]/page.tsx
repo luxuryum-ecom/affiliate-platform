@@ -5,13 +5,15 @@ import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
-import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline } from '@/components/shared/order-timeline'
+import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
 import { InvoiceRequestForm } from '@/components/wholesale/invoice-request-form'
 import type {
   WholesaleOrder,
   WholesaleOrderItem,
   WholesaleOrderImportHistory,
+  WholesaleOrderPaymentHistory,
   WholesaleImportStatus,
+  WholesalePaymentStatus,
   Product,
   Profile,
 } from '@/types/database'
@@ -49,6 +51,13 @@ const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: s
   delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
 }
 
+const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
+  no_deposit:        { label: 'Aucun acompte',     cls: 'bg-gray-100 text-gray-500' },
+  deposit_requested: { label: 'Acompte demandé',   cls: 'bg-amber-100 text-amber-700' },
+  deposit_received:  { label: 'Acompte reçu',      cls: 'bg-blue-100 text-blue-700' },
+  fully_paid:        { label: 'Entièrement réglé', cls: 'bg-green-100 text-green-700' },
+}
+
 export async function generateMetadata({ params }: Params) {
   const { id } = await params
   return { title: `Commande #${id.slice(0, 8).toUpperCase()} — Espace Grossiste` }
@@ -62,7 +71,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [profileRes, orderRes, itemsRes, importHistoryRes] = await Promise.all([
+  const [profileRes, orderRes, itemsRes, importHistoryRes, paymentHistoryRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('full_name, company_name, ice, registre_commerce, billing_address')
@@ -83,12 +92,18 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
       .select('*')
       .eq('order_id', id)
       .order('changed_at', { ascending: false }),
+    supabase
+      .from('wholesale_order_payment_history')
+      .select('*')
+      .eq('order_id', id)
+      .order('changed_at', { ascending: false }),
   ])
 
   const profile = profileRes.data as BillingProfile | null
   const order = orderRes.data as WholesaleOrder | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
+  const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
 
   if (!order) notFound()
 
@@ -96,9 +111,12 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   const importBadge = order.import_status
     ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus]
     : null
+  const paymentBadge = PAYMENT_STATUS_BADGE[order.payment_status as WholesalePaymentStatus] ?? PAYMENT_STATUS_BADGE.no_deposit
   const timeline = buildWholesaleTimeline(order)
   const importTimeline = buildImportHistoryTimeline(importHistory)
+  const paymentTimeline = buildPaymentHistoryTimeline(paymentHistory)
   const isDelivered = order.status === 'delivered'
+  const remainingBalance = order.total_amount - (order.deposit_received_amount ?? 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -150,6 +168,9 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                     Facture demandée
                   </span>
                 )}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
+                  {paymentBadge.label}
+                </span>
               </div>
               <p className="text-xs text-gray-400 mt-1.5">
                 Commande du{' '}
@@ -309,14 +330,50 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
               </div>
             )}
 
-            {/* Payment reminder */}
-            {!['delivered', 'cancelled'].includes(order.status) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-xs font-semibold text-amber-800 mb-1">Paiement</p>
-                <p className="text-xs text-amber-700">
-                  Le règlement s&apos;effectue en dehors de la plateforme. Notre équipe vous contactera
-                  pour confirmer les modalités.
-                </p>
+            {/* Payment status */}
+            {!['cancelled'].includes(order.status) && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-gray-700">Paiement</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentBadge.cls}`}>
+                    {paymentBadge.label}
+                  </span>
+                </div>
+                {(order.deposit_amount != null || order.deposit_received_amount > 0) && (
+                  <div className="space-y-1.5 text-sm">
+                    {order.deposit_amount != null && (
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-400">Acompte demandé</span>
+                        <span className="text-xs font-medium text-gray-700">{formatMAD(order.deposit_amount)}</span>
+                      </div>
+                    )}
+                    {order.deposit_received_amount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-400">Acompte reçu</span>
+                        <span className="text-xs font-medium text-blue-700">{formatMAD(order.deposit_received_amount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-gray-100 pt-1.5">
+                      <span className="text-xs font-semibold text-gray-600">Solde restant</span>
+                      <span className={`text-xs font-bold ${remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {formatMAD(remainingBalance)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {order.payment_status === 'no_deposit' && (
+                  <p className="text-xs text-gray-400">
+                    Notre équipe vous contactera pour les modalités de paiement.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Payment timeline */}
+            {paymentTimeline.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 mb-4">Historique paiement</h2>
+                <OrderTimeline steps={paymentTimeline} />
               </div>
             )}
           </div>

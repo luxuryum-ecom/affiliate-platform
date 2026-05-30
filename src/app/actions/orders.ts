@@ -17,6 +17,7 @@ import type {
   OrderSource,
   WholesaleOrderStatus,
   WholesaleImportStatus,
+  WholesalePaymentStatus,
   WholesaleCartItemWithProduct,
 } from '@/types/database'
 
@@ -802,4 +803,107 @@ export async function updateWholesaleImportStatus(
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/wholesale/orders/${orderId}`)
   return ok
+}
+
+// =============================================================================
+// ADMIN — UPDATE WHOLESALE ORDER PAYMENT STATUS
+// =============================================================================
+
+export type PaymentFormState = { error: string | null; success?: boolean }
+
+/**
+ * Admin updates the payment tracking for a wholesale order.
+ * Every change is appended to wholesale_order_payment_history.
+ * Remaining balance = total_amount − deposit_received_amount (computed client-side).
+ */
+export async function updateWholesalePaymentStatus(
+  _prev: PaymentFormState,
+  formData: FormData,
+): Promise<PaymentFormState> {
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return { error: authError ?? 'Erreur.' }
+
+  const orderId = (formData.get('orderId') as string)?.trim()
+  if (!orderId) return { error: 'Commande non spécifiée.' }
+
+  const paymentStatus = formData.get('payment_status') as WholesalePaymentStatus
+  const validStatuses: WholesalePaymentStatus[] = [
+    'no_deposit', 'deposit_requested', 'deposit_received', 'fully_paid',
+  ]
+  if (!validStatuses.includes(paymentStatus)) {
+    return { error: 'Statut de paiement invalide.' }
+  }
+
+  const depositAmountRaw       = formData.get('deposit_amount') as string
+  const depositReceivedRaw     = formData.get('deposit_received_amount') as string
+  const notes                  = (formData.get('notes') as string)?.trim() || null
+
+  const deposit_amount          = depositAmountRaw ? Math.max(0, parseFloat(depositAmountRaw)) : null
+  const deposit_received_amount = depositReceivedRaw ? Math.max(0, parseFloat(depositReceivedRaw)) : 0
+
+  if (deposit_amount !== null && isNaN(deposit_amount)) return { error: 'Montant de l\'acompte invalide.' }
+  if (isNaN(deposit_received_amount)) return { error: 'Montant reçu invalide.' }
+
+  const now = new Date().toISOString()
+  const update: Record<string, unknown> = {
+    payment_status: paymentStatus,
+    deposit_amount,
+    deposit_received_amount,
+  }
+
+  if (paymentStatus === 'deposit_requested' || paymentStatus === 'deposit_received' || paymentStatus === 'fully_paid') {
+    if (!update.deposit_requested_at) {
+      // Only set if not yet set — read current value first
+      const { data: current } = await supabase
+        .from('wholesale_orders')
+        .select('deposit_requested_at')
+        .eq('id', orderId)
+        .single() as { data: { deposit_requested_at: string | null } | null; error: unknown }
+      if (!current?.deposit_requested_at) {
+        update.deposit_requested_at = now
+      }
+    }
+  }
+  if (paymentStatus === 'deposit_received' || paymentStatus === 'fully_paid') {
+    const { data: current } = await supabase
+      .from('wholesale_orders')
+      .select('deposit_received_at')
+      .eq('id', orderId)
+      .single() as { data: { deposit_received_at: string | null } | null; error: unknown }
+    if (!current?.deposit_received_at) {
+      update.deposit_received_at = now
+    }
+  }
+  if (paymentStatus === 'fully_paid') {
+    const { data: current } = await supabase
+      .from('wholesale_orders')
+      .select('fully_paid_at')
+      .eq('id', orderId)
+      .single() as { data: { fully_paid_at: string | null } | null; error: unknown }
+    if (!current?.fully_paid_at) {
+      update.fully_paid_at = now
+    }
+  }
+
+  const { error: updateErr } = await supabase
+    .from('wholesale_orders')
+    .update(update)
+    .eq('id', orderId)
+
+  if (updateErr) return { error: updateErr.message }
+
+  await supabase.from('wholesale_order_payment_history').insert({
+    order_id:               orderId,
+    payment_status:         paymentStatus,
+    deposit_amount:         deposit_amount,
+    deposit_received_amount: deposit_received_amount,
+    changed_by:             userId,
+    notes,
+  })
+
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath(`/wholesale/orders/${orderId}`)
+  revalidatePath('/admin/analytics')
+  return { error: null, success: true }
 }

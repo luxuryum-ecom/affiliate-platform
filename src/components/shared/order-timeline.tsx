@@ -255,3 +255,29 @@ export function buildImportHistoryTimeline(
     note:      entry.notes ?? null,
   }))
 }
+
+// ─── Helper: build payment history as timeline steps ─────────────────────────
+
+import type { WholesaleOrderPaymentHistory, WholesalePaymentStatus } from '@/types/database'
+
+const PAYMENT_LABELS: Record<WholesalePaymentStatus, string> = {
+  no_deposit:        'Aucun acompte',
+  deposit_requested: 'Acompte demandé',
+  deposit_received:  'Acompte reçu',
+  fully_paid:        'Entièrement réglé',
+}
+
+/**
+ * Converts payment history entries (newest first) into timeline steps.
+ * Most recent entry = 'current'; all others = 'done'.
+ */
+export function buildPaymentHistoryTimeline(
+  history: WholesaleOrderPaymentHistory[]
+): TimelineStep[] {
+  return history.map((entry, i) => ({
+    label:     PAYMENT_LABELS[entry.payment_status as WholesalePaymentStatus] ?? entry.payment_status,
+    timestamp: entry.changed_at,
+    state:     i === 0 ? 'current' : 'done',
+    note:      entry.notes ?? null,
+  }))
+}
