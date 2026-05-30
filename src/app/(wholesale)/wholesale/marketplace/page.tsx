@@ -16,6 +16,9 @@ interface SearchParams {
   supplier_type?: string
   min_qty?: string
   max_price?: string
+  max_moq?: string
+  in_stock?: string
+  max_lead_time?: string
 }
 
 interface PageProps {
@@ -33,16 +36,23 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
       .from('supplier_products')
-      // Only safe public columns — supplier_id, supplier_private_notes, admin_notes, platform_margin_* excluded
       .select(
-        'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, created_at'
+        'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at'
       )
       .eq('approval_status', 'approved')
+      .is('archived_at', null)
       .order('created_at', { ascending: false }),
   ])
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
-  let products = (productsResult.data ?? []) as (SupplierProductPublic & { supplier_type: SupplierType })[]
+  type MarketplaceProduct = SupplierProductPublic & {
+    supplier_type: SupplierType
+    unit: string
+    stock_quantity: number | null
+    lead_time_days: number | null
+    export_countries: string[]
+  }
+  let products = (productsResult.data ?? []) as MarketplaceProduct[]
 
   // Apply filters
   if (filters.category) {
@@ -77,11 +87,25 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     }
   }
 
-  const allProducts = (productsResult.data ?? []) as (SupplierProductPublic & { supplier_type: SupplierType })[]
+  // Additional filters (migration 035 fields)
+  if (filters.max_moq) {
+    const qty = parseInt(filters.max_moq, 10)
+    if (!isNaN(qty)) products = products.filter((p) => p.min_quantity <= qty)
+  }
+  if (filters.in_stock === '1') {
+    products = products.filter((p) => (p.stock_quantity ?? 0) > 0)
+  }
+  if (filters.max_lead_time) {
+    const days = parseInt(filters.max_lead_time, 10)
+    if (!isNaN(days)) products = products.filter((p) => p.lead_time_days == null || p.lead_time_days <= days)
+  }
+
+  const allProducts = (productsResult.data ?? []) as MarketplaceProduct[]
   const origins = [...new Set(allProducts.map((p) => p.origin_country).filter(Boolean))].sort()
   const isFiltered = !!(
     filters.category || filters.niche || filters.origin ||
-    filters.availability || filters.supplier_type || filters.min_qty || filters.max_price
+    filters.availability || filters.supplier_type || filters.min_qty || filters.max_price ||
+    filters.max_moq || filters.in_stock || filters.max_lead_time
   )
 
   return (
@@ -189,7 +213,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
               />
             </div>
 
-            {/* Max price — only meaningful for Morocco suppliers (international = admin sets final price) */}
+            {/* Max price */}
             <div>
               <label className="block text-xs text-gray-500 mb-1">Prix max (MAD)</label>
               <input
@@ -200,6 +224,46 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
                 className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 placeholder="ex: 500"
               />
+            </div>
+
+            {/* Max MOQ */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">MOQ max</label>
+              <input
+                name="max_moq"
+                type="number"
+                min={1}
+                defaultValue={filters.max_moq ?? ''}
+                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                placeholder="ex: 500"
+              />
+            </div>
+
+            {/* Max lead time */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Délai max (jours)</label>
+              <input
+                name="max_lead_time"
+                type="number"
+                min={1}
+                defaultValue={filters.max_lead_time ?? ''}
+                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                placeholder="ex: 30"
+              />
+            </div>
+
+            {/* In stock only */}
+            <div className="flex items-end pb-1.5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  name="in_stock"
+                  type="checkbox"
+                  value="1"
+                  defaultChecked={filters.in_stock === '1'}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-xs text-gray-600">En stock uniquement</span>
+              </label>
             </div>
           </div>
 
@@ -258,7 +322,12 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 function MarketplaceProductCard({
   product,
 }: {
-  product: SupplierProductPublic & { supplier_type: SupplierType }
+  product: SupplierProductPublic & {
+    supplier_type: SupplierType
+    unit?: string
+    stock_quantity?: number | null
+    lead_time_days?: number | null
+  }
 }) {
   const displayName = product.public_name || product.product_name
   const displayDescription = product.public_description || product.description
@@ -321,6 +390,22 @@ function MarketplaceProductCard({
             Origine : <span className="text-gray-700 font-medium">{product.origin_country}</span>
           </p>
         )}
+
+        {/* Stock + Lead time */}
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {product.stock_quantity != null && (
+            <p className="text-xs text-gray-500">
+              Stock : <span className={`font-medium ${product.stock_quantity > 0 ? 'text-green-700' : 'text-red-600'}`}>
+                {product.stock_quantity > 0 ? `${product.stock_quantity} ${product.unit ?? 'pcs'}` : 'Épuisé'}
+              </span>
+            </p>
+          )}
+          {product.lead_time_days != null && (
+            <p className="text-xs text-gray-500">
+              Délai : <span className="font-medium text-gray-700">{product.lead_time_days}j</span>
+            </p>
+          )}
+        </div>
 
         {/* International supplier note — payment through platform, no supplier exposure */}
         {!isMorocco && (

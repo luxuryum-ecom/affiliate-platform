@@ -162,6 +162,26 @@ export default async function SupplierDashboardPage() {
               <p className="text-xs text-gray-500 mt-0.5">Voir l&apos;état de vos soumissions</p>
             </div>
           </Link>
+          <Link
+            href="/supplier/products/import"
+            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+          >
+            <span className="text-2xl">📥</span>
+            <div>
+              <p className="font-medium text-sm text-gray-900">Import en masse</p>
+              <p className="text-xs text-gray-500 mt-0.5">Importer votre catalogue via CSV</p>
+            </div>
+          </Link>
+          <Link
+            href="/supplier/analytics"
+            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+          >
+            <span className="text-2xl">📊</span>
+            <div>
+              <p className="font-medium text-sm text-gray-900">Analytiques</p>
+              <p className="text-xs text-gray-500 mt-0.5">Performance de vos produits</p>
+            </div>
+          </Link>
         </div>
 
         {/* Approved products with order & payout tracking */}

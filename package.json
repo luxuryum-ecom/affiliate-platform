@@ -16,24 +16,26 @@
     "reset-cache": "rm -rf .next"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.6.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "@types/papaparse": "^5.5.2",
+    "clsx": "^2.1.0",
     "next": "^15.3.0",
+    "papaparse": "^5.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@supabase/supabase-js": "^2.49.0",
-    "@supabase/ssr": "^0.6.0",
-    "clsx": "^2.1.0",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
+    "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.3.0",
-    "tailwindcss": "^4.0.0",
-    "@tailwindcss/postcss": "^4.0.0",
     "postcss": "^8.5.0",
-    "prettier": "^3.5.0"
+    "prettier": "^3.5.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.8.0"
   }
 }

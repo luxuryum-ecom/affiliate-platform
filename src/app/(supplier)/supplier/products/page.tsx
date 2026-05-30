@@ -57,17 +57,37 @@ export default async function SupplierProductsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">Mes soumissions</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{products.length} produit{products.length !== 1 ? 's' : ''} soumis</p>
+        {/* Catalog stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {[
+            { label: 'Total',         value: products.length,                                          cls: 'bg-white border-gray-200 text-gray-900' },
+            { label: 'En attente',    value: products.filter((p) => p.approval_status === 'pending').length,  cls: 'bg-amber-50 border-amber-200 text-amber-700' },
+            { label: 'Approuvés',     value: products.filter((p) => p.approval_status === 'approved').length, cls: 'bg-green-50 border-green-200 text-green-700' },
+            { label: 'Rejetés',       value: products.filter((p) => p.approval_status === 'rejected').length, cls: 'bg-red-50 border-red-200 text-red-600' },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-xl border p-4 ${s.cls.split(' ').slice(0, 2).join(' ')}`}>
+              <p className="text-xs text-gray-500">{s.label}</p>
+              <p className={`text-2xl font-bold tabular-nums mt-1 ${s.cls.split(' ').slice(2).join(' ')}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-sm font-semibold text-gray-900">Mes soumissions</h1>
+          <div className="flex gap-2">
+            <Link
+              href="/supplier/products/import"
+              className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Import CSV
+            </Link>
+            <Link
+              href="/supplier/products/new"
+              className="px-4 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              + Nouveau produit
+            </Link>
           </div>
-          <Link
-            href="/supplier/products/new"
-            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            + Soumettre un produit
-          </Link>
         </div>
 
         {products.length === 0 ? (

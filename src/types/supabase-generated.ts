@@ -943,6 +943,53 @@ export type Database = {
           },
         ]
       }
+      supplier_bulk_imports: {
+        Row: {
+          created_at: string
+          filename: string
+          id: string
+          report: Json
+          rows_imported: number
+          rows_invalid: number
+          rows_total: number
+          rows_valid: number
+          status: string
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string
+          filename: string
+          id?: string
+          report?: Json
+          rows_imported?: number
+          rows_invalid?: number
+          rows_total?: number
+          rows_valid?: number
+          status?: string
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string
+          filename?: string
+          id?: string
+          report?: Json
+          rows_imported?: number
+          rows_invalid?: number
+          rows_total?: number
+          rows_valid?: number
+          status?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_bulk_imports_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_issues: {
         Row: {
           created_at: string
@@ -1033,17 +1080,93 @@ export type Database = {
           },
         ]
       }
+      supplier_product_moq_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          min_quantity: number
+          supplier_product_id: string
+          unit_price_usd: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          min_quantity: number
+          supplier_product_id: string
+          unit_price_usd: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          min_quantity?: number
+          supplier_product_id?: string
+          unit_price_usd?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_product_moq_tiers_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_product_variants: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          model: string | null
+          price_adjustment_usd: number
+          size: string | null
+          stock_quantity: number | null
+          supplier_product_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          price_adjustment_usd?: number
+          size?: string | null
+          stock_quantity?: number | null
+          supplier_product_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          price_adjustment_usd?: number
+          size?: string | null
+          stock_quantity?: number | null
+          supplier_product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_product_variants_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_products: {
         Row: {
           admin_notes: string | null
           approval_status: string
           approved_at: string | null
           approved_by: string | null
+          archived_at: string | null
           availability_type: string
           category: string
           created_at: string
           description: string | null
+          export_countries: string[]
           id: string
+          lead_time_days: number | null
           min_quantity: number
           niche: string
           origin_country: string
@@ -1054,11 +1177,14 @@ export type Database = {
           public_description: string | null
           public_name: string | null
           rejected_at: string | null
+          stock_quantity: number | null
           suggested_wholesale_price_mad: number | null
           supplier_id: string
           supplier_private_notes: string | null
           supplier_type: string
+          supplier_unit_price_usd: number | null
           target_buyer_type: string
+          unit: string
           updated_at: string
         }
         Insert: {
@@ -1066,11 +1192,14 @@ export type Database = {
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
+          archived_at?: string | null
           availability_type?: string
           category?: string
           created_at?: string
           description?: string | null
+          export_countries?: string[]
           id?: string
+          lead_time_days?: number | null
           min_quantity?: number
           niche?: string
           origin_country?: string
@@ -1081,11 +1210,14 @@ export type Database = {
           public_description?: string | null
           public_name?: string | null
           rejected_at?: string | null
+          stock_quantity?: number | null
           suggested_wholesale_price_mad?: number | null
           supplier_id: string
           supplier_private_notes?: string | null
           supplier_type?: string
+          supplier_unit_price_usd?: number | null
           target_buyer_type?: string
+          unit?: string
           updated_at?: string
         }
         Update: {
@@ -1093,11 +1225,14 @@ export type Database = {
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
+          archived_at?: string | null
           availability_type?: string
           category?: string
           created_at?: string
           description?: string | null
+          export_countries?: string[]
           id?: string
+          lead_time_days?: number | null
           min_quantity?: number
           niche?: string
           origin_country?: string
@@ -1108,11 +1243,14 @@ export type Database = {
           public_description?: string | null
           public_name?: string | null
           rejected_at?: string | null
+          stock_quantity?: number | null
           suggested_wholesale_price_mad?: number | null
           supplier_id?: string
           supplier_private_notes?: string | null
           supplier_type?: string
+          supplier_unit_price_usd?: number | null
           target_buyer_type?: string
+          unit?: string
           updated_at?: string
         }
         Relationships: [

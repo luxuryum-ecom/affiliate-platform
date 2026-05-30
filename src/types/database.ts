@@ -669,12 +669,21 @@ export interface SupplierProduct {
   /** Internal supplier notes — admin only, never shown to wholesalers. */
   supplier_private_notes: string | null
 
+  // Extended catalog fields (migration 035)
+  unit: string
+  stock_quantity: number | null
+  lead_time_days: number | null
+  export_countries: string[]
+  supplier_unit_price_usd: number | null
+
   // Approval workflow
   approval_status: SupplierProductStatus
   admin_notes: string | null
   approved_by: string | null
   approved_at: string | null
   rejected_at: string | null
+  /** Set when admin archives a product. */
+  archived_at: string | null
 
   // Admin-editable public fields
   public_name: string | null
@@ -686,6 +695,51 @@ export interface SupplierProduct {
 
   created_at: string
   updated_at: string
+}
+
+/** A color/size/model variant of a supplier product (migration 035). */
+export interface SupplierProductVariant {
+  id: string
+  supplier_product_id: string
+  color: string | null
+  size: string | null
+  model: string | null
+  stock_quantity: number | null
+  price_adjustment_usd: number
+  created_at: string
+}
+
+/** MOQ pricing tier for a supplier product (migration 035). */
+export interface SupplierProductMoqTier {
+  id: string
+  supplier_product_id: string
+  min_quantity: number
+  unit_price_usd: number
+  created_at: string
+}
+
+/** Bulk import session created when supplier uploads CSV/XLSX (migration 035). */
+export type BulkImportStatus = 'pending' | 'validated' | 'imported' | 'failed'
+
+export interface BulkImportReportRow {
+  row: number
+  product_name: string
+  status: 'valid' | 'invalid'
+  errors: string[]
+  product_id?: string
+}
+
+export interface SupplierBulkImport {
+  id: string
+  supplier_id: string
+  filename: string
+  rows_total: number
+  rows_valid: number
+  rows_invalid: number
+  rows_imported: number
+  status: BulkImportStatus
+  report: BulkImportReportRow[]
+  created_at: string
 }
 
 /** Safe public view of a supplier product — strips all supplier identity fields. */
@@ -1047,19 +1101,42 @@ export type Database = {
       >
       supplier_products: TableDef<
         SupplierProduct,
-        Omit<SupplierProduct, 'id' | 'created_at' | 'updated_at' | 'approval_status' | 'admin_notes' | 'approved_by' | 'approved_at' | 'rejected_at' | 'public_name' | 'public_description' | 'platform_margin_type' | 'platform_margin_value' | 'supplier_type'> & {
+        Omit<SupplierProduct, 'id' | 'created_at' | 'updated_at' | 'approval_status' | 'admin_notes' | 'approved_by' | 'approved_at' | 'rejected_at' | 'archived_at' | 'public_name' | 'public_description' | 'platform_margin_type' | 'platform_margin_value' | 'supplier_type'> & {
           supplier_type?: SupplierType
           approval_status?: SupplierProductStatus
           admin_notes?: string | null
           approved_by?: string | null
           approved_at?: string | null
           rejected_at?: string | null
+          archived_at?: string | null
           public_name?: string | null
           public_description?: string | null
           platform_margin_type?: PlatformMarginType
           platform_margin_value?: number | null
         },
         Partial<SupplierProduct>
+      >
+      supplier_product_variants: TableDef<
+        SupplierProductVariant,
+        Omit<SupplierProductVariant, 'id' | 'created_at'>,
+        Partial<SupplierProductVariant>
+      >
+      supplier_product_moq_tiers: TableDef<
+        SupplierProductMoqTier,
+        Omit<SupplierProductMoqTier, 'id' | 'created_at'>,
+        Partial<SupplierProductMoqTier>
+      >
+      supplier_bulk_imports: TableDef<
+        SupplierBulkImport,
+        Omit<SupplierBulkImport, 'id' | 'created_at' | 'rows_total' | 'rows_valid' | 'rows_invalid' | 'rows_imported' | 'status' | 'report'> & {
+          rows_total?: number
+          rows_valid?: number
+          rows_invalid?: number
+          rows_imported?: number
+          status?: BulkImportStatus
+          report?: BulkImportReportRow[]
+        },
+        Partial<SupplierBulkImport>
       >
     }
     Views: Record<never, never>
