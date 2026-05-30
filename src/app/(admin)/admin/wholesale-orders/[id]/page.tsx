@@ -7,6 +7,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
 import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
+import { WholesaleCostForm } from '@/components/admin/wholesale-cost-form'
 import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, QuoteRequest } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
@@ -159,7 +160,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
             </div>
           </div>
 
-          {/* ── Right: status update ── */}
+          {/* ── Right: status update + cost breakdown ── */}
           <div className="space-y-4">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Mettre à jour</h2>
@@ -168,6 +169,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 currentStatus={order.status as WholesaleOrderStatus}
               />
             </div>
+
+            {/* Cost breakdown form */}
+            <WholesaleCostForm
+              orderId={order.id}
+              supplierCost={order.supplier_cost_mad ?? 0}
+              transportCost={order.transport_customs_cost_mad ?? 0}
+              additionalCost={order.additional_cost_mad ?? 0}
+              totalAmount={order.total_amount}
+            />
 
             {/* Linked quote */}
             {linkedQuote && (

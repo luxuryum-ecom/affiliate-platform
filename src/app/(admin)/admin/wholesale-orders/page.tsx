@@ -151,7 +151,19 @@ export default async function AdminWholesaleOrdersPage() {
                       </div>
                       <p className="text-sm font-medium text-gray-900">{order.buyer?.full_name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Total&nbsp;: <strong>{formatMAD(order.total_amount)}</strong>
+                        Vente&nbsp;: <strong>{formatMAD(order.total_amount)}</strong>
+                        {order.gross_profit_mad != null && (
+                          <>
+                            {' · '}
+                            Profit&nbsp;:{' '}
+                            <strong className={order.gross_profit_mad >= 0 ? 'text-green-600' : 'text-red-500'}>
+                              {formatMAD(order.gross_profit_mad)}
+                            </strong>
+                            {order.gross_margin_percent != null && (
+                              <span className="text-gray-400"> ({order.gross_margin_percent.toFixed(1)}%)</span>
+                            )}
+                          </>
+                        )}
                         {' · '}
                         {new Date(order.created_at).toLocaleDateString('fr-MA', { day:'2-digit', month:'short', year:'numeric' })}
                       </p>

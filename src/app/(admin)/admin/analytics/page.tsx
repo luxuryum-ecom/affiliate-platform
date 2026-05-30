@@ -62,7 +62,7 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [profileRes, ordersRes, productsRes, affiliatesRes, commissionsRes] = await Promise.all([
+  const [profileRes, ordersRes, productsRes, affiliatesRes, commissionsRes, wholesaleRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('full_name')
@@ -100,12 +100,43 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
       data: { affiliate_id: string; amount: number; status: string }[] | null
       error: unknown
     }>,
+
+    (since
+      ? supabase
+          .from('wholesale_orders')
+          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent')
+          .gte('created_at', since)
+      : supabase
+          .from('wholesale_orders')
+          .select('id, status, total_amount, total_cost_mad, gross_profit_mad, gross_margin_percent')
+    ) as unknown as Promise<{
+      data: {
+        id: string
+        status: string
+        total_amount: number
+        total_cost_mad: number | null
+        gross_profit_mad: number | null
+        gross_margin_percent: number | null
+      }[] | null
+      error: unknown
+    }>,
   ])
 
   const orders     = ordersRes.data ?? []
   const products   = productsRes.data ?? []
   const affiliates = affiliatesRes.data ?? []
   const commRows   = commissionsRes.data ?? []
+  const wholesaleOrders = wholesaleRes.data ?? []
+
+  // ── Wholesale P&L ─────────────────────────────────────────────────────────
+  const wsDelivered   = wholesaleOrders.filter((o) => o.status === 'delivered')
+  const wsAllActive   = wholesaleOrders.filter((o) => o.status !== 'cancelled')
+  const wsTotalRevenue  = wsDelivered.reduce((s, o) => s + o.total_amount, 0)
+  const wsTotalCost     = wsDelivered.reduce((s, o) => s + (o.total_cost_mad ?? 0), 0)
+  const wsTotalProfit   = wsDelivered.reduce((s, o) => s + (o.gross_profit_mad ?? o.total_amount), 0)
+  const wsAvgMargin     = wsDelivered.length > 0
+    ? wsDelivered.reduce((s, o) => s + (o.gross_margin_percent ?? 0), 0) / wsDelivered.length
+    : 0
 
   const productMap   = new Map(products.map((p) => [p.id, p.name]))
   const affiliateMap = new Map(affiliates.map((a) => [a.id, a.full_name]))
@@ -296,6 +327,57 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
               variant={cancelled > 0 ? 'warning' : 'muted'}
             />
           </div>
+        </section>
+
+        {/* Wholesale P&L */}
+        <section>
+          <SectionLabel>Grossiste — Revenus & profit (commandes livrées)</SectionLabel>
+          {wsDelivered.length === 0 ? (
+            <EmptyState label="Aucune commande grossiste livrée sur cette période." />
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard
+                label="Chiffre d'affaires"
+                value={formatMAD(wsTotalRevenue)}
+                sub={`${wsDelivered.length} commande${wsDelivered.length !== 1 ? 's' : ''} livrée${wsDelivered.length !== 1 ? 's' : ''}`}
+                variant="default"
+              />
+              <StatCard
+                label="Coût total import"
+                value={formatMAD(wsTotalCost)}
+                sub={wsTotalCost === 0 ? 'Coûts non saisis' : 'Fournisseur + transport + divers'}
+                variant="muted"
+              />
+              <StatCard
+                label="Profit brut"
+                value={formatMAD(wsTotalProfit)}
+                sub="CA − coût total"
+                variant={wsTotalProfit > 0 ? 'success' : 'warning'}
+              />
+              <StatCard
+                label="Marge moyenne"
+                value={`${wsAvgMargin.toFixed(1)}%`}
+                sub="Sur commandes livrées"
+                variant={wsAvgMargin > 0 ? 'success' : 'warning'}
+              />
+            </div>
+          )}
+          {wsAllActive.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-xs text-blue-700">Commandes actives (non annulées)</p>
+                <p className="mt-1 text-xl font-bold text-blue-800 tabular-nums">
+                  {wsAllActive.length}
+                </p>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <p className="text-xs text-gray-500">CA actif non livré</p>
+                <p className="mt-1 text-xl font-bold text-gray-700 tabular-nums">
+                  {formatMAD(wsAllActive.filter((o) => o.status !== 'delivered').reduce((s, o) => s + o.total_amount, 0))}
+                </p>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Top products & top affiliates */}

@@ -642,6 +642,46 @@ export async function submitWholesaleOrder(
 }
 
 // =============================================================================
+// ADMIN — UPDATE WHOLESALE ORDER COST BREAKDOWN
+// =============================================================================
+
+/**
+ * Admin updates the import cost breakdown for a wholesale order.
+ * The trigger compute_wholesale_order_costs auto-derives total_cost_mad,
+ * gross_profit_mad and gross_margin_percent on UPDATE.
+ */
+export async function updateWholesaleOrderCosts(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const { supabase, error: authError } = await requireAdmin()
+  if (authError) return fail(authError)
+
+  const orderId = (formData.get('orderId') as string)?.trim()
+  if (!orderId) return fail('Commande non spécifiée.')
+
+  const supplier_cost_mad          = Math.max(0, parseFloat((formData.get('supplier_cost_mad') as string) || '0'))
+  const transport_customs_cost_mad = Math.max(0, parseFloat((formData.get('transport_customs_cost_mad') as string) || '0'))
+  const additional_cost_mad        = Math.max(0, parseFloat((formData.get('additional_cost_mad') as string) || '0'))
+
+  if (isNaN(supplier_cost_mad) || isNaN(transport_customs_cost_mad) || isNaN(additional_cost_mad)) {
+    return fail('Valeurs invalides — saisir des montants numériques.')
+  }
+
+  const { error } = await supabase
+    .from('wholesale_orders')
+    .update({ supplier_cost_mad, transport_customs_cost_mad, additional_cost_mad })
+    .eq('id', orderId)
+
+  if (error) return fail(error.message)
+
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath('/admin/analytics')
+  return ok
+}
+
+// =============================================================================
 // ADMIN — UPDATE WHOLESALE ORDER STATUS
 // =============================================================================
 

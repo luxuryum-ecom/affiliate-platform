@@ -359,6 +359,20 @@ export interface WholesaleOrder {
   /** Set when this order was created from a quote request conversion. */
   quote_request_id: string | null
 
+  // ── Import cost breakdown (added migration 025) ───────────────────────────
+  /** Supplier/purchase cost in MAD for this order. Admin-entered. */
+  supplier_cost_mad: number
+  /** Transport + customs cost in MAD. Admin-entered. */
+  transport_customs_cost_mad: number
+  /** Any other additional cost in MAD. Admin-entered. */
+  additional_cost_mad: number
+  /** Auto-computed: supplier + transport + additional. */
+  total_cost_mad: number | null
+  /** Auto-computed: total_amount − total_cost_mad. */
+  gross_profit_mad: number | null
+  /** Auto-computed: (gross_profit_mad / total_amount) × 100. */
+  gross_margin_percent: number | null
+
   created_at: string
   updated_at: string
 }
@@ -603,9 +617,12 @@ export type Database = {
       >
       wholesale_orders: TableDef<
         WholesaleOrder,
-        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id'> & {
+        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id' | 'supplier_cost_mad' | 'transport_customs_cost_mad' | 'additional_cost_mad' | 'total_cost_mad' | 'gross_profit_mad' | 'gross_margin_percent'> & {
           invoice_requested?: boolean
           quote_request_id?: string | null
+          supplier_cost_mad?: number
+          transport_customs_cost_mad?: number
+          additional_cost_mad?: number
         },
         Partial<WholesaleOrder>
       >
