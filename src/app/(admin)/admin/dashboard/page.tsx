@@ -231,6 +231,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/analytics',
               },
+              {
+                title: 'Performance fournisseurs',
+                description: 'Score de fiabilité, incidents et délais par fournisseur.',
+                badge: null,
+                href: '/admin/supplier-performance',
+              },
             ].map((action) => (
               <div
                 key={action.title}

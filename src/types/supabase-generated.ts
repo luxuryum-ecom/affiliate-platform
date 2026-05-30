@@ -867,6 +867,51 @@ export type Database = {
           },
         ]
       }
+      supplier_issues: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delivery_days: number | null
+          id: string
+          issue_type: string
+          notes: string | null
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delivery_days?: number | null
+          id?: string
+          issue_type: string
+          notes?: string | null
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delivery_days?: number | null
+          id?: string
+          issue_type?: string
+          notes?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_issues_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_issues_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_payout_history: {
         Row: {
           changed_at: string

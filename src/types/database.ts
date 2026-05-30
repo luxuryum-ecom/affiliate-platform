@@ -743,6 +743,49 @@ export interface SupplierPayoutHistory {
   changed_at: string
 }
 
+/** Issue types that admin can log against a supplier (migration 033). */
+export type SupplierIssueType =
+  | 'delay'
+  | 'quality_problem'
+  | 'wrong_quantity'
+  | 'communication_problem'
+  | 'other'
+
+/** Admin-only issue note logged against a supplier (migration 033).
+ *  Never exposed to supplier or wholesaler. */
+export interface SupplierIssue {
+  id: string
+  supplier_id: string
+  issue_type: SupplierIssueType
+  notes: string | null
+  /** Optional delivery duration in days — used to compute avg_delivery_days per supplier. */
+  delivery_days: number | null
+  created_by: string | null
+  created_at: string
+}
+
+/** Computed performance snapshot for a supplier — built at query time. */
+export interface SupplierPerformance {
+  supplierId: string
+  supplierName: string
+  /** Most recent supplier_type found on their products ('morocco' | 'international'). */
+  supplierType: string | null
+  /** Comma-joined unique origin_country values from their products. */
+  countries: string
+  /** Comma-joined unique category values from their products. */
+  categories: string
+  /** Comma-joined unique niche values from their products. */
+  niches: string
+  totalOrders: number
+  totalRevenueMad: number
+  totalCommissionMad: number
+  averageDeliveryDays: number | null
+  delayedOrdersCount: number
+  issueCount: number
+  /** 0–100. Formula: max(0, 100 − 5×issueCount − 3×delayedOrdersCount). */
+  reliabilityScore: number
+}
+
 export type OrderSignalType = 'fraud' | 'duplicate' | 'spam' | 'conversion'
 
 export interface OrderSignal {
@@ -938,6 +981,11 @@ export type Database = {
         SupplierPayoutHistory,
         Omit<SupplierPayoutHistory, 'id' | 'changed_at'> & { changed_at?: string },
         never
+      >
+      supplier_issues: TableDef<
+        SupplierIssue,
+        Omit<SupplierIssue, 'id' | 'created_at'>,
+        Partial<SupplierIssue>
       >
       supplier_products: TableDef<
         SupplierProduct,
