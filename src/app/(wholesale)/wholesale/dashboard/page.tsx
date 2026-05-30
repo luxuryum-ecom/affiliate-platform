@@ -213,6 +213,25 @@ export default async function WholesaleDashboardPage() {
           </div>
         </div>
 
+        {/* Intelligent Sourcing */}
+        <div className="bg-white rounded-xl border border-indigo-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-sm font-semibold text-gray-900">Sourcing intelligent</h2>
+              <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-medium">Nouveau</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Décrivez votre besoin — notre équipe identifie les meilleurs fournisseurs et vous prépare un devis confidentiel.
+            </p>
+          </div>
+          <Link
+            href="/wholesale/sourcing"
+            className="text-xs px-4 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors whitespace-nowrap"
+          >
+            Faire une demande →
+          </Link>
+        </div>
+
         {/* Account / billing */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>

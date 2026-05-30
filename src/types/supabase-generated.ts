@@ -867,6 +867,82 @@ export type Database = {
           },
         ]
       }
+      sourcing_requests: {
+        Row: {
+          admin_notes: string | null
+          category: string
+          created_at: string
+          delivery_deadline: string | null
+          id: string
+          notes: string | null
+          product_name: string
+          quantity: number
+          quote_request_id: string | null
+          selected_supplier_id: string | null
+          status: string
+          target_budget_mad: number
+          target_country: string | null
+          updated_at: string
+          wholesaler_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          category: string
+          created_at?: string
+          delivery_deadline?: string | null
+          id?: string
+          notes?: string | null
+          product_name: string
+          quantity: number
+          quote_request_id?: string | null
+          selected_supplier_id?: string | null
+          status?: string
+          target_budget_mad: number
+          target_country?: string | null
+          updated_at?: string
+          wholesaler_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          category?: string
+          created_at?: string
+          delivery_deadline?: string | null
+          id?: string
+          notes?: string | null
+          product_name?: string
+          quantity?: number
+          quote_request_id?: string | null
+          selected_supplier_id?: string | null
+          status?: string
+          target_budget_mad?: number
+          target_country?: string | null
+          updated_at?: string
+          wholesaler_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_requests_quote_request_id_fkey"
+            columns: ["quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "quote_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sourcing_requests_selected_supplier_id_fkey"
+            columns: ["selected_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sourcing_requests_wholesaler_id_fkey"
+            columns: ["wholesaler_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_issues: {
         Row: {
           created_at: string

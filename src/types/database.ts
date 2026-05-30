@@ -743,6 +743,54 @@ export interface SupplierPayoutHistory {
   changed_at: string
 }
 
+// ─── INTELLIGENT SOURCING (migration 034) ────────────────────────────────────
+
+export type SourcingRequestStatus = 'pending' | 'matching' | 'matched' | 'quoted' | 'closed'
+
+/** Wholesaler sourcing request — supplier identity is hidden from wholesaler via RLS. */
+export interface SourcingRequest {
+  id: string
+  wholesaler_id: string
+  product_name: string
+  category: string
+  quantity: number
+  target_budget_mad: number
+  target_country: string | null
+  delivery_deadline: string | null
+  notes: string | null
+  status: SourcingRequestStatus
+  admin_notes: string | null
+  /** Admin-only — never returned to wholesaler. */
+  selected_supplier_id: string | null
+  quote_request_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Scored supplier match computed at query time for admin sourcing UI. */
+export interface ScoredSupplier {
+  supplierId: string
+  supplierName: string
+  supplierType: string | null
+  countries: string
+  categories: string
+  reliabilityScore: number
+  /** Lowest MOQ across their approved products. */
+  minMoq: number | null
+  /** Total score 0–100 based on category, country, reliability, MOQ, performance. */
+  matchScore: number
+  scoreBreakdown: {
+    categoryMatch: number
+    countryMatch: number
+    reliability: number
+    moqCompatibility: number
+    performance: number
+  }
+}
+
+/** Wholesaler-visible view of a sourcing request (no supplier identity). */
+export type SourcingRequestPublic = Omit<SourcingRequest, 'selected_supplier_id' | 'admin_notes'>
+
 /** Issue types that admin can log against a supplier (migration 033). */
 export type SupplierIssueType =
   | 'delay'
@@ -986,6 +1034,16 @@ export type Database = {
         SupplierIssue,
         Omit<SupplierIssue, 'id' | 'created_at'>,
         Partial<SupplierIssue>
+      >
+      sourcing_requests: TableDef<
+        SourcingRequest,
+        Omit<SourcingRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'selected_supplier_id' | 'quote_request_id'> & {
+          status?: SourcingRequestStatus
+          admin_notes?: string | null
+          selected_supplier_id?: string | null
+          quote_request_id?: string | null
+        },
+        Partial<SourcingRequest>
       >
       supplier_products: TableDef<
         SupplierProduct,

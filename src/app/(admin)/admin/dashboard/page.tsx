@@ -34,6 +34,7 @@ export default async function AdminDashboardPage() {
     { count: newQuoteRequests },
     pendingCommissionsRes,
     { count: pendingSupplierProducts },
+    { count: pendingSourcingRequests },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -70,6 +71,10 @@ export default async function AdminDashboardPage() {
       .from('supplier_products')
       .select('*', { count: 'exact', head: true })
       .eq('approval_status', 'pending'),
+    supabase
+      .from('sourcing_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
   ])
 
   const pendingCommissionRows = (pendingCommissionsRes.data ?? []) as { amount: number }[]
@@ -236,6 +241,12 @@ export default async function AdminDashboardPage() {
                 description: 'Score de fiabilité, incidents et délais par fournisseur.',
                 badge: null,
                 href: '/admin/supplier-performance',
+              },
+              {
+                title: 'Sourcing intelligent',
+                description: 'Matching automatique grossiste → fournisseur optimal.',
+                badge: pendingSourcingRequests ?? 0,
+                href: '/admin/sourcing',
               },
             ].map((action) => (
               <div
