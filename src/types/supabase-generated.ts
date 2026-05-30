@@ -555,6 +555,57 @@ export type Database = {
           },
         ]
       }
+      premium_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          featured_badge: boolean
+          full_analytics: boolean
+          id: string
+          max_products: number
+          name: string
+          price_mad_monthly: number
+          priority_support: boolean
+          rfq_priority_boost: number
+          slug: string
+          verified_badge: boolean
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          featured_badge?: boolean
+          full_analytics?: boolean
+          id?: string
+          max_products?: number
+          name: string
+          price_mad_monthly?: number
+          priority_support?: boolean
+          rfq_priority_boost?: number
+          slug: string
+          verified_badge?: boolean
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          featured_badge?: boolean
+          full_analytics?: boolean
+          id?: string
+          max_products?: number
+          name?: string
+          price_mad_monthly?: number
+          priority_support?: boolean
+          rfq_priority_boost?: number
+          slug?: string
+          verified_badge?: boolean
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean
@@ -564,6 +615,7 @@ export type Database = {
           approved_by: string | null
           availability_type: string
           calculated_sale_price_mad: number | null
+          category: string
           commission_amount: number
           confirmation_fee_mad: number
           created_at: string
@@ -596,6 +648,7 @@ export type Database = {
           source_notes: string | null
           source_type: string
           stock_count: number
+          subcategory: string
           submitted_by: string | null
           submitted_via: string
           supplier_id: string | null
@@ -613,6 +666,7 @@ export type Database = {
           approved_by?: string | null
           availability_type?: string
           calculated_sale_price_mad?: number | null
+          category?: string
           commission_amount?: number
           confirmation_fee_mad?: number
           created_at?: string
@@ -645,6 +699,7 @@ export type Database = {
           source_notes?: string | null
           source_type?: string
           stock_count?: number
+          subcategory?: string
           submitted_by?: string | null
           submitted_via?: string
           supplier_id?: string | null
@@ -662,6 +717,7 @@ export type Database = {
           approved_by?: string | null
           availability_type?: string
           calculated_sale_price_mad?: number | null
+          category?: string
           commission_amount?: number
           confirmation_fee_mad?: number
           created_at?: string
@@ -694,6 +750,7 @@ export type Database = {
           source_notes?: string | null
           source_type?: string
           stock_count?: number
+          subcategory?: string
           submitted_by?: string | null
           submitted_via?: string
           supplier_id?: string | null
@@ -1177,6 +1234,57 @@ export type Database = {
           },
         ]
       }
+      subscription_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_plan_slug: string
+          new_status: string
+          notes: string | null
+          old_plan_slug: string | null
+          old_status: string | null
+          supplier_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_plan_slug: string
+          new_status: string
+          notes?: string | null
+          old_plan_slug?: string | null
+          old_status?: string | null
+          supplier_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_plan_slug?: string
+          new_status?: string
+          notes?: string | null
+          old_plan_slug?: string | null
+          old_status?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_audit_log_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_bulk_imports: {
         Row: {
           created_at: string
@@ -1571,6 +1679,7 @@ export type Database = {
           public_name: string | null
           rejected_at: string | null
           stock_quantity: number | null
+          subcategory: string
           suggested_wholesale_price_mad: number | null
           supplier_id: string
           supplier_private_notes: string | null
@@ -1604,6 +1713,7 @@ export type Database = {
           public_name?: string | null
           rejected_at?: string | null
           stock_quantity?: number | null
+          subcategory?: string
           suggested_wholesale_price_mad?: number | null
           supplier_id: string
           supplier_private_notes?: string | null
@@ -1637,6 +1747,7 @@ export type Database = {
           public_name?: string | null
           rejected_at?: string | null
           stock_quantity?: number | null
+          subcategory?: string
           suggested_wholesale_price_mad?: number | null
           supplier_id?: string
           supplier_private_notes?: string | null
@@ -1743,6 +1854,67 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_subscriptions: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          plan_id: string
+          started_at: string
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_id: string
+          started_at?: string
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          started_at?: string
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_subscriptions_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "premium_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_subscriptions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2057,6 +2229,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_supplier_plan: { Args: { p_supplier_id: string }; Returns: string }
       my_role: { Args: never; Returns: string }
       reserve_stock: {
         Args: { p_product_id: string; p_qty: number }

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Profile } from '@/types/database'
 
 export const metadata = {
@@ -124,9 +125,11 @@ export default async function AdminDashboardPage() {
       {/* Navbar */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-gray-900 text-sm">Administration</span>
-            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize">
+          <div className="flex items-center gap-4">
+            <MozounaLogo size="md" />
+            <span className="hidden sm:flex items-center gap-2 text-gray-300">|</span>
+            <span className="hidden sm:block text-sm font-medium text-gray-600">Administration</span>
+            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize hidden sm:block">
               {profile?.role}
             </span>
           </div>

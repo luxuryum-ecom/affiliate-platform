@@ -3,19 +3,19 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
-import { SUPPLIER_CATEGORIES } from '@/types/database'
+import { MozounaLogo, OriginBadge, CategoryBadge, AvailabilityBadge, SupplierTypeBadge, VerifiedBadge, FeaturedBadge } from '@/components/shared/branding'
+import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
 import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
 
 export const metadata = { title: 'Marketplace fournisseurs — Espace Grossiste' }
 
 interface SearchParams {
+  q?: string
   category?: string
-  niche?: string
+  subcategory?: string
   origin?: string
   availability?: string
   supplier_type?: string
-  min_qty?: string
-  max_price?: string
   max_moq?: string
   in_stock?: string
   max_lead_time?: string
@@ -37,12 +37,11 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     supabase
       .from('supplier_products')
       .select(
-        'id, supplier_id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status)'
+        'id, supplier_id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status)'
       )
       .eq('approval_status', 'approved')
       .is('archived_at', null)
       .order('created_at', { ascending: false }),
-    // Fetch active premium subscriptions with badge flags — server-side only
     supabase
       .from('supplier_subscriptions')
       .select('supplier_id, plan:premium_plans(featured_badge, verified_badge)')
@@ -51,7 +50,6 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
 
-  // Build premium badge lookup (supplier_id → flags) — never exposed to client
   type PremiumFlags = { featured_badge: boolean; verified_badge: boolean }
   type PremiumSubRow = { supplier_id: string; plan: PremiumFlags | PremiumFlags[] | null }
   const premiumMap = new Map<string, PremiumFlags>()
@@ -63,6 +61,8 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   type MarketplaceProduct = SupplierProductPublic & {
     supplier_id: string
     supplier_type: SupplierType
+    subcategory: string
+    niche: string
     unit: string
     stock_quantity: number | null
     lead_time_days: number | null
@@ -78,7 +78,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
       is_verified: premiumMap.get(p.supplier_id)?.verified_badge ?? false,
     }))
 
-  // Premium suppliers appear first (featured > verified > rest)
+  // Premium suppliers first
   products.sort((a, b) => {
     const scoreA = (a.is_verified ? 2 : 0) + (a.is_featured ? 1 : 0)
     const scoreB = (b.is_verified ? 2 : 0) + (b.is_featured ? 1 : 0)
@@ -86,12 +86,22 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   })
 
   // Apply filters
+  if (filters.q) {
+    const q = filters.q.toLowerCase()
+    products = products.filter((p) =>
+      (p.public_name ?? p.product_name).toLowerCase().includes(q) ||
+      (p.public_description ?? p.description ?? '').toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      p.niche.toLowerCase().includes(q)
+    )
+  }
   if (filters.category) {
     products = products.filter((p) => p.category === filters.category)
   }
-  if (filters.niche) {
+  if (filters.subcategory) {
+    const sub = filters.subcategory.toLowerCase()
     products = products.filter((p) =>
-      p.niche.toLowerCase().includes(filters.niche!.toLowerCase())
+      p.subcategory.toLowerCase().includes(sub) || p.niche.toLowerCase().includes(sub)
     )
   }
   if (filters.origin) {
@@ -105,20 +115,6 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   if (filters.supplier_type) {
     products = products.filter((p) => p.supplier_type === filters.supplier_type)
   }
-  if (filters.min_qty) {
-    const qty = parseInt(filters.min_qty, 10)
-    if (!isNaN(qty)) products = products.filter((p) => p.min_quantity >= qty)
-  }
-  if (filters.max_price) {
-    const price = parseFloat(filters.max_price)
-    if (!isNaN(price)) {
-      products = products.filter(
-        (p) => p.suggested_wholesale_price_mad == null || p.suggested_wholesale_price_mad <= price
-      )
-    }
-  }
-
-  // Additional filters (migration 035 fields)
   if (filters.max_moq) {
     const qty = parseInt(filters.max_moq, 10)
     if (!isNaN(qty)) products = products.filter((p) => p.min_quantity <= qty)
@@ -131,27 +127,30 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     if (!isNaN(days)) products = products.filter((p) => p.lead_time_days == null || p.lead_time_days <= days)
   }
 
-  const allProducts = (productsResult.data ?? []) as MarketplaceProduct[]
-  const origins = [...new Set(allProducts.map((p) => p.origin_country).filter(Boolean))].sort()
+  const subcategoryOptions = filters.category ? getSubcategories(filters.category) : []
   const isFiltered = !!(
-    filters.category || filters.niche || filters.origin ||
-    filters.availability || filters.supplier_type || filters.min_qty || filters.max_price ||
-    filters.max_moq || filters.in_stock || filters.max_lead_time
+    filters.q || filters.category || filters.subcategory || filters.origin ||
+    filters.availability || filters.supplier_type || filters.max_moq ||
+    filters.in_stock || filters.max_lead_time
   )
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/wholesale/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Marketplace</span>
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <MozounaLogo size="md" />
+            <span className="hidden sm:block text-gray-300">|</span>
+            <nav className="hidden sm:flex items-center gap-4 text-sm">
+              <Link href="/wholesale/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+                Dashboard
+              </Link>
+              <span className="font-semibold text-gray-900">Marketplace</span>
+            </nav>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
+            <span className="text-sm text-gray-500 hidden md:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
                 Déconnexion
@@ -161,139 +160,145 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-lg font-semibold text-gray-900">Marketplace fournisseurs</h1>
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* ── Page title ──────────────────────────────────────────────────────── */}
+        <div className="mb-5">
+          <h1 className="text-xl font-bold text-gray-900">Marketplace fournisseurs</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Produits de nos fournisseurs sélectionnés. Demandez un devis directement.
+            Produits sélectionnés de nos fournisseurs vérifiés. Demandez un devis directement.
           </p>
         </div>
 
-        {/* Filters */}
-        <form method="GET" className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-3">
+        {/* ── Filters ─────────────────────────────────────────────────────────── */}
+        <form method="GET" className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
+          {/* Row 1: keyword + category + subcategory + origin */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            <div className="lg:col-span-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Recherche</label>
+              <input
+                name="q"
+                type="text"
+                defaultValue={filters.q ?? ''}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                placeholder="Nom, catégorie, description..."
+              />
+            </div>
 
-            {/* Category — predefined list */}
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-xs text-gray-500 mb-1">Catégorie</label>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Catégorie</label>
               <select
                 name="category"
                 defaultValue={filters.category ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
               >
-                <option value="">Toutes</option>
-                {SUPPLIER_CATEGORIES.map((cat) => (
+                <option value="">Toutes les catégories</option>
+                {PRODUCT_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
 
-            {/* Supplier type */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Origine fournisseur</label>
-              <select
-                name="supplier_type"
-                defaultValue={filters.supplier_type ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
-              >
-                <option value="">Tous</option>
-                <option value="morocco">Fournisseur Maroc</option>
-                <option value="international">International</option>
-              </select>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Sous-catégorie</label>
+              {subcategoryOptions.length > 0 ? (
+                <select
+                  name="subcategory"
+                  defaultValue={filters.subcategory ?? ''}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                >
+                  <option value="">Toutes</option>
+                  {subcategoryOptions.map((sub) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  name="subcategory"
+                  type="text"
+                  defaultValue={filters.subcategory ?? ''}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  placeholder="ex: Femme, Hijab..."
+                />
+              )}
             </div>
 
-            {/* Availability */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Disponibilité</label>
-              <select
-                name="availability"
-                defaultValue={filters.availability ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
-              >
-                <option value="">Tout</option>
-                <option value="local_stock">Stock disponible</option>
-                <option value="import_on_demand">Import / Demande</option>
-              </select>
-            </div>
-
-            {/* Origin country */}
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Pays d&apos;origine</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Pays d&apos;origine</label>
               <select
                 name="origin"
                 defaultValue={filters.origin ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
               >
                 <option value="">Tous pays</option>
-                {origins.map((o) => (
+                {ORIGIN_COUNTRIES.map((o) => (
                   <option key={o} value={o}>{o}</option>
                 ))}
               </select>
             </div>
+          </div>
 
-            {/* Min quantity */}
+          {/* Row 2: supplier type + availability + MOQ max + lead time max + in stock */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Qté min. max</label>
-              <input
-                name="min_qty"
-                type="number"
-                min={1}
-                defaultValue={filters.min_qty ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                placeholder="ex: 50"
-              />
+              <label className="block text-xs font-medium text-gray-500 mb-1">Fournisseur</label>
+              <select
+                name="supplier_type"
+                defaultValue={filters.supplier_type ?? ''}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                <option value="">Tous</option>
+                <option value="morocco">🇲🇦 Maroc</option>
+                <option value="international">🌍 International</option>
+              </select>
             </div>
 
-            {/* Max price */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Prix max (MAD)</label>
-              <input
-                name="max_price"
-                type="number"
-                min={0}
-                defaultValue={filters.max_price ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                placeholder="ex: 500"
-              />
+              <label className="block text-xs font-medium text-gray-500 mb-1">Disponibilité</label>
+              <select
+                name="availability"
+                defaultValue={filters.availability ?? ''}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                <option value="">Tout</option>
+                <option value="local_stock">Stock disponible</option>
+                <option value="import_on_demand">Import / Commande</option>
+              </select>
             </div>
 
-            {/* Max MOQ */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">MOQ max</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">MOQ max (unités)</label>
               <input
                 name="max_moq"
                 type="number"
                 min={1}
                 defaultValue={filters.max_moq ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 placeholder="ex: 500"
               />
             </div>
 
-            {/* Max lead time */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Délai max (jours)</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Délai max (jours)</label>
               <input
                 name="max_lead_time"
                 type="number"
                 min={1}
                 defaultValue={filters.max_lead_time ?? ''}
-                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 placeholder="ex: 30"
               />
             </div>
 
-            {/* In stock only */}
-            <div className="flex items-end pb-1.5">
+            <div className="flex items-end pb-1">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   name="in_stock"
                   type="checkbox"
                   value="1"
                   defaultChecked={filters.in_stock === '1'}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 w-4 h-4 accent-gray-900"
                 />
-                <span className="text-xs text-gray-600">En stock uniquement</span>
+                <span className="text-xs text-gray-600 font-medium">En stock seulement</span>
               </label>
             </div>
           </div>
@@ -301,30 +306,33 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
             >
               Filtrer
             </button>
             {isFiltered && (
               <Link
                 href="/wholesale/marketplace"
-                className="px-4 py-1.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Effacer
+                Effacer les filtres
               </Link>
             )}
           </div>
         </form>
 
-        {/* Result count */}
+        {/* ── Result count ─────────────────────────────────────────────────────── */}
         <p className="text-sm text-gray-500 mb-4">
-          {products.length} produit{products.length !== 1 ? 's' : ''}
+          <span className="font-semibold text-gray-900">{products.length}</span>{' '}
+          produit{products.length !== 1 ? 's' : ''}
           {isFiltered ? ' trouvé' + (products.length !== 1 ? 's' : '') : ' disponible' + (products.length !== 1 ? 's' : '')}
         </p>
 
+        {/* ── Product grid ─────────────────────────────────────────────────────── */}
         {products.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-2xl mb-2">🔍</p>
+            <p className="text-sm text-gray-500">
               {isFiltered ? 'Aucun produit ne correspond à ces filtres.' : 'Aucun produit disponible pour le moment.'}
             </p>
             {isFiltered && (
@@ -334,7 +342,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {products.map((product) => (
               <MarketplaceProductCard
                 key={product.id}
@@ -351,9 +359,6 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 }
 
 // ─── Marketplace product card ─────────────────────────────────────────────────
-// Supplier identity is NEVER rendered. Price display depends on supplier_type:
-//   - Morocco: show price directly (no customs, wholesale-only)
-//   - International: show "Sur devis" or admin-set public price; never reveal supplier cost
 
 function MarketplaceProductCard({
   product,
@@ -362,6 +367,8 @@ function MarketplaceProductCard({
 }: {
   product: SupplierProductPublic & {
     supplier_type: SupplierType
+    subcategory?: string
+    niche?: string
     unit?: string
     stock_quantity?: number | null
     lead_time_days?: number | null
@@ -379,9 +386,16 @@ function MarketplaceProductCard({
   const displayName = product.public_name || product.product_name
   const displayDescription = product.public_description || product.description
   const isMorocco = product.supplier_type === 'morocco'
+  const subcategoryLabel = product.subcategory || product.niche || ''
+
+  const cardBorder = isVerified
+    ? 'border-amber-300 ring-1 ring-amber-200'
+    : isFeatured
+    ? 'border-indigo-300 ring-1 ring-indigo-100'
+    : 'border-gray-200'
 
   return (
-    <div className={`bg-white rounded-xl border overflow-hidden flex flex-col ${isVerified ? 'border-amber-300 ring-1 ring-amber-200' : isFeatured ? 'border-indigo-300 ring-1 ring-indigo-100' : 'border-gray-200'}`}>
+    <div className={`bg-white rounded-xl border overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow ${cardBorder}`}>
       {/* Photo */}
       {product.photos.length > 0 ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -392,131 +406,107 @@ function MarketplaceProductCard({
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
       ) : (
-        <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center text-3xl text-gray-300">
+        <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center text-4xl text-gray-300">
           📦
         </div>
       )}
 
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        {/* Badges */}
-        <div className="flex flex-wrap gap-1.5">
-          {/* Premium badges — shown before origin badge */}
-          {isVerified && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
-              ✓ Vérifié
-            </span>
-          )}
-          {isFeatured && !isVerified && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-700">
-              ★ Vedette
-            </span>
-          )}
+      <div className="p-3 flex flex-col gap-2 flex-1">
+        {/* Premium badges */}
+        {(isVerified || isFeatured) && (
+          <div className="flex gap-1.5">
+            {isVerified && <VerifiedBadge />}
+            {isFeatured && !isVerified && <FeaturedBadge />}
+          </div>
+        )}
 
-          {/* Supplier type badge */}
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-            isMorocco
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-blue-100 text-blue-700'
-          }`}>
-            {isMorocco ? '🇲🇦 Maroc' : '🌍 International'}
-          </span>
+        {/* Classification badges */}
+        <div className="flex flex-wrap gap-1">
+          <SupplierTypeBadge type={isMorocco ? 'morocco' : 'international'} />
+          <AvailabilityBadge type={product.availability_type} />
+        </div>
 
-          {/* Availability badge */}
-          <span className={`text-xs px-2 py-0.5 rounded-full ${
-            product.availability_type === 'import_on_demand'
-              ? 'bg-purple-100 text-purple-700'
-              : 'bg-green-100 text-green-700'
-          }`}>
-            {product.availability_type === 'import_on_demand' ? 'Import / Demande' : 'Stock disponible'}
-          </span>
-
+        {/* Category + origin row */}
+        <div className="flex flex-wrap gap-1">
           {product.category && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-              {product.category}
-            </span>
+            <CategoryBadge category={product.category} subcategory={subcategoryLabel || undefined} />
           )}
-          {hasCatalog && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">📒 Catalogue</span>
-          )}
-          {hasVideo && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">🎥 Vidéo</span>
-          )}
-          {hasSample && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">🧪 Échantillon</span>
+          {product.origin_country && (
+            <OriginBadge country={product.origin_country} />
           )}
         </div>
 
-        <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2">{displayName}</h3>
+        {/* Name */}
+        <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 mt-0.5">
+          {displayName}
+        </h3>
 
         {displayDescription && (
           <p className="text-xs text-gray-500 line-clamp-2">{displayDescription}</p>
         )}
 
-        {/* Origin */}
-        {product.origin_country && (
-          <p className="text-xs text-gray-500">
-            Origine : <span className="text-gray-700 font-medium">{product.origin_country}</span>
-          </p>
-        )}
-
-        {/* Stock + Lead time */}
+        {/* MOQ + lead time */}
         <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {product.stock_quantity != null && (
-            <p className="text-xs text-gray-500">
-              Stock : <span className={`font-medium ${product.stock_quantity > 0 ? 'text-green-700' : 'text-red-600'}`}>
-                {product.stock_quantity > 0 ? `${product.stock_quantity} ${product.unit ?? 'pcs'}` : 'Épuisé'}
-              </span>
-            </p>
-          )}
+          <span className="text-xs text-gray-500">
+            MOQ : <span className="font-semibold text-gray-800">{product.min_quantity} {product.unit ?? 'u.'}</span>
+          </span>
           {product.lead_time_days != null && (
-            <p className="text-xs text-gray-500">
-              Délai : <span className="font-medium text-gray-700">{product.lead_time_days}j</span>
-            </p>
+            <span className="text-xs text-gray-500">
+              Délai : <span className="font-semibold text-gray-800">{product.lead_time_days}j</span>
+            </span>
+          )}
+          {product.stock_quantity != null && (
+            <span className={`text-xs font-medium ${product.stock_quantity > 0 ? 'text-green-700' : 'text-red-600'}`}>
+              {product.stock_quantity > 0 ? `✓ ${product.stock_quantity} en stock` : '✗ Épuisé'}
+            </span>
           )}
         </div>
 
-        {/* International supplier note — payment through platform, no supplier exposure */}
+        {/* Media badges */}
+        {(hasCatalog || hasVideo || hasSample) && (
+          <div className="flex flex-wrap gap-1">
+            {hasCatalog && <span className="text-xs px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">📒 Catalogue</span>}
+            {hasVideo   && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-50 text-pink-700 border border-pink-100">🎥 Vidéo</span>}
+            {hasSample  && <span className="text-xs px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-100">🧪 Échantillon</span>}
+          </div>
+        )}
+
+        {/* International note */}
         {!isMorocco && (
-          <p className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1">
-            Prix final défini par la plateforme. Paiement via AffiPartner uniquement.
+          <p className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1 border border-blue-100">
+            🔒 Paiement via plateforme — Transport & douane inclus
           </p>
         )}
 
-        {/* Price + Min quantity */}
-        <div className="mt-auto pt-2 border-t border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400">
-              {isMorocco ? 'Prix de gros' : 'Prix final TTC'}
-            </p>
-            <p className="text-base font-bold text-gray-900">
-              {product.suggested_wholesale_price_mad != null
-                ? `${product.suggested_wholesale_price_mad} MAD`
-                : 'Sur devis'}
-            </p>
-            {!isMorocco && product.suggested_wholesale_price_mad != null && (
-              <p className="text-xs text-gray-400">Transport + douane inclus</p>
-            )}
+        {/* Price + CTA */}
+        <div className="mt-auto pt-2 border-t border-gray-100">
+          <div className="flex items-end justify-between mb-2">
+            <div>
+              <p className="text-xs text-gray-400">{isMorocco ? 'Prix de gros' : 'Prix final TTC'}</p>
+              <p className="text-base font-bold text-gray-900">
+                {product.suggested_wholesale_price_mad != null
+                  ? `${product.suggested_wholesale_price_mad.toLocaleString('fr-MA')} MAD`
+                  : 'Sur devis'}
+              </p>
+              {!isMorocco && product.suggested_wholesale_price_mad != null && (
+                <p className="text-xs text-gray-400">Transport + douane inclus</p>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Min. commande</p>
-            <p className="text-sm font-medium text-gray-700">{product.min_quantity} u.</p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <MarketplaceQuoteForm
+                supplierProductId={product.id}
+                minQuantity={product.min_quantity}
+              />
+            </div>
+            <Link
+              href={`/wholesale/marketplace/${product.id}`}
+              className="shrink-0 text-xs px-3 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Détails
+            </Link>
           </div>
-        </div>
-
-        {/* CTA row */}
-        <div className="mt-2 flex gap-2">
-          <div className="flex-1">
-            <MarketplaceQuoteForm
-              supplierProductId={product.id}
-              minQuantity={product.min_quantity}
-            />
-          </div>
-          <Link
-            href={`/wholesale/marketplace/${product.id}`}
-            className="shrink-0 text-xs px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors self-center"
-          >
-            Détails
-          </Link>
         </div>
       </div>
     </div>

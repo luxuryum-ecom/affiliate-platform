@@ -10,6 +10,7 @@ import { isValidMediaUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
 import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportTariff, TariffMode, ImportShippingMode } from '@/types/database'
 import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/app/actions/tariffs'
+import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,10 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
   const [affiliateEnabled, setAffiliateEnabled] = useState<boolean>(
     product?.affiliate_enabled ?? true
   )
+
+  // ── Taxonomy (migration 039) ────────────────────────────────────────────────
+  const [productCategory, setProductCategory] = useState<string>(product?.category ?? '')
+  const subcategoryOptions = getSubcategories(productCategory)
 
   // ── Import-on-demand fields (migrations 019 + 020 + 022) ────────────────
   const [importOriginCountry, setImportOriginCountry] = useState<string>(
@@ -361,6 +366,52 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
             className={INPUT}
             placeholder="Ex : Crème hydratante Argan"
           />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="category" className={LABEL}>Catégorie</label>
+            <select
+              id="category"
+              name="category"
+              disabled={isPending}
+              value={productCategory}
+              onChange={(e) => setProductCategory(e.target.value)}
+              className={INPUT}
+            >
+              <option value="">Sélectionner une catégorie...</option>
+              {PRODUCT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="subcategory" className={LABEL}>Sous-catégorie</label>
+            {subcategoryOptions.length > 0 ? (
+              <select
+                id="subcategory"
+                name="subcategory"
+                disabled={isPending}
+                defaultValue={product?.subcategory ?? ''}
+                className={INPUT}
+              >
+                <option value="">Sélectionner...</option>
+                {subcategoryOptions.map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="subcategory"
+                name="subcategory"
+                type="text"
+                disabled={isPending || !productCategory}
+                defaultValue={product?.subcategory ?? ''}
+                className={INPUT}
+                placeholder={productCategory ? 'Précisez...' : 'Sélectionnez une catégorie'}
+              />
+            )}
+          </div>
         </div>
 
         <div>

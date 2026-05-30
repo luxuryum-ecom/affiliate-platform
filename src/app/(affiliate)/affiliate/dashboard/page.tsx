@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { formatConversionRate, formatReturnRate } from '@/lib/order-analytics'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Profile, Commission } from '@/types/database'
 
 export const metadata = {
@@ -101,7 +102,11 @@ export default async function AffiliateDashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-semibold text-gray-900 text-sm">Espace Affilié</span>
+          <div className="flex items-center gap-3">
+            <MozounaLogo size="md" />
+            <span className="hidden sm:block text-gray-300">|</span>
+            <span className="hidden sm:block text-sm font-medium text-gray-600">Espace Affilié</span>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>

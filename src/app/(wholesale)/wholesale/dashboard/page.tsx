@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Profile, WholesaleOrder } from '@/types/database'
 
 type QuoteCountRow = { status: string }
@@ -78,7 +79,11 @@ export default async function WholesaleDashboardPage() {
       {/* Navbar */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-semibold text-gray-900 text-sm">Espace Grossiste</span>
+          <div className="flex items-center gap-3">
+            <MozounaLogo size="md" />
+            <span className="hidden sm:block text-gray-300">|</span>
+            <span className="hidden sm:block text-sm font-medium text-gray-600">Espace Grossiste</span>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>

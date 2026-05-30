@@ -32,24 +32,15 @@ export type SupplierTargetBuyerType = 'wholesaler' | 'both'
  */
 export type SupplierType = 'morocco' | 'international'
 
-/** Predefined supplier product categories. */
+/** Predefined supplier product parent categories (mirrors CATEGORY_TAXONOMY in lib/taxonomy.ts). */
 export const SUPPLIER_CATEGORIES = [
-  'Textile Homme',
-  'Textile Femme',
-  'Textile Enfant',
-  'Sous-vêtements',
-  'Burkini',
-  'Hijab',
-  'Sportswear',
-  'Tissus vrac',
-  'Maille vrac',
+  'Textile',
+  'Matières premières',
   'Chaussures',
-  'Accessoires',
-  'Cosmétique',
-  'Produits alimentaires',
-  'Papier hygiénique',
+  'Cosmétique & hygiène',
+  'Alimentaire',
+  'Maison & packaging',
   'Artisanat',
-  'Électronique',
   'Autres',
 ] as const
 
@@ -275,6 +266,12 @@ export interface Product {
    * Also determines the unit for custom transport costs.
    */
   import_shipping_mode: ImportShippingMode | null
+
+  // ── Taxonomy (migration 039) ──────────────────────────────────────────────
+  /** Parent category from CATEGORY_TAXONOMY. Empty string if not set. */
+  category: string
+  /** Subcategory within the parent category. Empty string if not set. */
+  subcategory: string
 
   created_at: string
   updated_at: string
@@ -658,6 +655,8 @@ export interface SupplierProduct {
   // Supplier submission fields
   product_name: string
   category: string
+  /** Structured subcategory from taxonomy (migration 039). Backfilled from niche. */
+  subcategory: string
   niche: string
   description: string | null
   photos: string[]
@@ -1155,7 +1154,10 @@ export type Database = {
       >
       products: TableDef<
         Product,
-        Omit<Product, 'id' | 'created_at'>,
+        Omit<Product, 'id' | 'created_at' | 'category' | 'subcategory'> & {
+          category?: string
+          subcategory?: string
+        },
         Partial<Product>
       >
       orders: TableDef<
@@ -1295,7 +1297,7 @@ export type Database = {
       >
       supplier_products: TableDef<
         SupplierProduct,
-        Omit<SupplierProduct, 'id' | 'created_at' | 'updated_at' | 'approval_status' | 'admin_notes' | 'approved_by' | 'approved_at' | 'rejected_at' | 'archived_at' | 'public_name' | 'public_description' | 'platform_margin_type' | 'platform_margin_value' | 'supplier_type'> & {
+        Omit<SupplierProduct, 'id' | 'created_at' | 'updated_at' | 'approval_status' | 'admin_notes' | 'approved_by' | 'approved_at' | 'rejected_at' | 'archived_at' | 'public_name' | 'public_description' | 'platform_margin_type' | 'platform_margin_value' | 'supplier_type' | 'subcategory'> & {
           supplier_type?: SupplierType
           approval_status?: SupplierProductStatus
           admin_notes?: string | null
@@ -1307,6 +1309,7 @@ export type Database = {
           public_description?: string | null
           platform_margin_type?: PlatformMarginType
           platform_margin_value?: number | null
+          subcategory?: string
         },
         Partial<SupplierProduct>
       >
