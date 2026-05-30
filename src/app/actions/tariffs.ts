@@ -3,22 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './_guards'
-import type { ImportTariff, TariffCountry, ImportShippingMode, ImportPriceUnit } from '@/types/database'
+import type { ImportTariff, TariffCountry, ImportShippingMode } from '@/types/database'
+import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
 
 export type TariffFormState = { error: string | null }
-
-// ─── Shipping mode helpers ────────────────────────────────────────────────────
-
-export const SHIPPING_MODE_LABELS: Record<ImportShippingMode, string> = {
-  air_door_to_door_kg: 'Aérien door-to-door / kg',
-  sea_textile_kg:      'Maritime textile / kg',
-  sea_volume_cbm:      'Maritime volume carton / CBM',
-}
-
-/** Unit is deterministic from shipping mode — never ask the user. */
-export function unitFromShippingMode(mode: ImportShippingMode): ImportPriceUnit {
-  return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
-}
 
 // ─── Fetch all tariffs (admin sees all; others see active via RLS) ─────────────
 

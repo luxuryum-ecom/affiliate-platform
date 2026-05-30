@@ -5,10 +5,9 @@ import {
   upsertTariff,
   toggleTariffActive,
   deleteTariff,
-  SHIPPING_MODE_LABELS,
-  unitFromShippingMode,
   type TariffFormState,
 } from '@/app/actions/tariffs'
+import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
 import type { ImportTariff, TariffCountry, ImportShippingMode } from '@/types/database'
 
 const INPUT =

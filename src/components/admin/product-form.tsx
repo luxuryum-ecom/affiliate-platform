@@ -9,7 +9,7 @@ import { uploadProductImage, formatProductImageUploadError } from '@/lib/product
 import { isValidMediaUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
 import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportTariff, TariffMode, ImportShippingMode } from '@/types/database'
-import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/app/actions/tariffs'
+import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
 import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
 
 // ─── Types ────────────────────────────────────────────────────────────────────

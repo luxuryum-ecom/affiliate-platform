@@ -7,7 +7,8 @@ import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
 import { QuoteRequestForm } from '@/components/wholesale/quote-request-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
-import { getActiveTariff, SHIPPING_MODE_LABELS } from '@/app/actions/tariffs'
+import { getActiveTariff } from '@/app/actions/tariffs'
+import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
 import type { Product, ImportTariff } from '@/types/database'
 
 interface Params {

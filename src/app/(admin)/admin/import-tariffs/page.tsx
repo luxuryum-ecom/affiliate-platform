@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { getTariffs, SHIPPING_MODE_LABELS } from '@/app/actions/tariffs'
+import { getTariffs } from '@/app/actions/tariffs'
+import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
 import { AddTariffForm, TariffRowActions } from '@/components/admin/tariff-row-actions'
 import type { ImportTariff } from '@/types/database'
 
