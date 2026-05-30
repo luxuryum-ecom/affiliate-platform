@@ -213,6 +213,22 @@ export default async function WholesaleDashboardPage() {
           </div>
         </div>
 
+        {/* Sample requests */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Demandes d&apos;échantillons</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Demandez des photos, vidéos ou échantillons physiques depuis la marketplace.
+            </p>
+          </div>
+          <Link
+            href="/wholesale/samples"
+            className="text-xs px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors whitespace-nowrap"
+          >
+            Mes demandes →
+          </Link>
+        </div>
+
         {/* Intelligent Sourcing */}
         <div className="bg-white rounded-xl border border-indigo-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>

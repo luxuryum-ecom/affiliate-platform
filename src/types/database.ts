@@ -797,6 +797,67 @@ export interface SupplierPayoutHistory {
   changed_at: string
 }
 
+// ─── SUPPLIER CATALOGS & SAMPLE REQUESTS (migration 036) ─────────────────────
+
+export type CatalogFileType = 'pdf' | 'xlsx' | 'zip'
+export type AttachmentType = 'pdf_datasheet' | 'pdf_catalog' | 'image' | 'video'
+export type AttachmentAdminStatus = 'pending' | 'approved' | 'rejected'
+export type SampleRequestType = 'sample' | 'photos' | 'video' | 'technical_sheet'
+export type SampleRequestStatus = 'pending' | 'supplier_reply' | 'approved' | 'rejected' | 'shipped' | 'delivered'
+
+/** Company-level catalog uploaded by supplier (PDF/XLSX/ZIP). Admin-only + supplier-own. */
+export interface SupplierCatalog {
+  id: string
+  supplier_id: string
+  filename: string
+  storage_path: string
+  file_type: CatalogFileType
+  file_size: number | null
+  admin_status: AttachmentAdminStatus
+  admin_notes: string | null
+  created_at: string
+}
+
+/** Per-product attachment (datasheet, catalog, image, video). Wholesaler sees approved only. */
+export interface SupplierProductAttachment {
+  id: string
+  supplier_product_id: string
+  filename: string
+  storage_path: string
+  attachment_type: AttachmentType
+  file_size: number | null
+  admin_status: AttachmentAdminStatus
+  admin_notes: string | null
+  created_at: string
+}
+
+/** Sample/photo/video/tech-sheet request from a wholesaler. */
+export interface SampleRequest {
+  id: string
+  wholesaler_id: string
+  supplier_product_id: string
+  request_type: SampleRequestType
+  message: string | null
+  status: SampleRequestStatus
+  admin_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** File uploaded by supplier (or admin) in response to a sample request. */
+export interface SampleRequestFile {
+  id: string
+  sample_request_id: string
+  uploader_role: 'supplier' | 'admin'
+  filename: string
+  storage_path: string
+  file_type: 'image' | 'video' | 'pdf'
+  file_size: number | null
+  admin_approved: boolean
+  admin_notes: string | null
+  created_at: string
+}
+
 // ─── INTELLIGENT SOURCING (migration 034) ────────────────────────────────────
 
 export type SourcingRequestStatus = 'pending' | 'matching' | 'matched' | 'quoted' | 'closed'
@@ -1137,6 +1198,38 @@ export type Database = {
           report?: BulkImportReportRow[]
         },
         Partial<SupplierBulkImport>
+      >
+      supplier_catalogs: TableDef<
+        SupplierCatalog,
+        Omit<SupplierCatalog, 'id' | 'created_at' | 'admin_status' | 'admin_notes'> & {
+          admin_status?: AttachmentAdminStatus
+          admin_notes?: string | null
+        },
+        Partial<SupplierCatalog>
+      >
+      supplier_product_attachments: TableDef<
+        SupplierProductAttachment,
+        Omit<SupplierProductAttachment, 'id' | 'created_at' | 'admin_status' | 'admin_notes'> & {
+          admin_status?: AttachmentAdminStatus
+          admin_notes?: string | null
+        },
+        Partial<SupplierProductAttachment>
+      >
+      sample_requests: TableDef<
+        SampleRequest,
+        Omit<SampleRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes'> & {
+          status?: SampleRequestStatus
+          admin_notes?: string | null
+        },
+        Partial<SampleRequest>
+      >
+      sample_request_files: TableDef<
+        SampleRequestFile,
+        Omit<SampleRequestFile, 'id' | 'created_at' | 'admin_approved' | 'admin_notes'> & {
+          admin_approved?: boolean
+          admin_notes?: string | null
+        },
+        Partial<SampleRequestFile>
       >
     }
     Views: Record<never, never>

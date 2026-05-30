@@ -248,6 +248,12 @@ export default async function AdminDashboardPage() {
                 badge: pendingSourcingRequests ?? 0,
                 href: '/admin/sourcing',
               },
+              {
+                title: 'Médiation échantillons',
+                description: 'Valider fichiers, catalogues et demandes d\'échantillons.',
+                badge: null,
+                href: '/admin/samples',
+              },
             ].map((action) => (
               <div
                 key={action.title}

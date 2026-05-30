@@ -867,6 +867,104 @@ export type Database = {
           },
         ]
       }
+      sample_request_files: {
+        Row: {
+          admin_approved: boolean
+          admin_notes: string | null
+          created_at: string
+          file_size: number | null
+          file_type: string
+          filename: string
+          id: string
+          sample_request_id: string
+          storage_path: string
+          uploader_role: string
+        }
+        Insert: {
+          admin_approved?: boolean
+          admin_notes?: string | null
+          created_at?: string
+          file_size?: number | null
+          file_type: string
+          filename: string
+          id?: string
+          sample_request_id: string
+          storage_path: string
+          uploader_role: string
+        }
+        Update: {
+          admin_approved?: boolean
+          admin_notes?: string | null
+          created_at?: string
+          file_size?: number | null
+          file_type?: string
+          filename?: string
+          id?: string
+          sample_request_id?: string
+          storage_path?: string
+          uploader_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_request_files_sample_request_id_fkey"
+            columns: ["sample_request_id"]
+            isOneToOne: false
+            referencedRelation: "sample_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sample_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          message: string | null
+          request_type: string
+          status: string
+          supplier_product_id: string
+          updated_at: string
+          wholesaler_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          request_type: string
+          status?: string
+          supplier_product_id: string
+          updated_at?: string
+          wholesaler_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          request_type?: string
+          status?: string
+          supplier_product_id?: string
+          updated_at?: string
+          wholesaler_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_requests_wholesaler_id_fkey"
+            columns: ["wholesaler_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sourcing_requests: {
         Row: {
           admin_notes: string | null
@@ -990,6 +1088,50 @@ export type Database = {
           },
         ]
       }
+      supplier_catalogs: {
+        Row: {
+          admin_notes: string | null
+          admin_status: string
+          created_at: string
+          file_size: number | null
+          file_type: string
+          filename: string
+          id: string
+          storage_path: string
+          supplier_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          admin_status?: string
+          created_at?: string
+          file_size?: number | null
+          file_type: string
+          filename: string
+          id?: string
+          storage_path: string
+          supplier_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          admin_status?: string
+          created_at?: string
+          file_size?: number | null
+          file_type?: string
+          filename?: string
+          id?: string
+          storage_path?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_catalogs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_issues: {
         Row: {
           created_at: string
@@ -1076,6 +1218,50 @@ export type Database = {
             columns: ["supplier_quote_request_id"]
             isOneToOne: false
             referencedRelation: "supplier_quote_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_product_attachments: {
+        Row: {
+          admin_notes: string | null
+          admin_status: string
+          attachment_type: string
+          created_at: string
+          file_size: number | null
+          filename: string
+          id: string
+          storage_path: string
+          supplier_product_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          admin_status?: string
+          attachment_type: string
+          created_at?: string
+          file_size?: number | null
+          filename: string
+          id?: string
+          storage_path: string
+          supplier_product_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          admin_status?: string
+          attachment_type?: string
+          created_at?: string
+          file_size?: number | null
+          filename?: string
+          id?: string
+          storage_path?: string
+          supplier_product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_product_attachments_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
             referencedColumns: ["id"]
           },
         ]

@@ -46,6 +46,29 @@ export default async function SupplierDashboardPage() {
       .order('created_at', { ascending: false }),
   ])
 
+  // Sample request counters (supplier sees requests for their products, not buyer identity)
+  const { data: ownProductIds } = await supabase
+    .from('supplier_products')
+    .select('id')
+    .eq('supplier_id', user.id)
+  const productIdsForSamples = (ownProductIds ?? []).map((p: { id: string }) => p.id)
+
+  let samplePendingCount = 0
+  let sampleTotalCount = 0
+  if (productIdsForSamples.length > 0) {
+    const { count: total } = await supabase
+      .from('sample_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('supplier_product_id', productIdsForSamples)
+    const { count: pending2 } = await supabase
+      .from('sample_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('supplier_product_id', productIdsForSamples)
+      .eq('status', 'pending')
+    sampleTotalCount = total ?? 0
+    samplePendingCount = pending2 ?? 0
+  }
+
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
   const products = (productsResult.data ?? []) as Pick<SupplierProduct, 'id' | 'product_name' | 'approval_status' | 'created_at'>[]
 
@@ -126,6 +149,20 @@ export default async function SupplierDashboardPage() {
           </div>
         </div>
 
+        {/* Sample request counters */}
+        {sampleTotalCount > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">Demandes d&apos;échantillons</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{sampleTotalCount}</p>
+            </div>
+            <div className={`rounded-xl border p-4 ${samplePendingCount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
+              <p className="text-xs text-gray-500">En attente de réponse</p>
+              <p className={`text-2xl font-bold mt-1 ${samplePendingCount > 0 ? 'text-amber-700' : 'text-gray-900'}`}>{samplePendingCount}</p>
+            </div>
+          </div>
+        )}
+
         {/* Payout summary (only if there are approved products with quotes) */}
         {safeQuotes.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
@@ -180,6 +217,26 @@ export default async function SupplierDashboardPage() {
             <div>
               <p className="font-medium text-sm text-gray-900">Analytiques</p>
               <p className="text-xs text-gray-500 mt-0.5">Performance de vos produits</p>
+            </div>
+          </Link>
+          <Link
+            href="/supplier/catalogs"
+            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+          >
+            <span className="text-2xl">📒</span>
+            <div>
+              <p className="font-medium text-sm text-gray-900">Mes catalogues</p>
+              <p className="text-xs text-gray-500 mt-0.5">Uploader PDF, XLSX ou ZIP</p>
+            </div>
+          </Link>
+          <Link
+            href="/supplier/samples"
+            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+          >
+            <span className="text-2xl">🧪</span>
+            <div>
+              <p className="font-medium text-sm text-gray-900">Demandes d&apos;échantillons</p>
+              <p className="text-xs text-gray-500 mt-0.5">Répondre aux demandes grossistes</p>
             </div>
           </Link>
         </div>

@@ -37,7 +37,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     supabase
       .from('supplier_products')
       .select(
-        'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at'
+        'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status)'
       )
       .eq('approval_status', 'approved')
       .is('archived_at', null)
@@ -51,6 +51,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     stock_quantity: number | null
     lead_time_days: number | null
     export_countries: string[]
+    supplier_product_attachments: { attachment_type: string; admin_status: string }[]
   }
   let products = (productsResult.data ?? []) as MarketplaceProduct[]
 
@@ -327,8 +328,15 @@ function MarketplaceProductCard({
     unit?: string
     stock_quantity?: number | null
     lead_time_days?: number | null
+    supplier_product_attachments?: { attachment_type: string; admin_status: string }[]
   }
 }) {
+  const approvedAttachments = (product.supplier_product_attachments ?? []).filter(
+    (a) => a.admin_status === 'approved'
+  )
+  const hasCatalog = approvedAttachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
+  const hasVideo   = approvedAttachments.some((a) => a.attachment_type === 'video')
+  const hasSample  = product.availability_type === 'local_stock' || hasCatalog
   const displayName = product.public_name || product.product_name
   const displayDescription = product.public_description || product.description
   const isMorocco = product.supplier_type === 'morocco'
@@ -375,6 +383,15 @@ function MarketplaceProductCard({
             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
               {product.category}
             </span>
+          )}
+          {hasCatalog && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">📒 Catalogue</span>
+          )}
+          {hasVideo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">🎥 Vidéo</span>
+          )}
+          {hasSample && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">🧪 Échantillon</span>
           )}
         </div>
 
@@ -435,12 +452,20 @@ function MarketplaceProductCard({
           </div>
         </div>
 
-        {/* Quote form */}
-        <div className="mt-2">
-          <MarketplaceQuoteForm
-            supplierProductId={product.id}
-            minQuantity={product.min_quantity}
-          />
+        {/* CTA row */}
+        <div className="mt-2 flex gap-2">
+          <div className="flex-1">
+            <MarketplaceQuoteForm
+              supplierProductId={product.id}
+              minQuantity={product.min_quantity}
+            />
+          </div>
+          <Link
+            href={`/wholesale/marketplace/${product.id}`}
+            className="shrink-0 text-xs px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors self-center"
+          >
+            Détails
+          </Link>
         </div>
       </div>
     </div>
