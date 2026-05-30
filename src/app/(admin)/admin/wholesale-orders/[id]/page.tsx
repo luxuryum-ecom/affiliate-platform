@@ -7,7 +7,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
 import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
-import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus } from '@/types/database'
+import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, QuoteRequest } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -26,6 +26,7 @@ type OrderDetail = WholesaleOrder & {
   agent: Pick<Profile, 'id' | 'full_name'> | null
   items: OrderItemWithProduct[]
 }
+type LinkedQuote = Pick<QuoteRequest, 'id'>
 
 export default async function AdminWholesaleOrderDetailPage({ params }: Params) {
   const { id } = await params
@@ -49,6 +50,17 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
   const order = orderRes.data as unknown as OrderDetail | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
+
+  // Fetch linked quote if this order was created from a quote
+  let linkedQuote: LinkedQuote | null = null
+  if (order?.quote_request_id) {
+    const { data } = await supabase
+      .from('quote_requests')
+      .select('id')
+      .eq('id', order.quote_request_id)
+      .maybeSingle()
+    linkedQuote = data as LinkedQuote | null
+  }
 
   if (!order) notFound()
 
@@ -156,6 +168,20 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 currentStatus={order.status as WholesaleOrderStatus}
               />
             </div>
+
+            {/* Linked quote */}
+            {linkedQuote && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-400 mb-1">Créée depuis un devis</p>
+                <Link
+                  href={`/admin/quote-requests/${linkedQuote.id}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+                >
+                  Devis #{linkedQuote.id.slice(0, 8).toUpperCase()} →
+                </Link>
+              </div>
+            )}
+
             {order.agent && (
               <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <p className="text-xs text-gray-400">Agent assigné</p>

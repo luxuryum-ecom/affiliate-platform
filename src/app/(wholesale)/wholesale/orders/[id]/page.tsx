@@ -261,6 +261,19 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
               <OrderTimeline steps={timeline} />
             </div>
 
+            {/* Link back to source quote */}
+            {order.quote_request_id && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-400 mb-1">Créée depuis un devis</p>
+                <Link
+                  href={`/wholesale/quote-requests/${order.quote_request_id}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+                >
+                  Devis #{order.quote_request_id.slice(0, 8).toUpperCase()} →
+                </Link>
+              </div>
+            )}
+
             {/* Payment reminder */}
             {!['delivered', 'cancelled'].includes(order.status) && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">

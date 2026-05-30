@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
-import type { QuoteRequest, QuoteRequestStatus, Product } from '@/types/database'
+import type { QuoteRequest, QuoteRequestStatus, Product, WholesaleOrder } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -49,6 +49,18 @@ export default async function WholesaleQuoteRequestDetailPage({ params }: Params
   const req = data as unknown as ReqRow | null
   if (!req) notFound()
 
+  // Fetch linked wholesale order (only relevant when converted_to_order)
+  let linkedOrder: Pick<WholesaleOrder, 'id'> | null = null
+  if (req.status === 'converted_to_order') {
+    const { data: orderRow } = await supabase
+      .from('wholesale_orders')
+      .select('id')
+      .eq('quote_request_id', id)
+      .eq('buyer_id', user.id)
+      .maybeSingle()
+    linkedOrder = orderRow as Pick<WholesaleOrder, 'id'> | null
+  }
+
   const badge = STATUS_BADGE[req.status] ?? STATUS_BADGE.new
 
   return (
@@ -89,6 +101,22 @@ export default async function WholesaleQuoteRequestDetailPage({ params }: Params
             })}
           </p>
         </div>
+
+        {/* Commande disponible — shown when quote was converted */}
+        {req.status === 'converted_to_order' && linkedOrder && (
+          <div className="bg-green-50 rounded-xl border border-green-200 p-5">
+            <p className="text-xs font-semibold text-green-800 mb-2">Commande disponible</p>
+            <p className="text-xs text-green-700 mb-3">
+              Votre devis a été accepté et une commande grossiste a été créée.
+            </p>
+            <Link
+              href={`/wholesale/orders/${linkedOrder.id}`}
+              className="inline-block text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors px-4 py-2 rounded-lg"
+            >
+              Voir ma commande →
+            </Link>
+          </div>
+        )}
 
         {/* Request details */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">

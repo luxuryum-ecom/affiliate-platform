@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { QuoteRequestStatusForm } from '@/components/admin/quote-request-status-form'
-import type { QuoteRequestWithDetails, QuoteRequestStatus } from '@/types/database'
+import { ConvertQuoteButton } from '@/components/admin/convert-quote-button'
+import type { QuoteRequestWithDetails, QuoteRequestStatus, WholesaleOrder } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -25,15 +26,23 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
   const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = adminProfileRes.data as { full_name: string } | null
 
-  const { data } = await supabase
-    .from('quote_requests')
-    .select('*, buyer:profiles!buyer_id(id,full_name,phone,company_name), product:products!product_id(id,name,origin_country,availability_type)')
-    .eq('id', id)
-    .single()
+  const [quoteRes, linkedOrderRes] = await Promise.all([
+    supabase
+      .from('quote_requests')
+      .select('*, buyer:profiles!buyer_id(id,full_name,phone,company_name), product:products!product_id(id,name,origin_country,availability_type)')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('wholesale_orders')
+      .select('id')
+      .eq('quote_request_id', id)
+      .maybeSingle(),
+  ])
 
-  const req = data as unknown as QuoteRequestWithDetails | null
+  const req = quoteRes.data as unknown as QuoteRequestWithDetails | null
   if (!req) notFound()
 
+  const linkedOrder = linkedOrderRes.data as Pick<WholesaleOrder, 'id'> | null
   const badge = STATUS_BADGE[req.status] ?? STATUS_BADGE.new
 
   return (
@@ -69,6 +78,14 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-mono text-gray-400">#{id.slice(0, 8).toUpperCase()}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                {linkedOrder && (
+                  <Link
+                    href={`/admin/wholesale-orders/${linkedOrder.id}`}
+                    className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  >
+                    → Commande #{linkedOrder.id.slice(0, 8).toUpperCase()}
+                  </Link>
+                )}
               </div>
               <h1 className="text-base font-semibold text-gray-900 mb-1">
                 {req.buyer?.company_name ?? req.buyer?.full_name}
@@ -140,6 +157,32 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
                 currentNotesPublic={req.admin_notes_public}
               />
             </div>
+
+            {/* Convert to order — only when approved and not yet converted */}
+            {req.status === 'approved' && !linkedOrder && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Commande grossiste
+                </h2>
+                <p className="text-xs text-gray-400 mb-4">
+                  Crée un brouillon de commande à partir de ce devis approuvé.
+                </p>
+                <ConvertQuoteButton requestId={id} />
+              </div>
+            )}
+
+            {/* Converted — show link to order */}
+            {req.status === 'converted_to_order' && linkedOrder && (
+              <div className="bg-green-50 rounded-xl border border-green-200 p-5">
+                <p className="text-xs font-semibold text-green-800 mb-2">Commande créée</p>
+                <Link
+                  href={`/admin/wholesale-orders/${linkedOrder.id}`}
+                  className="text-sm text-green-700 hover:text-green-900 font-medium underline underline-offset-2"
+                >
+                  Commande #{linkedOrder.id.slice(0, 8).toUpperCase()} →
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </main>

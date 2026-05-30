@@ -355,6 +355,10 @@ export interface WholesaleOrder {
   /** Billing address at invoice request time. */
   invoice_billing_address: string | null
 
+  // ── Quote request link (added migration 024) ──────────────────────────────
+  /** Set when this order was created from a quote request conversion. */
+  quote_request_id: string | null
+
   created_at: string
   updated_at: string
 }
@@ -599,7 +603,10 @@ export type Database = {
       >
       wholesale_orders: TableDef<
         WholesaleOrder,
-        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested'> & { invoice_requested?: boolean },
+        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id'> & {
+          invoice_requested?: boolean
+          quote_request_id?: string | null
+        },
         Partial<WholesaleOrder>
       >
       wholesale_order_items: TableDef<
