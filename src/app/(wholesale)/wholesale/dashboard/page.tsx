@@ -152,6 +152,22 @@ export default async function WholesaleDashboardPage() {
           </Link>
         </div>
 
+        {/* Quote requests */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Demandes de devis</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Consultez vos demandes de devis pour les produits import.
+            </p>
+          </div>
+          <Link
+            href="/wholesale/quote-requests"
+            className="text-xs px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors whitespace-nowrap"
+          >
+            Mes devis →
+          </Link>
+        </div>
+
         {/* Account / billing */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>

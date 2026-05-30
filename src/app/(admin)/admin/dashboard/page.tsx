@@ -31,6 +31,7 @@ export default async function AdminDashboardPage() {
     { count: totalOrders },
     { count: todayOrders },
     { count: pendingWholesaleOrders },
+    { count: newQuoteRequests },
     pendingCommissionsRes,
   ] = await Promise.all([
     supabase
@@ -56,6 +57,10 @@ export default async function AdminDashboardPage() {
       .from('wholesale_orders')
       .select('*', { count: 'exact', head: true })
       .in('status', ['pending', 'confirmed', 'sourcing']),
+    supabase
+      .from('quote_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['new', 'studying', 'quoted', 'negotiating']),
     supabase
       .from('commissions')
       .select('amount')
@@ -202,6 +207,12 @@ export default async function AdminDashboardPage() {
                 description: "Enregistrer les virements et suivre l'historique des paiements.",
                 badge: null,
                 href: '/admin/payouts',
+              },
+              {
+                title: 'Demandes de devis',
+                description: 'Devis import-on-demand des grossistes.',
+                badge: newQuoteRequests ?? 0,
+                href: '/admin/quote-requests',
               },
               {
                 title: 'Analytiques',

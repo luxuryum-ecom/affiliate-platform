@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
+import { QuoteRequestForm } from '@/components/wholesale/quote-request-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getActiveTariff, SHIPPING_MODE_LABELS } from '@/app/actions/tariffs'
@@ -163,14 +164,18 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               <span className="font-medium text-gray-700">{formatMAD(product.sell_price)}</span>
             </div>
 
-            {/* Add to cart form (client component) */}
-            <AddToCartForm
-              productId={product.id}
-              sellPrice={product.sell_price}
-              tiers={product.wholesale_tiers}
-              minQty={product.wholesale_min_qty}
-              stockCount={product.stock_count}
-            />
+            {/* import_on_demand: quote request form only */}
+            {product.availability_type === 'import_on_demand' ? (
+              <QuoteRequestForm productId={product.id} productName={product.name} />
+            ) : (
+              <AddToCartForm
+                productId={product.id}
+                sellPrice={product.sell_price}
+                tiers={product.wholesale_tiers}
+                minQty={product.wholesale_min_qty}
+                stockCount={product.stock_count}
+              />
+            )}
           </div>
         </div>
       </main>

@@ -482,6 +482,35 @@ export interface AffiliateClick {
   created_at: string
 }
 
+/** Status pipeline for wholesale quote requests. */
+export type QuoteRequestStatus =
+  | 'new'
+  | 'studying'
+  | 'quoted'
+  | 'negotiating'
+  | 'approved'
+  | 'rejected'
+  | 'converted_to_order'
+
+export interface QuoteRequest {
+  id: string
+  buyer_id: string
+  product_id: string
+  quantity_requested: number
+  destination_country: string
+  destination_city: string | null
+  preferred_shipping_mode: string | null
+  colors_or_variants: string | null
+  sizes: string | null
+  buyer_notes: string | null
+  whatsapp_number: string
+  status: QuoteRequestStatus
+  admin_notes: string | null
+  admin_notes_public: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type OrderSignalType = 'fraud' | 'duplicate' | 'spam' | 'conversion'
 
 export interface OrderSignal {
@@ -518,6 +547,11 @@ export interface WholesaleOrderWithItems extends WholesaleOrder {
 
 export interface WholesaleCartItemWithProduct extends WholesaleCartItem {
   product: Product
+}
+
+export interface QuoteRequestWithDetails extends QuoteRequest {
+  buyer: Pick<Profile, 'id' | 'full_name' | 'phone' | 'company_name'>
+  product: Pick<Product, 'id' | 'name' | 'origin_country' | 'availability_type'>
 }
 
 export interface CommissionWithOrder extends Commission {
@@ -610,6 +644,15 @@ export type Database = {
           price_mad?: number | null
         },
         Partial<ImportTariff>
+      >
+      quote_requests: TableDef<
+        QuoteRequest,
+        Omit<QuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'admin_notes_public'> & {
+          status?: QuoteRequestStatus
+          admin_notes?: string | null
+          admin_notes_public?: boolean
+        },
+        Partial<QuoteRequest>
       >
     }
     Views: Record<never, never>

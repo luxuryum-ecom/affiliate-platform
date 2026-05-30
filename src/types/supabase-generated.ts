@@ -101,6 +101,51 @@ export type Database = {
           },
         ]
       }
+      cities: {
+        Row: {
+          courier_code: string | null
+          courier_fee_mad: number | null
+          courier_last_synced_at: string | null
+          courier_metadata: Json
+          courier_sync_enabled: boolean
+          courier_zone: string | null
+          created_at: string
+          delivery_fee_mad: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          courier_code?: string | null
+          courier_fee_mad?: number | null
+          courier_last_synced_at?: string | null
+          courier_metadata?: Json
+          courier_sync_enabled?: boolean
+          courier_zone?: string | null
+          created_at?: string
+          delivery_fee_mad?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          courier_code?: string | null
+          courier_fee_mad?: number | null
+          courier_last_synced_at?: string | null
+          courier_metadata?: Json
+          courier_sync_enabled?: boolean
+          courier_zone?: string | null
+          created_at?: string
+          delivery_fee_mad?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commissions: {
         Row: {
           affiliate_id: string
@@ -109,6 +154,8 @@ export type Database = {
           id: string
           order_id: string
           paid_at: string | null
+          reversed: boolean
+          reversed_at: string | null
           status: string
         }
         Insert: {
@@ -118,6 +165,8 @@ export type Database = {
           id?: string
           order_id: string
           paid_at?: string | null
+          reversed?: boolean
+          reversed_at?: string | null
           status?: string
         }
         Update: {
@@ -127,6 +176,8 @@ export type Database = {
           id?: string
           order_id?: string
           paid_at?: string | null
+          reversed?: boolean
+          reversed_at?: string | null
           status?: string
         }
         Relationships: [
@@ -145,6 +196,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      import_tariffs: {
+        Row: {
+          active: boolean
+          country: string
+          created_at: string
+          delivery_days: number | null
+          id: string
+          notes: string | null
+          price_mad: number
+          pricing_mode: string
+          shipping_mode: string
+          transport_customs_price_mad: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          country: string
+          created_at?: string
+          delivery_days?: number | null
+          id?: string
+          notes?: string | null
+          price_mad: number
+          pricing_mode: string
+          shipping_mode: string
+          transport_customs_price_mad: number
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          country?: string
+          created_at?: string
+          delivery_days?: number | null
+          id?: string
+          notes?: string | null
+          price_mad?: number
+          pricing_mode?: string
+          shipping_mode?: string
+          transport_customs_price_mad?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      logistics_settings: {
+        Row: {
+          api_config: Json
+          casablanca_delivery_fee_mad: number
+          default_delivery_fee_mad: number
+          id: string
+          return_fee_mad: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_config?: Json
+          casablanca_delivery_fee_mad?: number
+          default_delivery_fee_mad?: number
+          id?: string
+          return_fee_mad?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_config?: Json
+          casablanca_delivery_fee_mad?: number
+          default_delivery_fee_mad?: number
+          id?: string
+          return_fee_mad?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       order_proofs: {
         Row: {
@@ -251,6 +377,7 @@ export type Database = {
           affiliate_commission_mad_snapshot: number | null
           affiliate_id: string | null
           attribution_click_id: string | null
+          cancelled_at: string | null
           cod_expected: number | null
           cod_received: number | null
           cod_transfer_received_at: string | null
@@ -269,10 +396,12 @@ export type Database = {
           fraud_score: number | null
           id: string
           notes: string | null
+          order_source: string | null
           packaging_fee_snapshot: number | null
           product_id: string
           product_price_snapshot: number | null
           quantity: number
+          return_fee_snapshot: number | null
           return_reason: string | null
           returned_at: string | null
           shipped_at: string | null
@@ -287,6 +416,7 @@ export type Database = {
           affiliate_commission_mad_snapshot?: number | null
           affiliate_id?: string | null
           attribution_click_id?: string | null
+          cancelled_at?: string | null
           cod_expected?: number | null
           cod_received?: number | null
           cod_transfer_received_at?: string | null
@@ -305,10 +435,12 @@ export type Database = {
           fraud_score?: number | null
           id?: string
           notes?: string | null
+          order_source?: string | null
           packaging_fee_snapshot?: number | null
           product_id: string
           product_price_snapshot?: number | null
           quantity?: number
+          return_fee_snapshot?: number | null
           return_reason?: string | null
           returned_at?: string | null
           shipped_at?: string | null
@@ -323,6 +455,7 @@ export type Database = {
           affiliate_commission_mad_snapshot?: number | null
           affiliate_id?: string | null
           attribution_click_id?: string | null
+          cancelled_at?: string | null
           cod_expected?: number | null
           cod_received?: number | null
           cod_transfer_received_at?: string | null
@@ -341,10 +474,12 @@ export type Database = {
           fraud_score?: number | null
           id?: string
           notes?: string | null
+          order_source?: string | null
           packaging_fee_snapshot?: number | null
           product_id?: string
           product_price_snapshot?: number | null
           quantity?: number
+          return_fee_snapshot?: number | null
           return_reason?: string | null
           returned_at?: string | null
           shipped_at?: string | null
@@ -432,17 +567,28 @@ export type Database = {
           commission_amount: number
           confirmation_fee_mad: number
           created_at: string
+          delivery_fee_config: Json
           delivery_fee_mad: number
           description: string | null
+          estimated_cost_mad: number | null
+          estimated_delivery_days: number | null
+          estimated_import_price_mad: number | null
           exchange_rate_to_mad: number
+          factory_cost_mad: number | null
           id: string
           images: string[]
+          import_notes: string | null
+          import_price_unit: string | null
+          import_pricing_mode: string | null
+          import_shipping_mode: string | null
           margin_percentage: number
           media: Json
           name: string
           origin_country: string | null
           origin_detail: string | null
           packaging_fee_mad: number
+          platform_margin_type: string
+          platform_margin_value: number | null
           purchase_currency: string
           purchase_price: number | null
           purchase_price_mad: number | null
@@ -454,6 +600,7 @@ export type Database = {
           submitted_via: string
           supplier_id: string | null
           supplier_name: string | null
+          tariff_mode: string
           updated_at: string
           wholesale_min_qty: number
           wholesale_tiers: Json
@@ -469,17 +616,28 @@ export type Database = {
           commission_amount?: number
           confirmation_fee_mad?: number
           created_at?: string
+          delivery_fee_config?: Json
           delivery_fee_mad?: number
           description?: string | null
+          estimated_cost_mad?: number | null
+          estimated_delivery_days?: number | null
+          estimated_import_price_mad?: number | null
           exchange_rate_to_mad?: number
+          factory_cost_mad?: number | null
           id?: string
           images?: string[]
+          import_notes?: string | null
+          import_price_unit?: string | null
+          import_pricing_mode?: string | null
+          import_shipping_mode?: string | null
           margin_percentage?: number
           media?: Json
           name: string
           origin_country?: string | null
           origin_detail?: string | null
           packaging_fee_mad?: number
+          platform_margin_type?: string
+          platform_margin_value?: number | null
           purchase_currency?: string
           purchase_price?: number | null
           purchase_price_mad?: number | null
@@ -491,6 +649,7 @@ export type Database = {
           submitted_via?: string
           supplier_id?: string | null
           supplier_name?: string | null
+          tariff_mode?: string
           updated_at?: string
           wholesale_min_qty?: number
           wholesale_tiers?: Json
@@ -506,17 +665,28 @@ export type Database = {
           commission_amount?: number
           confirmation_fee_mad?: number
           created_at?: string
+          delivery_fee_config?: Json
           delivery_fee_mad?: number
           description?: string | null
+          estimated_cost_mad?: number | null
+          estimated_delivery_days?: number | null
+          estimated_import_price_mad?: number | null
           exchange_rate_to_mad?: number
+          factory_cost_mad?: number | null
           id?: string
           images?: string[]
+          import_notes?: string | null
+          import_price_unit?: string | null
+          import_pricing_mode?: string | null
+          import_shipping_mode?: string | null
           margin_percentage?: number
           media?: Json
           name?: string
           origin_country?: string | null
           origin_detail?: string | null
           packaging_fee_mad?: number
+          platform_margin_type?: string
+          platform_margin_value?: number | null
           purchase_currency?: string
           purchase_price?: number | null
           purchase_price_mad?: number | null
@@ -528,6 +698,7 @@ export type Database = {
           submitted_via?: string
           supplier_id?: string | null
           supplier_name?: string | null
+          tariff_mode?: string
           updated_at?: string
           wholesale_min_qty?: number
           wholesale_tiers?: Json
@@ -552,35 +723,122 @@ export type Database = {
       profiles: {
         Row: {
           bank_account: string | null
+          billing_address: string | null
           city: string | null
+          company_name: string | null
           created_at: string
           full_name: string
+          ice: string | null
           id: string
           phone: string | null
+          registre_commerce: string | null
           role: string
           status: string
+          wholesale_access: boolean
         }
         Insert: {
           bank_account?: string | null
+          billing_address?: string | null
           city?: string | null
+          company_name?: string | null
           created_at?: string
           full_name?: string
+          ice?: string | null
           id: string
           phone?: string | null
+          registre_commerce?: string | null
           role: string
           status?: string
+          wholesale_access?: boolean
         }
         Update: {
           bank_account?: string | null
+          billing_address?: string | null
           city?: string | null
+          company_name?: string | null
           created_at?: string
           full_name?: string
+          ice?: string | null
           id?: string
           phone?: string | null
+          registre_commerce?: string | null
           role?: string
           status?: string
+          wholesale_access?: boolean
         }
         Relationships: []
+      }
+      quote_requests: {
+        Row: {
+          admin_notes: string | null
+          admin_notes_public: boolean
+          buyer_id: string
+          buyer_notes: string | null
+          colors_or_variants: string | null
+          created_at: string
+          destination_city: string | null
+          destination_country: string
+          id: string
+          preferred_shipping_mode: string | null
+          product_id: string
+          quantity_requested: number
+          sizes: string | null
+          status: string
+          updated_at: string
+          whatsapp_number: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          admin_notes_public?: boolean
+          buyer_id: string
+          buyer_notes?: string | null
+          colors_or_variants?: string | null
+          created_at?: string
+          destination_city?: string | null
+          destination_country: string
+          id?: string
+          preferred_shipping_mode?: string | null
+          product_id: string
+          quantity_requested: number
+          sizes?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_number: string
+        }
+        Update: {
+          admin_notes?: string | null
+          admin_notes_public?: boolean
+          buyer_id?: string
+          buyer_notes?: string | null
+          colors_or_variants?: string | null
+          created_at?: string
+          destination_city?: string | null
+          destination_country?: string
+          id?: string
+          preferred_shipping_mode?: string | null
+          product_id?: string
+          quantity_requested?: number
+          sizes?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wholesale_cart_items: {
         Row: {
@@ -678,8 +936,15 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           delivered_at: string | null
+          delivery_cost: number
           delivery_preference: string
           id: string
+          invoice_billing_address: string | null
+          invoice_company_name: string | null
+          invoice_ice: string | null
+          invoice_registre_commerce: string | null
+          invoice_requested: boolean
+          invoice_requested_at: string | null
           shipped_at: string | null
           sourcing_at: string | null
           status: string
@@ -697,8 +962,15 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_cost?: number
           delivery_preference: string
           id?: string
+          invoice_billing_address?: string | null
+          invoice_company_name?: string | null
+          invoice_ice?: string | null
+          invoice_registre_commerce?: string | null
+          invoice_requested?: boolean
+          invoice_requested_at?: string | null
           shipped_at?: string | null
           sourcing_at?: string | null
           status?: string
@@ -716,8 +988,15 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_cost?: number
           delivery_preference?: string
           id?: string
+          invoice_billing_address?: string | null
+          invoice_company_name?: string | null
+          invoice_ice?: string | null
+          invoice_registre_commerce?: string | null
+          invoice_requested?: boolean
+          invoice_requested_at?: string | null
           shipped_at?: string | null
           sourcing_at?: string | null
           status?: string
