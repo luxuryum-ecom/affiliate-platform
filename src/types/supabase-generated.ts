@@ -867,6 +867,234 @@ export type Database = {
           },
         ]
       }
+      supplier_payout_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_status: string
+          notes: string | null
+          previous_status: string | null
+          supplier_quote_request_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status: string
+          notes?: string | null
+          previous_status?: string | null
+          supplier_quote_request_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status?: string
+          notes?: string | null
+          previous_status?: string | null
+          supplier_quote_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payout_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payout_history_supplier_quote_request_id_fkey"
+            columns: ["supplier_quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_quote_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_products: {
+        Row: {
+          admin_notes: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          availability_type: string
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          min_quantity: number
+          niche: string
+          origin_country: string
+          photos: string[]
+          platform_margin_type: string
+          platform_margin_value: number | null
+          product_name: string
+          public_description: string | null
+          public_name: string | null
+          rejected_at: string | null
+          suggested_wholesale_price_mad: number | null
+          supplier_id: string
+          supplier_private_notes: string | null
+          supplier_type: string
+          target_buyer_type: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          availability_type?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_quantity?: number
+          niche?: string
+          origin_country?: string
+          photos?: string[]
+          platform_margin_type?: string
+          platform_margin_value?: number | null
+          product_name: string
+          public_description?: string | null
+          public_name?: string | null
+          rejected_at?: string | null
+          suggested_wholesale_price_mad?: number | null
+          supplier_id: string
+          supplier_private_notes?: string | null
+          supplier_type?: string
+          target_buyer_type?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          availability_type?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_quantity?: number
+          niche?: string
+          origin_country?: string
+          photos?: string[]
+          platform_margin_type?: string
+          platform_margin_value?: number | null
+          product_name?: string
+          public_description?: string | null
+          public_name?: string | null
+          rejected_at?: string | null
+          suggested_wholesale_price_mad?: number | null
+          supplier_id?: string
+          supplier_private_notes?: string | null
+          supplier_type?: string
+          target_buyer_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_products_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_quote_requests: {
+        Row: {
+          admin_notes: string | null
+          buyer_id: string
+          buyer_notes: string | null
+          created_at: string
+          destination_city: string | null
+          destination_country: string
+          id: string
+          platform_commission_amount_mad: number | null
+          platform_commission_type: string
+          platform_commission_value: number | null
+          quantity_requested: number
+          quoted_unit_price_mad: number | null
+          status: string
+          supplier_cost_mad: number | null
+          supplier_payout_amount_mad: number | null
+          supplier_payout_status: string
+          supplier_product_id: string
+          transport_customs_cost_mad: number
+          updated_at: string
+          whatsapp_number: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          buyer_id: string
+          buyer_notes?: string | null
+          created_at?: string
+          destination_city?: string | null
+          destination_country?: string
+          id?: string
+          platform_commission_amount_mad?: number | null
+          platform_commission_type?: string
+          platform_commission_value?: number | null
+          quantity_requested: number
+          quoted_unit_price_mad?: number | null
+          status?: string
+          supplier_cost_mad?: number | null
+          supplier_payout_amount_mad?: number | null
+          supplier_payout_status?: string
+          supplier_product_id: string
+          transport_customs_cost_mad?: number
+          updated_at?: string
+          whatsapp_number: string
+        }
+        Update: {
+          admin_notes?: string | null
+          buyer_id?: string
+          buyer_notes?: string | null
+          created_at?: string
+          destination_city?: string | null
+          destination_country?: string
+          id?: string
+          platform_commission_amount_mad?: number | null
+          platform_commission_type?: string
+          platform_commission_value?: number | null
+          quantity_requested?: number
+          quoted_unit_price_mad?: number | null
+          status?: string
+          supplier_cost_mad?: number | null
+          supplier_payout_amount_mad?: number | null
+          supplier_payout_status?: string
+          supplier_product_id?: string
+          transport_customs_cost_mad?: number
+          updated_at?: string
+          whatsapp_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_quote_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wholesale_cart_items: {
         Row: {
           added_at: string

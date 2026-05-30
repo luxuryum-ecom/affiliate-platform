@@ -132,6 +132,12 @@ export type DeliveryPreference = 'pickup' | 'delivery'
 export type CommissionStatus = 'pending' | 'approved' | 'paid'
 export type PayoutStatus = 'pending' | 'processing' | 'paid'
 
+/** Commission model for supplier marketplace payouts. */
+export type SupplierCommissionType = 'percent' | 'fixed'
+
+/** Lifecycle of a supplier payout per quote request. */
+export type SupplierPayoutStatus = 'not_due' | 'pending' | 'partially_paid' | 'paid'
+
 // ─── WHOLESALE TIER ───────────────────────────────────────────────────────────
 // Stored as a JSONB array in products.wholesale_tiers.
 // The last tier in the array always has max_qty = undefined (open-ended).
@@ -705,8 +711,36 @@ export interface SupplierQuoteRequest {
   /** Admin internal notes — never shown to buyer or supplier. */
   admin_notes: string | null
   quoted_unit_price_mad: number | null
+
+  // ── Supplier financial fields (migration 032) ─────────────────────────────
+  /** What the platform pays the supplier for this order in MAD. Admin-set. */
+  supplier_cost_mad: number | null
+  /** How the platform commission is computed. */
+  platform_commission_type: SupplierCommissionType
+  /** Commission rate (% when type=percent) or fixed MAD amount. */
+  platform_commission_value: number | null
+  /** Computed commission amount in MAD. Admin-computed and stored. */
+  platform_commission_amount_mad: number | null
+  /** Transport + customs cost in MAD. Admin-set. */
+  transport_customs_cost_mad: number
+  /** Final payout to supplier = total_client_amount − commission − transport_customs. Admin-computed. */
+  supplier_payout_amount_mad: number | null
+  /** Payout lifecycle status. Default 'not_due'. */
+  supplier_payout_status: SupplierPayoutStatus
+
   created_at: string
   updated_at: string
+}
+
+/** Audit trail for supplier payout status changes (migration 032). */
+export interface SupplierPayoutHistory {
+  id: string
+  supplier_quote_request_id: string
+  previous_status: SupplierPayoutStatus | null
+  new_status: SupplierPayoutStatus
+  changed_by: string | null
+  notes: string | null
+  changed_at: string
 }
 
 export type OrderSignalType = 'fraud' | 'duplicate' | 'spam' | 'conversion'
@@ -886,12 +920,24 @@ export type Database = {
       >
       supplier_quote_requests: TableDef<
         SupplierQuoteRequest,
-        Omit<SupplierQuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'quoted_unit_price_mad'> & {
+        Omit<SupplierQuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'quoted_unit_price_mad' | 'supplier_cost_mad' | 'platform_commission_type' | 'platform_commission_value' | 'platform_commission_amount_mad' | 'transport_customs_cost_mad' | 'supplier_payout_amount_mad' | 'supplier_payout_status'> & {
           status?: SupplierQuoteRequestStatus
           admin_notes?: string | null
           quoted_unit_price_mad?: number | null
+          supplier_cost_mad?: number | null
+          platform_commission_type?: SupplierCommissionType
+          platform_commission_value?: number | null
+          platform_commission_amount_mad?: number | null
+          transport_customs_cost_mad?: number
+          supplier_payout_amount_mad?: number | null
+          supplier_payout_status?: SupplierPayoutStatus
         },
         Partial<SupplierQuoteRequest>
+      >
+      supplier_payout_history: TableDef<
+        SupplierPayoutHistory,
+        Omit<SupplierPayoutHistory, 'id' | 'changed_at'> & { changed_at?: string },
+        never
       >
       supplier_products: TableDef<
         SupplierProduct,
