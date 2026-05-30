@@ -10,14 +10,16 @@ import type { QuoteRequestWithDetails, QuoteRequestStatus, WholesaleOrder } from
 interface Params { params: Promise<{ id: string }> }
 
 const STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> = {
-  new:                { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
-  studying:           { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
-  quoted:             { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
-  quote_prepared:     { label: 'Devis préparé',        cls: 'bg-indigo-100 text-indigo-700' },
-  negotiating:        { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
-  approved:           { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
-  rejected:           { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
-  converted_to_order: { label: 'Converti en commande', cls: 'bg-gray-100 text-gray-500' },
+  new:                 { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
+  studying:            { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
+  quoted:              { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
+  quote_prepared:      { label: 'Devis préparé',        cls: 'bg-indigo-100 text-indigo-700' },
+  accepted_by_client:  { label: 'Accepté client',       cls: 'bg-green-100 text-green-700' },
+  rejected_by_client:  { label: 'Refusé client',        cls: 'bg-red-100 text-red-600' },
+  negotiating:         { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
+  approved:            { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
+  rejected:            { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
+  converted_to_order:  { label: 'Converti en commande', cls: 'bg-gray-100 text-gray-500' },
 }
 
 export default async function AdminQuoteRequestDetailPage({ params }: Params) {
@@ -199,6 +201,36 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
                   >
                     Aperçu du document client
                   </Link>
+                )}
+              </div>
+            )}
+
+            {/* Client decision — shown when client has responded */}
+            {(req.status === 'accepted_by_client' || req.status === 'rejected_by_client') && (
+              <div className={`rounded-xl border p-4 ${
+                req.status === 'accepted_by_client'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <p className={`text-xs font-semibold mb-1 ${
+                  req.status === 'accepted_by_client' ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  Décision du client :{' '}
+                  {req.status === 'accepted_by_client' ? 'Accepté' : 'Refusé'}
+                </p>
+                {req.client_decision_at && (
+                  <p className={`text-xs ${
+                    req.status === 'accepted_by_client' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    Le{' '}
+                    {new Date(req.client_decision_at).toLocaleDateString('fr-MA', {
+                      day: '2-digit', month: 'long', year: 'numeric',
+                    })}{' '}
+                    à{' '}
+                    {new Date(req.client_decision_at).toLocaleTimeString('fr-MA', {
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
                 )}
               </div>
             )}

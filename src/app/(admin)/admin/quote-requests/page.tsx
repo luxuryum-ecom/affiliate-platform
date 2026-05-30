@@ -5,15 +5,19 @@ import type { QuoteRequestWithDetails, QuoteRequestStatus } from '@/types/databa
 
 export const metadata = { title: 'Demandes de devis — Administration' }
 
+type StatusRow = { status: string }
+
 const STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> = {
-  new:                { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
-  studying:           { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
-  quoted:             { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
-  quote_prepared:     { label: 'Devis préparé',        cls: 'bg-indigo-100 text-indigo-700' },
-  negotiating:        { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
-  approved:           { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
-  rejected:           { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
-  converted_to_order: { label: 'Converti',             cls: 'bg-gray-100 text-gray-500' },
+  new:                 { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
+  studying:            { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
+  quoted:              { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
+  quote_prepared:      { label: 'Devis préparé',        cls: 'bg-indigo-100 text-indigo-700' },
+  accepted_by_client:  { label: 'Accepté client',       cls: 'bg-green-100 text-green-700' },
+  rejected_by_client:  { label: 'Refusé client',        cls: 'bg-red-100 text-red-600' },
+  negotiating:         { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
+  approved:            { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
+  rejected:            { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
+  converted_to_order:  { label: 'Converti',             cls: 'bg-gray-100 text-gray-500' },
 }
 
 export default async function AdminQuoteRequestsPage() {
@@ -22,13 +26,25 @@ export default async function AdminQuoteRequestsPage() {
   const profileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = profileRes.data as { full_name: string } | null
 
-  const { data } = await supabase
-    .from('quote_requests')
-    .select('*, buyer:profiles!buyer_id(id,full_name,phone,company_name), product:products!product_id(id,name,origin_country,availability_type)')
-    .order('created_at', { ascending: false })
-    .limit(300)
+  const [{ data }, { data: statusData }] = await Promise.all([
+    supabase
+      .from('quote_requests')
+      .select('*, buyer:profiles!buyer_id(id,full_name,phone,company_name), product:products!product_id(id,name,origin_country,availability_type)')
+      .order('created_at', { ascending: false })
+      .limit(300),
+    supabase
+      .from('quote_requests')
+      .select('status') as unknown as Promise<{ data: StatusRow[] | null; error: unknown }>,
+  ])
 
   const requests = (data ?? []) as unknown as QuoteRequestWithDetails[]
+
+  const allStatuses = (statusData ?? []) as StatusRow[]
+  const preparedCount = allStatuses.filter((r) => r.status === 'quote_prepared').length
+  const acceptedCount = allStatuses.filter((r) => r.status === 'accepted_by_client').length
+  const rejectedCount = allStatuses.filter((r) => r.status === 'rejected_by_client').length
+  const decidedCount  = acceptedCount + rejectedCount
+  const acceptanceRate = decidedCount > 0 ? Math.round((acceptedCount / decidedCount) * 100) : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -60,6 +76,28 @@ export default async function AdminQuoteRequestsPage() {
           <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
             {requests.length}
           </span>
+        </div>
+
+        {/* Analytics strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+            <p className="text-xs text-indigo-600">Devis préparés</p>
+            <p className="mt-1 text-2xl font-bold text-indigo-700 tabular-nums">{preparedCount}</p>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <p className="text-xs text-green-600">Acceptés client</p>
+            <p className="mt-1 text-2xl font-bold text-green-700 tabular-nums">{acceptedCount}</p>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-xs text-red-500">Refusés client</p>
+            <p className="mt-1 text-2xl font-bold text-red-600 tabular-nums">{rejectedCount}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <p className="text-xs text-gray-500">Taux d&apos;acceptation</p>
+            <p className="mt-1 text-2xl font-bold text-gray-900 tabular-nums">
+              {acceptanceRate !== null ? `${acceptanceRate}%` : '—'}
+            </p>
+          </div>
         </div>
 
         {requests.length === 0 ? (

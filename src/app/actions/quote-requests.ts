@@ -10,6 +10,7 @@ import type { QuoteRequest, Product, QuoteRequestStatus } from '@/types/database
 export type QuoteRequestFormState = { error: string | null; success?: boolean }
 export type PrepareQuoteFormState = { error: string | null; success?: boolean }
 export type ConvertQuoteFormState = { error: string | null }
+export type QuoteDecisionFormState = { error: string | null; success?: boolean }
 
 // ─── Submit quote request (wholesaler) ────────────────────────────────────────
 
@@ -128,6 +129,53 @@ export async function prepareQuote(
   revalidatePath(`/admin/quote-requests/${requestId}`)
   revalidatePath('/wholesale/quote-requests')
   revalidatePath(`/wholesale/quote-requests/${requestId}`)
+  return { error: null, success: true }
+}
+
+// ─── Wholesaler accepts or rejects a prepared quote ───────────────────────────
+
+export async function respondToQuote(
+  _prev: QuoteDecisionFormState,
+  formData: FormData,
+): Promise<QuoteDecisionFormState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const requestId = (formData.get('request_id') as string)?.trim()
+  if (!requestId) return { error: 'Identifiant manquant.' }
+
+  const decision = formData.get('decision') as string
+  if (decision !== 'accepted_by_client' && decision !== 'rejected_by_client') {
+    return { error: 'Décision invalide.' }
+  }
+
+  // Verify current status before updating (gives a clear error if already decided)
+  const { data: existing } = await supabase
+    .from('quote_requests')
+    .select('status')
+    .eq('id', requestId)
+    .eq('buyer_id', user.id)
+    .single()
+
+  if (!existing) return { error: 'Devis introuvable.' }
+  if (existing.status !== 'quote_prepared') {
+    return { error: 'Ce devis ne peut plus être modifié.' }
+  }
+
+  const { error: dbError } = await supabase
+    .from('quote_requests')
+    .update({ status: decision, client_decision_at: new Date().toISOString() })
+    .eq('id', requestId)
+    .eq('buyer_id', user.id)
+
+  if (dbError) return { error: dbError.message }
+
+  revalidatePath('/wholesale/quote-requests')
+  revalidatePath(`/wholesale/quote-requests/${requestId}`)
+  revalidatePath(`/wholesale/quote-requests/${requestId}/quote`)
+  revalidatePath('/admin/quote-requests')
+  revalidatePath(`/admin/quote-requests/${requestId}`)
   return { error: null, success: true }
 }
 

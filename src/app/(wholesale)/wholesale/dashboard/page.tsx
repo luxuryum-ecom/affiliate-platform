@@ -4,6 +4,8 @@ import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import type { Profile, WholesaleOrder } from '@/types/database'
 
+type QuoteCountRow = { status: string }
+
 export const metadata = {
   title: 'Tableau de bord — Espace Grossiste',
 }
@@ -25,6 +27,7 @@ export default async function WholesaleDashboardPage() {
     { count: totalOrders },
     { count: cartItemCount },
     { data: orderRows },
+    { data: quoteStatusRows },
   ] = await Promise.all([
     supabase
       .from('wholesale_orders')
@@ -38,6 +41,10 @@ export default async function WholesaleDashboardPage() {
       .from('wholesale_orders')
       .select('*')
       .eq('buyer_id', user!.id) as unknown as Promise<{ data: WholesaleOrder[] | null; error: unknown }>,
+    supabase
+      .from('quote_requests')
+      .select('status')
+      .eq('buyer_id', user!.id) as unknown as Promise<{ data: QuoteCountRow[] | null; error: unknown }>,
   ])
 
   const totalSpend = (orderRows ?? [])
@@ -48,11 +55,22 @@ export default async function WholesaleDashboardPage() {
     (o) => !['delivered', 'cancelled'].includes(o.status)
   ).length
 
+  const quoteRows = quoteStatusRows ?? []
+  const preparedQuotes  = quoteRows.filter((q) => q.status === 'quote_prepared').length
+  const acceptedQuotes  = quoteRows.filter((q) => q.status === 'accepted_by_client').length
+  const rejectedQuotes  = quoteRows.filter((q) => q.status === 'rejected_by_client').length
+
   const stats = [
     { label: 'Commandes passées', value: String(totalOrders ?? 0) },
     { label: 'En cours', value: String(pendingOrders) },
     { label: 'Articles dans le panier', value: String(cartItemCount ?? 0) },
     { label: 'Total dépensé', value: formatMAD(totalSpend) },
+  ]
+
+  const quoteStats = [
+    { label: 'Devis prêts', value: String(preparedQuotes), cls: preparedQuotes > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200', textCls: preparedQuotes > 0 ? 'text-indigo-700' : 'text-gray-900' },
+    { label: 'Devis acceptés', value: String(acceptedQuotes), cls: 'bg-white border-gray-200', textCls: 'text-green-700' },
+    { label: 'Devis refusés', value: String(rejectedQuotes), cls: 'bg-white border-gray-200', textCls: 'text-red-600' },
   ]
 
   return (
@@ -153,19 +171,30 @@ export default async function WholesaleDashboardPage() {
         </div>
 
         {/* Quote requests */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Demandes de devis</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Consultez vos demandes de devis pour les produits import.
-            </p>
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Demandes de devis</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Consultez vos demandes de devis pour les produits import.
+              </p>
+            </div>
+            <Link
+              href="/wholesale/quote-requests"
+              className="text-xs px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors whitespace-nowrap"
+            >
+              Mes devis →
+            </Link>
           </div>
-          <Link
-            href="/wholesale/quote-requests"
-            className="text-xs px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors whitespace-nowrap"
-          >
-            Mes devis →
-          </Link>
+          {/* Quote decision counters */}
+          <div className="grid grid-cols-3 gap-2">
+            {quoteStats.map((qs) => (
+              <div key={qs.label} className={`rounded-lg border p-3 ${qs.cls}`}>
+                <p className="text-xs text-gray-500 leading-tight">{qs.label}</p>
+                <p className={`mt-1 text-lg font-bold tabular-nums ${qs.textCls}`}>{qs.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Account / billing */}

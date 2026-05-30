@@ -12,14 +12,16 @@ export async function generateMetadata({ params }: Params) {
 }
 
 const STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> = {
-  new:                { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
-  studying:           { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
-  quoted:             { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
-  quote_prepared:     { label: 'Devis prêt',           cls: 'bg-indigo-100 text-indigo-700' },
-  negotiating:        { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
-  approved:           { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
-  rejected:           { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
-  converted_to_order: { label: 'Converti en commande', cls: 'bg-gray-100 text-gray-500' },
+  new:                 { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
+  studying:            { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
+  quoted:              { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
+  quote_prepared:      { label: 'Devis prêt',           cls: 'bg-indigo-100 text-indigo-700' },
+  accepted_by_client:  { label: 'Accepté',              cls: 'bg-green-100 text-green-700' },
+  rejected_by_client:  { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
+  negotiating:         { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
+  approved:            { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
+  rejected:            { label: 'Refusé (admin)',       cls: 'bg-red-100 text-red-600' },
+  converted_to_order:  { label: 'Converti en commande', cls: 'bg-gray-100 text-gray-500' },
 }
 
 const SHIPPING_LABELS: Record<string, string> = {
@@ -115,6 +117,48 @@ export default async function WholesaleQuoteRequestDetailPage({ params }: Params
               className="inline-block text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors px-4 py-2 rounded-lg"
             >
               Consulter le devis →
+            </Link>
+          </div>
+        )}
+
+        {/* Accepted — show confirmation and link */}
+        {req.status === 'accepted_by_client' && (
+          <div className="bg-green-50 rounded-xl border border-green-200 p-5">
+            <p className="text-xs font-semibold text-green-800 mb-1">Devis accepté — en attente de confirmation de commande</p>
+            {req.client_decision_at && (
+              <p className="text-xs text-green-600 mb-3">
+                Accepté le{' '}
+                {new Date(req.client_decision_at).toLocaleDateString('fr-MA', {
+                  day: '2-digit', month: 'long', year: 'numeric',
+                })}
+              </p>
+            )}
+            <Link
+              href={`/wholesale/quote-requests/${id}/quote`}
+              className="inline-block text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors px-4 py-2 rounded-lg"
+            >
+              Voir le devis →
+            </Link>
+          </div>
+        )}
+
+        {/* Rejected by client */}
+        {req.status === 'rejected_by_client' && (
+          <div className="bg-red-50 rounded-xl border border-red-200 p-5">
+            <p className="text-xs font-semibold text-red-800 mb-1">Devis refusé</p>
+            {req.client_decision_at && (
+              <p className="text-xs text-red-600 mb-3">
+                Refusé le{' '}
+                {new Date(req.client_decision_at).toLocaleDateString('fr-MA', {
+                  day: '2-digit', month: 'long', year: 'numeric',
+                })}
+              </p>
+            )}
+            <Link
+              href={`/wholesale/quote-requests/${id}/quote`}
+              className="inline-block text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-lg"
+            >
+              Consulter le document →
             </Link>
           </div>
         )}

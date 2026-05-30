@@ -530,6 +530,8 @@ export type QuoteRequestStatus =
   | 'studying'
   | 'quoted'
   | 'quote_prepared'
+  | 'accepted_by_client'
+  | 'rejected_by_client'
   | 'negotiating'
   | 'approved'
   | 'rejected'
@@ -559,6 +561,8 @@ export interface QuoteRequest {
   quote_validity_date: string | null
   quote_public_note: string | null
   quote_prepared_at: string | null
+  /** Client decision — set by wholesaler after reviewing quote_prepared document */
+  client_decision_at: string | null
   created_at: string
   updated_at: string
 }
@@ -711,7 +715,7 @@ export type Database = {
       >
       quote_requests: TableDef<
         QuoteRequest,
-        Omit<QuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'admin_notes_public' | 'quoted_unit_price_mad' | 'quoted_quantity' | 'quoted_transport_total_mad' | 'quoted_shipping_mode' | 'quoted_delivery_delay' | 'quote_validity_date' | 'quote_public_note' | 'quote_prepared_at'> & {
+        Omit<QuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'admin_notes_public' | 'quoted_unit_price_mad' | 'quoted_quantity' | 'quoted_transport_total_mad' | 'quoted_shipping_mode' | 'quoted_delivery_delay' | 'quote_validity_date' | 'quote_public_note' | 'quote_prepared_at' | 'client_decision_at'> & {
           status?: QuoteRequestStatus
           admin_notes?: string | null
           admin_notes_public?: boolean
@@ -723,6 +727,7 @@ export type Database = {
           quote_validity_date?: string | null
           quote_public_note?: string | null
           quote_prepared_at?: string | null
+          client_decision_at?: string | null
         },
         Partial<QuoteRequest>
       >

@@ -6,14 +6,16 @@ import type { QuoteRequest, QuoteRequestStatus, Profile, Product } from '@/types
 export const metadata = { title: 'Mes demandes de devis — Espace Grossiste' }
 
 const STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> = {
-  new:                { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
-  studying:           { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
-  quoted:             { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
-  quote_prepared:     { label: 'Devis prêt',           cls: 'bg-indigo-100 text-indigo-700' },
-  negotiating:        { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
-  approved:           { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
-  rejected:           { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
-  converted_to_order: { label: 'Converti en commande', cls: 'bg-gray-100 text-gray-500' },
+  new:                 { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
+  studying:            { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
+  quoted:              { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
+  quote_prepared:      { label: 'Devis prêt',           cls: 'bg-indigo-100 text-indigo-700' },
+  accepted_by_client:  { label: 'Accepté',              cls: 'bg-green-100 text-green-700' },
+  rejected_by_client:  { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
+  negotiating:         { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
+  approved:            { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
+  rejected:            { label: 'Refusé (admin)',       cls: 'bg-red-100 text-red-600' },
+  converted_to_order:  { label: 'Converti en commande', cls: 'bg-gray-100 text-gray-500' },
 }
 
 type ReqRow = QuoteRequest & { product: Pick<Product, 'id' | 'name'> }

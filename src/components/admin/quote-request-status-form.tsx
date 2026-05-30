@@ -5,18 +5,22 @@ import { updateQuoteRequestStatus } from '@/app/actions/quote-requests'
 import type { QuoteRequestStatus } from '@/types/database'
 
 const ALL_STATUSES: QuoteRequestStatus[] = [
-  'new', 'studying', 'quoted', 'quote_prepared', 'negotiating', 'approved', 'rejected', 'converted_to_order',
+  'new', 'studying', 'quoted', 'quote_prepared',
+  'accepted_by_client', 'rejected_by_client',
+  'negotiating', 'approved', 'rejected', 'converted_to_order',
 ]
 
 const LABELS: Record<QuoteRequestStatus, string> = {
-  new:                'Nouveau',
-  studying:           'En étude',
-  quoted:             'Devisé',
-  quote_prepared:     'Devis préparé',
-  negotiating:        'En négociation',
-  approved:           'Approuvé',
-  rejected:           'Refusé',
-  converted_to_order: 'Converti en commande',
+  new:                 'Nouveau',
+  studying:            'En étude',
+  quoted:              'Devisé',
+  quote_prepared:      'Devis préparé',
+  accepted_by_client:  'Accepté client',
+  rejected_by_client:  'Refusé client',
+  negotiating:         'En négociation',
+  approved:            'Approuvé',
+  rejected:            'Refusé',
+  converted_to_order:  'Converti en commande',
 }
 
 export function QuoteRequestStatusForm({
