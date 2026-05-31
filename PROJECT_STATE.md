@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-05-31 — commit `53f6824` (customer order tracking)  
+> Last agent update: 2026-05-31 — commit `3dcbaad` (6 bugs fixed in commission calc + authorization)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
@@ -364,6 +364,31 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 
 ## 7. Known Issues
 
+### Fixed — commit `3dcbaad` (2026-05-31)
+
+| # | Issue | Fix |
+|---|-------|-----|
+| — | `placeOrder` used `purchase_price_mad` instead of `factory_cost_mad` for commission calculation | Fetch and use `factory_cost_mad`, fall back to `purchase_price_mad` |
+| — | `placeOrder` inserted raw `commissionAmount` (could be negative), violating DB `CHECK >= 0` | Wrapped with `Math.max(0, ...)` |
+| — | `attribution_click_id` stored without validating it belongs to the claimed affiliate + product | Added server-side cross-check before insert |
+| — | `NEXT_PUBLIC_APP_URL` fell back to `'https://yourapp.com'` — broken referral links on misconfigured deploy | Now falls back to `NEXT_PUBLIC_VERCEL_URL` then `localhost:3000` |
+| — | `updateSupplierFinancials`, `updateSupplierPayoutStatus` missing `requireAdmin()` — any authenticated user could invoke them | Added `requireAdmin()` guard |
+| — | `approveSupplierProduct`, `rejectSupplierProduct` missing `requireAdmin()` guard | Added `requireAdmin()` guard |
+
+### Deferred — require DB migration or RPC redesign
+
+| # | Issue | Blocker |
+|---|-------|---------|
+| DB-1 | `wholesale_access` users allowed by app layer but blocked by cart/orders RLS | Needs additive RLS policy migration |
+| DB-2 | `createPayout` marks ALL approved commissions paid regardless of entered amount | Needs schema redesign (junction table) or amount sum constraint |
+| DB-3 | `updateOrderStatus` has no server-side status transition guard — can skip `confirmed` | Needs state machine enforcement in action |
+| DB-4 | Wholesale stock reserve loop has no rollback on partial failure | Needs transactional RPC |
+| DB-5 | COD order overselling race: stock checked but not reserved at submit time | Design trade-off; fix requires reserve-on-insert RPC |
+| DB-6 | Phone-based order tracking: no rate limiting — enumeration possible | Needs middleware IP rate limiting |
+| DB-7 | `createWholesaleOrderAction` returns `void` — errors swallowed silently for admin | Needs caller refactor to `useActionState` |
+
+
+
 ### 7.1 Hardcoded Social Proof in Marketplace Product Detail
 `/wholesale/marketplace/[id]/page.tsx` displays `4.9 ★`, `32 avis vérifiés`, `148 commandes sur 12 mois`, and `Taux de réponse 98%` as literal strings. No review, order count, or response-rate tables exist in the database. These numbers are cosmetic placeholders.
 
@@ -432,4 +457,4 @@ Ordered by business impact and build stability:
 
 ---
 
-*Last updated: 2026-05-31 — commit `53f6824` on branch `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 49 components).*
+*Last updated: 2026-05-31 — commit `3dcbaad` — bug fix session. Branch: `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 49 components).*
