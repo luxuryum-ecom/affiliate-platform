@@ -364,7 +364,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {products.map((product) => (
               <MarketplaceProductCard
                 key={product.id}
@@ -582,17 +582,17 @@ function MarketplaceProductCard({
   return (
     <div className={`bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-sm transition-all duration-200 ${cardBorder}`}>
       {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-50">
+      <div className="relative aspect-[16/9] overflow-hidden bg-gray-50">
         {product.photos.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={product.photos[0]}
             alt={displayName}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-100">
-            <span className="text-4xl text-gray-300">▢</span>
+            <span className="text-3xl text-gray-300">▢</span>
           </div>
         )}
 
@@ -615,7 +615,7 @@ function MarketplaceProductCard({
       </div>
 
       {/* Supplier identity block */}
-      <div className="px-3 pt-3 flex items-center gap-2 min-w-0">
+      <div className="px-3 pt-2 flex items-center gap-2 min-w-0">
         <SupplierLogoBlock
           supplierType={isMorocco ? 'morocco' : 'international'}
           category={product.category}
@@ -630,7 +630,7 @@ function MarketplaceProductCard({
         </div>
       </div>
 
-      <div className="px-3 pt-2 pb-3 flex flex-col gap-2 flex-1">
+      <div className="px-3 pt-1.5 pb-2.5 flex flex-col gap-1.5 flex-1">
         {/* Category */}
         {product.category && (
           <CategoryBadge
@@ -645,11 +645,11 @@ function MarketplaceProductCard({
         </h3>
 
         {displayDescription && (
-          <p className="text-xs text-gray-500 line-clamp-2">{displayDescription}</p>
+          <p className="text-xs text-gray-500 line-clamp-1">{displayDescription}</p>
         )}
 
         {/* Spec chips */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           <MOQChip qty={product.min_quantity} unit={product.unit ?? 'u.'} />
           {product.lead_time_days != null && <LeadTimeChip days={product.lead_time_days} />}
           {product.stock_quantity != null && (
@@ -681,26 +681,23 @@ function MarketplaceProductCard({
 
         {/* Platform guarantee note for international */}
         {!isMorocco && (
-          <p className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1 border border-blue-100">
-            Paiement via plateforme — Transport & douane inclus
+          <p className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-0.5 border border-blue-100">
+            Paiement plateforme — Transport & douane inclus
           </p>
         )}
 
         {/* Price + CTA */}
-        <div className="mt-auto pt-2 border-t border-gray-100">
-          <div className="flex items-end justify-between mb-2">
+        <div className="mt-auto pt-1.5 border-t border-gray-100">
+          <div className="flex items-end justify-between mb-1.5">
             <div>
               <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
                 {isMorocco ? 'Prix de gros' : 'Prix TTC'}
               </p>
-              <p className="text-base font-bold text-gray-900">
+              <p className="text-sm font-bold text-gray-900">
                 {product.suggested_wholesale_price_mad != null
                   ? `${product.suggested_wholesale_price_mad.toLocaleString('fr-MA')} MAD`
                   : 'Sur devis'}
               </p>
-              {!isMorocco && product.suggested_wholesale_price_mad != null && (
-                <p className="text-[10px] text-gray-400">Transport + douane inclus</p>
-              )}
             </div>
           </div>
           <div className="flex gap-2">

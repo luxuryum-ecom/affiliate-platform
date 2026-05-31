@@ -120,6 +120,86 @@ export function TrustBadgesStrip() {
   )
 }
 
+// ─── Gold supplier & fast response badges ─────────────────────────────────────
+
+export function GoldSupplierBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-yellow-50 text-yellow-700 border border-yellow-300">
+      ✦ Gold
+    </span>
+  )
+}
+
+export function FastResponseBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-green-50 text-green-700 border border-green-300">
+      ⚡ Réactif
+    </span>
+  )
+}
+
+// ─── Supplier logo block ───────────────────────────────────────────────────────
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Textile':              '👗',
+  'Matières premières':   '🧱',
+  'Chaussures':           '👟',
+  'Cosmétique & hygiène': '💄',
+  'Alimentaire':          '🥗',
+  'Maison & packaging':   '🏠',
+  'Artisanat':            '🎨',
+}
+
+export function SupplierLogoBlock({
+  supplierType,
+  category,
+  size = 'md',
+}: {
+  supplierType: 'morocco' | 'international'
+  category?: string
+  size?: 'sm' | 'md'
+}) {
+  const icon = (category && CATEGORY_ICONS[category]) ?? (supplierType === 'morocco' ? '🇲🇦' : '🌍')
+  const dim = size === 'sm' ? 'w-7 h-7 text-sm' : 'w-9 h-9 text-base'
+  const bg = supplierType === 'morocco' ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'
+  return (
+    <div className={`${dim} ${bg} rounded-lg border flex items-center justify-center flex-shrink-0`}>
+      {icon}
+    </div>
+  )
+}
+
+// ─── Spec chips ────────────────────────────────────────────────────────────────
+
+export function MOQChip({ qty, unit }: { qty: number; unit: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+      MOQ {qty} {unit}
+    </span>
+  )
+}
+
+export function LeadTimeChip({ days }: { days: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200">
+      {days}j
+    </span>
+  )
+}
+
+export function StockChip({ qty, unit }: { qty: number; unit: string }) {
+  const cls = qty > 100
+    ? 'bg-green-50 text-green-700 border-green-200'
+    : qty > 0
+    ? 'bg-amber-50 text-amber-700 border-amber-200'
+    : 'bg-red-50 text-red-600 border-red-200'
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border ${cls}`}>
+      {qty > 0 ? `${qty} ${unit}` : 'Rupture'}
+    </span>
+  )
+}
+
 // ─── Category color lookup (exported for filters) ─────────────────────────────
 
 export { CATEGORY_COLORS, PRODUCT_CATEGORIES }
