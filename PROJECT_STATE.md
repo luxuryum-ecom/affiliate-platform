@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-05-31 — commit `0cc345c` (compact Alibaba-style product cards)  
+> Last agent update: 2026-05-31 — login verified working; stale process (PID 40205, 39h uptime) was the root cause  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
