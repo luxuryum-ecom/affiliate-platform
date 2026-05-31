@@ -2,6 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
+> Last agent update: 2026-05-31 — commit `53f6824` (customer order tracking)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
@@ -100,6 +101,7 @@
 ### 2.6 Public Pages
 - **Home** (`/`): Mozouna Group B2B landing with stats, country-first sourcing cards, quick filters, trust strip, WhatsApp sourcing CTA, signup/login CTAs
 - **Product COD page** (`/products/[id]?ref=[affiliateId]`): customer-facing COD order form, attribution tracking, product gallery, WhatsApp COD button
+- **Order tracking** (`/orders/track?phone=...`): public COD order status page — phone-number lookup, visual status timeline, tracking number display; no auth required
 
 ### 2.7 Core Business Logic (Server Actions)
 - COD order placement with referral attribution (30-day localStorage + session)
@@ -115,7 +117,7 @@
 - Premium plan limits enforcement
 
 ### 2.8 Database Schema (40 migrations)
-Complete schema through `040_wholesaler_badges_rls.sql`. All migrations are idempotent.
+Complete schema through `041_order_tracking_rpc.sql`. All migrations are idempotent.
 
 ---
 
@@ -197,7 +199,7 @@ These are presented as separate sections. There is no unified search or cross-ca
 | **Affiliate link QR codes** | Not built (common affiliate feature) |
 | **Wholesale order PDF export** | Quote document exists via `shared/quote-document.tsx`; no direct PDF download for standard wholesale orders |
 | **Admin bulk order status update** | Orders must be updated one at a time |
-| **Customer order status page** | COD customers have no way to check their order status (no order lookup page) |
+| ~~**Customer order status page**~~ | ✅ Built — `/orders/track` (commit `53f6824`) |
 | **Rate limiting / abuse protection** | COD form has heuristic spam scoring but no actual rate limiting at the route level |
 | **`agent` role implementation** | Role exists in DB and auth but has zero routes or functionality |
 
@@ -314,6 +316,7 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 | 038 | `038_premium_monetization.sql` | `premium_plans`, `supplier_subscriptions`, `subscription_audit_log` |
 | 039 | `039_category_subcategory.sql` | `category` / `subcategory` fields on products |
 | 040 | `040_wholesaler_badges_rls.sql` | **UNTRACKED** — RLS so wholesalers read active subscriptions for badge display |
+| 041 | `041_order_tracking_rpc.sql` | `get_orders_by_phone(text)` SECURITY DEFINER RPC for public customer order tracking |
 
 ### 6.2 Key Tables
 
@@ -388,6 +391,9 @@ Wholesalers have two separate browsing surfaces — `/wholesale/products` (inter
 ### 7.9 No README at Repository Root
 There is no `README.md`. New developers or agents have no entry point documentation. The equivalent content is spread across `.cursor/rules/`, `docs/AGENT_WORKFLOW.md`, and `docs/PROJECT_ARCHITECTURE.md` (the latter is partially outdated relative to current routes).
 
+### 7.11 Migration 040 Still Needs Applying
+`040_wholesaler_badges_rls.sql` remains untracked and unapplied. Migration 041 (`get_orders_by_phone` RPC) has been written and committed but also needs to be applied to Supabase via `npm run migrate` before `/orders/track` will function on the live database.
+
 ### 7.10 `agent` Role Has No Routes
 The `agent` role is defined in `src/types/database.ts` and the `profiles` table but has no route group, no layout, and no pages. Any user promoted to `agent` would see nothing after login.
 
@@ -411,8 +417,8 @@ Ordered by business impact and build stability:
 7. Rebrand the affiliate area header with `MozounaLogo` and the shared branding component
 8. Ensure `NEXT_PUBLIC_APP_URL` is documented in `.env.production.example` and validated on startup (throw early if missing)
 
-### Priority 4 — Customer order tracking
-9. Build a public order status lookup page for COD customers (e.g., `/orders/track?phone=...`) — currently customers have no visibility into their order status
+### ~~Priority 4 — Customer order tracking~~ ✅ DONE (commit `53f6824`)
+~~9. Build a public order status lookup page for COD customers~~ — **Built**: `/orders/track?phone=...` is live. Phone lookup, status timeline, tracking number display.
 
 ### Priority 5 — Operations
 10. Add automated commission approval trigger or at minimum a bulk-approve UI to reduce admin overhead at scale
@@ -426,4 +432,4 @@ Ordered by business impact and build stability:
 
 ---
 
-*Last updated: 2026-05-31 from branch `chore/agent-operating-system` (40 migrations, 64 routes, 25 server action modules, 49 components).*
+*Last updated: 2026-05-31 — commit `53f6824` on branch `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 49 components).*
