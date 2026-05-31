@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-05-31 — commit `5510f52` (affiliate branding + admin bulk commission approve)  
+> Last agent update: 2026-05-31 — commit `0cc345c` (compact Alibaba-style product cards)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
@@ -461,4 +461,4 @@ Ordered by business impact and build stability:
 
 ---
 
-*Last updated: 2026-05-31 — commit `5510f52`. Branch: `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 50 components).*
+*Last updated: 2026-05-31 — commit `0cc345c`. Branch: `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 50 components).*
