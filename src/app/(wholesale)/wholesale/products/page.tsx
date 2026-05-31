@@ -107,7 +107,7 @@ export default async function WholesaleProductsPage() {
             <p className="text-sm text-gray-400">Aucun produit disponible pour le moment.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {products.map((product) => {
               const inCart = cartMap.get(product.id)
               // Cheapest available tier price for display
@@ -159,7 +159,7 @@ function WholesaleProductCard({
       className="group bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
     >
       {/* Thumbnail */}
-      <div className="aspect-[4/3] relative overflow-hidden">
+      <div className="aspect-square relative overflow-hidden">
         <ProductThumbnail
           src={coverUrl}
           name={product.name}
@@ -175,7 +175,7 @@ function WholesaleProductCard({
       </div>
 
       {/* Info */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
+      <div className="p-3 flex flex-col gap-1.5 flex-1">
         <div className="flex items-center gap-1.5">
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
@@ -197,23 +197,11 @@ function WholesaleProductCard({
           {product.name}
         </h3>
 
-        {hasTiers && (
-          <p className="text-xs text-gray-500">
-            Paliers : {tierQtys.join(' / ')} pcs
+        <div className="mt-auto pt-1.5 border-t border-gray-100">
+          <p className="text-sm font-bold text-gray-900">{formatMAD(displayPrice)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {hasTiers ? 'À partir de · ' : ''}{product.wholesale_min_qty} u. min.
           </p>
-        )}
-
-        <div className="mt-auto pt-2 border-t border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400">
-              {hasTiers ? 'À partir de' : 'Prix / unité'}
-            </p>
-            <p className="text-base font-bold text-gray-900">{formatMAD(displayPrice)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Min. commande</p>
-            <p className="text-sm font-medium text-gray-700">{product.wholesale_min_qty} u.</p>
-          </div>
         </div>
       </div>
     </Link>

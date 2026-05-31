@@ -2,8 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
-import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
-import { MozounaLogo, OriginBadge, CategoryBadge, AvailabilityBadge, SupplierTypeBadge, VerifiedBadge, FeaturedBadge, GoldSupplierBadge, FastResponseBadge, SupplierLogoBlock, MOQChip, LeadTimeChip, StockChip } from '@/components/shared/branding'
+import { MozounaLogo, OriginBadge, VerifiedBadge, FeaturedBadge, MOQChip, LeadTimeChip } from '@/components/shared/branding'
 import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
 import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
 
@@ -364,7 +363,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {products.map((product) => (
               <MarketplaceProductCard
                 key={product.id}
@@ -542,6 +541,8 @@ function CountrySourceSection({ activeOrigin }: { activeOrigin?: string }) {
 }
 
 // ─── Marketplace product card ─────────────────────────────────────────────────
+// Compact Alibaba-style card: square image, name, MOQ + lead time, price.
+// Full details and quote form are on the product detail page.
 
 function MarketplaceProductCard({
   product,
@@ -560,16 +561,8 @@ function MarketplaceProductCard({
   isFeatured?: boolean
   isVerified?: boolean
 }) {
-  const approvedAttachments = (product.supplier_product_attachments ?? []).filter(
-    (a) => a.admin_status === 'approved'
-  )
-  const hasCatalog = approvedAttachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
-  const hasVideo   = approvedAttachments.some((a) => a.attachment_type === 'video')
-  const hasSample  = product.availability_type === 'local_stock' || hasCatalog
   const displayName = product.public_name || product.product_name
-  const displayDescription = product.public_description || product.description
   const isMorocco = product.supplier_type === 'morocco'
-  const subcategoryLabel = product.subcategory || product.niche || ''
 
   const cardBorder = isVerified
     ? 'border-amber-300 ring-1 ring-amber-100'
@@ -577,145 +570,78 @@ function MarketplaceProductCard({
     ? 'border-indigo-300 ring-1 ring-indigo-100'
     : 'border-gray-200'
 
-  const stockQty = product.stock_quantity ?? 0
-
   return (
-    <div className={`bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-sm transition-all duration-200 ${cardBorder}`}>
-      {/* Image */}
-      <div className="relative aspect-[16/9] overflow-hidden bg-gray-50">
+    <Link
+      href={`/wholesale/marketplace/${product.id}`}
+      className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-md transition-all duration-200 ${cardBorder}`}
+    >
+      {/* Square image */}
+      <div className="relative aspect-square overflow-hidden bg-gray-100">
         {product.photos.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={product.photos[0]}
             alt={displayName}
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-            <span className="text-3xl text-gray-300">▢</span>
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-4xl text-gray-300">▢</span>
           </div>
         )}
 
-        {/* Country flag overlay — top left */}
+        {/* Origin overlay — top left */}
         {product.origin_country && (
-          <div className="absolute top-2 left-2">
-            <OriginBadge
-              country={product.origin_country}
-              className="bg-white/95 text-xs"
-            />
+          <div className="absolute top-1.5 left-1.5">
+            <OriginBadge country={product.origin_country} className="bg-white/95 shadow-sm" />
           </div>
         )}
 
         {/* Premium badge — top right */}
         {(isVerified || isFeatured) && (
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-1.5 right-1.5">
             {isVerified ? <VerifiedBadge /> : <FeaturedBadge />}
           </div>
         )}
-      </div>
 
-      {/* Supplier identity block */}
-      <div className="px-3 pt-2 flex items-center gap-2 min-w-0">
-        <SupplierLogoBlock
-          supplierType={isMorocco ? 'morocco' : 'international'}
-          category={product.category}
-          size="sm"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <SupplierTypeBadge type={isMorocco ? 'morocco' : 'international'} />
-            {isVerified && <GoldSupplierBadge />}
-            {isFeatured && !isVerified && <FastResponseBadge />}
+        {/* Local stock tag — bottom left */}
+        {product.availability_type === 'local_stock' && (
+          <div className="absolute bottom-1.5 left-1.5">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600/90 text-white font-medium">
+              Stock
+            </span>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className="px-3 pt-1.5 pb-2.5 flex flex-col gap-1.5 flex-1">
-        {/* Category */}
-        {product.category && (
-          <CategoryBadge
-            category={product.category}
-            subcategory={subcategoryLabel || undefined}
-          />
-        )}
+      {/* Compact info */}
+      <div className="p-2.5 flex flex-col gap-1.5 flex-1">
+        {/* Supplier type */}
+        <p className="text-[10px] text-gray-400 font-medium leading-none">
+          {isMorocco ? '🇲🇦 Fournisseur Maroc' : '🌍 International'}
+          {isVerified && <span className="ml-1 text-amber-600">· Gold</span>}
+        </p>
 
-        {/* Name */}
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2">
+        {/* Product name */}
+        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 flex-1">
           {displayName}
         </h3>
 
-        {displayDescription && (
-          <p className="text-xs text-gray-500 line-clamp-1">{displayDescription}</p>
-        )}
-
-        {/* Spec chips */}
+        {/* MOQ + lead time */}
         <div className="flex flex-wrap gap-1">
           <MOQChip qty={product.min_quantity} unit={product.unit ?? 'u.'} />
           {product.lead_time_days != null && <LeadTimeChip days={product.lead_time_days} />}
-          {product.stock_quantity != null && (
-            <StockChip qty={stockQty} unit={product.unit ?? 'u.'} />
-          )}
-          <AvailabilityBadge type={product.availability_type} />
         </div>
 
-        {/* Media capabilities */}
-        {(hasCatalog || hasVideo || hasSample) && (
-          <div className="flex flex-wrap gap-1">
-            {hasCatalog && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">
-                Catalogue
-              </span>
-            )}
-            {hasVideo && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-pink-50 text-pink-700 border border-pink-100">
-                Vidéo
-              </span>
-            )}
-            {hasSample && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-100">
-                Échantillon
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Platform guarantee note for international */}
-        {!isMorocco && (
-          <p className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-0.5 border border-blue-100">
-            Paiement plateforme — Transport & douane inclus
+        {/* Price */}
+        <div className="pt-1.5 border-t border-gray-100">
+          <p className="text-sm font-bold text-gray-900">
+            {product.suggested_wholesale_price_mad != null
+              ? `${product.suggested_wholesale_price_mad.toLocaleString('fr-MA')} MAD`
+              : <span className="text-gray-500 font-medium text-xs">Sur devis</span>}
           </p>
-        )}
-
-        {/* Price + CTA */}
-        <div className="mt-auto pt-1.5 border-t border-gray-100">
-          <div className="flex items-end justify-between mb-1.5">
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
-                {isMorocco ? 'Prix de gros' : 'Prix TTC'}
-              </p>
-              <p className="text-sm font-bold text-gray-900">
-                {product.suggested_wholesale_price_mad != null
-                  ? `${product.suggested_wholesale_price_mad.toLocaleString('fr-MA')} MAD`
-                  : 'Sur devis'}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <MarketplaceQuoteForm
-                supplierProductId={product.id}
-                minQuantity={product.min_quantity}
-              />
-            </div>
-            <Link
-              href={`/wholesale/marketplace/${product.id}`}
-              className="shrink-0 text-xs px-3 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-            >
-              Profil →
-            </Link>
-          </div>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
