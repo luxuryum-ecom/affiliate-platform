@@ -1429,6 +1429,26 @@ export type Database = {
     Functions: {
       my_role: { Args: Record<string, never>; Returns: UserRole }
       get_supplier_plan: { Args: { p_supplier_id: string }; Returns: string }
+      get_orders_by_phone: {
+        Args: { p_phone: string }
+        Returns: {
+          id: string
+          status: OrderStatus
+          customer_name: string
+          customer_city: string
+          quantity: number
+          total_amount: number
+          product_name: string
+          tracking_number: string | null
+          delivery_company: string | null
+          created_at: string
+          confirmed_at: string | null
+          shipped_at: string | null
+          delivered_at: string | null
+          cancelled_at: string | null
+          returned_at: string | null
+        }[]
+      }
     }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>
