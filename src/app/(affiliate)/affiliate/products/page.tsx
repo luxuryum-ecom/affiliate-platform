@@ -7,6 +7,7 @@ import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Product } from '@/types/database'
 
 export const metadata = {
@@ -119,12 +120,7 @@ export default async function AffiliateProductsPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/affiliate/dashboard"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              ← Dashboard
-            </Link>
+            <Link href="/affiliate/dashboard"><MozounaLogo size="sm" /></Link>
             <span className="text-gray-300">/</span>
             <span className="font-semibold text-gray-900 text-sm">Catalogue</span>
           </div>

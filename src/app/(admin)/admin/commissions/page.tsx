@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { CommissionStatusForm } from '@/components/admin/commission-status-form'
+import { BulkApproveButton } from '@/components/admin/bulk-approve-button'
 import type { Commission, Profile, Order, CommissionStatus } from '@/types/database'
 
 export const metadata = { title: 'Commissions affiliés — Administration' }
@@ -83,6 +84,11 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
   }, {})
 
   const isFiltered = !!(filterStatus || affiliate_id)
+
+  // IDs of pending commissions in the current view — passed to bulk-approve button.
+  const pendingIdsInView = list
+    .filter((c) => c.status === 'pending')
+    .map((c) => c.id)
 
   function buildHref(params: { status?: string; affiliate_id?: string }) {
     const p = new URLSearchParams()
@@ -192,11 +198,14 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
           ))}
         </div>
 
-        {/* Results header */}
-        <p className="text-xs text-gray-500 mb-2">
-          {list.length} commission{list.length !== 1 ? 's' : ''}
-          {isFiltered ? ' (filtré)' : ''}
-        </p>
+        {/* Results header + bulk action */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+          <p className="text-xs text-gray-500">
+            {list.length} commission{list.length !== 1 ? 's' : ''}
+            {isFiltered ? ' (filtré)' : ''}
+          </p>
+          <BulkApproveButton pendingIds={pendingIdsInView} />
+        </div>
 
         {/* Commission list */}
         {list.length === 0 ? (

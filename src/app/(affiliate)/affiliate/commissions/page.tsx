@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Commission, CommissionStatus, Payout } from '@/types/database'
 
 export const metadata = {
@@ -92,9 +93,7 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link href="/affiliate/dashboard" className="text-gray-400 hover:text-gray-600 text-sm shrink-0">
-              ← Dashboard
-            </Link>
+            <Link href="/affiliate/dashboard"><MozounaLogo size="sm" /></Link>
             <span className="text-gray-300 shrink-0">/</span>
             <span className="font-semibold text-gray-900 text-sm truncate">Mes commissions</span>
           </div>

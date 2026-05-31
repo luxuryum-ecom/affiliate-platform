@@ -33,6 +33,36 @@ export async function updateCommissionStatus(
   return { error: null }
 }
 
+/**
+ * Bulk-approve all commissions whose IDs are provided and whose current status is 'pending'.
+ * Only 'pending' rows are touched — already-approved or paid commissions are skipped.
+ * Returns the count of rows actually updated.
+ */
+export async function bulkApproveCommissions(
+  commissionIds: string[]
+): Promise<{ updated: number; error: string | null }> {
+  if (!Array.isArray(commissionIds) || commissionIds.length === 0) {
+    return { updated: 0, error: null }
+  }
+
+  const { supabase, error } = await requireAdmin({ allowAgent: false })
+  if (error) return { updated: 0, error }
+
+  const { data, error: updateErr } = await supabase
+    .from('commissions')
+    .update({ status: 'approved' as CommissionStatus })
+    .in('id', commissionIds)
+    .eq('status', 'pending')
+    .select('id')
+
+  if (updateErr) return { updated: 0, error: updateErr.message }
+
+  revalidatePath('/admin/commissions')
+  revalidatePath('/admin/dashboard')
+  revalidatePath('/affiliate/commissions')
+  return { updated: data?.length ?? 0, error: null }
+}
+
 export async function addOrderProof(formData: FormData): Promise<{ error: string | null }> {
   const orderId = (formData.get('orderId') as string)?.trim()
   const proofType = formData.get('proofType') as ProofType
