@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from './_guards'
 import type { SupplierCommissionType, SupplierPayoutStatus, SupplierQuoteRequest } from '@/types/database'
 
 export type SupplierPayoutState = { error: string | null; success?: boolean }
@@ -11,9 +11,8 @@ export async function updateSupplierFinancials(
   _prevState: SupplierPayoutState,
   formData: FormData
 ): Promise<SupplierPayoutState> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié.' }
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return { error: authError ?? 'Non authentifié.' }
 
   const id = formData.get('id') as string
   const supplier_cost_mad = parseFloat(formData.get('supplier_cost_mad') as string)
@@ -70,9 +69,8 @@ export async function updateSupplierPayoutStatus(
   _prevState: SupplierPayoutState,
   formData: FormData
 ): Promise<SupplierPayoutState> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié.' }
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return { error: authError ?? 'Non authentifié.' }
 
   const id = formData.get('id') as string
   const new_status = formData.get('supplier_payout_status') as SupplierPayoutStatus
@@ -102,7 +100,7 @@ export async function updateSupplierPayoutStatus(
     supplier_quote_request_id: id,
     previous_status,
     new_status,
-    changed_by: user.id,
+    changed_by: userId,
     notes,
   })
 

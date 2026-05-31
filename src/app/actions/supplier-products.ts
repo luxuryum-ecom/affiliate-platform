@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { requireAdmin } from './_guards'
 import type { SupplierProduct, SupplierProductStatus, PlatformMarginType, SupplierType } from '@/types/database'
 
 export type SupplierProductState = { error: string | null; success?: boolean }
@@ -60,9 +61,8 @@ export async function approveSupplierProduct(
   _prevState: SupplierProductState,
   formData: FormData
 ): Promise<SupplierProductState> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié.' }
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return { error: authError ?? 'Non authentifié.' }
 
   const id = formData.get('id') as string
   const public_name = (formData.get('public_name') as string)?.trim() || null
@@ -80,7 +80,7 @@ export async function approveSupplierProduct(
       platform_margin_type: platform_margin_type as PlatformMarginType,
       platform_margin_value: isNaN(platform_margin_value) ? null : platform_margin_value,
       admin_notes,
-      approved_by: user.id,
+      approved_by: userId,
       approved_at: new Date().toISOString(),
       rejected_at: null,
     })
@@ -96,9 +96,8 @@ export async function rejectSupplierProduct(
   _prevState: SupplierProductState,
   formData: FormData
 ): Promise<SupplierProductState> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié.' }
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return { error: authError ?? 'Non authentifié.' }
 
   const id = formData.get('id') as string
   const admin_notes = (formData.get('admin_notes') as string)?.trim() || null

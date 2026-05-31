@@ -58,7 +58,7 @@ export async function placeOrder(
   const { data: product } = (await supabase
     .from('products')
     .select(
-      'id, sell_price, stock_count, active, approval_status, affiliate_enabled, availability_type, name, confirmation_fee_mad, packaging_fee_mad, delivery_fee_mad, purchase_price_mad, platform_margin_type, platform_margin_value'
+      'id, sell_price, stock_count, active, approval_status, affiliate_enabled, availability_type, name, confirmation_fee_mad, packaging_fee_mad, delivery_fee_mad, factory_cost_mad, purchase_price_mad, platform_margin_type, platform_margin_value'
     )
     .eq('id', productId)
     .single()) as { data: {
@@ -73,6 +73,7 @@ export async function placeOrder(
       confirmation_fee_mad: number
       packaging_fee_mad: number
       delivery_fee_mad: number
+      factory_cost_mad: number | null
       purchase_price_mad: number | null
       platform_margin_type: 'percentage' | 'fixed'
       platform_margin_value: number | null
@@ -116,6 +117,19 @@ export async function placeOrder(
     }
   }
 
+  // Validate attribution click belongs to this affiliate + product — reject tampered click IDs.
+  let validatedClickId: string | null = null
+  if (attributionClickId && validatedAffiliateId) {
+    const { data: clickRow } = (await supabase
+      .from('affiliate_clicks')
+      .select('id')
+      .eq('id', attributionClickId)
+      .eq('affiliate_id', validatedAffiliateId)
+      .eq('product_id', productId)
+      .maybeSingle()) as { data: { id: string } | null; error: unknown }
+    validatedClickId = clickRow?.id ?? null
+  }
+
   // ── Resolve delivery fee: cities table → logistics_settings default ──────
   const [deliveryFeeResolved, logisticsSettings] = await Promise.all([
     resolveDeliveryFeeByCity(customerCity),
@@ -129,7 +143,7 @@ export async function placeOrder(
   const commissionAmount = validatedAffiliateId
     ? calculateNetAffiliateCommission({
         affiliateSellPrice: unitPrice,
-        factoryCostMad: product.purchase_price_mad ?? 0,
+        factoryCostMad: product.factory_cost_mad ?? product.purchase_price_mad ?? 0,
         marginType: product.platform_margin_type,
         marginValue: product.platform_margin_value ?? 0,
         deliveryFee: deliveryFeeResolved,
@@ -172,14 +186,14 @@ export async function placeOrder(
       customer_address: customerAddress,
       quantity,
       total_amount: totalAmount,
-      commission_amount: commissionAmount,
+      commission_amount: Math.max(0, commissionAmount),
       product_price_snapshot: unitPrice,
-      affiliate_commission_mad_snapshot: commissionAmount,
+      affiliate_commission_mad_snapshot: Math.max(0, commissionAmount),
       delivery_fee_snapshot: deliveryFeeSnapshot,
       packaging_fee_snapshot: packagingFeeSnapshot,
       confirmation_fee_snapshot: confirmationFeeSnapshot,
       return_fee_snapshot: returnFeeResolved,
-      attribution_click_id: attributionClickId,
+      attribution_click_id: validatedClickId,
       fraud_score: fraudScore,
       duplicate_risk_score: duplicateScore,
       spam_score: spamScore,

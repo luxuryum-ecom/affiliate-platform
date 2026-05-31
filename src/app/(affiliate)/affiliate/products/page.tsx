@@ -110,7 +110,8 @@ export default async function AffiliateProductsPage() {
     })
   }
 
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://yourapp.com'
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL
+    ?? (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
 
   return (
     <div className="min-h-screen bg-gray-50">
