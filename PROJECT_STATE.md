@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-05-31 — commit `b3dde3d` (migrations 040 + 041 resolved and applied)  
+> Last agent update: 2026-05-31 — commit `5510f52` (affiliate branding + admin bulk commission approve)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
@@ -71,11 +71,11 @@
 - **Premium subscriptions**: manage plans and assign subscriptions to suppliers
 
 ### 2.3 Affiliate Area (`/affiliate/*`)
-- **Dashboard**: earnings summary (earned, paid, pending), commission history
-- **Products catalogue**: all `affiliate_enabled` products with referral link generator, custom sell-price setter, per-product performance stats (clicks, orders, conversion rate, earned)
-- **Orders**: list of orders attributed to the affiliate
+- **Dashboard**: earnings summary (earned, paid, pending), commission history — Mozouna Group branding ✓
+- **Products catalogue**: all `affiliate_enabled` products with referral link generator, custom sell-price setter, per-product performance stats (clicks, orders, conversion rate, earned) — Mozouna Group branding ✓
+- **Orders**: list of orders attributed to the affiliate — Mozouna Group branding ✓
 - **New order**: self-entry form for manual order creation
-- **Commissions**: detailed commission ledger
+- **Commissions**: detailed commission ledger — Mozouna Group branding ✓
 
 ### 2.4 Wholesale Area (`/wholesale/*`)
 - **Dashboard**: overview stats, quick links
@@ -147,8 +147,8 @@ All four are imported by committed pages and required for the pages to build.
 ### 3.3 Migration 040 — Untracked
 `supabase/migrations/040_wholesaler_badges_rls.sql` is untracked (not committed). It adds a read policy so wholesalers can query active subscriptions for premium badge display in the marketplace. The marketplace page already depends on this data.
 
-### 3.4 Affiliate Products Page — Branding Divergence
-`/affiliate/products` uses a plain header with no `MozounaLogo`, while all wholesale and admin pages now use the Mozouna Group branding components from `src/components/shared/branding.tsx`. The affiliate area has not been rebranded.
+### ~~3.4 Affiliate Branding Divergence~~ ✅ DONE (commit `5510f52`)
+All affiliate pages (`/affiliate/products`, `/affiliate/orders`, `/affiliate/commissions`) now display `MozounaLogo` in their headers, consistent with admin and wholesale areas.
 
 ### 3.5 Admin Analytics
 `/admin/analytics` exists but covers only basic COD order stats. No wholesale analytics, supplier analytics, or commission trend charts are present in the admin analytics view (those exist as separate dedicated pages, not unified).
@@ -194,7 +194,7 @@ These are presented as separate sections. There is no unified search or cross-ca
 | **Affiliate dashboard charts/graphs** | Earnings shown as numbers only; no trend visualization |
 | **Order notification system** | No email/SMS when a COD order is placed or status changes |
 | **Stock depletion alerts** | No admin notification when `stock_count` hits zero |
-| **Automated commission approval** | Admin must manually approve each commission after delivery; no automation |
+| ~~**Automated commission approval**~~ | ✅ Bulk-approve button built on `/admin/commissions` (commit `5510f52`) |
 | **Payout scheduling** | Payouts are manual batch operations; no schedule or automatic release |
 | **Affiliate link QR codes** | Not built (common affiliate feature) |
 | **Wholesale order PDF export** | Quote document exists via `shared/quote-document.tsx`; no direct PDF download for standard wholesale orders |
@@ -442,16 +442,16 @@ Ordered by business impact and build stability:
 5. Remove or clearly mark the hardcoded social proof stats (reviews, order count, response rate) in the marketplace product detail; either hide them or replace with real aggregate queries
 6. Remove the hardcoded variants section or implement a real variant model on `supplier_products`
 
-### Priority 3 — Affiliate area alignment
-7. Rebrand the affiliate area header with `MozounaLogo` and the shared branding component
-8. Ensure `NEXT_PUBLIC_APP_URL` is documented in `.env.production.example` and validated on startup (throw early if missing)
+### ~~Priority 3 — Affiliate area alignment~~ ✅ DONE (commit `5510f52`)
+~~7. Rebrand the affiliate area header with `MozounaLogo`~~ — Done for products, orders, commissions pages.
+8. Ensure `NEXT_PUBLIC_APP_URL` is documented in `.env.production.example` and validated on startup (throw early if missing) — still pending.
 
 ### ~~Priority 4 — Customer order tracking~~ ✅ DONE (commit `53f6824`)
 ~~9. Build a public order status lookup page for COD customers~~ — **Built**: `/orders/track?phone=...` is live. Phone lookup, status timeline, tracking number display.
 
 ### Priority 5 — Operations
-10. Add automated commission approval trigger or at minimum a bulk-approve UI to reduce admin overhead at scale
-11. Add stock depletion notification (admin alert when `stock_count` reaches 0)
+~~10. Add automated commission approval trigger or at minimum a bulk-approve UI~~ — ✅ DONE (commit `5510f52`): `BulkApproveButton` on `/admin/commissions` — one click approves all pending commissions in the current view.
+11. Add stock depletion notification (admin alert when `stock_count` reaches 0) — still pending.
 
 ### Priority 6 — Documentation
 12. Create a `README.md` at the repository root with: local setup steps, env var reference, migration workflow, and role descriptions
@@ -461,4 +461,4 @@ Ordered by business impact and build stability:
 
 ---
 
-*Last updated: 2026-05-31 — commit `b3dde3d` — migrations 040+041 resolved. Branch: `chore/agent-operating-system` (41 migrations applied, 65 routes, 25 server action modules, 49 components).*
+*Last updated: 2026-05-31 — commit `5510f52`. Branch: `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 50 components).*
