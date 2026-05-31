@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-05-31 — commit `3dcbaad` (6 bugs fixed in commission calc + authorization)  
+> Last agent update: 2026-05-31 — commit `b3dde3d` (migrations 040 + 041 resolved and applied)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
@@ -117,7 +117,7 @@
 - Premium plan limits enforcement
 
 ### 2.8 Database Schema (40 migrations)
-Complete schema through `041_order_tracking_rpc.sql`. All migrations are idempotent.
+Complete schema through `041_order_tracking_rpc.sql`. All migrations are idempotent. All 41 migrations fully in sync between local and remote as of 2026-05-31.
 
 ---
 
@@ -272,6 +272,10 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 
 ## 6. Database and Migration Status
 
+### 6.0 Migration Sync Status
+
+**As of 2026-05-31:** All 41 migrations are fully in sync (`Local = Remote` for 001–041). `supabase migration list` confirms no drift.
+
 ### 6.1 Migration File Inventory
 
 | # | File | Description |
@@ -315,7 +319,7 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 | 037 | `037_rfq_matching_engine.sql` | `supplier_matching_profiles`, `rfq_matches`, `rfq_offers` |
 | 038 | `038_premium_monetization.sql` | `premium_plans`, `supplier_subscriptions`, `subscription_audit_log` |
 | 039 | `039_category_subcategory.sql` | `category` / `subcategory` fields on products |
-| 040 | `040_wholesaler_badges_rls.sql` | **UNTRACKED** — RLS so wholesalers read active subscriptions for badge display |
+| 040 | `040_wholesaler_badges_rls.sql` | RLS so wholesalers read active subscriptions for badge display ✓ committed 2026-05-31 |
 | 041 | `041_order_tracking_rpc.sql` | `get_orders_by_phone(text)` SECURITY DEFINER RPC for public customer order tracking |
 
 ### 6.2 Key Tables
@@ -457,4 +461,4 @@ Ordered by business impact and build stability:
 
 ---
 
-*Last updated: 2026-05-31 — commit `3dcbaad` — bug fix session. Branch: `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 49 components).*
+*Last updated: 2026-05-31 — commit `b3dde3d` — migrations 040+041 resolved. Branch: `chore/agent-operating-system` (41 migrations applied, 65 routes, 25 server action modules, 49 components).*
