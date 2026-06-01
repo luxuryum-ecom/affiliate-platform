@@ -17,7 +17,7 @@ export async function updateUserStatus(formData: FormData): Promise<void> {
     .from('profiles')
     .update({ status })
     .eq('id', profileId)
-    .in('role', ['affiliate', 'wholesaler'])
+    .in('role', ['affiliate', 'wholesaler', 'supplier'])
 
   revalidatePath('/admin/users')
   revalidatePath('/admin/dashboard')

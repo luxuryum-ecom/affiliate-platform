@@ -7,8 +7,9 @@ import type { Profile } from '@/types/database'
 export const metadata = { title: 'Utilisateurs — Administration' }
 
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
-  affiliate:  { label: 'Affilié',   cls: 'bg-blue-100 text-blue-700' },
-  wholesaler: { label: 'Grossiste', cls: 'bg-purple-100 text-purple-700' },
+  affiliate:  { label: 'Affilié',     cls: 'bg-blue-100 text-blue-700' },
+  wholesaler: { label: 'Grossiste',   cls: 'bg-purple-100 text-purple-700' },
+  supplier:   { label: 'Fournisseur', cls: 'bg-orange-100 text-orange-700' },
 }
 
 export default async function AdminUsersPage() {
@@ -26,13 +27,13 @@ export default async function AdminUsersPage() {
       .from('profiles')
       .select('*')
       .eq('status', 'pending')
-      .in('role', ['affiliate', 'wholesaler'])
+      .in('role', ['affiliate', 'wholesaler', 'supplier'])
       .order('created_at', { ascending: true }),
     supabase
       .from('profiles')
       .select('id, full_name, phone, role, status, wholesale_access')
       .eq('status', 'approved')
-      .in('role', ['affiliate', 'wholesaler'])
+      .in('role', ['affiliate', 'wholesaler', 'supplier'])
       .order('created_at', { ascending: false }),
   ])
 
