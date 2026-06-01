@@ -6,6 +6,7 @@ import { MozounaLogo, OriginBadge, VerifiedBadge, FeaturedBadge, MOQChip } from 
 import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
 import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
+import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
 import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
 
 export const metadata = { title: 'Marketplace fournisseurs — Espace Grossiste' }
@@ -208,6 +209,12 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 font-medium">
             🛡 Identité fournisseur protégée
           </span>
+          <Link
+            href="/wholesale/marketplace?availability=import_on_demand"
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-medium hover:bg-blue-100 transition-colors"
+          >
+            📦 Voir tous les produits import
+          </Link>
         </div>
 
         {/* ── Filters ─────────────────────────────────────────────────────────── */}
@@ -451,9 +458,6 @@ const INTERNATIONAL_SOURCES = [
 ] as const
 
 const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000'
-const sourcingMessage = encodeURIComponent(
-  'Bonjour, je souhaite demander un sourcing personnalisé pour mon activité de gros. Pouvez-vous me contacter ?'
-)
 
 function CountrySourceSection({
   activeOrigin,
@@ -581,28 +585,7 @@ function CountrySourceSection({
           })}
         </div>
 
-        {/* Quick sourcing CTA */}
-        <div className="mt-3 flex flex-col gap-2">
-          <div>
-            <p className="text-xs text-gray-500 mb-2">
-              Vous ne trouvez pas votre produit ? Nous le recherchons pour vous.
-            </p>
-            <a
-              href={`https://wa.me/${whatsappPhone}?text=${sourcingMessage}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 w-full sm:max-w-md text-sm font-semibold px-4 py-2.5 rounded-lg bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              💬 Sourcing personnalisé sur demande
-            </a>
-          </div>
-          <Link
-            href="/wholesale/marketplace?availability=import_on_demand"
-            className="inline-flex items-center gap-1.5 self-start text-[10px] font-medium px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
-          >
-            📦 Voir tous les produits import
-          </Link>
-        </div>
+        <SourcingRequestCta whatsappPhone={whatsappPhone} />
       </div>
     </section>
   )
