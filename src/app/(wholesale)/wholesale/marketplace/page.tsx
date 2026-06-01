@@ -366,7 +366,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {products.map((product) => (
               <MarketplaceProductCard
                 key={product.id}
@@ -603,8 +603,8 @@ function MarketplaceProductCard({
       href={`/wholesale/marketplace/${product.id}`}
       className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-lg transition-all duration-200 ${cardBorder}`}
     >
-      {/* Image — 4:3 for richer product feel */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+      {/* Square image — compact density */}
+      <div className="relative aspect-square overflow-hidden bg-gray-100">
         {product.photos.length > 0 ? (
           <ProductCardImage src={product.photos[0]} alt={displayName} />
         ) : (
@@ -639,91 +639,60 @@ function MarketplaceProductCard({
       </div>
 
       {/* Card body */}
-      <div className="p-3 flex flex-col gap-2 flex-1">
-        {/* Supplier verification badge row */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-400 font-medium">
-            {isMorocco ? '🇲🇦 Fournisseur Maroc' : '🌍 International'}
+      <div className="p-2.5 flex flex-col gap-1.5 flex-1">
+        {/* Supplier + verification badge */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-[9px] text-gray-400 font-medium leading-none">
+            {isMorocco ? '🇲🇦 Maroc' : '🌍 Intl'}
           </span>
           {isVerified && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 leading-none">
               ✓ Vérifié
             </span>
           )}
           {!isVerified && isFeatured && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
+            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-indigo-100 text-indigo-700 leading-none">
               ★ Premium
             </span>
           )}
         </div>
 
         {/* Product name */}
-        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+        <h3 className="text-xs font-semibold text-gray-900 leading-snug line-clamp-2 flex-1">
           {displayName}
         </h3>
 
-        {/* MOQ + delivery row */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* MOQ + delivery */}
+        <div className="flex gap-1 flex-wrap">
           <MOQChip qty={product.min_quantity} unit={product.unit ?? 'u.'} />
-          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100 font-medium">
+          <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 font-medium">
             🚚 {deliveryLabel}
           </span>
         </div>
 
         {/* Stock quantity */}
         {product.stock_quantity != null && (
-          <p className="text-[11px] text-gray-500">
+          <p className="text-[10px] leading-none">
             <span className={product.stock_quantity > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>
-              {product.stock_quantity > 0 ? `${product.stock_quantity.toLocaleString('fr-MA')} en stock` : 'Rupture de stock'}
+              {product.stock_quantity > 0 ? `${product.stock_quantity.toLocaleString('fr-MA')} en stock` : 'Rupture'}
             </span>
-            {product.stock_quantity > 0 && (
-              <span className="ml-1 text-gray-400">/ {product.unit ?? 'u.'}</span>
-            )}
           </p>
         )}
 
-        {/* Price */}
-        <div className="pt-2 border-t border-gray-100">
+        {/* Price + CTA */}
+        <div className="pt-1.5 border-t border-gray-100 mt-auto">
           {product.suggested_wholesale_price_mad != null ? (
-            <div>
-              <p className="text-[10px] text-gray-400 font-medium mb-0.5">À partir de</p>
-              <p className="text-base font-extrabold text-gray-900">
-                {product.suggested_wholesale_price_mad.toLocaleString('fr-MA')}{' '}
-                <span className="text-sm font-semibold text-gray-500">MAD</span>
-                <span className="text-[10px] font-normal text-gray-400 ml-1">/ {product.unit ?? 'u.'}</span>
-              </p>
-            </div>
+            <p className="text-sm font-bold text-gray-900 leading-none mb-1.5">
+              {product.suggested_wholesale_price_mad.toLocaleString('fr-MA')}{' '}
+              <span className="text-xs font-semibold text-gray-500">MAD</span>
+              {hasTiers && (
+                <span className="text-[9px] font-normal text-gray-400 ml-1">· paliers dispo</span>
+              )}
+            </p>
           ) : (
-            <p className="text-sm font-semibold text-gray-500">Prix sur devis</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1.5">Sur devis</p>
           )}
-
-          {/* Tier pricing table */}
-          {hasTiers && (
-            <div className="mt-2 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden">
-              <p className="text-[9px] font-bold text-gray-400 uppercase px-2 pt-1.5 pb-0.5 tracking-wider">
-                Paliers de prix
-              </p>
-              <table className="w-full text-[10px]">
-                <tbody>
-                  {moqTiers.slice(0, 3).map((tier) => (
-                    <tr key={tier.min_quantity} className="border-t border-gray-100 first:border-0">
-                      <td className="px-2 py-1 text-gray-600 font-medium">
-                        ≥ {tier.min_quantity.toLocaleString('fr-MA')} {product.unit ?? 'u.'}
-                      </td>
-                      <td className="px-2 py-1 text-right text-gray-500">
-                        Sur devis
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* CTA button */}
-        <div className="mt-auto pt-2">
-          <span className="block w-full text-center text-xs font-bold py-2.5 px-3 rounded-xl bg-emerald-600 text-white group-hover:bg-emerald-700 transition-colors">
+          <span className="block w-full text-center text-[10px] font-bold py-1.5 rounded-lg bg-emerald-600 text-white group-hover:bg-emerald-700 transition-colors">
             Voir les tarifs grossiste →
           </span>
         </div>
