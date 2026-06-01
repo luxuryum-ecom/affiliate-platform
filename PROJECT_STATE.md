@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-05-31 — login verified working; stale process (PID 40205, 39h uptime) was the root cause  
+> Last agent update: 2026-06-01 — commit `3bdf177` (wholesale marketplace QA fixes: image error handling, Morocco hero country selection, conversion product cards)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
