@@ -2,6 +2,12 @@
 
 import { useActionState, useState } from 'react'
 import { requestSupplierProductQuote, type SupplierProductState } from '@/app/actions/supplier-products'
+import {
+  PURCHASE_PROFILE_LABELS,
+  VOLUME_TIER_LABELS,
+  BUYER_PURCHASE_PROFILES,
+  BUYER_VOLUME_TIERS,
+} from '@/lib/rfq-buyer-intake'
 
 const initial: SupplierProductState = { error: null }
 
@@ -51,6 +57,50 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
         />
         <p className="text-xs text-gray-400 mt-0.5">Min. {minQuantity} u.</p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">Profil d&apos;achat</label>
+        <select
+          name="buyer_purchase_profile"
+          required
+          disabled={isPending}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+        >
+          <option value="">Sélectionner...</option>
+          {BUYER_PURCHASE_PROFILES.map((value) => (
+            <option key={value} value={value}>
+              {PURCHASE_PROFILE_LABELS[value]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">Volume estimé</label>
+        <select
+          name="buyer_volume_tier"
+          required
+          disabled={isPending}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+        >
+          <option value="">Sélectionner...</option>
+          {BUYER_VOLUME_TIERS.map((value) => (
+            <option key={value} value={value}>
+              {VOLUME_TIER_LABELS[value]}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">
+          Plus le volume est élevé, plus les conditions tarifaires peuvent être avantageuses.
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800 space-y-0.5">
+        <p>20 pcs → Prix standard</p>
+        <p>100 pcs → Remise grossiste</p>
+        <p>500 pcs → Prix usine privilégié</p>
+        <p>1000+ pcs → Négociation directe plateforme</p>
       </div>
 
       <div>

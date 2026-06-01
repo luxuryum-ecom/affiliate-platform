@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { requireAdmin } from './_guards'
 import type { SupplierProduct, SupplierProductStatus, PlatformMarginType, SupplierType } from '@/types/database'
+import { isBuyerPurchaseProfile, isBuyerVolumeTier } from '@/lib/rfq-buyer-intake'
 
 export type SupplierProductState = { error: string | null; success?: boolean }
 
@@ -133,15 +134,25 @@ export async function requestSupplierProductQuote(
   const destination_city = (formData.get('destination_city') as string)?.trim() || null
   const buyer_notes = (formData.get('buyer_notes') as string)?.trim() || null
   const whatsapp_number = (formData.get('whatsapp_number') as string)?.trim() || ''
+  const buyer_purchase_profile = (formData.get('buyer_purchase_profile') as string)?.trim() || ''
+  const buyer_volume_tier = (formData.get('buyer_volume_tier') as string)?.trim() || ''
 
   if (!supplier_product_id) return { error: 'Produit introuvable.' }
   if (!quantity_requested || quantity_requested < 1) return { error: 'Quantité invalide.' }
+  if (!isBuyerPurchaseProfile(buyer_purchase_profile)) {
+    return { error: 'Sélectionnez votre profil d\'achat.' }
+  }
+  if (!isBuyerVolumeTier(buyer_volume_tier)) {
+    return { error: 'Sélectionnez un volume estimé.' }
+  }
   if (!whatsapp_number) return { error: 'Numéro WhatsApp requis.' }
 
   const { error } = await supabase.from('supplier_quote_requests').insert({
     supplier_product_id,
     buyer_id: user.id,
     quantity_requested,
+    buyer_purchase_profile,
+    buyer_volume_tier,
     destination_country,
     destination_city,
     buyer_notes,

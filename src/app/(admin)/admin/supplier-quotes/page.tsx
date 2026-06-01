@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { labelPurchaseProfile, labelVolumeTier } from '@/lib/rfq-buyer-intake'
 import { PAYOUT_STATUS_BADGE } from '@/components/admin/supplier-payout-form'
 import type { SupplierQuoteRequest, SupplierProduct, SupplierQuoteRequestStatus, SupplierPayoutStatus, Profile } from '@/types/database'
 
@@ -155,6 +156,18 @@ export default async function AdminSupplierQuotesPage({ searchParams }: PageProp
                       <span>Fournisseur : {q.supplier_product?.supplier?.full_name ?? '—'}</span>
                       <span className="text-gray-300">·</span>
                       <span>{q.quantity_requested} u.</span>
+                      {q.buyer_purchase_profile && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span>{labelPurchaseProfile(q.buyer_purchase_profile)}</span>
+                        </>
+                      )}
+                      {q.buyer_volume_tier && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span>{labelVolumeTier(q.buyer_volume_tier)}</span>
+                        </>
+                      )}
                       {q.quoted_unit_price_mad != null && (
                         <>
                           <span className="text-gray-300">·</span>

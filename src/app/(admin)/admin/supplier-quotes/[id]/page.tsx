@@ -5,6 +5,7 @@ import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { SupplierFinancialsForm } from '@/components/admin/supplier-financials-form'
 import { SupplierPayoutForm, PAYOUT_STATUS_BADGE } from '@/components/admin/supplier-payout-form'
+import { labelPurchaseProfile, labelVolumeTier } from '@/lib/rfq-buyer-intake'
 import type {
   SupplierQuoteRequest,
   SupplierProduct,
@@ -263,6 +264,22 @@ export default async function AdminSupplierQuoteDetailPage({ params }: PageProps
                   <dt className="text-rose-500 text-xs">WhatsApp</dt>
                   <dd className="text-gray-900 font-medium">{quote.whatsapp_number}</dd>
                 </div>
+                {(quote.buyer_purchase_profile || quote.buyer_volume_tier) && (
+                  <>
+                    <div>
+                      <dt className="text-rose-500 text-xs">Profil d&apos;achat</dt>
+                      <dd className="text-gray-900 font-medium">
+                        {labelPurchaseProfile(quote.buyer_purchase_profile)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-rose-500 text-xs">Volume estimé</dt>
+                      <dd className="text-gray-900 font-medium">
+                        {labelVolumeTier(quote.buyer_volume_tier)}
+                      </dd>
+                    </div>
+                  </>
+                )}
               </dl>
             </div>
 

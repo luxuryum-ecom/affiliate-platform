@@ -750,12 +750,28 @@ export type SupplierProductPublic = Omit<
 /** Status for supplier marketplace quote requests. */
 export type SupplierQuoteRequestStatus = 'new' | 'studying' | 'quoted' | 'approved' | 'rejected'
 
+export type BuyerPurchaseProfile =
+  | 'physical_store'
+  | 'social_reseller'
+  | 'wholesaler'
+  | 'importer'
+
+export type BuyerVolumeTier =
+  | 'test_20_50'
+  | 'small_100_300'
+  | 'active_500_1000'
+  | 'importer_1000_plus'
+
 /** Quote request from a wholesaler for a marketplace supplier product. Supplier identity hidden. */
 export interface SupplierQuoteRequest {
   id: string
   supplier_product_id: string
   buyer_id: string
   quantity_requested: number
+  /** Admin-only intake — not selected in supplier-facing queries. */
+  buyer_purchase_profile: BuyerPurchaseProfile | null
+  /** Admin-only intake — not selected in supplier-facing queries. */
+  buyer_volume_tier: BuyerVolumeTier | null
   destination_country: string
   destination_city: string | null
   buyer_notes: string | null
