@@ -97,9 +97,9 @@ export default async function SupplierDashboardPage() {
     safeQuotes = (quotesData ?? []) as SafeQuoteRow[]
   }
 
-  const pending = products.filter((p) => p.approval_status === 'pending').length
+  const pending = products.filter((p) => p.approval_status === 'pending_review').length
   const approved = products.filter((p) => p.approval_status === 'approved').length
-  const rejected = products.filter((p) => p.approval_status === 'rejected').length
+  const rejected = products.filter((p) => p.approval_status === 'blocked').length
 
   // Payout aggregates (supplier-safe: payout amounts only, no commission breakdown)
   const totalPayoutDue = safeQuotes

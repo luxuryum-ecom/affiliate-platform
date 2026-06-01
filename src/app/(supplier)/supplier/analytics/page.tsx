@@ -29,8 +29,8 @@ export default async function SupplierAnalyticsPage() {
 
   const products = (productsData ?? []) as Pick<SupplierProduct, 'id' | 'product_name' | 'approval_status' | 'created_at'>[]
   const approvedProducts  = products.filter((p) => p.approval_status === 'approved')
-  const pendingProducts   = products.filter((p) => p.approval_status === 'pending')
-  const rejectedProducts  = products.filter((p) => p.approval_status === 'rejected')
+  const pendingProducts   = products.filter((p) => p.approval_status === 'pending_review')
+  const rejectedProducts  = products.filter((p) => p.approval_status === 'blocked')
   const approvedIds       = approvedProducts.map((p) => p.id)
 
   // ── Quote requests for approved products ─────────────────────────────────────

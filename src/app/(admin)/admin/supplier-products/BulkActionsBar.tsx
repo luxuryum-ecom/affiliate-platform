@@ -2,7 +2,11 @@
 
 import { useActionState, useState } from 'react'
 import { bulkApproveProducts, bulkRejectProducts, bulkArchiveProducts } from '@/app/actions/supplier-bulk'
-import type { SupplierProductStatus, SupplierType } from '@/types/database'
+import {
+  MODERATION_FLAG_LABELS,
+  SUPPLIER_PRODUCT_STATUS_BADGES,
+} from '@/lib/supplier-product-moderation'
+import type { SupplierProductStatus, SupplierType, SupplierModerationFlag } from '@/types/database'
 
 type ActionResult = { error: string | null; success: boolean }
 const initial: ActionResult = { error: null, success: false }
@@ -11,17 +15,14 @@ interface ProductRow {
   id: string
   product_name: string
   approval_status: SupplierProductStatus
+  moderation_flag: SupplierModerationFlag | null
+  ai_risk_score: number | null
   supplier_type: SupplierType
   category: string
+  min_quantity: number
   origin_country: string
   supplierName: string | null
   createdAt: string
-}
-
-const STATUS_BADGE: Record<SupplierProductStatus, { label: string; cls: string }> = {
-  pending:  { label: 'En attente', cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Approuvé',   cls: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Rejeté',     cls: 'bg-red-100 text-red-600' },
 }
 
 export default function BulkProductList({ products, detailBase }: { products: ProductRow[]; detailBase: string }) {
@@ -56,7 +57,7 @@ export default function BulkProductList({ products, detailBase }: { products: Pr
           <form action={rejectAction} className="contents">
             <input type="hidden" name="product_ids" value={ids} />
             <button type="submit" disabled={isRejecting} className="text-xs px-3 py-1.5 bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors">
-              {isRejecting ? '...' : 'Rejeter'}
+              {isRejecting ? '...' : 'Bloquer'}
             </button>
           </form>
 
@@ -89,7 +90,9 @@ export default function BulkProductList({ products, detailBase }: { products: Pr
       ) : (
         <div className="bg-white rounded-b-xl border border-gray-200 divide-y divide-gray-100">
           {products.map((p) => {
-            const badge = STATUS_BADGE[p.approval_status]
+            const badge = SUPPLIER_PRODUCT_STATUS_BADGES[p.approval_status]
+            const modLabel =
+              p.moderation_flag != null ? MODERATION_FLAG_LABELS[p.moderation_flag] : null
             return (
               <div key={p.id} className={`p-4 flex items-start gap-3 transition-colors ${selected.has(p.id) ? 'bg-blue-50' : ''}`}>
                 <input
@@ -102,6 +105,16 @@ export default function BulkProductList({ products, detailBase }: { products: Pr
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="font-medium text-gray-900 text-sm truncate max-w-[200px]">{p.product_name}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                    {modLabel && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                        IA: {modLabel}
+                      </span>
+                    )}
+                    {p.ai_risk_score != null && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 tabular-nums">
+                        Risque {p.ai_risk_score}
+                      </span>
+                    )}
                     {p.supplier_type && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                         {p.supplier_type === 'morocco' ? '🇲🇦 Maroc' : '🌍 International'}
@@ -111,6 +124,7 @@ export default function BulkProductList({ products, detailBase }: { products: Pr
                   <p className="text-xs text-gray-500 flex flex-wrap gap-x-2">
                     {p.supplierName && <span className="font-medium text-gray-700">{p.supplierName}</span>}
                     {p.category && <span>· {p.category}</span>}
+                    <span>· MOQ {p.min_quantity}</span>
                     {p.origin_country && <span>· {p.origin_country}</span>}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">{new Date(p.createdAt).toLocaleDateString('fr-FR')}</p>

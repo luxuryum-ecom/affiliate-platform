@@ -3,13 +3,16 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import BulkProductList from './BulkActionsBar'
-import type { SupplierProduct, SupplierType, Profile } from '@/types/database'
+import { SUPPLIER_PRODUCT_STATUS_BADGES } from '@/lib/supplier-product-moderation'
+import type { SupplierProduct, SupplierType, Profile, SupplierProductStatus } from '@/types/database'
 
-export const metadata = { title: 'Produits fournisseurs — Administration' }
+export const metadata = { title: 'Modération produits fournisseurs — Administration' }
 
 type SupplierProductRow = SupplierProduct & {
   supplier: Pick<Profile, 'id' | 'full_name' | 'phone'> | null
 }
+
+const FILTER_STATUSES = ['', 'pending_review', 'approved', 'blocked'] as const
 
 interface PageProps {
   searchParams: Promise<{ status?: string }>
@@ -37,26 +40,30 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
     .order('created_at', { ascending: false })
     .limit(300)
 
-  if (filters.status) {
-    query = query.eq('approval_status', filters.status)
+  const statusFilter = filters.status as SupplierProductStatus | undefined
+  if (statusFilter && FILTER_STATUSES.includes(statusFilter as (typeof FILTER_STATUSES)[number])) {
+    query = query.eq('approval_status', statusFilter)
   }
 
   const { data } = await query
   const products = (data ?? []) as unknown as SupplierProductRow[]
 
-  const pendingCount  = products.filter((p) => p.approval_status === 'pending').length
+  const pendingCount = products.filter((p) => p.approval_status === 'pending_review').length
   const approvedCount = products.filter((p) => p.approval_status === 'approved').length
-  const rejectedCount = products.filter((p) => p.approval_status === 'rejected').length
+  const blockedCount = products.filter((p) => p.approval_status === 'blocked').length
 
   const listProducts = products.map((p) => ({
-    id:               p.id,
-    product_name:     p.product_name,
-    approval_status:  p.approval_status,
-    supplier_type:    (p.supplier_type ?? 'morocco') as SupplierType,
-    category:         p.category,
-    origin_country:   p.origin_country,
-    supplierName:     p.supplier?.full_name ?? null,
-    createdAt:        p.created_at,
+    id: p.id,
+    product_name: p.product_name,
+    approval_status: p.approval_status,
+    moderation_flag: p.moderation_flag,
+    ai_risk_score: p.ai_risk_score,
+    supplier_type: (p.supplier_type ?? 'morocco') as SupplierType,
+    category: p.category,
+    min_quantity: p.min_quantity,
+    origin_country: p.origin_country,
+    supplierName: p.supplier?.full_name ?? null,
+    createdAt: p.created_at,
   }))
 
   return (
@@ -66,7 +73,7 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
           <div className="flex items-center gap-3">
             <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">← Dashboard</Link>
             <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Produits fournisseurs</span>
+            <span className="font-semibold text-gray-900 text-sm">Modération produits</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
@@ -80,19 +87,18 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Produits fournisseurs</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Modération produits fournisseurs</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {products.length} total · {pendingCount} en attente · {approvedCount} approuvés · {rejectedCount} rejetés
+              {products.length} total · {pendingCount} en attente · {approvedCount} approuvés · {blockedCount} bloqués
             </p>
           </div>
         </div>
 
-        {/* Stats row */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
-            { label: 'En attente',  value: pendingCount,  cls: 'bg-amber-50 border-amber-200 text-amber-700' },
-            { label: 'Approuvés',   value: approvedCount, cls: 'bg-green-50 border-green-200 text-green-700' },
-            { label: 'Rejetés',     value: rejectedCount, cls: 'bg-red-50 border-red-200 text-red-600' },
+            { label: 'En attente', value: pendingCount, cls: 'bg-amber-50 border-amber-200 text-amber-700' },
+            { label: 'Approuvés', value: approvedCount, cls: 'bg-green-50 border-green-200 text-green-700' },
+            { label: 'Bloqués', value: blockedCount, cls: 'bg-red-50 border-red-200 text-red-600' },
           ].map((s) => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.cls.split(' ').slice(0, 2).join(' ')}`}>
               <p className="text-xs text-gray-500">{s.label}</p>
@@ -101,11 +107,10 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
           ))}
         </div>
 
-        {/* Filter bar */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {(['', 'pending', 'approved', 'rejected'] as const).map((s) => (
+          {FILTER_STATUSES.map((s) => (
             <Link
-              key={s}
+              key={s || 'all'}
               href={s ? `/admin/supplier-products?status=${s}` : '/admin/supplier-products'}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 (filters.status ?? '') === s
@@ -113,7 +118,9 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
               }`}
             >
-              {s === '' ? 'Tous' : s === 'pending' ? 'En attente' : s === 'approved' ? 'Approuvés' : 'Rejetés'}
+              {s === ''
+                ? 'Tous'
+                : SUPPLIER_PRODUCT_STATUS_BADGES[s as SupplierProductStatus]?.label ?? s}
             </Link>
           ))}
         </div>

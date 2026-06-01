@@ -2,11 +2,48 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
-import type { SupplierProduct, SupplierProductStatus, PlatformMarginType, SupplierType } from '@/types/database'
+import type {
+  SupplierProduct,
+  SupplierProductStatus,
+  SupplierProductMoqTier,
+  PlatformMarginType,
+  SupplierType,
+} from '@/types/database'
 import { isBuyerPurchaseProfile, isBuyerVolumeTier } from '@/lib/rfq-buyer-intake'
+import { moderateSupplierProduct, type ModerationInput } from '@/lib/supplier-product-moderation'
 
 export type SupplierProductState = { error: string | null; success?: boolean }
+
+function parseMoqTiersFromForm(formData: FormData): Array<{ min_quantity: number; unit_price_usd: number }> {
+  const tiers: Array<{ min_quantity: number; unit_price_usd: number }> = []
+  for (let i = 1; i <= 4; i++) {
+    const qty = parseInt(formData.get(`tier_${i}_qty`) as string, 10)
+    const price = parseFloat(formData.get(`tier_${i}_price`) as string)
+    if (!isNaN(qty) && qty > 0 && !isNaN(price) && price > 0) {
+      tiers.push({ min_quantity: qty, unit_price_usd: price })
+    }
+  }
+  return tiers.sort((a, b) => a.min_quantity - b.min_quantity)
+}
+
+async function runAndStoreModeration(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  productId: string,
+  input: ModerationInput
+) {
+  const result = moderateSupplierProduct(input)
+  await supabase
+    .from('supplier_products')
+    .update({
+      moderation_flag: result.moderation_flag,
+      ai_risk_score: result.ai_risk_score,
+      moderation_reason: result.moderation_reason,
+      moderation_signals: result.moderation_signals,
+    })
+    .eq('id', productId)
+}
 
 // ── Supplier: submit a new product ────────────────────────────────────────────
 
@@ -31,27 +68,62 @@ export async function submitSupplierProduct(
   const target_buyer_type = (formData.get('target_buyer_type') as string) || 'wholesaler'
   const suggested_price = parseFloat(formData.get('suggested_wholesale_price_mad') as string)
   const supplier_private_notes = (formData.get('supplier_private_notes') as string)?.trim() || null
+  const stockRaw = parseInt(formData.get('stock_quantity') as string, 10)
+  const leadRaw = parseInt(formData.get('lead_time_days') as string, 10)
+  const moqTiers = parseMoqTiersFromForm(formData)
 
   if (!product_name) return { error: 'Le nom du produit est requis.' }
   if (!origin_country) return { error: "Le pays d'origine est requis." }
 
-  const { error } = await supabase.from('supplier_products').insert({
-    supplier_id: user.id,
-    supplier_type: supplier_type as SupplierType,
+  const { data: product, error } = await supabase
+    .from('supplier_products')
+    .insert({
+      supplier_id: user.id,
+      supplier_type: supplier_type as SupplierType,
+      product_name,
+      category,
+      niche,
+      description,
+      photos,
+      min_quantity,
+      origin_country,
+      availability_type: availability_type as SupplierProduct['availability_type'],
+      target_buyer_type: target_buyer_type as SupplierProduct['target_buyer_type'],
+      suggested_wholesale_price_mad: isNaN(suggested_price) ? null : suggested_price,
+      supplier_private_notes,
+      approval_status: 'pending_review' as SupplierProductStatus,
+      stock_quantity: isNaN(stockRaw) ? null : stockRaw,
+      lead_time_days: isNaN(leadRaw) ? null : leadRaw,
+    })
+    .select('id')
+    .single()
+
+  if (error || !product) return { error: error?.message ?? 'Erreur lors de la soumission.' }
+
+  const productId = (product as { id: string }).id
+
+  if (moqTiers.length > 0) {
+    const tierRows: Omit<SupplierProductMoqTier, 'id' | 'created_at'>[] = moqTiers.map((t) => ({
+      supplier_product_id: productId,
+      min_quantity: t.min_quantity,
+      unit_price_usd: t.unit_price_usd,
+    }))
+    const { error: tierErr } = await supabase.from('supplier_product_moq_tiers').insert(tierRows)
+    if (tierErr) return { error: tierErr.message }
+  }
+
+  await runAndStoreModeration(supabase, productId, {
     product_name,
-    category,
-    niche,
     description,
     photos,
+    category,
     min_quantity,
-    origin_country,
-    availability_type: availability_type as SupplierProduct['availability_type'],
-    target_buyer_type: target_buyer_type as SupplierProduct['target_buyer_type'],
+    stock_quantity: isNaN(stockRaw) ? null : stockRaw,
+    lead_time_days: isNaN(leadRaw) ? null : leadRaw,
     suggested_wholesale_price_mad: isNaN(suggested_price) ? null : suggested_price,
-    supplier_private_notes,
+    supplier_unit_price_usd: null,
+    moq_tier_count: moqTiers.length,
   })
-
-  if (error) return { error: error.message }
 
   redirect('/supplier/products')
 }
@@ -76,6 +148,7 @@ export async function approveSupplierProduct(
     .from('supplier_products')
     .update({
       approval_status: 'approved' as SupplierProductStatus,
+      moderation_flag: 'approved',
       public_name,
       public_description,
       platform_margin_type: platform_margin_type as PlatformMarginType,
@@ -88,6 +161,9 @@ export async function approveSupplierProduct(
     .eq('id', id)
 
   if (error) return { error: error.message }
+  revalidatePath('/admin/supplier-products')
+  revalidatePath(`/admin/supplier-products/${id}`)
+  revalidatePath('/wholesale/marketplace')
   return { error: null, success: true }
 }
 
@@ -106,7 +182,8 @@ export async function rejectSupplierProduct(
   const { error } = await supabase
     .from('supplier_products')
     .update({
-      approval_status: 'rejected' as SupplierProductStatus,
+      approval_status: 'blocked' as SupplierProductStatus,
+      moderation_flag: 'blocked',
       admin_notes,
       rejected_at: new Date().toISOString(),
       approved_at: null,
@@ -115,6 +192,8 @@ export async function rejectSupplierProduct(
     .eq('id', id)
 
   if (error) return { error: error.message }
+  revalidatePath('/admin/supplier-products')
+  revalidatePath(`/admin/supplier-products/${id}`)
   return { error: null, success: true }
 }
 

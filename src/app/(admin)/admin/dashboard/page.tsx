@@ -71,7 +71,7 @@ export default async function AdminDashboardPage() {
     supabase
       .from('supplier_products')
       .select('*', { count: 'exact', head: true })
-      .eq('approval_status', 'pending'),
+      .eq('approval_status', 'pending_review'),
     supabase
       .from('sourcing_requests')
       .select('*', { count: 'exact', head: true })

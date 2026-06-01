@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { parseCsvText } from '@/lib/bulk-import'
+import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
 import { requireAdmin } from './_guards'
 import type {
   SupplierProductStatus,
@@ -113,6 +114,7 @@ export async function publishBulkImport(
         supplier_type:            'international',
         availability_type:        'import_on_demand',
         target_buyer_type:        'wholesaler',
+        approval_status:          'pending_review',
       })
       .select('id')
       .single()
@@ -120,6 +122,28 @@ export async function publishBulkImport(
     if (pErr || !product) continue
 
     const productId = (product as { id: string }).id
+
+    const mod = moderateSupplierProduct({
+      product_name: row.product_name,
+      description: row.description,
+      photos: row.photos,
+      category: row.category,
+      min_quantity: row.moq,
+      stock_quantity: row.stock_quantity,
+      lead_time_days: row.lead_time_days,
+      suggested_wholesale_price_mad: null,
+      supplier_unit_price_usd: row.supplier_unit_price_usd,
+      moq_tier_count: row.moq_tiers.length,
+    })
+    await supabase
+      .from('supplier_products')
+      .update({
+        moderation_flag: mod.moderation_flag,
+        ai_risk_score: mod.ai_risk_score,
+        moderation_reason: mod.moderation_reason,
+        moderation_signals: mod.moderation_signals,
+      })
+      .eq('id', productId)
 
     if (row.variants.length > 0) {
       const variantRows: Omit<SupplierProductVariant, 'id' | 'created_at'>[] = row.variants.map((v) => ({
@@ -172,6 +196,7 @@ export async function bulkApproveProducts(
     .from('supplier_products')
     .update({
       approval_status: 'approved' as SupplierProductStatus,
+      moderation_flag: 'approved',
       approved_by:     userId,
       approved_at:     new Date().toISOString(),
       rejected_at:     null,
@@ -200,7 +225,8 @@ export async function bulkRejectProducts(
   const { error: dbErr } = await supabase
     .from('supplier_products')
     .update({
-      approval_status: 'rejected' as SupplierProductStatus,
+      approval_status: 'blocked' as SupplierProductStatus,
+      moderation_flag: 'blocked',
       rejected_at:     new Date().toISOString(),
       approved_at:     null,
       approved_by:     null,

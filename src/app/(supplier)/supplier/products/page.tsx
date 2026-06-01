@@ -2,15 +2,10 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
-import type { Profile, SupplierProduct, SupplierProductStatus, SupplierType } from '@/types/database'
+import type { Profile, SupplierProduct, SupplierType } from '@/types/database'
+import { SUPPLIER_PRODUCT_STATUS_BADGES } from '@/lib/supplier-product-moderation'
 
 export const metadata = { title: 'Mes produits — Espace Fournisseur' }
-
-const STATUS_BADGE: Record<SupplierProductStatus, { label: string; cls: string }> = {
-  pending:  { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Approuvé',    cls: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Rejeté',      cls: 'bg-red-100 text-red-600' },
-}
 
 const SUPPLIER_TYPE_BADGE: Record<SupplierType, { label: string; cls: string }> = {
   morocco:       { label: '🇲🇦 Maroc',        cls: 'bg-emerald-100 text-emerald-700' },
@@ -61,9 +56,9 @@ export default async function SupplierProductsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Total',         value: products.length,                                          cls: 'bg-white border-gray-200 text-gray-900' },
-            { label: 'En attente',    value: products.filter((p) => p.approval_status === 'pending').length,  cls: 'bg-amber-50 border-amber-200 text-amber-700' },
+            { label: 'En attente',    value: products.filter((p) => p.approval_status === 'pending_review').length,  cls: 'bg-amber-50 border-amber-200 text-amber-700' },
             { label: 'Approuvés',     value: products.filter((p) => p.approval_status === 'approved').length, cls: 'bg-green-50 border-green-200 text-green-700' },
-            { label: 'Rejetés',       value: products.filter((p) => p.approval_status === 'rejected').length, cls: 'bg-red-50 border-red-200 text-red-600' },
+            { label: 'Bloqués',       value: products.filter((p) => p.approval_status === 'blocked').length, cls: 'bg-red-50 border-red-200 text-red-600' },
           ].map((s) => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.cls.split(' ').slice(0, 2).join(' ')}`}>
               <p className="text-xs text-gray-500">{s.label}</p>
@@ -103,7 +98,7 @@ export default async function SupplierProductsPage() {
         ) : (
           <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
             {products.map((product) => {
-              const badge = STATUS_BADGE[product.approval_status]
+              const badge = SUPPLIER_PRODUCT_STATUS_BADGES[product.approval_status]
               return (
                 <div key={product.id} className="p-4 flex items-start gap-4">
                   <div className="flex-1 min-w-0">
@@ -135,7 +130,7 @@ export default async function SupplierProductsPage() {
                         </>
                       )}
                     </p>
-                    {product.approval_status === 'rejected' && product.admin_notes && (
+                    {product.approval_status === 'blocked' && product.admin_notes && (
                       <p className="mt-1 text-xs text-red-600 bg-red-50 rounded px-2 py-1">
                         Note admin : {product.admin_notes}
                       </p>

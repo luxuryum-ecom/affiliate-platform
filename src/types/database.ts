@@ -21,7 +21,8 @@ export type ProductOriginDetail = 'locally_produced' | 'imported_but_in_morocco_
 export type ProductSubmittedVia = 'admin_dashboard' | 'telegram_future' | 'supplier_future'
 
 /** Approval status for supplier-submitted products. */
-export type SupplierProductStatus = 'pending' | 'approved' | 'rejected'
+export type SupplierProductStatus = 'pending_review' | 'approved' | 'blocked'
+export type SupplierModerationFlag = 'approved' | 'review_required' | 'blocked'
 
 /** Target buyer type for supplier products. */
 export type SupplierTargetBuyerType = 'wholesaler' | 'both'
@@ -677,6 +678,10 @@ export interface SupplierProduct {
 
   // Approval workflow
   approval_status: SupplierProductStatus
+  moderation_flag: SupplierModerationFlag | null
+  ai_risk_score: number | null
+  moderation_reason: string | null
+  moderation_signals: string[]
   admin_notes: string | null
   approved_by: string | null
   approved_at: string | null

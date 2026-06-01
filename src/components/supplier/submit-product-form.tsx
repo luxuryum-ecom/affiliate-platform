@@ -254,28 +254,74 @@ export function SubmitProductForm() {
       <div className="space-y-4">
         <p className={SECTION}>Tarification</p>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={LABEL}>
+              {supplierType === 'morocco'
+                ? 'Prix de gros (MAD)'
+                : 'Prix fournisseur (MAD) — ne sera pas affiché aux acheteurs'}
+            </label>
+            <input
+              name="suggested_wholesale_price_mad"
+              type="number"
+              min={0}
+              step="0.01"
+              disabled={isPending}
+              className={INPUT}
+              placeholder="ex: 150.00"
+            />
+          </div>
+          <div>
+            <label className={LABEL}>Stock disponible</label>
+            <input
+              name="stock_quantity"
+              type="number"
+              min={0}
+              disabled={isPending}
+              className={INPUT}
+              placeholder="ex: 500"
+            />
+          </div>
+        </div>
         <div>
-          <label className={LABEL}>
-            {supplierType === 'morocco'
-              ? 'Prix de gros (MAD)'
-              : 'Prix fournisseur (MAD) — ne sera pas affiché aux acheteurs'}
-          </label>
+          <label className={LABEL}>Délai de livraison (jours)</label>
           <input
-            name="suggested_wholesale_price_mad"
+            name="lead_time_days"
             type="number"
             min={0}
-            step="0.01"
             disabled={isPending}
             className={INPUT}
-            placeholder="ex: 150.00"
+            placeholder="ex: 14"
           />
-          {supplierType === 'international' ? (
-            <p className={HELPER}>
-              La plateforme calculera le prix final (coût + transport + douane + marge) visible par les acheteurs.
-            </p>
-          ) : (
-            <p className={HELPER}>Prix indicatif. La plateforme peut l&apos;ajuster.</p>
-          )}
+        </div>
+        <div>
+          <label className={LABEL}>Paliers de prix (quantité min. + prix USD / unité)</label>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="grid grid-cols-2 gap-2">
+                <input
+                  name={`tier_${i}_qty`}
+                  type="number"
+                  min={1}
+                  disabled={isPending}
+                  className={INPUT}
+                  placeholder={`Palier ${i} — qté min.`}
+                />
+                <input
+                  name={`tier_${i}_price`}
+                  type="number"
+                  min={0}
+                  step="0.0001"
+                  disabled={isPending}
+                  className={INPUT}
+                  placeholder="Prix USD / u."
+                />
+              </div>
+            ))}
+          </div>
+          <p className={HELPER}>
+            Les prix sont définis par le fournisseur. Mozouna ne les invente pas — validation admin obligatoire.
+          </p>
         </div>
       </div>
 
@@ -325,7 +371,7 @@ export function SubmitProductForm() {
         disabled={isPending}
         className="w-full py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isPending ? 'Soumission en cours…' : 'Soumettre le produit pour validation'}
+        {isPending ? 'Soumission en cours…' : 'Soumettre pour validation Mozouna'}
       </button>
     </form>
   )
