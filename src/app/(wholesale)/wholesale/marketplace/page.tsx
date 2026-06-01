@@ -129,6 +129,13 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     if (!isNaN(days)) products = products.filter((p) => p.lead_time_days == null || p.lead_time_days <= days)
   }
 
+  // Trust metrics — computed on unfiltered data for platform-wide stats
+  const totalProductCount = productsResult.data?.length ?? 0
+  let verifiedSupplierCount = 0
+  for (const flags of premiumMap.values()) {
+    if (flags.verified_badge) verifiedSupplierCount++
+  }
+
   const subcategoryOptions = filters.category ? getSubcategories(filters.category) : []
   const isFiltered = !!(
     filters.q || filters.category || filters.subcategory || filters.origin ||
@@ -172,7 +179,11 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         </div>
 
         {/* ── Country source section ───────────────────────────────────────────── */}
-        <CountrySourceSection activeOrigin={filters.origin} />
+        <CountrySourceSection
+          activeOrigin={filters.origin}
+          totalProducts={totalProductCount}
+          verifiedSuppliers={verifiedSupplierCount}
+        />
 
         {/* ── Trust strip ──────────────────────────────────────────────────────── */}
         <div className="flex flex-wrap gap-2 mb-6 pb-5 border-b border-gray-200">
@@ -436,7 +447,15 @@ const sourcingMessage = encodeURIComponent(
   'Bonjour, je souhaite demander un sourcing personnalisé pour mon activité de gros. Pouvez-vous me contacter ?'
 )
 
-function CountrySourceSection({ activeOrigin }: { activeOrigin?: string }) {
+function CountrySourceSection({
+  activeOrigin,
+  totalProducts = 0,
+  verifiedSuppliers = 0,
+}: {
+  activeOrigin?: string
+  totalProducts?: number
+  verifiedSuppliers?: number
+}) {
   const active = activeOrigin?.toLowerCase()
   const moroccoActive = active === 'maroc'
 
@@ -503,6 +522,22 @@ function CountrySourceSection({ activeOrigin }: { activeOrigin?: string }) {
           </div>
         </div>
       </Link>
+
+      {/* ── Trust metrics strip ──────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+          📦 {totalProducts > 0 ? `${totalProducts} produits disponibles` : 'Produits disponibles'}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+          ✓ {verifiedSuppliers > 0 ? `${verifiedSuppliers} fournisseurs vérifiés` : 'Fournisseurs vérifiés'}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+          🚚 Livraison 24–72h (stock local)
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
+          🔒 Paiement sécurisé plateforme
+        </span>
+      </div>
 
       {/* ── Section 2: International grid ────────────────────────────────── */}
       <div>
@@ -598,19 +633,28 @@ function MarketplaceProductCard({
     ? `${product.lead_time_days} j`
     : 'Sur devis'
 
+  const price = product.suggested_wholesale_price_mad
+  const resaleLow = price != null ? Math.round(price * 1.35) : null
+  const resaleHigh = price != null ? Math.round(price * 1.6) : null
+  const marginLow = resaleLow != null && price != null ? resaleLow - Math.round(price) : null
+  const marginHigh = resaleHigh != null && price != null ? resaleHigh - Math.round(price) : null
+
+  const productUrl = `/wholesale/marketplace/${product.id}`
+  const waText = encodeURIComponent(
+    `Bonjour, je souhaite un devis grossiste pour : ${displayName} (MOQ : ${product.min_quantity} ${product.unit ?? 'u.'})`
+  )
+  const waUrl = `https://wa.me/${whatsappPhone}?text=${waText}`
+
   return (
-    <Link
-      href={`/wholesale/marketplace/${product.id}`}
-      className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-lg transition-all duration-200 ${cardBorder}`}
-    >
+    <article className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-lg transition-all duration-200 ${cardBorder}`}>
       {/* Square image — compact density */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+      <Link href={productUrl} className="block relative aspect-square overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50">
         {product.photos.length > 0 ? (
           <ProductCardImage src={product.photos[0]} alt={displayName} />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-100">
-            <span className="text-4xl text-gray-300">📦</span>
-            <span className="text-[10px] text-gray-400 text-center px-3 leading-tight">{displayName}</span>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-stone-50 to-amber-50">
+            <span className="text-4xl opacity-40">🏷️</span>
+            <span className="text-[10px] text-stone-400 font-medium text-center px-3 leading-tight line-clamp-2">{displayName}</span>
           </div>
         )}
 
@@ -636,7 +680,7 @@ function MarketplaceProductCard({
             </span>
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Card body */}
       <div className="p-2.5 flex flex-col gap-1.5 flex-1">
@@ -657,10 +701,12 @@ function MarketplaceProductCard({
           )}
         </div>
 
-        {/* Product name */}
-        <h3 className="text-xs font-semibold text-gray-900 leading-snug line-clamp-2 flex-1">
-          {displayName}
-        </h3>
+        {/* Product name — linked */}
+        <Link href={productUrl} className="block">
+          <h3 className="text-xs font-semibold text-gray-900 leading-snug line-clamp-2 flex-1 hover:text-emerald-700 transition-colors">
+            {displayName}
+          </h3>
+        </Link>
 
         {/* MOQ + delivery */}
         <div className="flex gap-1 flex-wrap">
@@ -679,24 +725,57 @@ function MarketplaceProductCard({
           </p>
         )}
 
-        {/* Price + CTA */}
+        {/* Price + resale/margin + CTAs */}
         <div className="pt-1.5 border-t border-gray-100 mt-auto">
-          {product.suggested_wholesale_price_mad != null ? (
-            <p className="text-sm font-bold text-gray-900 leading-none mb-1.5">
-              {product.suggested_wholesale_price_mad.toLocaleString('fr-MA')}{' '}
-              <span className="text-xs font-semibold text-gray-500">MAD</span>
-              {hasTiers && (
-                <span className="text-[9px] font-normal text-gray-400 ml-1">· paliers dispo</span>
+          {price != null ? (
+            <>
+              <p className="text-sm font-bold text-gray-900 leading-none">
+                {price.toLocaleString('fr-MA')}{' '}
+                <span className="text-xs font-semibold text-gray-500">MAD</span>
+                {hasTiers && (
+                  <span className="text-[9px] font-normal text-gray-400 ml-1">· paliers dispo</span>
+                )}
+              </p>
+              {resaleLow != null && resaleHigh != null && (
+                <div className="mt-0.5 space-y-0.5">
+                  <p className="text-[9px] text-gray-500 leading-none">
+                    Revente conseillée :{' '}
+                    <span className="font-semibold text-gray-700">
+                      {resaleLow.toLocaleString('fr-MA')}–{resaleHigh.toLocaleString('fr-MA')} MAD
+                    </span>
+                  </p>
+                  {marginLow != null && marginHigh != null && (
+                    <p className="text-[9px] text-emerald-600 font-semibold leading-none">
+                      Marge estimée : {marginLow.toLocaleString('fr-MA')}–{marginHigh.toLocaleString('fr-MA')} MAD
+                    </p>
+                  )}
+                </div>
               )}
-            </p>
+            </>
           ) : (
-            <p className="text-xs font-semibold text-gray-500 mb-1.5">Sur devis</p>
+            <p className="text-xs font-semibold text-gray-500">Sur devis</p>
           )}
-          <span className="block w-full text-center text-[10px] font-bold py-1.5 rounded-lg bg-emerald-600 text-white group-hover:bg-emerald-700 transition-colors">
+
+          {/* Primary CTA */}
+          <Link
+            href={productUrl}
+            className="mt-1.5 block w-full text-center text-[10px] font-bold py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+          >
             Voir les tarifs grossiste →
-          </span>
+          </Link>
+
+          {/* Secondary CTA */}
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 block w-full text-center text-[9px] font-semibold py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            💬 Demander un devis WhatsApp
+          </a>
         </div>
       </div>
-    </Link>
+    </article>
   )
 }

@@ -12,9 +12,9 @@ export function ProductCardImage({ src, alt }: ProductCardImageProps) {
 
   if (errored) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-100">
-        <span className="text-3xl text-gray-300">📦</span>
-        <span className="text-[10px] text-gray-400 text-center px-2 leading-tight">{alt}</span>
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-stone-50 to-amber-50">
+        <span className="text-3xl opacity-40">🏷️</span>
+        <span className="text-[10px] text-stone-400 font-medium text-center px-2 leading-tight line-clamp-2">{alt}</span>
       </div>
     )
   }
