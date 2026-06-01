@@ -1,4 +1,70 @@
+import type { PlatformMarginType, SupplierProductStatus } from '@/types/database'
+
 export type ModerationFlag = 'approved' | 'review_required' | 'blocked'
+
+/** Columns safe for supplier-facing reads — excludes moderation and admin-internal fields. */
+export const SUPPLIER_PRODUCT_SELECT =
+  'id, product_name, category, origin_country, min_quantity, suggested_wholesale_price_mad, supplier_type, approval_status, created_at'
+
+const FORBIDDEN_IN_SUPPLIER_SELECT = [
+  'ai_risk_score',
+  'moderation_reason',
+  'moderation_signals',
+  'moderation_flag',
+  'admin_notes',
+  'supplier_private_notes',
+  'platform_margin_type',
+  'platform_margin_value',
+  'approved_by',
+] as const
+
+export function assertSupplierSelectSafe(select: string): void {
+  for (const field of FORBIDDEN_IN_SUPPLIER_SELECT) {
+    if (select.includes(field)) {
+      throw new Error(`Supplier select must not include ${field}`)
+    }
+  }
+}
+
+export type BulkApprovalCheckInput = {
+  public_name: string | null
+  min_quantity: number
+  suggested_wholesale_price_mad: number | null
+  supplier_unit_price_usd: number | null
+  stock_quantity: number | null
+  lead_time_days: number | null
+  platform_margin_type: PlatformMarginType | null
+  platform_margin_value: number | null
+  moq_tier_count: number
+}
+
+export function validateSupplierProductReadyForApproval(
+  input: BulkApprovalCheckInput,
+): { ok: true } | { ok: false; reason: string } {
+  const missing: string[] = []
+  if (!input.public_name?.trim()) missing.push('nom public')
+  if (input.min_quantity < 1) missing.push('MOQ')
+  const hasPrice =
+    (input.suggested_wholesale_price_mad != null && input.suggested_wholesale_price_mad > 0) ||
+    (input.supplier_unit_price_usd != null && input.supplier_unit_price_usd > 0) ||
+    input.moq_tier_count > 0
+  if (!hasPrice) missing.push('prix')
+  if (input.stock_quantity == null && input.lead_time_days == null) {
+    missing.push('stock ou délai')
+  }
+  if (
+    !input.platform_margin_type ||
+    input.platform_margin_value == null ||
+    input.platform_margin_value <= 0
+  ) {
+    missing.push('marge plateforme')
+  }
+  if (missing.length === 0) return { ok: true }
+  return {
+    ok: false,
+    reason: `Approbation impossible — manque : ${missing.join(', ')}.`,
+  }
+}
 
 export type ModerationSignal =
   | 'counterfeit'
@@ -130,8 +196,6 @@ export const MODERATION_FLAG_LABELS: Record<ModerationFlag, string> = {
   review_required: 'Revue requise',
   blocked: 'Bloqué',
 }
-
-import type { SupplierProductStatus } from '@/types/database'
 
 export const SUPPLIER_PRODUCT_STATUS_BADGES: Record<
   SupplierProductStatus,

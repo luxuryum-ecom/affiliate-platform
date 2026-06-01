@@ -752,6 +752,20 @@ export type SupplierProductPublic = Omit<
   'supplier_id' | 'supplier_private_notes' | 'admin_notes' | 'approved_by' | 'platform_margin_type' | 'platform_margin_value'
 >
 
+/** Supplier dashboard list — no moderation scores, admin notes, or platform margin. */
+export type SupplierProductSupplierView = Pick<
+  SupplierProduct,
+  | 'id'
+  | 'product_name'
+  | 'category'
+  | 'origin_country'
+  | 'min_quantity'
+  | 'suggested_wholesale_price_mad'
+  | 'supplier_type'
+  | 'approval_status'
+  | 'created_at'
+>
+
 /** Status for supplier marketplace quote requests. */
 export type SupplierQuoteRequestStatus = 'new' | 'studying' | 'quoted' | 'approved' | 'rejected'
 

@@ -3,13 +3,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { parseCsvText } from '@/lib/bulk-import'
-import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
+import {
+  moderateSupplierProduct,
+  validateSupplierProductReadyForApproval,
+} from '@/lib/supplier-product-moderation'
 import { requireAdmin } from './_guards'
 import type {
   SupplierProductStatus,
   BulkImportReportRow,
   SupplierProductVariant,
   SupplierProductMoqTier,
+  PlatformMarginType,
 } from '@/types/database'
 
 type ActionResult = { error: string | null; success: boolean; importId?: string }
@@ -192,21 +196,94 @@ export async function bulkApproveProducts(
   const ids = (formData.get('product_ids') as string ?? '').split(',').filter(Boolean)
   if (ids.length === 0) return fail('Aucun produit sélectionné.')
 
-  const { error: dbErr } = await supabase
+  const { data: rows, error: fetchErr } = await supabase
     .from('supplier_products')
-    .update({
-      approval_status: 'approved' as SupplierProductStatus,
-      moderation_flag: 'approved',
-      approved_by:     userId,
-      approved_at:     new Date().toISOString(),
-      rejected_at:     null,
-      archived_at:     null,
-    })
+    .select(
+      'id, product_name, public_name, min_quantity, suggested_wholesale_price_mad, supplier_unit_price_usd, stock_quantity, lead_time_days, platform_margin_type, platform_margin_value, supplier_product_moq_tiers(id)',
+    )
     .in('id', ids)
 
-  if (dbErr) return fail('Erreur lors de l\'approbation.')
+  if (fetchErr) return fail('Impossible de charger les produits sélectionnés.')
+
+  type Row = {
+    id: string
+    product_name: string
+    public_name: string | null
+    min_quantity: number
+    suggested_wholesale_price_mad: number | null
+    supplier_unit_price_usd: number | null
+    stock_quantity: number | null
+    lead_time_days: number | null
+    platform_margin_type: string | null
+    platform_margin_value: number | null
+    supplier_product_moq_tiers: { id: string }[] | null
+  }
+
+  const toApprove: string[] = []
+  const skipped: string[] = []
+
+  for (const row of (rows ?? []) as Row[]) {
+    const check = validateSupplierProductReadyForApproval({
+      public_name: row.public_name,
+      min_quantity: row.min_quantity,
+      suggested_wholesale_price_mad: row.suggested_wholesale_price_mad,
+      supplier_unit_price_usd: row.supplier_unit_price_usd,
+      stock_quantity: row.stock_quantity,
+      lead_time_days: row.lead_time_days,
+      platform_margin_type: row.platform_margin_type as PlatformMarginType | null,
+      platform_margin_value: row.platform_margin_value,
+      moq_tier_count: row.supplier_product_moq_tiers?.length ?? 0,
+    })
+
+    if (check.ok) {
+      toApprove.push(row.id)
+      continue
+    }
+
+    skipped.push(`${row.product_name}: ${check.reason}`)
+    await supabase
+      .from('supplier_products')
+      .update({
+        moderation_flag: 'review_required',
+        moderation_reason: check.reason,
+      })
+      .eq('id', row.id)
+  }
+
+  if (toApprove.length > 0) {
+    const { error: dbErr } = await supabase
+      .from('supplier_products')
+      .update({
+        approval_status: 'approved' as SupplierProductStatus,
+        moderation_flag: 'approved',
+        approved_by: userId,
+        approved_at: new Date().toISOString(),
+        rejected_at: null,
+        archived_at: null,
+      })
+      .in('id', toApprove)
+
+    if (dbErr) return fail('Erreur lors de l\'approbation.')
+    revalidatePath('/wholesale/marketplace')
+  }
 
   revalidatePath('/admin/supplier-products')
+
+  if (toApprove.length === 0) {
+    return fail(
+      skipped.length > 0
+        ? `Aucun produit approuvé. ${skipped.join(' ')}`
+        : 'Aucun produit trouvé.',
+    )
+  }
+
+  if (skipped.length > 0) {
+    return {
+      error: `${toApprove.length} approuvé(s). Non approuvés : ${skipped.join(' ')}`,
+      success: true,
+    }
+  }
+
   return ok()
 }
 

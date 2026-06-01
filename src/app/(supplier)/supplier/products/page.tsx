@@ -2,8 +2,11 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
-import type { Profile, SupplierProduct, SupplierType } from '@/types/database'
-import { SUPPLIER_PRODUCT_STATUS_BADGES } from '@/lib/supplier-product-moderation'
+import type { Profile, SupplierProductSupplierView, SupplierType } from '@/types/database'
+import {
+  SUPPLIER_PRODUCT_SELECT,
+  SUPPLIER_PRODUCT_STATUS_BADGES,
+} from '@/lib/supplier-product-moderation'
 
 export const metadata = { title: 'Mes produits — Espace Fournisseur' }
 
@@ -21,13 +24,13 @@ export default async function SupplierProductsPage() {
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
       .from('supplier_products')
-      .select('*')
+      .select(SUPPLIER_PRODUCT_SELECT)
       .eq('supplier_id', user.id)
       .order('created_at', { ascending: false }),
   ])
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
-  const products = (productsResult.data ?? []) as SupplierProduct[]
+  const products = (productsResult.data ?? []) as SupplierProductSupplierView[]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -130,9 +133,9 @@ export default async function SupplierProductsPage() {
                         </>
                       )}
                     </p>
-                    {product.approval_status === 'blocked' && product.admin_notes && (
+                    {product.approval_status === 'blocked' && (
                       <p className="mt-1 text-xs text-red-600 bg-red-50 rounded px-2 py-1">
-                        Note admin : {product.admin_notes}
+                        Produit refusé — contactez Mozouna pour plus d&apos;informations.
                       </p>
                     )}
                     <p className="text-xs text-gray-400 mt-0.5">
