@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-06-01 — commit `3bdf177` (wholesale marketplace QA fixes: image error handling, Morocco hero country selection, conversion product cards)  
+> Last agent update: 2026-06-01 — commit `05601d0` (RFQ buyer intake: purchase profile + volume tier on marketplace quote requests)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
@@ -88,6 +88,7 @@
 - **Samples**: request product samples from suppliers
 - **Marketplace** (`/wholesale/marketplace`): supplier product catalog with full filtering (category, subcategory, origin, MOQ, lead time, availability, stock), country-first buying journey, premium badge display
 - **Marketplace product detail** (`/wholesale/marketplace/[id]`): full product page with photo gallery, wholesale tier pricing, quantity stepper, logistics info, attachments/documents, related products, WhatsApp CTA, mobile sticky bar, sample request
+- **Marketplace RFQ quote form**: buyer **Profil d'achat** + **Volume estimé** captured on `supplier_quote_requests` (`buyer_purchase_profile`, `buyer_volume_tier`) — visible to admin only, not suppliers (commit `05601d0`, migration `043`)
 
 ### 2.5 Supplier Area (`/supplier/*`)
 - **Dashboard**: overview
@@ -116,8 +117,8 @@
 - RFQ matching engine (automatic supplier-to-buyer matching)
 - Premium plan limits enforcement
 
-### 2.8 Database Schema (40 migrations)
-Complete schema through `041_order_tracking_rpc.sql`. All migrations are idempotent. All 41 migrations fully in sync between local and remote as of 2026-05-31.
+### 2.8 Database Schema (43 migrations)
+Complete schema through `043_rfq_buyer_intake.sql`. All migrations are idempotent. Migrations `042` (wholesale_access cart/order RLS) and `043` (RFQ buyer intake) applied to remote as of 2026-06-01.
 
 ---
 
@@ -268,13 +269,36 @@ Per-order costs tracked on `products`:
 
 Platform margin per COD order: `sell_price - cost_price - confirmation_fee - packaging_fee - delivery_fee`
 
+### 5.10 SUPPLIER PRICING RULE
+
+**Source of truth:** The supplier defines all commercial terms. Mozouna does not invent supplier prices.
+
+| Field | Set by supplier |
+|-------|-----------------|
+| Available quantities | Supplier |
+| Tier prices | Supplier |
+| MOQ | Supplier |
+| Stock | Supplier |
+| Lead time | Supplier |
+
+**Planned intake workflow (not built yet):**
+
+1. Supplier sends product/pricing data through Telegram or dashboard.
+2. AI agent parses product name, photos, quantities, tier prices, MOQ, stock, lead time.
+3. Product/pricing enters `pending_review` state.
+4. Admin reviews and approves or rejects before publication.
+5. Suspicious, counterfeit, illegal, low-quality, or incomplete products are blocked.
+6. Nothing becomes visible to wholesale buyers before admin approval.
+
+**Explicitly out of scope for now:** Telegram ingestion, AI parsing agent, new UI, schema changes for this workflow.
+
 ---
 
 ## 6. Database and Migration Status
 
 ### 6.0 Migration Sync Status
 
-**As of 2026-05-31:** All 41 migrations are fully in sync (`Local = Remote` for 001–041). `supabase migration list` confirms no drift.
+**As of 2026-06-01:** Migrations through `043` applied to remote (`042` wholesale_access RLS, `043` RFQ buyer intake). Run `supabase migration list` to confirm local/remote sync after pull.
 
 ### 6.1 Migration File Inventory
 
@@ -321,6 +345,8 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 | 039 | `039_category_subcategory.sql` | `category` / `subcategory` fields on products |
 | 040 | `040_wholesaler_badges_rls.sql` | RLS so wholesalers read active subscriptions for badge display ✓ committed 2026-05-31 |
 | 041 | `041_order_tracking_rpc.sql` | `get_orders_by_phone(text)` SECURITY DEFINER RPC for public customer order tracking |
+| 042 | `042_wholesale_access_cart_orders_rls.sql` | `has_wholesale_buyer_access()` — cart/order writes for `wholesale_access` entitlement |
+| 043 | `043_rfq_buyer_intake.sql` | `buyer_purchase_profile`, `buyer_volume_tier` on `supplier_quote_requests` (admin-only display) |
 
 ### 6.2 Key Tables
 
@@ -342,6 +368,7 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 | `quote_requests` | Import-on-demand wholesale quote requests |
 | `sourcing_requests` | Wholesale free-form sourcing |
 | `supplier_products` | Supplier-submitted marketplace products |
+| `supplier_quote_requests` | Marketplace RFQ/devis requests; includes admin-only buyer intake fields (`buyer_purchase_profile`, `buyer_volume_tier`) |
 | `supplier_product_attachments` | Files (PDF, video, images) per supplier product |
 | `supplier_subscriptions` / `premium_plans` | Supplier premium tiers |
 | `rfq_matches` / `rfq_offers` | RFQ engine output |
@@ -379,11 +406,16 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 | — | `updateSupplierFinancials`, `updateSupplierPayoutStatus` missing `requireAdmin()` — any authenticated user could invoke them | Added `requireAdmin()` guard |
 | — | `approveSupplierProduct`, `rejectSupplierProduct` missing `requireAdmin()` guard | Added `requireAdmin()` guard |
 
+### Fixed — commit `2843b16` (2026-06-01)
+
+| # | Issue | Fix |
+|---|-------|-----|
+| DB-1 | `wholesale_access` users allowed by app layer but blocked by cart/orders RLS | Migration `042`: `has_wholesale_buyer_access()` on cart insert/update/delete and wholesale order insert |
+
 ### Deferred — require DB migration or RPC redesign
 
 | # | Issue | Blocker |
 |---|-------|---------|
-| DB-1 | `wholesale_access` users allowed by app layer but blocked by cart/orders RLS | Needs additive RLS policy migration |
 | DB-2 | `createPayout` marks ALL approved commissions paid regardless of entered amount | Needs schema redesign (junction table) or amount sum constraint |
 | DB-3 | `updateOrderStatus` has no server-side status transition guard — can skip `confirmed` | Needs state machine enforcement in action |
 | DB-4 | Wholesale stock reserve loop has no rollback on partial failure | Needs transactional RPC |
