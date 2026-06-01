@@ -2,7 +2,7 @@
 
 > Source of truth: generated from repository inspection on 2026-05-31.  
 > Branch: `chore/agent-operating-system`  
-> Last agent update: 2026-06-01 — commit `05601d0` (RFQ buyer intake: purchase profile + volume tier on marketplace quote requests)  
+> Last agent update: 2026-06-01 — commit `c4505bb` (supplier product moderation hardened + E2E verified)  
 > Do not edit manually — regenerate from codebase when the state changes.
 
 ---
@@ -63,7 +63,7 @@
 - **Analytics**: order stats (basic)
 - **Quote requests**: list, detail, prepare structured quote document, approve/reject, convert to wholesale order
 - **Sourcing requests**: list, match suppliers, convert to quote
-- **Supplier products**: review submitted products, approve/reject, view detail
+- **Supplier products**: moderation queues (`pending_review` / `approved` / `blocked`), rule-based screening, approve/reject, bulk actions, detail review
 - **Supplier quotes**: manage platform quotes to suppliers
 - **Supplier analytics / performance**: per-supplier stats, issue notes (admin-only)
 - **Samples**: manage sample requests across suppliers
@@ -92,7 +92,7 @@
 
 ### 2.5 Supplier Area (`/supplier/*`)
 - **Dashboard**: overview
-- **Products**: list own submitted products, submit new product, bulk CSV import
+- **Products**: list own submitted products (safe column select — no moderation metadata), submit new product (`pending_review`), bulk CSV import
 - **Catalogs**: upload PDF catalogs and attachments
 - **Samples**: manage sample requests received
 - **Opportunities**: view RFQ matches and submit offers
@@ -117,8 +117,20 @@
 - RFQ matching engine (automatic supplier-to-buyer matching)
 - Premium plan limits enforcement
 
-### 2.8 Database Schema (43 migrations)
-Complete schema through `043_rfq_buyer_intake.sql`. All migrations are idempotent. Migrations `042` (wholesale_access cart/order RLS) and `043` (RFQ buyer intake) applied to remote as of 2026-06-01.
+### 2.8 Database Schema (44 migrations)
+Complete schema through `044_supplier_product_moderation.sql`. All migrations are idempotent. Migrations `042`–`044` applied to remote as of 2026-06-01.
+
+### 2.9 Supplier Product Moderation ✅ DONE
+
+Commits `95007bf` (workflow), `5c74008` (hardening), `c4505bb` (automated E2E).
+
+- **Migration 044 deployed** — `approval_status` (`pending_review` | `approved` | `blocked`), moderation columns (`moderation_flag`, `ai_risk_score`, `moderation_reason`, `moderation_signals`), supplier UPDATE RLS limited to `pending_review`
+- **Supplier data exposure fixed** — `SUPPLIER_PRODUCT_SELECT` explicit column list on `/supplier/products`; no `ai_risk_score`, `moderation_reason`, `moderation_signals`, or `admin_notes` in supplier-facing responses
+- **Bulk approve validation fixed** — `bulkApproveProducts` requires `public_name`, MOQ, price, stock/lead time, and platform margin before `approved`; incomplete rows stay `pending_review` with `moderation_flag = review_required` and reason
+- **Approval workflow tested** — automated E2E (`scripts/e2e-supplier-moderation.ts`): supplier submit → `pending_review` → admin approve → cleanup
+- **Marketplace visibility verified** — `/wholesale/marketplace` queries `approval_status = approved` only; pending products excluded until admin approval
+
+**Out of scope (unchanged):** Telegram ingestion, LLM parsing agent.
 
 ---
 
@@ -281,16 +293,16 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 | Stock | Supplier |
 | Lead time | Supplier |
 
-**Planned intake workflow (not built yet):**
+**Dashboard intake workflow ✅ DONE** (see §2.9 Supplier Product Moderation):
 
-1. Supplier sends product/pricing data through Telegram or dashboard.
-2. AI agent parses product name, photos, quantities, tier prices, MOQ, stock, lead time.
-3. Product/pricing enters `pending_review` state.
-4. Admin reviews and approves or rejects before publication.
-5. Suspicious, counterfeit, illegal, low-quality, or incomplete products are blocked.
-6. Nothing becomes visible to wholesale buyers before admin approval.
+1. Supplier submits product/pricing via dashboard (or CSV bulk import).
+2. Rule-based screening (`supplier-product-moderation.ts`) flags counterfeit/prohibited/incomplete listings — not LLM.
+3. Product enters `pending_review`.
+4. Admin reviews and approves (`approved`) or blocks (`blocked`) before publication.
+5. Suspicious listings flagged `review_required` or `blocked`; bulk approve enforces catalog completeness.
+6. Nothing visible on `/wholesale/marketplace` until `approval_status = approved`.
 
-**Explicitly out of scope for now:** Telegram ingestion, AI parsing agent, new UI, schema changes for this workflow.
+**Explicitly out of scope:** Telegram ingestion, AI parsing agent.
 
 ---
 
@@ -298,7 +310,7 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 
 ### 6.0 Migration Sync Status
 
-**As of 2026-06-01:** Migrations through `043` applied to remote (`042` wholesale_access RLS, `043` RFQ buyer intake). Run `supabase migration list` to confirm local/remote sync after pull.
+**As of 2026-06-01:** Migrations through `044` applied to remote (`042` wholesale_access RLS, `043` RFQ buyer intake, `044` supplier product moderation). Run `supabase migration list` to confirm local/remote sync after pull.
 
 ### 6.1 Migration File Inventory
 
@@ -347,6 +359,7 @@ Platform margin per COD order: `sell_price - cost_price - confirmation_fee - pac
 | 041 | `041_order_tracking_rpc.sql` | `get_orders_by_phone(text)` SECURITY DEFINER RPC for public customer order tracking |
 | 042 | `042_wholesale_access_cart_orders_rls.sql` | `has_wholesale_buyer_access()` — cart/order writes for `wholesale_access` entitlement |
 | 043 | `043_rfq_buyer_intake.sql` | `buyer_purchase_profile`, `buyer_volume_tier` on `supplier_quote_requests` (admin-only display) |
+| 044 | `044_supplier_product_moderation.sql` | `pending_review`/`approved`/`blocked` status, moderation columns, supplier pending-only UPDATE RLS ✓ deployed 2026-06-01 |
 
 ### 6.2 Key Tables
 
@@ -493,4 +506,4 @@ Ordered by business impact and build stability:
 
 ---
 
-*Last updated: 2026-05-31 — commit `0cc345c`. Branch: `chore/agent-operating-system` (41 migrations, 65 routes, 25 server action modules, 50 components).*
+*Last updated: 2026-06-01 — commit `c4505bb`. Branch: `chore/agent-operating-system` (44 migrations).*
