@@ -6,8 +6,8 @@ import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
-import { WholesaleImportStatusForm, IMPORT_STATUS_BADGE } from '@/components/admin/wholesale-import-status-form'
-import { WholesalePaymentForm, PAYMENT_STATUS_BADGE } from '@/components/admin/wholesale-payment-form'
+import { WholesaleImportStatusForm } from '@/components/admin/wholesale-import-status-form'
+import { WholesalePaymentForm } from '@/components/admin/wholesale-payment-form'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
 import { WholesaleCostForm } from '@/components/admin/wholesale-cost-form'
 import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, WholesaleOrderPaymentHistory, WholesalePaymentStatus, QuoteRequest } from '@/types/database'
@@ -23,7 +23,26 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
 }
 
-type OrderItemWithProduct = WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'stock_count'> }
+const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
+  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-600' },
+  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
+  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
+  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
+  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
+  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
+  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+}
+
+const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
+  no_deposit:        { label: 'Aucun acompte',       cls: 'bg-gray-100 text-gray-500' },
+  deposit_requested: { label: 'Acompte demandé',     cls: 'bg-amber-100 text-amber-700' },
+  deposit_received:  { label: 'Acompte reçu',        cls: 'bg-blue-100 text-blue-700' },
+  fully_paid:        { label: 'Entièrement réglé',   cls: 'bg-green-100 text-green-700' },
+}
+
+type OrderItemWithProduct = WholesaleOrderItem & {
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'stock_count' | 'availability_type'>
+}
 type OrderDetail = WholesaleOrder & {
   buyer: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'>
   agent: Pick<Profile, 'id' | 'full_name'> | null
@@ -47,7 +66,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       .single(),
     supabase
       .from('wholesale_order_items')
-      .select('*, product:products(id,name,images,stock_count)')
+      .select('*, product:products(id,name,images,stock_count,availability_type)')
       .eq('order_id', id),
     supabase
       .from('wholesale_order_import_history')
@@ -79,11 +98,17 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
   if (!order) notFound()
 
+  const isLocalStockOrder =
+    !linkedQuote &&
+    items.length > 0 &&
+    items.every((item) => item.product.availability_type === 'local_stock')
+
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
   const importBadge = order.import_status
-    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus]
+    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus] ?? null
     : null
-  const paymentBadge = PAYMENT_STATUS_BADGE[order.payment_status as WholesalePaymentStatus] ?? PAYMENT_STATUS_BADGE.no_deposit
+  const paymentStatus = (order.payment_status ?? 'no_deposit') as WholesalePaymentStatus
+  const paymentBadge = PAYMENT_STATUS_BADGE[paymentStatus] ?? PAYMENT_STATUS_BADGE.no_deposit
 
   const timeline = buildWholesaleTimeline(order)
   const importTimeline = buildImportHistoryTimeline(importHistory)
@@ -191,10 +216,14 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
             {/* Import progress history */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Historique import</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">
+                {isLocalStockOrder ? 'Historique préparation / livraison' : 'Historique import'}
+              </h2>
               {importTimeline.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">
-                  Aucun statut import enregistré. Utilisez le panneau de droite pour commencer le suivi.
+                  {isLocalStockOrder
+                    ? 'Aucun statut enregistré. Utilisez le panneau de droite pour commencer le suivi.'
+                    : 'Aucun statut import enregistré. Utilisez le panneau de droite pour commencer le suivi.'}
                 </p>
               ) : (
                 <OrderTimeline steps={importTimeline} />
@@ -226,10 +255,13 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
             {/* Import status form */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Statut import</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">
+                {isLocalStockOrder ? 'Statut préparation / livraison locale' : 'Statut import'}
+              </h2>
               <WholesaleImportStatusForm
                 orderId={order.id}
                 currentImportStatus={order.import_status as WholesaleImportStatus | null}
+                isLocalStock={isLocalStockOrder}
               />
             </div>
 
@@ -240,6 +272,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               transportCost={order.transport_customs_cost_mad ?? 0}
               additionalCost={order.additional_cost_mad ?? 0}
               totalAmount={order.total_amount}
+              isLocalStock={isLocalStockOrder}
             />
 
             {/* Payment management */}

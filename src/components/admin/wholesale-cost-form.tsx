@@ -11,6 +11,8 @@ interface Props {
   transportCost: number
   additionalCost: number
   totalAmount: number
+  /** True when all line items are local_stock (Morocco stock). */
+  isLocalStock?: boolean
 }
 
 const initial: ActionState = { error: null, success: false }
@@ -21,16 +23,19 @@ export function WholesaleCostForm({
   transportCost,
   additionalCost,
   totalAmount,
+  isLocalStock = false,
 }: Props) {
   const [state, action, isPending] = useActionState(updateWholesaleOrderCosts, initial)
 
   const totalCost = supplierCost + transportCost + additionalCost
   const grossProfit = totalAmount - totalCost
   const grossMargin = totalAmount > 0 ? ((grossProfit / totalAmount) * 100).toFixed(1) : '0'
+  const sectionTitle = isLocalStock ? 'Coûts locaux' : "Coûts d'import"
+  const transportLabel = isLocalStock ? 'Livraison locale' : 'Transport & douanes'
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-      <h2 className="text-sm font-semibold text-gray-900">Coûts d&apos;import</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{sectionTitle}</h2>
 
       <form action={action} className="space-y-3">
         <input type="hidden" name="orderId" value={orderId} />
@@ -41,7 +46,7 @@ export function WholesaleCostForm({
           defaultValue={supplierCost}
         />
         <CostField
-          label="Transport & douanes"
+          label={transportLabel}
           name="transport_customs_cost_mad"
           defaultValue={transportCost}
         />

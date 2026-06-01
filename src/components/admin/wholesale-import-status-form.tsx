@@ -37,9 +37,11 @@ const ALL_STATUSES: WholesaleImportStatus[] = [
 export function WholesaleImportStatusForm({
   orderId,
   currentImportStatus,
+  isLocalStock = false,
 }: {
   orderId: string
   currentImportStatus: WholesaleImportStatus | null
+  isLocalStock?: boolean
 }) {
   const [isPending, startTransition] = useTransition()
   const [selected, setSelected] = useState<WholesaleImportStatus | ''>('')
@@ -55,7 +57,10 @@ export function WholesaleImportStatusForm({
         selected as WholesaleImportStatus,
         notes || undefined
       )
-      setMsg({ ok: result.success, text: result.error ?? 'Statut import mis à jour.' })
+      setMsg({
+        ok: result.success,
+        text: result.error ?? (isLocalStock ? 'Statut mis à jour.' : 'Statut import mis à jour.'),
+      })
       if (result.success) {
         setSelected('')
         setNotes('')
@@ -77,7 +82,7 @@ export function WholesaleImportStatusForm({
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Nouveau statut import
+            {isLocalStock ? 'Nouveau statut' : 'Nouveau statut import'}
           </label>
           <select
             value={selected}
