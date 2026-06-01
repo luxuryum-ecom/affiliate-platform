@@ -129,12 +129,16 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     if (!isNaN(days)) products = products.filter((p) => p.lead_time_days == null || p.lead_time_days <= days)
   }
 
-  // Trust metrics — computed on unfiltered data for platform-wide stats
-  const totalProductCount = productsResult.data?.length ?? 0
+  // Trust metrics — real counts from unfiltered approved products
+  const allApproved = (productsResult.data ?? []) as MarketplaceProduct[]
+  const totalProductCount = allApproved.length
   let verifiedSupplierCount = 0
   for (const flags of premiumMap.values()) {
     if (flags.verified_badge) verifiedSupplierCount++
   }
+  const localStockProductCount = allApproved.filter(
+    (p) => p.availability_type === 'local_stock'
+  ).length
 
   const subcategoryOptions = filters.category ? getSubcategories(filters.category) : []
   const isFiltered = !!(
@@ -183,6 +187,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           activeOrigin={filters.origin}
           totalProducts={totalProductCount}
           verifiedSuppliers={verifiedSupplierCount}
+          localStockProducts={localStockProductCount}
         />
 
         {/* ── Trust strip ──────────────────────────────────────────────────────── */}
@@ -377,7 +382,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {products.map((product) => (
               <MarketplaceProductCard
                 key={product.id}
@@ -451,10 +456,12 @@ function CountrySourceSection({
   activeOrigin,
   totalProducts = 0,
   verifiedSuppliers = 0,
+  localStockProducts = 0,
 }: {
   activeOrigin?: string
   totalProducts?: number
   verifiedSuppliers?: number
+  localStockProducts?: number
 }) {
   const active = activeOrigin?.toLowerCase()
   const moroccoActive = active === 'maroc'
@@ -526,16 +533,16 @@ function CountrySourceSection({
       {/* ── Trust metrics strip ──────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 mb-4">
         <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-          📦 {totalProducts > 0 ? `${totalProducts} produits disponibles` : 'Produits disponibles'}
+          📦 {totalProducts} produit{totalProducts !== 1 ? 's' : ''} disponible{totalProducts !== 1 ? 's' : ''}
         </span>
         <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-medium">
-          ✓ {verifiedSuppliers > 0 ? `${verifiedSuppliers} fournisseurs vérifiés` : 'Fournisseurs vérifiés'}
+          ✓ {verifiedSuppliers} fournisseur{verifiedSuppliers !== 1 ? 's' : ''} vérifié{verifiedSuppliers !== 1 ? 's' : ''}
         </span>
         <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-medium">
-          🚚 Livraison 24–72h (stock local)
+          🚚 {localStockProducts} en livraison 24–72h
         </span>
         <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
-          🔒 Paiement sécurisé plateforme
+          🔒 Paiement sécurisé
         </span>
       </div>
 
@@ -741,7 +748,7 @@ function MarketplaceProductCard({
           {price != null ? (
             <>
               <p className="text-sm font-bold text-gray-900 leading-none">
-                {price.toLocaleString('fr-MA')}{' '}
+                À partir de {price.toLocaleString('fr-MA')}{' '}
                 <span className="text-xs font-semibold text-gray-500">MAD</span>
                 {hasTiers && (
                   <span className="text-[9px] font-normal text-gray-400 ml-1">· paliers dispo</span>
@@ -780,10 +787,9 @@ function MarketplaceProductCard({
             href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 block w-full text-center text-[9px] font-semibold py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
-
+            className="mt-1 block w-full text-center text-[9px] font-semibold py-1.5 rounded-lg bg-white border border-emerald-500 text-emerald-700 hover:bg-emerald-50 transition-colors"
           >
-            💬 Demander un devis WhatsApp
+            🟢 Demander un devis WhatsApp
           </a>
         </div>
       </div>
