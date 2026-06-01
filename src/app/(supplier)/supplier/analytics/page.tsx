@@ -39,7 +39,7 @@ export default async function SupplierAnalyticsPage() {
 
   if (approvedIds.length > 0) {
     const { data: quotesData } = await supabase
-      .from('supplier_quote_requests')
+      .from('supplier_quote_requests_supplier_read')
       .select('id, supplier_product_id, quantity_requested, status, supplier_payout_amount_mad, created_at')
       .in('supplier_product_id', approvedIds)
       .order('created_at', { ascending: false })

@@ -41,13 +41,11 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
 
   const [productRes, attachmentsRes] = await Promise.all([
     supabase
-      .from('supplier_products')
+      .from('supplier_products_wholesaler_read')
       .select(
         'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, created_at'
       )
       .eq('id', id)
-      .eq('approval_status', 'approved')
-      .is('archived_at', null)
       .single(),
     supabase
       .from('supplier_product_attachments')

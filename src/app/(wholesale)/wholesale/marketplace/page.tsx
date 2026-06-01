@@ -34,35 +34,20 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileResult, productsResult, premiumSubsResult] = await Promise.all([
+  const [profileResult, productsResult] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
-      .from('supplier_products')
+      .from('supplier_products_wholesaler_read')
       .select(
-        'id, supplier_id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status), supplier_product_moq_tiers(min_quantity, unit_price_usd)'
+        'id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, is_featured, is_verified, supplier_product_attachments(attachment_type, admin_status), supplier_product_moq_tiers(min_quantity, unit_price_usd)'
       )
-      .eq('approval_status', 'approved')
-      .is('archived_at', null)
       .order('created_at', { ascending: false }),
-    supabase
-      .from('supplier_subscriptions')
-      .select('supplier_id, plan:premium_plans(featured_badge, verified_badge)')
-      .eq('status', 'active'),
   ])
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
 
-  type PremiumFlags = { featured_badge: boolean; verified_badge: boolean }
-  type PremiumSubRow = { supplier_id: string; plan: PremiumFlags | PremiumFlags[] | null }
-  const premiumMap = new Map<string, PremiumFlags>()
-  for (const sub of (premiumSubsResult.data ?? []) as PremiumSubRow[]) {
-    const flags = Array.isArray(sub.plan) ? sub.plan[0] : sub.plan
-    if (flags) premiumMap.set(sub.supplier_id, flags)
-  }
-
   type MoqTierRow = { min_quantity: number; unit_price_usd: number }
   type MarketplaceProduct = SupplierProductPublic & {
-    supplier_id: string
     supplier_type: SupplierType
     subcategory: string
     niche: string
@@ -75,12 +60,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     is_featured: boolean
     is_verified: boolean
   }
-  let products = ((productsResult.data ?? []) as (MarketplaceProduct & { supplier_id: string })[])
-    .map((p) => ({
-      ...p,
-      is_featured: premiumMap.get(p.supplier_id)?.featured_badge ?? false,
-      is_verified: premiumMap.get(p.supplier_id)?.verified_badge ?? false,
-    }))
+  let products = (productsResult.data ?? []) as MarketplaceProduct[]
 
   // Premium suppliers first
   products.sort((a, b) => {
@@ -134,10 +114,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   // Trust metrics — real counts from unfiltered approved products
   const allApproved = (productsResult.data ?? []) as MarketplaceProduct[]
   const totalProductCount = allApproved.length
-  let verifiedSupplierCount = 0
-  for (const flags of premiumMap.values()) {
-    if (flags.verified_badge) verifiedSupplierCount++
-  }
+  const verifiedSupplierCount = allApproved.filter((p) => p.is_verified).length
   const localStockProductCount = allApproved.filter(
     (p) => p.availability_type === 'local_stock'
   ).length

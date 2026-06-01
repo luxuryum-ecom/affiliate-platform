@@ -1150,6 +1150,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sample_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sample_requests_wholesaler_id_fkey"
             columns: ["wholesaler_id"]
             isOneToOne: false
@@ -1535,6 +1542,13 @@ export type Database = {
             referencedRelation: "supplier_quote_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supplier_payout_history_supplier_quote_request_id_fkey"
+            columns: ["supplier_quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_quote_requests_supplier_read"
+            referencedColumns: ["id"]
+          },
         ]
       }
       supplier_product_attachments: {
@@ -1579,6 +1593,13 @@ export type Database = {
             referencedRelation: "supplier_products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supplier_product_attachments_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
         ]
       }
       supplier_product_moq_tiers: {
@@ -1609,6 +1630,13 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_moq_tiers_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
         ]
@@ -1652,11 +1680,19 @@ export type Database = {
             referencedRelation: "supplier_products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supplier_product_variants_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
         ]
       }
       supplier_products: {
         Row: {
           admin_notes: string | null
+          ai_risk_score: number | null
           approval_status: string
           approved_at: string | null
           approved_by: string | null
@@ -1669,6 +1705,9 @@ export type Database = {
           id: string
           lead_time_days: number | null
           min_quantity: number
+          moderation_flag: string | null
+          moderation_reason: string | null
+          moderation_signals: string[]
           niche: string
           origin_country: string
           photos: string[]
@@ -1691,6 +1730,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          ai_risk_score?: number | null
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
@@ -1703,6 +1743,9 @@ export type Database = {
           id?: string
           lead_time_days?: number | null
           min_quantity?: number
+          moderation_flag?: string | null
+          moderation_reason?: string | null
+          moderation_signals?: string[]
           niche?: string
           origin_country?: string
           photos?: string[]
@@ -1725,6 +1768,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          ai_risk_score?: number | null
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
@@ -1737,6 +1781,9 @@ export type Database = {
           id?: string
           lead_time_days?: number | null
           min_quantity?: number
+          moderation_flag?: string | null
+          moderation_reason?: string | null
+          moderation_signals?: string[]
           niche?: string
           origin_country?: string
           photos?: string[]
@@ -1779,6 +1826,8 @@ export type Database = {
           admin_notes: string | null
           buyer_id: string
           buyer_notes: string | null
+          buyer_purchase_profile: string | null
+          buyer_volume_tier: string | null
           created_at: string
           destination_city: string | null
           destination_country: string
@@ -1801,6 +1850,8 @@ export type Database = {
           admin_notes?: string | null
           buyer_id: string
           buyer_notes?: string | null
+          buyer_purchase_profile?: string | null
+          buyer_volume_tier?: string | null
           created_at?: string
           destination_city?: string | null
           destination_country?: string
@@ -1823,6 +1874,8 @@ export type Database = {
           admin_notes?: string | null
           buyer_id?: string
           buyer_notes?: string | null
+          buyer_purchase_profile?: string | null
+          buyer_volume_tier?: string | null
           created_at?: string
           destination_city?: string | null
           destination_country?: string
@@ -1854,6 +1907,13 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
         ]
@@ -2226,10 +2286,168 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      supplier_products_wholesaler_read: {
+        Row: {
+          approval_status: string | null
+          archived_at: string | null
+          availability_type: string | null
+          category: string | null
+          created_at: string | null
+          description: string | null
+          export_countries: string[] | null
+          id: string | null
+          is_featured: boolean | null
+          is_verified: boolean | null
+          lead_time_days: number | null
+          min_quantity: number | null
+          niche: string | null
+          origin_country: string | null
+          photos: string[] | null
+          product_name: string | null
+          public_description: string | null
+          public_name: string | null
+          stock_quantity: number | null
+          subcategory: string | null
+          suggested_wholesale_price_mad: number | null
+          supplier_type: string | null
+          target_buyer_type: string | null
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approval_status?: string | null
+          archived_at?: string | null
+          availability_type?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          export_countries?: string[] | null
+          id?: string | null
+          is_featured?: never
+          is_verified?: never
+          lead_time_days?: number | null
+          min_quantity?: number | null
+          niche?: string | null
+          origin_country?: string | null
+          photos?: string[] | null
+          product_name?: string | null
+          public_description?: string | null
+          public_name?: string | null
+          stock_quantity?: number | null
+          subcategory?: string | null
+          suggested_wholesale_price_mad?: number | null
+          supplier_type?: string | null
+          target_buyer_type?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approval_status?: string | null
+          archived_at?: string | null
+          availability_type?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          export_countries?: string[] | null
+          id?: string | null
+          is_featured?: never
+          is_verified?: never
+          lead_time_days?: number | null
+          min_quantity?: number | null
+          niche?: string | null
+          origin_country?: string | null
+          photos?: string[] | null
+          product_name?: string | null
+          public_description?: string | null
+          public_name?: string | null
+          stock_quantity?: number | null
+          subcategory?: string | null
+          suggested_wholesale_price_mad?: number | null
+          supplier_type?: string | null
+          target_buyer_type?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      supplier_quote_requests_supplier_read: {
+        Row: {
+          created_at: string | null
+          destination_city: string | null
+          destination_country: string | null
+          id: string | null
+          quantity_requested: number | null
+          status: string | null
+          supplier_payout_amount_mad: number | null
+          supplier_payout_status: string | null
+          supplier_product_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          destination_city?: string | null
+          destination_country?: string | null
+          id?: string | null
+          quantity_requested?: number | null
+          status?: string | null
+          supplier_payout_amount_mad?: number | null
+          supplier_payout_status?: string | null
+          supplier_product_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          destination_city?: string | null
+          destination_country?: string | null
+          id?: string | null
+          quantity_requested?: number | null
+          status?: string | null
+          supplier_payout_amount_mad?: number | null
+          supplier_payout_status?: string | null
+          supplier_product_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_quote_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      get_orders_by_phone: {
+        Args: { p_phone: string }
+        Returns: {
+          cancelled_at: string
+          confirmed_at: string
+          created_at: string
+          customer_city: string
+          customer_name: string
+          delivered_at: string
+          delivery_company: string
+          id: string
+          product_name: string
+          quantity: number
+          returned_at: string
+          shipped_at: string
+          status: string
+          total_amount: number
+          tracking_number: string
+        }[]
+      }
       get_supplier_plan: { Args: { p_supplier_id: string }; Returns: string }
+      has_wholesale_buyer_access: { Args: never; Returns: boolean }
       my_role: { Args: never; Returns: string }
       reserve_stock: {
         Args: { p_product_id: string; p_qty: number }

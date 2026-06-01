@@ -88,7 +88,7 @@ export default async function SupplierDashboardPage() {
   let safeQuotes: SafeQuoteRow[] = []
   if (approvedProductIds.length > 0) {
     const { data: quotesData } = await supabase
-      .from('supplier_quote_requests')
+      .from('supplier_quote_requests_supplier_read')
       .select(
         'id, supplier_product_id, quantity_requested, destination_country, destination_city, status, supplier_payout_amount_mad, supplier_payout_status, created_at'
       )
