@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
-import { MozounaLogo, OriginBadge, VerifiedBadge, FeaturedBadge, MOQChip, LeadTimeChip } from '@/components/shared/branding'
+import { MozounaLogo, OriginBadge, VerifiedBadge, FeaturedBadge, MOQChip } from '@/components/shared/branding'
 import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
+import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
 
 export const metadata = { title: 'Marketplace fournisseurs — Espace Grossiste' }
@@ -36,7 +37,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     supabase
       .from('supplier_products')
       .select(
-        'id, supplier_id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status)'
+        'id, supplier_id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, supplier_product_attachments(attachment_type, admin_status), supplier_product_moq_tiers(min_quantity, unit_price_usd)'
       )
       .eq('approval_status', 'approved')
       .is('archived_at', null)
@@ -57,6 +58,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     if (flags) premiumMap.set(sub.supplier_id, flags)
   }
 
+  type MoqTierRow = { min_quantity: number; unit_price_usd: number }
   type MarketplaceProduct = SupplierProductPublic & {
     supplier_id: string
     supplier_type: SupplierType
@@ -67,6 +69,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     lead_time_days: number | null
     export_countries: string[]
     supplier_product_attachments: { attachment_type: string; admin_status: string }[]
+    supplier_product_moq_tiers: MoqTierRow[]
     is_featured: boolean
     is_verified: boolean
   }
@@ -363,7 +366,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {products.map((product) => (
               <MarketplaceProductCard
                 key={product.id}
@@ -381,71 +384,50 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 
 // ─── Country source section ───────────────────────────────────────────────────
 
-const COUNTRY_SOURCES = [
-  {
-    origin: 'Maroc',
-    flag: '🇲🇦',
-    name: 'Maroc',
-    tagline: 'Stock local prêt à livrer',
-    bullets: ['Livraison 24–72h', 'Aucune douane', 'Paiement flexible'],
-    accentCls: 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100',
-    activeCls: 'border-emerald-500 bg-emerald-100 ring-2 ring-emerald-400',
-    inactiveCls: 'border-gray-200 bg-white hover:border-emerald-200 hover:bg-emerald-50',
-    nameCls: 'text-emerald-800',
-    taglineCls: 'text-emerald-600',
-    bulletCls: 'text-emerald-700',
-  },
+const INTERNATIONAL_SOURCES = [
   {
     origin: 'Turquie',
     flag: '🇹🇷',
     name: 'Turquie',
     tagline: 'Textile & prêt-à-porter',
-    bullets: ['Import rapide 7–14 j', 'Qualité finition élevée', 'MOQ souple'],
-    accentCls: '',
+    note: 'Import 7–14 j · MOQ souple',
     activeCls: 'border-red-400 bg-red-50 ring-2 ring-red-300',
     inactiveCls: 'border-gray-200 bg-white hover:border-red-200 hover:bg-red-50',
     nameCls: 'text-red-800',
     taglineCls: 'text-red-600',
-    bulletCls: 'text-red-700',
   },
   {
     origin: 'Chine',
     flag: '🇨🇳',
     name: 'Chine',
-    tagline: 'Gros volume, prix usine',
-    bullets: ['Maritime & aérien', 'Prix compétitif', 'Délai 20–45 j'],
-    accentCls: '',
+    tagline: 'Gros volume · Prix usine',
+    note: 'Maritime & aérien · 20–45 j',
     activeCls: 'border-rose-400 bg-rose-50 ring-2 ring-rose-300',
     inactiveCls: 'border-gray-200 bg-white hover:border-rose-200 hover:bg-rose-50',
     nameCls: 'text-rose-800',
     taglineCls: 'text-rose-600',
-    bulletCls: 'text-rose-700',
   },
   {
     origin: 'Égypte',
     flag: '🇪🇬',
     name: 'Égypte',
-    tagline: 'Opportunités selon dispo.',
-    bullets: ['Coton & textile', 'Prix avantageux', 'Stock variable'],
-    accentCls: '',
+    tagline: 'Coton & textile',
+    note: 'Prix avantageux · Stock variable',
     activeCls: 'border-amber-400 bg-amber-50 ring-2 ring-amber-300',
     inactiveCls: 'border-gray-200 bg-white hover:border-amber-200 hover:bg-amber-50',
     nameCls: 'text-amber-800',
     taglineCls: 'text-amber-600',
-    bulletCls: 'text-amber-700',
   },
   {
     origin: 'Dubai',
     flag: '🇦🇪',
     name: 'Dubai',
-    tagline: 'Opportunités selon dispo.',
-    bullets: ['Hub logistique', 'Multi-origines', 'Commande groupée'],
-    accentCls: '',
+    tagline: 'Hub logistique multi-origines',
+    note: 'Commande groupée · Réexportation',
     activeCls: 'border-sky-400 bg-sky-50 ring-2 ring-sky-300',
     inactiveCls: 'border-gray-200 bg-white hover:border-sky-200 hover:bg-sky-50',
     nameCls: 'text-sky-800',
     taglineCls: 'text-sky-600',
-    bulletCls: 'text-sky-700',
   },
 ] as const
 
@@ -456,15 +438,14 @@ const sourcingMessage = encodeURIComponent(
 
 function CountrySourceSection({ activeOrigin }: { activeOrigin?: string }) {
   const active = activeOrigin?.toLowerCase()
+  const moroccoActive = active === 'maroc'
 
   return (
     <section className="mb-7 pb-6 border-b border-gray-200">
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <div>
           <h2 className="text-base font-bold text-gray-900">Choisissez votre source d&apos;achat</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Sélectionnez un pays pour filtrer les produits disponibles
-          </p>
+          <p className="text-xs text-gray-500 mt-0.5">Sélectionnez un pays pour filtrer les produits disponibles</p>
         </div>
         {active && (
           <Link
@@ -476,73 +457,110 @@ function CountrySourceSection({ activeOrigin }: { activeOrigin?: string }) {
         )}
       </div>
 
-      {/* Country cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        {COUNTRY_SOURCES.map((src) => {
-          const isActive = active === src.origin.toLowerCase()
-          return (
-            <Link
-              key={src.origin}
-              href={`/wholesale/marketplace?origin=${encodeURIComponent(src.origin)}`}
-              className={`rounded-xl border p-3 flex flex-col gap-1.5 transition-all duration-150 ${
-                isActive ? src.activeCls : src.inactiveCls
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xl leading-none">{src.flag}</span>
-                {isActive && (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/80 text-gray-700 border border-gray-200">
+      {/* ── Section 1: Morocco hero ───────────────────────────────────────── */}
+      <Link
+        href="/wholesale/marketplace?origin=Maroc&in_stock=1"
+        className={`block rounded-2xl border-2 p-5 mb-4 transition-all duration-200 ${
+          moroccoActive
+            ? 'border-emerald-500 bg-emerald-600 shadow-lg shadow-emerald-200'
+            : 'border-emerald-400 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-md'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <span className="text-5xl leading-none flex-shrink-0">🇲🇦</span>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+                  MAROC — STOCK DISPONIBLE
+                </h3>
+                {moroccoActive && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-emerald-700 border border-emerald-200">
                     Actif
                   </span>
                 )}
               </div>
-              <div>
-                <p className={`text-sm font-bold leading-tight ${src.nameCls}`}>{src.name}</p>
-                <p className={`text-[11px] leading-snug mt-0.5 ${src.taglineCls}`}>{src.tagline}</p>
+              <p className="text-emerald-100 text-sm font-medium mb-2">
+                Fournisseurs locaux · Livraison 24–72h · Aucune douane
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-white/20 text-white font-medium border border-white/30">
+                  ✓ Livraison 24–72h
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-white/20 text-white font-medium border border-white/30">
+                  ✓ Aucune douane
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-white/20 text-white font-medium border border-white/30">
+                  ✓ Paiement flexible
+                </span>
               </div>
-              <ul className="mt-0.5 space-y-0.5">
-                {src.bullets.map((b) => (
-                  <li key={b} className={`text-[10px] flex items-start gap-1 ${src.bulletCls}`}>
-                    <span className="mt-px opacity-60">✓</span>
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-            </Link>
-          )
-        })}
-      </div>
+            </div>
+          </div>
+          <div className="flex-shrink-0">
+            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-emerald-700 font-bold text-sm shadow-sm hover:shadow transition-shadow whitespace-nowrap">
+              Voir les produits disponibles →
+            </span>
+          </div>
+        </div>
+      </Link>
 
-      {/* Quick action buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/wholesale/marketplace?origin=Maroc&in_stock=1"
-          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-        >
-          🇲🇦 Voir stock Maroc
-        </Link>
-        <Link
-          href="/wholesale/marketplace?availability=import_on_demand"
-          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        >
-          🌍 Importer sur commande
-        </Link>
-        <a
-          href={`https://wa.me/${whatsappPhone}?text=${sourcingMessage}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          💬 Demander sourcing personnalisé
-        </a>
+      {/* ── Section 2: International grid ────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          🌍 Importation internationale
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {INTERNATIONAL_SOURCES.map((src) => {
+            const isActive = active === src.origin.toLowerCase()
+            return (
+              <Link
+                key={src.origin}
+                href={`/wholesale/marketplace?origin=${encodeURIComponent(src.origin)}`}
+                className={`rounded-xl border p-3 flex flex-col gap-1 transition-all duration-150 ${
+                  isActive ? src.activeCls : src.inactiveCls
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-2xl leading-none">{src.flag}</span>
+                  {isActive && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/80 text-gray-700 border border-gray-200">
+                      Actif
+                    </span>
+                  )}
+                </div>
+                <p className={`text-sm font-bold leading-tight ${src.nameCls}`}>{src.name}</p>
+                <p className={`text-[11px] leading-snug ${src.taglineCls}`}>{src.tagline}</p>
+                <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{src.note}</p>
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Quick sourcing CTA */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a
+            href={`https://wa.me/${whatsappPhone}?text=${sourcingMessage}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            💬 Sourcing personnalisé sur demande
+          </a>
+          <Link
+            href="/wholesale/marketplace?availability=import_on_demand"
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
+          >
+            📦 Voir tous les produits import
+          </Link>
+        </div>
       </div>
     </section>
   )
 }
 
 // ─── Marketplace product card ─────────────────────────────────────────────────
-// Compact Alibaba-style card: square image, name, MOQ + lead time, price.
-// Full details and quote form are on the product detail page.
+
+type MoqTierRow = { min_quantity: number; unit_price_usd: number }
 
 function MarketplaceProductCard({
   product,
@@ -557,12 +575,16 @@ function MarketplaceProductCard({
     stock_quantity?: number | null
     lead_time_days?: number | null
     supplier_product_attachments?: { attachment_type: string; admin_status: string }[]
+    supplier_product_moq_tiers?: MoqTierRow[]
   }
   isFeatured?: boolean
   isVerified?: boolean
 }) {
   const displayName = product.public_name || product.product_name
   const isMorocco = product.supplier_type === 'morocco'
+  const isLocalStock = product.availability_type === 'local_stock'
+  const moqTiers = product.supplier_product_moq_tiers ?? []
+  const hasTiers = moqTiers.length > 1
 
   const cardBorder = isVerified
     ? 'border-amber-300 ring-1 ring-amber-100'
@@ -570,76 +592,140 @@ function MarketplaceProductCard({
     ? 'border-indigo-300 ring-1 ring-indigo-100'
     : 'border-gray-200'
 
+  const deliveryLabel = isLocalStock
+    ? '24–72h'
+    : product.lead_time_days != null
+    ? `${product.lead_time_days} j`
+    : 'Sur devis'
+
   return (
     <Link
       href={`/wholesale/marketplace/${product.id}`}
-      className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-md transition-all duration-200 ${cardBorder}`}
+      className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-lg transition-all duration-200 ${cardBorder}`}
     >
-      {/* Square image */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+      {/* Image — 4:3 for richer product feel */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
         {product.photos.length > 0 ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.photos[0]}
-            alt={displayName}
-            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-          />
+          <ProductCardImage src={product.photos[0]} alt={displayName} />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-4xl text-gray-300">▢</span>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-100">
+            <span className="text-4xl text-gray-300">📦</span>
+            <span className="text-[10px] text-gray-400 text-center px-3 leading-tight">{displayName}</span>
           </div>
         )}
 
-        {/* Origin overlay — top left */}
+        {/* Top-left: origin badge */}
         {product.origin_country && (
-          <div className="absolute top-1.5 left-1.5">
+          <div className="absolute top-2 left-2">
             <OriginBadge country={product.origin_country} className="bg-white/95 shadow-sm" />
           </div>
         )}
 
-        {/* Premium badge — top right */}
+        {/* Top-right: verified / featured */}
         {(isVerified || isFeatured) && (
-          <div className="absolute top-1.5 right-1.5">
+          <div className="absolute top-2 right-2">
             {isVerified ? <VerifiedBadge /> : <FeaturedBadge />}
           </div>
         )}
 
-        {/* Local stock tag — bottom left */}
-        {product.availability_type === 'local_stock' && (
-          <div className="absolute bottom-1.5 left-1.5">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600/90 text-white font-medium">
-              Stock
+        {/* Bottom-left: stock tag */}
+        {isLocalStock && (
+          <div className="absolute bottom-2 left-2 flex gap-1">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600/90 text-white font-semibold">
+              Stock local
             </span>
           </div>
         )}
       </div>
 
-      {/* Compact info */}
-      <div className="p-2.5 flex flex-col gap-1.5 flex-1">
-        {/* Supplier type */}
-        <p className="text-[10px] text-gray-400 font-medium leading-none">
-          {isMorocco ? '🇲🇦 Fournisseur Maroc' : '🌍 International'}
-          {isVerified && <span className="ml-1 text-amber-600">· Gold</span>}
-        </p>
+      {/* Card body */}
+      <div className="p-3 flex flex-col gap-2 flex-1">
+        {/* Supplier verification badge row */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-gray-400 font-medium">
+            {isMorocco ? '🇲🇦 Fournisseur Maroc' : '🌍 International'}
+          </span>
+          {isVerified && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+              ✓ Vérifié
+            </span>
+          )}
+          {!isVerified && isFeatured && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
+              ★ Premium
+            </span>
+          )}
+        </div>
 
         {/* Product name */}
-        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 flex-1">
+        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
           {displayName}
         </h3>
 
-        {/* MOQ + lead time */}
-        <div className="flex flex-wrap gap-1">
+        {/* MOQ + delivery row */}
+        <div className="flex items-center gap-2 flex-wrap">
           <MOQChip qty={product.min_quantity} unit={product.unit ?? 'u.'} />
-          {product.lead_time_days != null && <LeadTimeChip days={product.lead_time_days} />}
+          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100 font-medium">
+            🚚 {deliveryLabel}
+          </span>
         </div>
 
-        {/* Price */}
-        <div className="pt-1.5 border-t border-gray-100">
-          <p className="text-sm font-bold text-gray-900">
-            {product.suggested_wholesale_price_mad != null
-              ? `${product.suggested_wholesale_price_mad.toLocaleString('fr-MA')} MAD`
-              : <span className="text-gray-500 font-medium text-xs">Sur devis</span>}
+        {/* Stock quantity */}
+        {product.stock_quantity != null && (
+          <p className="text-[11px] text-gray-500">
+            <span className={product.stock_quantity > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>
+              {product.stock_quantity > 0 ? `${product.stock_quantity.toLocaleString('fr-MA')} en stock` : 'Rupture de stock'}
+            </span>
+            {product.stock_quantity > 0 && (
+              <span className="ml-1 text-gray-400">/ {product.unit ?? 'u.'}</span>
+            )}
           </p>
+        )}
+
+        {/* Price */}
+        <div className="pt-2 border-t border-gray-100">
+          {product.suggested_wholesale_price_mad != null ? (
+            <div>
+              <p className="text-[10px] text-gray-400 font-medium mb-0.5">À partir de</p>
+              <p className="text-base font-extrabold text-gray-900">
+                {product.suggested_wholesale_price_mad.toLocaleString('fr-MA')}{' '}
+                <span className="text-sm font-semibold text-gray-500">MAD</span>
+                <span className="text-[10px] font-normal text-gray-400 ml-1">/ {product.unit ?? 'u.'}</span>
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-gray-500">Prix sur devis</p>
+          )}
+
+          {/* Tier pricing table */}
+          {hasTiers && (
+            <div className="mt-2 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden">
+              <p className="text-[9px] font-bold text-gray-400 uppercase px-2 pt-1.5 pb-0.5 tracking-wider">
+                Paliers de prix
+              </p>
+              <table className="w-full text-[10px]">
+                <tbody>
+                  {moqTiers.slice(0, 3).map((tier) => (
+                    <tr key={tier.min_quantity} className="border-t border-gray-100 first:border-0">
+                      <td className="px-2 py-1 text-gray-600 font-medium">
+                        ≥ {tier.min_quantity.toLocaleString('fr-MA')} {product.unit ?? 'u.'}
+                      </td>
+                      <td className="px-2 py-1 text-right text-gray-500">
+                        Sur devis
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* CTA button */}
+        <div className="mt-auto pt-2">
+          <span className="block w-full text-center text-xs font-bold py-2.5 px-3 rounded-xl bg-emerald-600 text-white group-hover:bg-emerald-700 transition-colors">
+            Voir les tarifs grossiste →
+          </span>
         </div>
       </div>
     </Link>
