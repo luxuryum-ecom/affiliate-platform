@@ -595,6 +595,16 @@ function CountrySourceSection({
 
 // ─── Marketplace product card ─────────────────────────────────────────────────
 
+const CATEGORY_ICONS: Record<string, string> = {
+  'Textile':              '👗',
+  'Matières premières':   '🧵',
+  'Chaussures':           '👟',
+  'Cosmétique & hygiène': '💄',
+  'Alimentaire':          '🥗',
+  'Maison & packaging':   '📦',
+  'Artisanat':            '🧶',
+}
+
 type MoqTierRow = { min_quantity: number; unit_price_usd: number }
 
 function MarketplaceProductCard({
@@ -616,6 +626,7 @@ function MarketplaceProductCard({
   isVerified?: boolean
 }) {
   const displayName = product.public_name || product.product_name
+  const categoryIcon = CATEGORY_ICONS[product.category] ?? '🏷️'
   const isMorocco = product.supplier_type === 'morocco'
   const isLocalStock = product.availability_type === 'local_stock'
   const moqTiers = product.supplier_product_moq_tiers ?? []
@@ -650,11 +661,11 @@ function MarketplaceProductCard({
       {/* Square image — compact density */}
       <Link href={productUrl} className="block relative aspect-square overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50">
         {product.photos.length > 0 ? (
-          <ProductCardImage src={product.photos[0]} alt={displayName} />
+          <ProductCardImage src={product.photos[0]} alt={displayName} category={product.category} />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-stone-50 to-amber-50">
-            <span className="text-4xl opacity-40">🏷️</span>
-            <span className="text-[10px] text-stone-400 font-medium text-center px-3 leading-tight line-clamp-2">{displayName}</span>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-50 via-stone-50 to-amber-100">
+            <span className="text-4xl">{categoryIcon}</span>
+            <span className="text-[10px] text-stone-500 font-semibold text-center px-3 leading-tight line-clamp-2">{displayName}</span>
           </div>
         )}
 
