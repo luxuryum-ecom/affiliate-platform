@@ -5,6 +5,7 @@ import { signOut } from '@/app/actions/auth'
 import { MozounaLogo, OriginBadge, VerifiedBadge, FeaturedBadge, MOQChip } from '@/components/shared/branding'
 import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
 import { ProductCardImage } from '@/components/wholesale/product-card-image'
+import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
 
 export const metadata = { title: 'Marketplace fournisseurs — Espace Grossiste' }
@@ -210,7 +211,8 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         </div>
 
         {/* ── Filters ─────────────────────────────────────────────────────────── */}
-        <form method="GET" className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
+        <MarketplaceFilters>
+        <form method="GET" className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           {/* Row 1: keyword + category + subcategory + origin */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             <div className="lg:col-span-1">
@@ -360,6 +362,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         </form>
+        </MarketplaceFilters>
 
         {/* ── Result count ─────────────────────────────────────────────────────── */}
         <p className="text-sm text-gray-500 mb-4">
@@ -382,7 +385,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {products.map((product) => (
               <MarketplaceProductCard
                 key={product.id}
@@ -666,7 +669,7 @@ function MarketplaceProductCard({
   return (
     <article className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-lg transition-all duration-200 ${cardBorder}`}>
       {/* Square image — compact density */}
-      <Link href={productUrl} className="block relative aspect-square overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50">
+      <Link href={productUrl} className="block relative aspect-[5/3] overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50">
         {product.photos.length > 0 ? (
           <ProductCardImage src={product.photos[0]} alt={displayName} category={product.category} />
         ) : (
@@ -787,7 +790,7 @@ function MarketplaceProductCard({
             href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 block w-full text-center text-[9px] font-semibold py-1.5 rounded-lg bg-white border border-emerald-500 text-emerald-700 hover:bg-emerald-50 transition-colors"
+            className="mt-1 block w-full text-center text-[8px] font-normal py-1 text-emerald-600 hover:text-emerald-700 hover:underline underline-offset-2"
           >
             🟢 Demander un devis WhatsApp
           </a>
