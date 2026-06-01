@@ -10,18 +10,24 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-3">
         <Link
           href="/signup?type=affiliate"
           className="px-6 py-3 bg-black text-white rounded-lg font-medium text-center hover:bg-gray-800 transition-colors"
         >
-          Devenir affilié
+          Je fais de l&apos;affiliation
         </Link>
         <Link
           href="/signup?type=wholesale"
           className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-center hover:bg-gray-50 transition-colors"
         >
-          Acheter en gros / Grossiste
+          J&apos;achète en gros
+        </Link>
+        <Link
+          href="/signup?type=supplier"
+          className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-center hover:bg-gray-50 transition-colors"
+        >
+          Je vends mes produits
         </Link>
       </div>
 

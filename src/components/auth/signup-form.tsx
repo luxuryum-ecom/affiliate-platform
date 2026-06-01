@@ -7,9 +7,9 @@ import { signUp, type AuthState } from '@/app/actions/auth'
 const initialState: AuthState = { error: null }
 
 const ROLE_LABELS: Record<string, string> = {
-  affiliate: 'Affiliation — dropshipping COD',
-  wholesaler: 'Achat en gros — B2B',
-  supplier: 'Fournisseur — proposer des produits',
+  affiliate: "Je fais de l'affiliation",
+  wholesaler: "J'achète en gros",
+  supplier: 'Je vends mes produits',
 }
 
 interface SignupFormProps {

@@ -19,23 +19,33 @@ const PENDING_COPY: Record<
   { title: string; intro: string; steps: string[] }
 > = {
   affiliate: {
-    title: 'Inscription affilié en cours de validation',
+    title: 'Votre compte affiliation est en cours de validation',
     intro:
-      'Votre demande d\'accès à l\'espace affilié (dropshipping COD) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.',
+      "Votre demande pour faire de l'affiliation (dropshipping COD) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.",
     steps: [
-      'Vérification de votre profil affilié',
+      'Vérification de votre profil',
       'Notification par email une fois approuvé',
       'Accès au catalogue, liens de parrainage et suivi des commissions',
     ],
   },
   wholesaler: {
-    title: 'Inscription grossiste en cours de validation',
+    title: 'Votre compte achat en gros est en cours de validation',
     intro:
-      'Votre demande d\'accès à l\'espace grossiste (achat en gros B2B) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.',
+      "Votre demande pour acheter en gros (B2B) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.",
     steps: [
-      'Vérification de votre profil grossiste',
+      'Vérification de votre profil',
       'Notification par email une fois approuvé',
       'Accès au catalogue gros, paliers de prix et commandes B2B',
+    ],
+  },
+  supplier: {
+    title: 'Votre compte fournisseur est en cours de validation',
+    intro:
+      "Votre demande pour vendre vos produits sur la marketplace a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.",
+    steps: [
+      'Vérification de votre profil fournisseur',
+      'Notification par email une fois approuvé',
+      'Accès à la gestion de vos produits et aux demandes de devis',
     ],
   },
 }
