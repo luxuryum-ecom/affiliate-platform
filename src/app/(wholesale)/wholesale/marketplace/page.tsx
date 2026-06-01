@@ -770,7 +770,7 @@ function MarketplaceProductCard({
             target="_blank"
             rel="noopener noreferrer"
             className="mt-1 block w-full text-center text-[9px] font-semibold py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
-            onClick={(e) => e.stopPropagation()}
+
           >
             💬 Demander un devis WhatsApp
           </a>
