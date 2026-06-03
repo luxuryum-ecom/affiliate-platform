@@ -1,7 +1,7 @@
 # QA Backlog — Mozouna Group Platform
 
 > **Status:** Manual QA in progress — documentation only.  
-> **Last updated:** 2026-06-02 (BUG-052 added — gap fill)  
+> **Last updated:** 2026-06-02 (BUG-062 added)  
 > **Do not implement from this file without explicit approval.**
 
 ---
@@ -26,8 +26,8 @@ Issues that block a coherent wholesale purchase flow or violate non-negotiable b
 | **BUG-001** | Marketplace supplier products force RFQ despite price/stock/MOQ | Supplier marketplace shows price, stock, MOQ but always routes to devis. | Local stock with known price, MOQ, and stock → **direct order** (not RFQ). Related: BUG-013, BUG-004. |
 | **BUG-013** | Marketplace Morocco stock has no direct buy CTA | Local-stock marketplace products lack add-to-cart / buy path. | Stock available → **Acheter / Ajouter au panier**; import/custom → RFQ. Related: BUG-001, BUG-009. |
 | **BUG-004** | Local order workflow unclear | Wholesalers cannot clearly complete local-stock purchase (tiers, qty, cart, checkout). | Local-stock products: quantity selector, wholesale tiers, cart, checkout → wholesale order. Related: BUG-006, BUG-009. |
-| **BUG-005** | Payment validation must remain human-approved | Risk of auto-validation or unclear proof flow. | Upload proof + **admin manual validation**; AI/OCR later **assistance only**, never auto-approve. Related: BUG-044. |
-| **BUG-044** | Payment proof workflow missing | No structured buyer upload + admin validation path. | Grossiste uploads proof → admin validates manually → status update; OCR/AI optional assistant later. Related: BUG-005, BUG-027. |
+| **BUG-005** | Payment validation must remain human-approved | Risk of auto-validation or unclear proof flow. | Upload proof + **admin manual validation**; AI/OCR later **assistance only**, never auto-approve. Related: BUG-044, **BUG-065**. |
+| **BUG-044** | Payment proof workflow missing | No structured buyer upload + admin validation path. | Grossiste uploads proof → admin validates manually → status update; OCR/AI optional assistant later. Related: BUG-005, BUG-027, **BUG-065**. |
 | **BUG-022** | Stock quantity guard not intelligent | Orders can exceed available stock without business-aware rules. | Hard cap at available stock unless `production_possible = true` (see BUG-050). |
 
 ---
@@ -79,7 +79,12 @@ Back-office, roles, cash, profit truth, sourcing ops, and compliance. Not launch
 | **BUG-028** | Multi-caisse finance missing | No cashbox by currency/account. | Cashbox system: **MAD, AED, TRY, USD, USDT, RMB, EGP**. Related: BUG-027. |
 | **BUG-029** | Profit calculation is misleading | Margin excludes real costs. | Profit includes: supplier cost, delivery, packaging, customs/import, platform commission, affiliate commission, other costs. Related: **BUG-060**. |
 | **BUG-060** | Affiliate payout marks all approved commissions as paid without granular selection | **Admin → Paiements affiliés:** select affiliate + enter amount; page states all **approved** commissions for that affiliate are **automatically marked paid**. No per-commission selection. | Admin selects **exactly which commissions** are included in a payout. Required: list approved unpaid commissions; checkbox per commission; total selected; amount actually paid; remaining balance if partial; payment method; payment reference; optional proof upload; audit trail. **Impact:** high finance risk — accidental bulk mark-paid; amount entered may not match commissions included; partial payouts untraceable. Related: BUG-027, BUG-028, BUG-044, BUG-048, BUG-029, **BUG-061**. See [BUG-060 technical note](#bug-060-technical-note-code-audit). |
-| **BUG-061** | Affiliate payout lacks payment method and cashbox/caisse tracking | **Admin → Paiements affiliés** captures amount and transfer reference only — no structured **payment method** or **caisse** selection. | Every payout records: payment method (cash, bank transfer, CIH, Attijari, company bank, PayPal, Wise, USDT, other); **cashbox/caisse** used; currency; reference number; payment date; paid-by user; owner approval if required. **Impact:** finance/accounting risk — outflows not tied to a specific caisse or payment channel. Related: BUG-027, BUG-028, BUG-060, BUG-048, BUG-053. See [BUG-061 technical note](#bug-061-technical-note-code-audit). |
+| **BUG-061** | Affiliate payout lacks payment method and cashbox/caisse tracking | **Admin → Paiements affiliés** captures amount and transfer reference only — no structured **payment method** or **caisse** selection. | Every payout records: payment method (cash, bank transfer, CIH, Attijari, company bank, PayPal, Wise, USDT, other); **cashbox/caisse** used; currency; reference number; payment date; paid-by user; owner approval if required. **Impact:** finance/accounting risk — outflows not tied to a specific caisse or payment channel. Related: BUG-027, BUG-028, BUG-060, BUG-048, BUG-053, **BUG-062**. See [BUG-061 technical note](#bug-061-technical-note-code-audit). |
+| **BUG-062** | Affiliate payout lacks owner approval and correction workflow | **Admin → Paiements affiliés:** admin can record a payout (amount + reference) and commissions are immediately marked **paid** — no owner/supervisor approval step, no correction after submit, no reversal/void, no before/after audit log, no locked final validation state. | Payout lifecycle with finance controls: **draft / pending approval → approved → paid (locked)**; **owner or supervisor approval** required before commissions flip to paid; **correction window** with reason; **reversal/void** with commission rollback; **audit trail** (before/after values, actor, timestamp, reason); sensitive payouts flagged for owner-only final validation. **Impact:** high finance risk — erroneous or premature payouts cannot be corrected with accountability. Related: BUG-048, BUG-053, BUG-060, BUG-061, BUG-064. See [BUG-062 technical note](#bug-062-technical-note-code-audit). |
+| **BUG-063** | Delivered COD order shows COD received as empty | Admin order detail: status **Livrée**, tracking shows **COD attendu = 400 MAD** but **COD reçu = —**. Delivered orders can exist with no COD collection recorded. | Delivered COD orders must clearly track collection state: **COD collected** / **pending reconciliation** / **missing** / **partially received**. Admin sees: collected amount, collection date, courier/agent, payment method, caisse/cashbox, reconciliation status. **Impact:** critical finance — delivered-but-unpaid COD creates accounting gaps. Related: BUG-005, BUG-027, BUG-028, BUG-029, BUG-048, BUG-053. See [BUG-063 technical note](#bug-063-technical-note-code-audit). |
+| **BUG-064** | Commission marked paid while COD collection not confirmed | Order detail: status **Livrée**, **COD reçu = —**, affiliate commission **140 MAD**, yet **“Commission payée le 29/05/2026”**. Payout can finalize before revenue is reconciled. | Commission payout must not be final until order revenue is reconciled **or** owner manually overrides. Rules: **pending** until delivered → **approved** after delivered + COD/revenue confirmed → **payable** after finance reconciliation → **paid** only after actual payout recorded → **owner override** required if paid before COD reconciled. **Impact:** critical finance — affiliates paid before cash collected. Related: BUG-063, BUG-060, BUG-061, **BUG-062**, BUG-005, BUG-048, BUG-053. See [BUG-064 technical note](#bug-064-technical-note-code-audit). |
+| **BUG-065** | Proof upload uses URL only — no file upload or verification workflow | **Admin → order detail → Preuves & justificatifs:** type selector, **URL du fichier**, note, **Ajouter une preuve**. No direct upload for receipt/photo/PDF; no inline preview; no validation status; no approval chain. Existing proofs render as external links only (`proof_type` + date). | Admin (and later wholesaler/finance) can **upload or attach** proofs directly. Required: receipt / delivery proof / bank transfer / WhatsApp screenshot / supplier invoice / courier slip; **uploaded by** user; **timestamp**; **validation status** (pending / approved / rejected); **owner or supervisor approval** for sensitive proofs; **audit trail** (status changes, approver, reason). Inline **preview** for images/PDF. **Impact:** high operational and finance risk — external URLs can be lost, manipulated, or hard to verify. Related: BUG-005, BUG-044, BUG-048, BUG-053, BUG-063. See [BUG-065 technical note](#bug-065-technical-note-code-audit). |
+| **BUG-066** | Admin COD order search cannot find displayed short reference | **Admin → Commandes COD** list shows short ref e.g. **#14C20579**, but searching `14C20579` or `#14C20579` returns **0 results**. Searching customer name (e.g. “abdou”) works. | Search must find orders by the **exact short reference shown in the UI**. Support: `14C20579`, `#14C20579`, full order UUID, customer name, phone, city, affiliate name, product name. **Impact:** high ops friction — admins copy refs from WhatsApp, screenshots, support tickets, and commission pages; failed lookup slows order handling and increases errors. Related: BUG-010, BUG-047, BUG-063, BUG-064. See [BUG-066 technical note](#bug-066-technical-note-code-audit). |
 | **BUG-030** | Missing owner dashboard | No single ops/finance command view. | Critical alerts, blocked orders, cash balances, real profit, pending payments, late sourcing, top suppliers, cancellation risk. Related: BUG-025, BUG-026, **BUG-057**. |
 | **BUG-049** | No cancellation/return workflow for wholesale | No structured post-submit lifecycle. | Statuses: cancellation requested, cancelled by admin, returned, partially delivered, refund/credit note if needed. Related: BUG-019. |
 | **BUG-031** | Sourcing admin cannot process requests professionally | Admin sourcing is a static list. | Detail page: assign agent, create quote, contact supplier, notes, files, status changes, reply to client. Related: BUG-033–BUG-037, BUG-041, **BUG-052**. |
@@ -129,7 +134,7 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 |-------|---------|-----------|
 | **Critical launch blocker** | BUG-017, BUG-042, BUG-001, BUG-013, BUG-004, BUG-005, BUG-044, BUG-022 | Core rule: stock = buy, import = RFQ; payment stays human-approved; stock guards. |
 | **High ROI** | BUG-002, BUG-008, BUG-009, BUG-006, BUG-007, BUG-014, BUG-046, BUG-018, BUG-010, BUG-019, BUG-020, BUG-021, BUG-047, BUG-051, BUG-054, BUG-055, BUG-056, BUG-057, **BUG-058**, BUG-016 | Catalog clarity, CTAs, dashboard routing, **wholesaler sample page**, quote tracking. |
-| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061 | Roles, cashboxes, profit truth, affiliate payout controls, **actionable sourcing/RFQ rows**, alerts, tasks, sample mediation CRM, audit trail. |
+| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
 | **Later** | BUG-003, BUG-011, BUG-012, BUG-015, BUG-043, BUG-038, BUG-039, BUG-040, BUG-050 | Wording polish, attachments, upsell, images, basic notifications (see BUG-053 for full ops routing), advanced stock/production. |
 
 ### Suggested fix order (do not batch all 50)
@@ -138,7 +143,7 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 2. **Local direct purchase path** (BUG-001, BUG-004, BUG-013, BUG-009, BUG-006) — marketplace + catalog CTAs, cart, checkout.
 3. **Catalog IA** (BUG-002, BUG-008, BUG-047) — naming, nav, admin source labels.
 4. **Stock & location truth** (BUG-007, BUG-014, BUG-046, BUG-021, BUG-022) — filters, origin vs stock, guards.
-5. **Payment proof** (BUG-005, BUG-044) — upload + admin validation only.
+5. **Payment proof** (BUG-005, BUG-044, **BUG-065**) — Supabase Storage upload, preview, validation status, owner approval for sensitive proofs.
 6. **Buyer post-submit** (BUG-019, BUG-010, BUG-020) — edit window, notes, fee disclaimers.
 7. **Operations layer** (BUG-024–BUG-030, BUG-031–BUG-037, BUG-041, **BUG-053**) — roles, finance, sourcing CRM, alerts, **role-based task routing**.
 8. **Conversion & polish** (Tier 4–5) — attachments, upsell, notifications, production logic.
@@ -159,14 +164,15 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | Direct purchase vs RFQ | BUG-001, BUG-004, BUG-013, BUG-017, BUG-042, **BUG-056** |
 | Two catalogs / IA | BUG-002, BUG-008, BUG-009 |
 | Stock & location | BUG-007, BUG-014, BUG-021, BUG-022, BUG-046, BUG-050 |
-| Payment & proof | BUG-005, BUG-027, BUG-028, BUG-044, BUG-060, **BUG-061** |
-| Wholesale order lifecycle | BUG-010, BUG-019, BUG-047, BUG-049 |
+| Payment & proof | BUG-005, BUG-027, BUG-028, BUG-044, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065** |
+| Wholesale order lifecycle | BUG-010, BUG-019, BUG-047, BUG-049, **BUG-066** |
+| Admin COD ops & search | **BUG-066**, BUG-063, BUG-064, BUG-010 |
 | Quote / RFQ admin & wholesaler routing | BUG-051, BUG-052, BUG-054, BUG-047, BUG-031, BUG-037, **BUG-057** |
 | Sample & document requests | BUG-012, BUG-055, BUG-056, BUG-057, BUG-058, **BUG-059** |
 | Dashboard & counter routing | **BUG-057**, BUG-030, BUG-053 |
 | Sourcing ops | BUG-011, BUG-031–BUG-041, **BUG-052** |
-| Roles & audit | BUG-024, BUG-045, BUG-048, **BUG-053** |
-| Finance & profit | BUG-029, BUG-030, BUG-060, **BUG-061** |
+| Roles & audit | BUG-024, BUG-045, BUG-048, **BUG-053**, **BUG-062**, **BUG-065** |
+| Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065** |
 | UX / conversion | BUG-003, BUG-006, BUG-012, BUG-015, BUG-016, BUG-043 |
 | Alerts, tasks & routing | BUG-025, BUG-026, BUG-034, BUG-035, BUG-040, **BUG-053** |
 
@@ -188,6 +194,11 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | 2026-06-02 | BUG-060 added — affiliate payout lacks per-commission selection. |
 | 2026-06-02 | BUG-061 added — affiliate payout lacks payment method/caisse tracking. |
 | 2026-06-02 | BUG-052 added — admin sourcing/RFQ row not actionable (gap fill). |
+| 2026-06-02 | BUG-063 added — delivered COD order missing COD received tracking. |
+| 2026-06-02 | BUG-064 added — commission paid before COD reconciliation. |
+| 2026-06-02 | BUG-065 added — proof upload URL-only, no file upload or validation workflow. |
+| 2026-06-02 | BUG-066 added — admin COD search cannot find displayed short order reference. |
+| 2026-06-02 | BUG-062 added — affiliate payout lacks owner approval and correction workflow (gap fill). |
 
 ---
 
@@ -347,7 +358,110 @@ Explicit action → module → counter mapping (target state):
 
 **Gap vs BUG-027/028:** Platform-wide multi-caisse finance not built; affiliate payouts are first concrete outflow that needs channel + caisse linkage.
 
-**Fix direction (when approved):** Extend `payouts` or link to `cashbox_transactions` (BUG-028); method enum; caisse FK; currency; `paid_by` / `approved_by` audit fields; owner approval gate for high amounts (BUG-053). Fix together with BUG-060.
+**Fix direction (when approved):** Extend `payouts` or link to `cashbox_transactions` (BUG-028); method enum; caisse FK; currency; `paid_by` / `approved_by` audit fields; owner approval gate for high amounts (BUG-053, **BUG-062**). Fix together with BUG-060.
+
+### BUG-062 technical note (code audit)
+
+**Current flow** (`createPayout()` in `src/app/actions/payouts.ts`):
+1. Any admin calls action with affiliate + amount + optional reference/notes
+2. Inserts `payouts` row with `status: 'paid'` and `paid_at` set immediately
+3. Bulk-updates **all** approved commissions for affiliate → `status: 'paid'` (BUG-060)
+4. No approval queue, no `paid_by` / `approved_by`, no edit-after-save, no void/reversal path
+
+**Schema gaps:** `payouts` has no `approval_status`, `approved_by`, `corrected_at`, `reversed_at`, or linked audit table. Commission `paid` flip is one-way with no rollback workflow.
+
+**Gap vs BUG-048:** Platform-wide correction/audit spec exists but payout module does not implement before/after logging or owner override for financial corrections.
+
+**Gap vs BUG-053:** Finance role matrix defines owner approval for sensitive outflows — not enforced on affiliate payouts today.
+
+**Fix direction (when approved):** Payout state machine (`pending_approval` → `approved` → `paid` locked); owner/supervisor approve action; `payout_audit_log` with before/after fields; void/reversal restores commission status; integrate with granular commission selection (BUG-060), caisse/method (BUG-061), COD gating (BUG-064). Fix together with BUG-048 audit trail pattern.
+
+### BUG-063 technical note (code audit)
+
+**Schema:** `orders.cod_expected` and `orders.cod_received` exist (migration `004_order_tracking.sql`). `cod_expected` set at order placement; `cod_received` optional.
+
+**UI:** Admin order detail shows COD attendu / COD reçu; reçu displays **—** when `cod_received` is null (`/admin/orders/[id]/page.tsx`).
+
+**Status update:** `OrderStatusForm` shows “Montant COD reçu” only when selecting **delivered** — field is **optional**; admin can mark delivered without entering amount → commission trigger still fires on delivery.
+
+**Gap:** No `cod_reconciliation_status`, collection date, courier remittance link, caisse, or partial-collection workflow. Delivered + empty COD is a valid state today.
+
+**Fix direction (when approved):** Require COD reconciliation sub-state on deliver (or warn/block commission until collected); partial/missing states; link to caisse inflow (BUG-027/028); finance alerts (BUG-053). Gate commission **approved/paid** on COD confirmed (BUG-064).
+
+### BUG-064 technical note (code audit)
+
+**Commission lifecycle today** (business model + code):
+1. Order → `delivered` → `handle_order_delivered` trigger creates `commissions` row (`status = pending`) — **no check** on `cod_received`
+2. Admin approves commission → `approved`
+3. `createPayout()` marks **all** approved commissions for affiliate → `paid` (BUG-060) — **no check** on linked order COD reconciliation
+
+**Observed QA case:** `delivered` + `cod_received = null` + commission already `paid` — valid under current logic, invalid under finance rules.
+
+**Target state machine:**
+```
+pending (pre-delivery)
+  → pending (delivered, COD unreconciled)
+  → approved (delivered + COD/revenue confirmed)
+  → paid (payout recorded + linked)
+Exception: owner override with audit reason (BUG-048)
+```
+
+**Fix together with:** BUG-063 (COD collection), BUG-060/061 (granular payout + caisse), BUG-053 (finance role gates).
+
+### BUG-065 technical note (code audit)
+
+**Schema** (`supabase/migrations/005_proofs_and_search.sql`): `order_proofs` table exists with `proof_type`, `file_url` (text, required), `uploaded_by`, `uploaded_at`, `notes`, and optional FKs to order / wholesale order / product. No `storage_path`, `mime_type`, `validation_status`, `approved_by`, or audit history table.
+
+**Current proof types** (DB CHECK): `bank_receipt`, `transfer_proof`, `delivery_receipt`, `return_receipt`, `stock_reception_proof`, `other`. Missing QA-expected types: WhatsApp screenshot, supplier invoice, courier slip (may map to `other` today without semantics).
+
+**Admin UI** (`src/components/admin/order-proof-form.tsx` on `/admin/orders/[id]`):
+- Form fields: type `<select>`, **URL du fichier** (`type="url"`, required), optional note.
+- Existing proofs: plain `<a href={file_url}>` link with type label + date — **no thumbnail/PDF preview**, no validation badge.
+
+**Server action** (`addOrderProof` in `src/app/actions/commissions.ts`): inserts `file_url` string as provided — **no Supabase Storage upload**, no file type/size validation, no virus/MIME check, no approval workflow.
+
+**RLS:** Admin full access; affiliates/buyers read-only on related proofs — no finance-role gate or approval permissions.
+
+**Gap vs expected workflow:**
+| Capability | Today | Required |
+|------------|-------|----------|
+| Direct file upload | ❌ URL paste only | Supabase Storage bucket + signed URLs |
+| Preview | ❌ external link | Image inline; PDF viewer or download |
+| Validation status | ❌ none | pending → approved / rejected |
+| Sensitive-proof approval | ❌ none | Owner/supervisor gate (BUG-053) |
+| Audit trail | ❌ insert-only | Status change log (BUG-048) |
+| Proof types | 6 generic enums | receipt, delivery, bank transfer, WhatsApp, supplier invoice, courier slip |
+
+**Fix direction (when approved):** Storage bucket `order-proofs` with RLS; extend schema with `validation_status`, `approved_by`, `rejected_reason`, optional `storage_path`; proof-type enum expansion; `OrderProofForm` file input + preview; finance validation UI; link COD reconciliation proofs (BUG-063) and wholesale payment proof (BUG-044); notification on upload (BUG-053 event #3).
+
+### BUG-066 technical note (code audit)
+
+**Displayed reference** (`src/app/(admin)/admin/orders/page.tsx`, `OrderRow`):
+```typescript
+const ref = order.id.slice(0, 8).toUpperCase()  // UI: #{ref} e.g. #14C20579
+```
+Short ref is **not a stored column** — it is the first 8 hex chars of the order UUID, uppercased. Same pattern used on order detail, commissions list, affiliate orders, and customer tracking pages.
+
+**Current search** (`AdminOrdersPage`, `?search=` param):
+```typescript
+query = query.or(`customer_name.ilike.${term},customer_phone.ilike.${term}`)
+```
+Only **customer name** and **customer phone** are searched (pg_trgm indexes on those columns in migration `005_proofs_and_search.sql`). No match on:
+- UUID prefix / short ref (with or without `#`)
+- Full order UUID
+- `customer_city`
+- Affiliate name (joined `profiles`, not in filter)
+- Product name (joined `products`, not in filter)
+
+**Root cause:** UI shows a derived ID fragment admins treat as the order number; backend search ignores `orders.id` entirely.
+
+**Fix direction (when approved):**
+1. Normalize input: strip leading `#`, trim, uppercase for prefix match.
+2. If term looks like UUID or 8-char hex prefix → `id.ilike.{prefix}%` (or exact UUID eq).
+3. Extend `.or()` to include `customer_city.ilike`, and join-based filters for affiliate/product (RPC or denormalized search column).
+4. Optional: persist `short_ref` generated column for index-friendly lookup; apply same search pattern to affiliate admin order lists if they gain search later.
+
+**Quick win:** UUID-prefix + full UUID + city in existing query — unblocks the reported repro immediately.
 
 ### BUG-053 specification
 
