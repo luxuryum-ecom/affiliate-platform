@@ -1,7 +1,7 @@
 # QA Backlog — Mozouna Group Platform
 
 > **Status:** Manual QA in progress — documentation only.  
-> **Last updated:** 2026-06-02 (BUG-073–074 added)  
+> **Last updated:** 2026-06-02 (BUG-075–077 added)  
 > **Do not implement from this file without explicit approval.**
 
 ---
@@ -93,6 +93,9 @@ Back-office, roles, cash, profit truth, sourcing ops, and compliance. Not launch
 | **BUG-072** | RFQ module lacks supplier offer workflow after matching | **Admin → Moteur RFQ** shows matched suppliers but no structured end-to-end offer workflow visible to admin. | Per matched supplier: offer record with proposed price, MOQ, delivery delay, available quantity, payment terms, notes, attachments; status **notified → opened → responded → expired → selected → rejected**; **admin comparison table**; **conversion to wholesaler quote**. **Impact:** critical sourcing workflow gap — matching alone is insufficient for professional RFQ-to-offer-to-quote. Related: BUG-031, BUG-037, BUG-041, **BUG-070**, **BUG-071**, BUG-051. See [BUG-072 technical note](#bug-072-technical-note-code-audit). |
 | **BUG-073** | Premium plan management lacks payment validation and billing workflow | **Admin → Monétisation Premium** shows plans (Gratuit / Professionnel 500 MAD/mois / Entreprise 1500 MAD/mois) and supplier subscription status, but no clear **billing/payment workflow** for activating paid plans. | Premium subscription must include: **payment method**, **billing cycle**, **invoice/receipt**, **payment status**, **start / renewal / expiry dates**, **trial period** if applicable, **cancellation/downgrade flow**, **owner approval** for manual activation, **audit trail** of plan changes. **Impact:** critical monetization risk — paid plans may be activated or counted in MRR without verified payment or billing records. Related: BUG-044, BUG-048, BUG-053, BUG-027, **BUG-074**. See [BUG-073 technical note](#bug-073-technical-note-code-audit). |
 | **BUG-074** | Premium MRR is shown without transparent source breakdown | **Admin → Monétisation Premium:** **MRR estimé: 2.000 MAD**, **Abonnés payants: 2**, **En essai: 0**, **Gratuit: 71** — no visible breakdown of which suppliers generate the 2.000 MAD, which plan each is on, or whether payment is active vs estimated only. | Admin must see: **paid suppliers list**, plan per supplier, monthly price, **payment status**, renewal date, active/trial/expired/cancelled status, **MRR calculation source**, excluded unpaid or expired subscriptions. **Impact:** high finance/reporting risk — owner cannot verify if MRR is collected revenue, expected revenue, or manual estimate. Related: BUG-029, BUG-030, BUG-048, **BUG-073**, BUG-067. See [BUG-074 technical note](#bug-074-technical-note-code-audit). |
+| **BUG-075** | Product list uses placeholder thumbnails instead of real product images | **Admin → Products** rows show placeholder initials (**PC**, **SC**, **DM**, **MJ**, **PE**) instead of real product photos when media may exist or should be uploaded. | Show **real thumbnail preview** when `media` / `images` has valid URLs; **fallback placeholder** only when no image; **broken image detection** indicator; **upload status** (missing / pending / ready); open **image/media gallery** from list row. **Impact:** high catalog quality issue — admin cannot quickly verify product identity, media quality, or marketplace readiness. Related: BUG-043, BUG-009, BUG-013. See [BUG-075 technical note](#bug-075-technical-note-code-audit). |
+| **BUG-076** | Product destructive actions lack visible safety workflow | **Admin → Products:** direct **Désactiver** and **Suppr.** actions — no visible confirmation with business impact, dependency warnings, or permission gates beyond a minimal browser confirm on delete. | Before disable/delete: **confirmation modal**, affected product name, **active orders/cart impact**, marketplace/catalog visibility impact, **soft vs permanent delete** clarity, **owner-only** permission for deletion, **audit trail**. **Impact:** critical operational risk — accidental removal of products used in orders, carts, commissions, or supplier workflows. Related: BUG-048, BUG-053, BUG-022, BUG-045. See [BUG-076 technical note](#bug-076-technical-note-code-audit). |
+| **BUG-077** | Product finance fields lack audit and calculation transparency | **Admin → Products** list shows price, commission, cost, margin, fees — no formula explanation, edit history, or warning about impact on existing orders. | Finance management must include: **calculation formula**, **before/after** on edit, **last updated by / timestamp**, **owner approval** for sensitive changes, **audit trail**, warning that **existing order snapshots stay frozen**, distinction between **catalog current price** vs **order snapshot price**. **Impact:** high finance risk — price, cost, margin, commission, fees affect profit, affiliate payouts, and reporting. Related: BUG-029, BUG-048, BUG-053, BUG-064, **BUG-076**. See [BUG-077 technical note](#bug-077-technical-note-code-audit). |
 | **BUG-030** | Missing owner dashboard | No single ops/finance command view. | Critical alerts, blocked orders, cash balances, real profit, pending payments, late sourcing, top suppliers, cancellation risk. Related: BUG-025, BUG-026, **BUG-057**, **BUG-067**, **BUG-068**, **BUG-074**. |
 | **BUG-049** | No cancellation/return workflow for wholesale | No structured post-submit lifecycle. | Statuses: cancellation requested, cancelled by admin, returned, partially delivered, refund/credit note if needed. Related: BUG-019. |
 | **BUG-031** | Sourcing admin cannot process requests professionally | Admin sourcing is a static list. | Detail page: assign agent, create quote, contact supplier, notes, files, status changes, reply to client. Related: BUG-033–BUG-037, BUG-041, **BUG-052**. |
@@ -117,7 +120,7 @@ Improves clarity, attachment, and conversion. Safe to schedule after Tier 1–2 
 | **BUG-011** | Sourcing intelligent missing attachments | Free-form sourcing lacks media. | Allow: photo, video, PDF, links, screenshots, Alibaba/1688/TikTok links. |
 | **BUG-012** | Sample/document request missing file types | Sample flow too limited. | Allow: PDF, catalogue, certificate, lab report, technical sheet. Related: **BUG-055**. |
 | **BUG-015** | No upsell/cross-sell after add to cart | Missed basket expansion. | Show similar products, bundles, complementary items after add-to-cart. |
-| **BUG-043** | Product images / placeholders inconsistent | Marketplace quality uneven. | Enforce at least **one clean product image** for marketplace-quality display. |
+| **BUG-043** | Product images / placeholders inconsistent | Marketplace quality uneven. | Enforce at least **one clean product image** for marketplace-quality display. Related: **BUG-075**. |
 
 ---
 
@@ -142,8 +145,8 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 |-------|---------|-----------|
 | **Critical launch blocker** | BUG-017, BUG-042, BUG-001, BUG-013, BUG-004, BUG-005, BUG-044, BUG-022 | Core rule: stock = buy, import = RFQ; payment stays human-approved; stock guards. |
 | **High ROI** | BUG-002, BUG-008, BUG-009, BUG-006, BUG-007, BUG-014, BUG-046, BUG-018, BUG-010, BUG-019, BUG-020, BUG-021, BUG-047, BUG-051, BUG-054, BUG-055, BUG-056, BUG-057, **BUG-058**, BUG-016, **BUG-070**, **BUG-071**, **BUG-072** | Catalog clarity, CTAs, dashboard routing, **wholesaler sample page**, quote tracking, **RFQ engine matching/notify/offer workflow**. |
-| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066**, **BUG-067**, **BUG-068**, **BUG-069**, **BUG-070**, **BUG-071**, **BUG-072**, **BUG-073**, **BUG-074** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, **analytics payment/COD consistency**, **supplier reliability scoring**, **RFQ engine ops**, **premium billing/MRR transparency**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
-| **Later** | BUG-003, BUG-011, BUG-012, BUG-015, BUG-043, BUG-038, BUG-039, BUG-040, BUG-050 | Wording polish, attachments, upsell, images, basic notifications (see BUG-053 for full ops routing), advanced stock/production. |
+| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066**, **BUG-067**, **BUG-068**, **BUG-069**, **BUG-070**, **BUG-071**, **BUG-072**, **BUG-073**, **BUG-074**, **BUG-076**, **BUG-077** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, **analytics payment/COD consistency**, **supplier reliability scoring**, **RFQ engine ops**, **premium billing/MRR transparency**, **product delete/finance safety**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
+| **Later** | BUG-003, BUG-011, BUG-012, BUG-015, BUG-043, **BUG-075**, BUG-038, BUG-039, BUG-040, BUG-050 | Wording polish, attachments, upsell, **admin product thumbnails**, basic notifications (see BUG-053 for full ops routing), advanced stock/production. |
 
 ### Suggested fix order (do not batch all 50)
 
@@ -180,11 +183,12 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | Sample & document requests | BUG-012, BUG-055, BUG-056, BUG-057, BUG-058, **BUG-059** |
 | Dashboard & counter routing | **BUG-057**, BUG-030, BUG-053 |
 | Sourcing ops | BUG-011, BUG-031–BUG-041, **BUG-052**, **BUG-069**, **BUG-070**, **BUG-072** |
-| Roles & audit | BUG-024, BUG-045, BUG-048, **BUG-053**, **BUG-062**, **BUG-065** |
-| Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-067**, **BUG-068**, **BUG-073**, **BUG-074** |
+| Roles & audit | BUG-024, BUG-045, BUG-048, **BUG-053**, **BUG-062**, **BUG-065**, **BUG-076**, **BUG-077** |
+| Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-067**, **BUG-068**, **BUG-073**, **BUG-074**, **BUG-077** |
 | Analytics & reporting | **BUG-067**, **BUG-068**, **BUG-074**, BUG-029, BUG-030, BUG-023, BUG-063, BUG-064 |
 | Premium monetization | **BUG-073**, **BUG-074**, BUG-048, BUG-053, BUG-027 |
-| UX / conversion | BUG-003, BUG-006, BUG-012, BUG-015, BUG-016, BUG-043 |
+| Admin product catalog | **BUG-075**, **BUG-076**, **BUG-077**, BUG-043, BUG-022 |
+| UX / conversion | BUG-003, BUG-006, BUG-012, BUG-015, BUG-016, BUG-043, **BUG-075** |
 | Alerts, tasks & routing | BUG-025, BUG-026, BUG-034, BUG-035, BUG-040, **BUG-053** |
 
 ---
@@ -218,6 +222,9 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | 2026-06-02 | BUG-072 added — RFQ module lacks post-match offer workflow. |
 | 2026-06-02 | BUG-073 added — premium billing/payment validation workflow missing. |
 | 2026-06-02 | BUG-074 added — premium MRR lacks transparent source breakdown. |
+| 2026-06-02 | BUG-075 added — admin product list placeholder thumbnails. |
+| 2026-06-02 | BUG-076 added — product delete/disable lacks safety workflow. |
+| 2026-06-02 | BUG-077 added — product finance fields lack audit transparency. |
 
 ---
 
@@ -660,6 +667,44 @@ Label: **MRR estimé** — sums **catalog list prices** for subscriptions with `
 **Gap:** Owner sees **2.000 MAD** and **2 payants** but cannot reconcile which two suppliers, whether 500+1500 or 2×1000, or if payment was ever collected vs admin-assigned active status.
 
 **Fix direction (when approved):** MRR breakdown table (supplier, plan, price, payment_status, renewal, included/excluded reason); separate **MRR estimé** vs **MRR encaissé**; auto-exclude expired/cancelled/unpaid; export for finance; reuse in owner dashboard (BUG-030) and analytics (BUG-067 consistency pattern).
+
+### BUG-075 technical note (code audit)
+
+**Page:** `/admin/products` — `ProductRow` uses `ProductThumbnail` + `getProductCoverUrl(product)` (`src/lib/product-media.ts`).
+
+**Current behavior:** `getProductCoverUrl` returns first valid URL from `media[]` (image type) or legacy `images[]`; if none → `null` → `ProductThumbnail` renders **initials** from product name (`getProductInitials` → e.g. PC, SC).
+
+**Component** (`ProductThumbnail`): client-side `onError` → fallback to initials — **no admin-visible “broken URL” badge**, no upload-status indicator, no gallery link from list row.
+
+**Query:** Admin list selects `*` — media fields included; placeholders mean **no valid http(s) image URLs** in DB for those products (or broken URLs only discovered client-side after paint).
+
+**Gap vs QA:** Admin cannot distinguish “no image uploaded” vs “upload failed” vs “broken external URL”; cannot open media gallery without entering edit page; catalog readiness (BUG-043) not surfaced on list.
+
+**Fix direction (when approved):** List-row media status badge; thumbnail from Storage signed URL if applicable; broken-image icon; click → lightbox/gallery; filter “missing image”; align with marketplace quality gate (BUG-043).
+
+### BUG-076 technical note (code audit)
+
+**UI:** `ProductActions` (`src/components/admin/product-actions.tsx`) — **Désactiver/Activer** = immediate form submit (no confirm); **Suppr.** = browser `confirm('Supprimer définitivement ce produit ?')` only.
+
+**Server actions** (`src/app/actions/products.ts`):
+- `toggleProductActive()` — sets `active` flag; guards activation if not `approved`; **no order/cart dependency check**
+- `deleteProduct()` — **`DELETE FROM products`** hard delete — **no soft delete**, no FK impact preview, no owner role gate, **no audit log**
+
+**Risk:** Products linked to `orders`, `wholesale_order_items`, carts, commissions, quote requests may FK-block delete or orphan references depending on schema; disable hides from catalog but does not warn about in-flight orders.
+
+**Fix direction (when approved):** Modal with dependency counts (pending orders, cart lines, open quotes); soft-delete / archive pattern; block delete when dependencies exist; owner-only permanent delete (BUG-053); audit trail (BUG-048); separate “Masquer” vs “Supprimer” copy.
+
+### BUG-077 technical note (code audit)
+
+**List display** (`ProductRow` on `/admin/products`): inline **Prix**, **Commission**, **Coût**, **Marge** (% or MAD), **Frais** (confirmation + packaging + delivery) — read from current `products` row only.
+
+**Edit form** (`product-form.tsx`): finance fields editable — **no live formula tooltip**, no before/after diff, no `updated_by` on price/cost/commission fields (only `approved_by` shown post-approval).
+
+**Order isolation:** COD/wholesale orders store **snapshots** at placement (`product_price_snapshot`, `affiliate_commission_mad_snapshot`, fee snapshots) — correct for historical orders but **not explained** in admin UI when editing catalog prices.
+
+**Gap vs BUG-048/053:** No product finance audit table; no owner approval for commission/cost changes; admin may assume list price retroactively changes past orders.
+
+**Fix direction (when approved):** Finance panel with formula (sell − cost − fees − commission = platform profit); edit audit log; “existing orders unaffected” banner; owner gate for commission/cost changes; link to affected pending orders count; align with profit truth (BUG-029).
 
 ### BUG-053 specification
 
