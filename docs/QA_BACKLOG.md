@@ -1,7 +1,7 @@
 # QA Backlog — Mozouna Group Platform
 
 > **Status:** Manual QA in progress — documentation only.  
-> **Last updated:** 2026-06-02 (BUG-062 added)  
+> **Last updated:** 2026-06-02 (BUG-068 added)  
 > **Do not implement from this file without explicit approval.**
 
 ---
@@ -85,7 +85,9 @@ Back-office, roles, cash, profit truth, sourcing ops, and compliance. Not launch
 | **BUG-064** | Commission marked paid while COD collection not confirmed | Order detail: status **Livrée**, **COD reçu = —**, affiliate commission **140 MAD**, yet **“Commission payée le 29/05/2026”**. Payout can finalize before revenue is reconciled. | Commission payout must not be final until order revenue is reconciled **or** owner manually overrides. Rules: **pending** until delivered → **approved** after delivered + COD/revenue confirmed → **payable** after finance reconciliation → **paid** only after actual payout recorded → **owner override** required if paid before COD reconciled. **Impact:** critical finance — affiliates paid before cash collected. Related: BUG-063, BUG-060, BUG-061, **BUG-062**, BUG-005, BUG-048, BUG-053. See [BUG-064 technical note](#bug-064-technical-note-code-audit). |
 | **BUG-065** | Proof upload uses URL only — no file upload or verification workflow | **Admin → order detail → Preuves & justificatifs:** type selector, **URL du fichier**, note, **Ajouter une preuve**. No direct upload for receipt/photo/PDF; no inline preview; no validation status; no approval chain. Existing proofs render as external links only (`proof_type` + date). | Admin (and later wholesaler/finance) can **upload or attach** proofs directly. Required: receipt / delivery proof / bank transfer / WhatsApp screenshot / supplier invoice / courier slip; **uploaded by** user; **timestamp**; **validation status** (pending / approved / rejected); **owner or supervisor approval** for sensitive proofs; **audit trail** (status changes, approver, reason). Inline **preview** for images/PDF. **Impact:** high operational and finance risk — external URLs can be lost, manipulated, or hard to verify. Related: BUG-005, BUG-044, BUG-048, BUG-053, BUG-063. See [BUG-065 technical note](#bug-065-technical-note-code-audit). |
 | **BUG-066** | Admin COD order search cannot find displayed short reference | **Admin → Commandes COD** list shows short ref e.g. **#14C20579**, but searching `14C20579` or `#14C20579` returns **0 results**. Searching customer name (e.g. “abdou”) works. | Search must find orders by the **exact short reference shown in the UI**. Support: `14C20579`, `#14C20579`, full order UUID, customer name, phone, city, affiliate name, product name. **Impact:** high ops friction — admins copy refs from WhatsApp, screenshots, support tickets, and commission pages; failed lookup slows order handling and increases errors. Related: BUG-010, BUG-047, BUG-063, BUG-064. See [BUG-066 technical note](#bug-066-technical-note-code-audit). |
-| **BUG-030** | Missing owner dashboard | No single ops/finance command view. | Critical alerts, blocked orders, cash balances, real profit, pending payments, late sourcing, top suppliers, cancellation risk. Related: BUG-025, BUG-026, **BUG-057**. |
+| **BUG-067** | Analytics payment counters are inconsistent | **Admin → Analytics → Grossiste — Paiements** shows **Acomptes reçus: 500,00 MAD** but **0 cmdes avec acompte** — amount and count contradict each other. | Analytics payment counters must be **internally consistent**. Required: **Acomptes reçus** amount matches count of orders with received deposits; **cmdes avec acompte** counts orders where `deposit_received_amount > 0`; **Soldes en attente** equals total order amount minus confirmed deposits/payments; payment-status breakdown counts match actual order payment states. **Impact:** critical finance reporting — owner may make wrong cashflow decisions when amounts and counts diverge. Related: BUG-029, BUG-030, BUG-048, BUG-027, BUG-044, **BUG-068**. See [BUG-067 technical note](#bug-067-technical-note-code-audit). |
+| **BUG-068** | Analytics COD revenue may count delivered orders without COD reconciliation | **Admin → Analytics** shows **COD encaissé = 700 MAD**. Separately, an order detail showed status **Livrée**, **COD attendu: 400 MAD**, **COD reçu: —** — delivered but not reconciled. | Analytics must separate: **delivered orders**, **COD expected**, **COD actually collected**, **COD pending reconciliation**, **COD missing**. **COD encaissé** must include only **confirmed collected/reconciled** COD — not delivered order totals alone. **Impact:** critical finance risk — analytics may overstate collected revenue if delivered orders are counted as cash received before COD reconciliation. Related: BUG-063, BUG-064, BUG-067, BUG-029, BUG-030, BUG-048. See [BUG-068 technical note](#bug-068-technical-note-code-audit). |
+| **BUG-030** | Missing owner dashboard | No single ops/finance command view. | Critical alerts, blocked orders, cash balances, real profit, pending payments, late sourcing, top suppliers, cancellation risk. Related: BUG-025, BUG-026, **BUG-057**, **BUG-067**, **BUG-068**. |
 | **BUG-049** | No cancellation/return workflow for wholesale | No structured post-submit lifecycle. | Statuses: cancellation requested, cancelled by admin, returned, partially delivered, refund/credit note if needed. Related: BUG-019. |
 | **BUG-031** | Sourcing admin cannot process requests professionally | Admin sourcing is a static list. | Detail page: assign agent, create quote, contact supplier, notes, files, status changes, reply to client. Related: BUG-033–BUG-037, BUG-041, **BUG-052**. |
 | **BUG-032** | Sourcing status workflow missing | No defined sourcing lifecycle. | Statuses: pending, assigned, supplier_search, offers_received, quote_created, quote_sent, accepted, rejected, blocked, cancelled. |
@@ -134,7 +136,7 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 |-------|---------|-----------|
 | **Critical launch blocker** | BUG-017, BUG-042, BUG-001, BUG-013, BUG-004, BUG-005, BUG-044, BUG-022 | Core rule: stock = buy, import = RFQ; payment stays human-approved; stock guards. |
 | **High ROI** | BUG-002, BUG-008, BUG-009, BUG-006, BUG-007, BUG-014, BUG-046, BUG-018, BUG-010, BUG-019, BUG-020, BUG-021, BUG-047, BUG-051, BUG-054, BUG-055, BUG-056, BUG-057, **BUG-058**, BUG-016 | Catalog clarity, CTAs, dashboard routing, **wholesaler sample page**, quote tracking. |
-| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
+| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066**, **BUG-067**, **BUG-068** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, **analytics payment/COD consistency**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
 | **Later** | BUG-003, BUG-011, BUG-012, BUG-015, BUG-043, BUG-038, BUG-039, BUG-040, BUG-050 | Wording polish, attachments, upsell, images, basic notifications (see BUG-053 for full ops routing), advanced stock/production. |
 
 ### Suggested fix order (do not batch all 50)
@@ -166,13 +168,14 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | Stock & location | BUG-007, BUG-014, BUG-021, BUG-022, BUG-046, BUG-050 |
 | Payment & proof | BUG-005, BUG-027, BUG-028, BUG-044, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065** |
 | Wholesale order lifecycle | BUG-010, BUG-019, BUG-047, BUG-049, **BUG-066** |
-| Admin COD ops & search | **BUG-066**, BUG-063, BUG-064, BUG-010 |
+| Admin COD ops & search | **BUG-066**, BUG-063, BUG-064, BUG-010, **BUG-068** |
 | Quote / RFQ admin & wholesaler routing | BUG-051, BUG-052, BUG-054, BUG-047, BUG-031, BUG-037, **BUG-057** |
 | Sample & document requests | BUG-012, BUG-055, BUG-056, BUG-057, BUG-058, **BUG-059** |
 | Dashboard & counter routing | **BUG-057**, BUG-030, BUG-053 |
 | Sourcing ops | BUG-011, BUG-031–BUG-041, **BUG-052** |
 | Roles & audit | BUG-024, BUG-045, BUG-048, **BUG-053**, **BUG-062**, **BUG-065** |
-| Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065** |
+| Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-067**, **BUG-068** |
+| Analytics & reporting | **BUG-067**, **BUG-068**, BUG-029, BUG-030, BUG-023, BUG-063, BUG-064 |
 | UX / conversion | BUG-003, BUG-006, BUG-012, BUG-015, BUG-016, BUG-043 |
 | Alerts, tasks & routing | BUG-025, BUG-026, BUG-034, BUG-035, BUG-040, **BUG-053** |
 
@@ -199,6 +202,8 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | 2026-06-02 | BUG-065 added — proof upload URL-only, no file upload or validation workflow. |
 | 2026-06-02 | BUG-066 added — admin COD search cannot find displayed short order reference. |
 | 2026-06-02 | BUG-062 added — affiliate payout lacks owner approval and correction workflow (gap fill). |
+| 2026-06-02 | BUG-067 added — analytics payment counters inconsistent (amount vs order count). |
+| 2026-06-02 | BUG-068 added — analytics COD encaissé may count delivered orders without reconciliation. |
 
 ---
 
@@ -462,6 +467,62 @@ Only **customer name** and **customer phone** are searched (pg_trgm indexes on t
 4. Optional: persist `short_ref` generated column for index-friendly lookup; apply same search pattern to affiliate admin order lists if they gain search later.
 
 **Quick win:** UUID-prefix + full UUID + city in existing query — unblocks the reported repro immediately.
+
+### BUG-067 technical note (code audit)
+
+**Page:** `/admin/analytics` — section **Grossiste — Paiements** (`src/app/(admin)/admin/analytics/page.tsx`).
+
+**Observed inconsistency (QA):** **Acomptes reçus** shows **500,00 MAD** while subtitle shows **0 cmdes avec acompte**.
+
+**Root cause — mixed data sources:**
+
+| Metric | Current logic | Problem |
+|--------|---------------|---------|
+| **Acomptes reçus** (amount) | `sum(deposit_received_amount)` over all non-cancelled wholesale orders | Uses numeric field regardless of `payment_status` |
+| **cmdes avec acompte** (subtitle count) | `payment_status === 'deposit_received'` **OR** `'fully_paid'` | Ignores orders with `deposit_received_amount > 0` but stale/wrong `payment_status` |
+
+If admin records `deposit_received_amount = 500` without setting `payment_status` to `deposit_received` (or leaves `no_deposit` / `deposit_requested`), **amount > 0** but **count = 0** — exact QA repro.
+
+**Soldes en attente:** `sum(max(0, total_amount - deposit_received_amount))` — amount-based, consistent with deposit field; subtitle **non soldées** uses `payment_status !== 'fully_paid'` — can diverge from balance math if status and amounts disagree.
+
+**Payment status breakdown:** Counts by `payment_status` enum only — does not reconcile against `deposit_received_amount`.
+
+**Schema** (migration `029_wholesale_payment_tracking.sql`): `payment_status`, `deposit_amount`, `deposit_received_amount`, timestamps — no DB constraint tying amount > 0 to status.
+
+**Fix direction (when approved):**
+1. Single source of truth: derive display metrics from **amount fields** with status as secondary label, or enforce status ↔ amount sync on save (`updateWholesalePayment` in `orders.ts`).
+2. **cmdes avec acompte** → `deposit_received_amount > 0` (or status in `deposit_received`, `fully_paid` **iff** amounts match).
+3. Add consistency guard in analytics: if `wsTotalDepositsReceived > 0` then order count must be ≥ 1; log/warn on mismatch.
+4. Optional: DB check or trigger — `deposit_received_amount > 0` implies `payment_status IN ('deposit_received', 'fully_paid')`.
+5. Owner dashboard (BUG-030) should reuse same aggregation helpers to avoid duplicate drift.
+
+### BUG-068 technical note (code audit)
+
+**Page:** `/admin/analytics` — section **Revenus (commandes livrées)** (`src/app/(admin)/admin/analytics/page.tsx`).
+
+**Observed (QA):** **COD encaissé = 700 MAD** while a delivered order shows **COD attendu: 400 MAD**, **COD reçu: —** (not reconciled).
+
+**Current logic:**
+```typescript
+const deliveredOrders = orders.filter((o) => o.status === 'delivered')
+const totalCodCollected = deliveredOrders.reduce((s, o) => s + o.total_amount, 0)
+```
+UI label: **COD encaissé** · subtitle: **Montant total des livraisons** — sums `total_amount` for all **delivered** affiliate COD orders.
+
+**Gap:** Analytics query does **not** select `cod_expected` or `cod_received` (migration `004_order_tracking.sql`). Delivered status alone is treated as cash collected. Profit (**Profit brut plateforme**) and top-product **revenue** use the same delivered + `total_amount` assumption — downstream metrics inherit the overstatement.
+
+**Relationship to BUG-063/064:** Order detail can show delivered + empty COD reçu; analytics still counts full order value as encaissé; commissions may still progress to paid (BUG-064).
+
+**Expected analytics breakdown (when approved):**
+| Metric | Source |
+|--------|--------|
+| Commandes livrées | `status = delivered` (count) |
+| COD attendu | `sum(cod_expected ?? total_amount)` for delivered |
+| COD encaissé | `sum(cod_received)` where `cod_received IS NOT NULL` |
+| COD en attente | delivered with `cod_received IS NULL` |
+| COD manquant / partiel | reconciliation sub-states (BUG-063) |
+
+**Fix direction (when approved):** Extend analytics `orders` select with `cod_expected`, `cod_received`; replace **COD encaissé** with reconciled sum; add separate stat cards for expected / pending / missing; gate profit-on-cash metrics on confirmed COD or show dual view (delivered vs collected); align with owner dashboard (BUG-030) and shared finance helpers (BUG-067).
 
 ### BUG-053 specification
 
