@@ -60,7 +60,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Profil d&apos;achat</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1">Type d&apos;activité</label>
         <select
           name="buyer_purchase_profile"
           required

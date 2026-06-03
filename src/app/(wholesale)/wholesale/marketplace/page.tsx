@@ -7,6 +7,7 @@ import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/ta
 import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
+import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
 import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
 
 export const metadata = { title: 'Marketplace fournisseurs — Espace Grossiste' }
@@ -604,6 +605,7 @@ function MarketplaceProductCard({
   const categoryIcon = CATEGORY_ICONS[product.category] ?? '🏷️'
   const isMorocco = product.supplier_type === 'morocco'
   const isLocalStock = product.availability_type === 'local_stock'
+  const ctaMode = getSupplierProductCtaMode(product)
   const moqTiers = product.supplier_product_moq_tiers ?? []
   const hasTiers = moqTiers.length > 1
 
@@ -747,18 +749,20 @@ function MarketplaceProductCard({
             href={productUrl}
             className="mt-1.5 block w-full text-center text-[10px] font-bold py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
           >
-            Voir les tarifs grossiste →
+            {ctaMode === 'direct' ? 'Commander →' : 'Demander un devis →'}
           </Link>
 
           {/* Secondary CTA */}
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 block w-full text-center text-[8px] font-normal py-1 text-emerald-600 hover:text-emerald-700 hover:underline underline-offset-2"
-          >
-            🟢 Demander un devis WhatsApp
-          </a>
+          {ctaMode === 'rfq' && (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block w-full text-center text-[8px] font-normal py-1 text-emerald-600 hover:text-emerald-700 hover:underline underline-offset-2"
+            >
+              🟢 Devis WhatsApp
+            </a>
+          )}
         </div>
       </div>
     </article>

@@ -219,7 +219,7 @@ export async function requestSupplierProductQuote(
   if (!supplier_product_id) return { error: 'Produit introuvable.' }
   if (!quantity_requested || quantity_requested < 1) return { error: 'Quantité invalide.' }
   if (!isBuyerPurchaseProfile(buyer_purchase_profile)) {
-    return { error: 'Sélectionnez votre profil d\'achat.' }
+    return { error: 'Sélectionnez votre type d\'activité.' }
   }
   if (!isBuyerVolumeTier(buyer_volume_tier)) {
     return { error: 'Sélectionnez un volume estimé.' }

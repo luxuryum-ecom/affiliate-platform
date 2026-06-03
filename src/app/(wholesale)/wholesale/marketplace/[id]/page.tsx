@@ -3,6 +3,8 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
+import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
+import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
 import SampleRequestClient from './SampleRequestClient'
 import type {
   Profile,
@@ -70,6 +72,9 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const displayName = product.public_name || product.product_name
   const displayDesc = product.public_description || product.description
   const isMorocco = product.supplier_type === 'morocco'
+  const ctaMode = getSupplierProductCtaMode(product)
+  const directUnitPrice = product.suggested_wholesale_price_mad ?? 0
+  const directStock = product.stock_quantity ?? 0
 
   const hasCatalog = attachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
   const hasVideo   = attachments.some((a) => a.attachment_type === 'video')
@@ -222,11 +227,29 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
               </p>
             )}
 
-            {/* Quote form */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-sm font-semibold text-gray-900 mb-3">Demander un devis</p>
-              <MarketplaceQuoteForm supplierProductId={product.id} minQuantity={product.min_quantity} />
-            </div>
+            {ctaMode === 'direct' ? (
+              <div className="bg-white rounded-xl border border-emerald-200 p-4">
+                <p className="text-sm font-semibold text-gray-900 mb-1">Commander en gros</p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Prix affiché, stock et MOQ connus — ajout au panier puis validation de commande.
+                </p>
+                <MarketplaceDirectOrderForm
+                  supplierProductId={product.id}
+                  unitPrice={directUnitPrice}
+                  minQty={product.min_quantity}
+                  stockCount={directStock}
+                  unit={product.unit}
+                />
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-sm font-semibold text-gray-900 mb-1">Demander un devis</p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Import, prix sur mesure ou volume à négocier — notre équipe prépare une offre.
+                </p>
+                <MarketplaceQuoteForm supplierProductId={product.id} minQuantity={product.min_quantity} />
+              </div>
+            )}
 
             {/* Sample request */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">

@@ -18,8 +18,8 @@ export type BuyerVolumeTier = (typeof BUYER_VOLUME_TIERS)[number]
 
 export const PURCHASE_PROFILE_LABELS: Record<BuyerPurchaseProfile, string> = {
   physical_store: 'Boutique physique',
-  social_reseller: 'Revendeur réseaux sociaux',
-  wholesaler: 'Grossiste',
+  social_reseller: 'Instagram / Facebook Shop',
+  wholesaler: 'E-commerce / Distributeur',
   importer: 'Importateur',
 }
 

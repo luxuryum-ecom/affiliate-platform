@@ -9,6 +9,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getActiveTariff } from '@/app/actions/tariffs'
 import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
+import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
 import type { Product, ImportTariff } from '@/types/database'
 
 interface Params {
@@ -59,6 +60,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   const coverUrl = getProductCoverUrl(product)
   const galleryUrls = getProductGalleryUrls(product)
+  const ctaMode = getCatalogProductCtaMode(product.availability_type)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -165,17 +167,26 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               <span className="font-medium text-gray-700">{formatMAD(product.sell_price)}</span>
             </div>
 
-            {/* import_on_demand: quote request form only */}
-            {product.availability_type === 'import_on_demand' ? (
-              <QuoteRequestForm productId={product.id} productName={product.name} />
+            {ctaMode === 'rfq' ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                  Produit import / sur demande
+                </p>
+                <QuoteRequestForm productId={product.id} productName={product.name} />
+              </div>
             ) : (
-              <AddToCartForm
-                productId={product.id}
-                sellPrice={product.sell_price}
-                tiers={product.wholesale_tiers}
-                minQty={product.wholesale_min_qty}
-                stockCount={product.stock_count}
-              />
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+                  Commande directe — stock Maroc
+                </p>
+                <AddToCartForm
+                  productId={product.id}
+                  sellPrice={product.sell_price}
+                  tiers={product.wholesale_tiers}
+                  minQty={product.wholesale_min_qty}
+                  stockCount={product.stock_count}
+                />
+              </div>
             )}
           </div>
         </div>
