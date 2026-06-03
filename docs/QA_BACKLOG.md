@@ -1,7 +1,7 @@
 # QA Backlog — Mozouna Group Platform
 
 > **Status:** Manual QA in progress — documentation only.  
-> **Last updated:** 2026-06-02 (BUG-070–072 added)  
+> **Last updated:** 2026-06-02 (BUG-073–074 added)  
 > **Do not implement from this file without explicit approval.**
 
 ---
@@ -91,7 +91,9 @@ Back-office, roles, cash, profit truth, sourcing ops, and compliance. Not launch
 | **BUG-070** | RFQ matching shows suppliers with weak scores without clear eligibility explanation | **Admin → Moteur RFQ** shows e.g. **10 matched suppliers**; some have weak/incomplete score components (e.g. **Cat:0/30**, **Pays:0/20**, **Délai:0/10**) yet still appear as matched and can be notified. | Matching must clearly explain **why** each supplier was matched. Required: eligibility reason; score breakdown explanation; missing-data warning; **hard-block** if not eligible; **insufficient data** state; sort by best operational fit; ability to **exclude weak matches** before notification. **Impact:** high sourcing risk — admin may notify irrelevant or unqualified suppliers. Related: BUG-031, BUG-037, BUG-069, **BUG-071**, **BUG-072**. See [BUG-070 technical note](#bug-070-technical-note-code-audit). |
 | **BUG-071** | RFQ supplier notification action lacks confirmation and channel clarity | **Admin → Moteur RFQ:** **Notifier 10 fournisseurs** and per-row **Notifier** buttons — no notification channel, message preview, recipient details, real vs simulated indicator, confirmation modal, or audit trail. | Before notifying: show **selected suppliers**, **channel** (email / WhatsApp / platform / internal), **message preview**, **response deadline**, **confirmation step**, then **sent status**, **sent by**, **timestamp**. **Impact:** critical operational risk — admin may notify wrong suppliers or trigger real communication without control. Related: BUG-053, BUG-040, **BUG-070**, **BUG-072**. See [BUG-071 technical note](#bug-071-technical-note-code-audit). |
 | **BUG-072** | RFQ module lacks supplier offer workflow after matching | **Admin → Moteur RFQ** shows matched suppliers but no structured end-to-end offer workflow visible to admin. | Per matched supplier: offer record with proposed price, MOQ, delivery delay, available quantity, payment terms, notes, attachments; status **notified → opened → responded → expired → selected → rejected**; **admin comparison table**; **conversion to wholesaler quote**. **Impact:** critical sourcing workflow gap — matching alone is insufficient for professional RFQ-to-offer-to-quote. Related: BUG-031, BUG-037, BUG-041, **BUG-070**, **BUG-071**, BUG-051. See [BUG-072 technical note](#bug-072-technical-note-code-audit). |
-| **BUG-030** | Missing owner dashboard | No single ops/finance command view. | Critical alerts, blocked orders, cash balances, real profit, pending payments, late sourcing, top suppliers, cancellation risk. Related: BUG-025, BUG-026, **BUG-057**, **BUG-067**, **BUG-068**. |
+| **BUG-073** | Premium plan management lacks payment validation and billing workflow | **Admin → Monétisation Premium** shows plans (Gratuit / Professionnel 500 MAD/mois / Entreprise 1500 MAD/mois) and supplier subscription status, but no clear **billing/payment workflow** for activating paid plans. | Premium subscription must include: **payment method**, **billing cycle**, **invoice/receipt**, **payment status**, **start / renewal / expiry dates**, **trial period** if applicable, **cancellation/downgrade flow**, **owner approval** for manual activation, **audit trail** of plan changes. **Impact:** critical monetization risk — paid plans may be activated or counted in MRR without verified payment or billing records. Related: BUG-044, BUG-048, BUG-053, BUG-027, **BUG-074**. See [BUG-073 technical note](#bug-073-technical-note-code-audit). |
+| **BUG-074** | Premium MRR is shown without transparent source breakdown | **Admin → Monétisation Premium:** **MRR estimé: 2.000 MAD**, **Abonnés payants: 2**, **En essai: 0**, **Gratuit: 71** — no visible breakdown of which suppliers generate the 2.000 MAD, which plan each is on, or whether payment is active vs estimated only. | Admin must see: **paid suppliers list**, plan per supplier, monthly price, **payment status**, renewal date, active/trial/expired/cancelled status, **MRR calculation source**, excluded unpaid or expired subscriptions. **Impact:** high finance/reporting risk — owner cannot verify if MRR is collected revenue, expected revenue, or manual estimate. Related: BUG-029, BUG-030, BUG-048, **BUG-073**, BUG-067. See [BUG-074 technical note](#bug-074-technical-note-code-audit). |
+| **BUG-030** | Missing owner dashboard | No single ops/finance command view. | Critical alerts, blocked orders, cash balances, real profit, pending payments, late sourcing, top suppliers, cancellation risk. Related: BUG-025, BUG-026, **BUG-057**, **BUG-067**, **BUG-068**, **BUG-074**. |
 | **BUG-049** | No cancellation/return workflow for wholesale | No structured post-submit lifecycle. | Statuses: cancellation requested, cancelled by admin, returned, partially delivered, refund/credit note if needed. Related: BUG-019. |
 | **BUG-031** | Sourcing admin cannot process requests professionally | Admin sourcing is a static list. | Detail page: assign agent, create quote, contact supplier, notes, files, status changes, reply to client. Related: BUG-033–BUG-037, BUG-041, **BUG-052**. |
 | **BUG-032** | Sourcing status workflow missing | No defined sourcing lifecycle. | Statuses: pending, assigned, supplier_search, offers_received, quote_created, quote_sent, accepted, rejected, blocked, cancelled. |
@@ -140,7 +142,7 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 |-------|---------|-----------|
 | **Critical launch blocker** | BUG-017, BUG-042, BUG-001, BUG-013, BUG-004, BUG-005, BUG-044, BUG-022 | Core rule: stock = buy, import = RFQ; payment stays human-approved; stock guards. |
 | **High ROI** | BUG-002, BUG-008, BUG-009, BUG-006, BUG-007, BUG-014, BUG-046, BUG-018, BUG-010, BUG-019, BUG-020, BUG-021, BUG-047, BUG-051, BUG-054, BUG-055, BUG-056, BUG-057, **BUG-058**, BUG-016, **BUG-070**, **BUG-071**, **BUG-072** | Catalog clarity, CTAs, dashboard routing, **wholesaler sample page**, quote tracking, **RFQ engine matching/notify/offer workflow**. |
-| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066**, **BUG-067**, **BUG-068**, **BUG-069**, **BUG-070**, **BUG-071**, **BUG-072** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, **analytics payment/COD consistency**, **supplier reliability scoring**, **RFQ engine ops**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
+| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066**, **BUG-067**, **BUG-068**, **BUG-069**, **BUG-070**, **BUG-071**, **BUG-072**, **BUG-073**, **BUG-074** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, **analytics payment/COD consistency**, **supplier reliability scoring**, **RFQ engine ops**, **premium billing/MRR transparency**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
 | **Later** | BUG-003, BUG-011, BUG-012, BUG-015, BUG-043, BUG-038, BUG-039, BUG-040, BUG-050 | Wording polish, attachments, upsell, images, basic notifications (see BUG-053 for full ops routing), advanced stock/production. |
 
 ### Suggested fix order (do not batch all 50)
@@ -179,8 +181,9 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | Dashboard & counter routing | **BUG-057**, BUG-030, BUG-053 |
 | Sourcing ops | BUG-011, BUG-031–BUG-041, **BUG-052**, **BUG-069**, **BUG-070**, **BUG-072** |
 | Roles & audit | BUG-024, BUG-045, BUG-048, **BUG-053**, **BUG-062**, **BUG-065** |
-| Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-067**, **BUG-068** |
-| Analytics & reporting | **BUG-067**, **BUG-068**, BUG-029, BUG-030, BUG-023, BUG-063, BUG-064 |
+| Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-067**, **BUG-068**, **BUG-073**, **BUG-074** |
+| Analytics & reporting | **BUG-067**, **BUG-068**, **BUG-074**, BUG-029, BUG-030, BUG-023, BUG-063, BUG-064 |
+| Premium monetization | **BUG-073**, **BUG-074**, BUG-048, BUG-053, BUG-027 |
 | UX / conversion | BUG-003, BUG-006, BUG-012, BUG-015, BUG-016, BUG-043 |
 | Alerts, tasks & routing | BUG-025, BUG-026, BUG-034, BUG-035, BUG-040, **BUG-053** |
 
@@ -213,6 +216,8 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | 2026-06-02 | BUG-070 added — RFQ matching weak scores without eligibility explanation. |
 | 2026-06-02 | BUG-071 added — RFQ notification lacks confirmation and channel clarity. |
 | 2026-06-02 | BUG-072 added — RFQ module lacks post-match offer workflow. |
+| 2026-06-02 | BUG-073 added — premium billing/payment validation workflow missing. |
+| 2026-06-02 | BUG-074 added — premium MRR lacks transparent source breakdown. |
 
 ---
 
@@ -617,6 +622,44 @@ With **0 incidents** and **0 delays** → score is always **100**, regardless of
 **Admin actions today:** Notifier, Sélectionner, Expirer — no **prepare quote**, **send to grossiste**, or side-by-side offer comparison.
 
 **Fix direction (when approved):** Admin RFQ detail per sourcing request; offer comparison grid; extend `rfq_offers` (payment terms, attachments, available qty); deadline + auto-expire; **opened** tracking; bridge to quote creation (BUG-037); align with sourcing CRM (BUG-031/041). Fix together with BUG-070/071.
+
+### BUG-073 technical note (code audit)
+
+**Page:** `/admin/premium` — **Monétisation Premium** (`src/app/(admin)/admin/premium/page.tsx`).
+
+**Plans seeded** (migration `038_premium_monetization.sql`): Gratuit (0 MAD), Professionnel (500 MAD/mois), Entreprise (1500 MAD/mois).
+
+**Current activation flow:** `AssignPlanForm` → `assignPlan()` in `src/app/actions/premium.ts`:
+- Admin selects plan slug, status (`active` / `trial` / `expired`), optional `expires_at`, free-text **Notes (facturation)**.
+- Upserts `supplier_subscriptions` — **no payment method**, **no invoice/receipt**, **no payment_status**, **no renewal date** field, **no trial end**, **no owner approval gate**.
+- Writes `subscription_audit_log` (plan slug + status change + `changed_by`) — plan-assignment audit only, not payment audit.
+
+**Schema gaps** (`supplier_subscriptions`): `status`, `started_at`, `expires_at`, `notes`, `assigned_by` — no `payment_method`, `payment_status`, `billing_cycle`, `renewal_at`, `invoice_url`, `paid_at`, `approved_by`.
+
+**Supplier self-serve:** `/supplier/premium` displays plans — no payment gateway; upgrades appear admin-assigned only today.
+
+**Gap vs BUG-044/027:** No proof-of-payment upload or caisse linkage when activating paid tier.
+
+**Fix direction (when approved):** Billing sub-entity or extend subscription with payment fields; pending_payment → active only after finance validation; owner approve manual comp/override (BUG-053); invoice/receipt storage (BUG-065 pattern); downgrade/cancel with effective date; link MRR to **paid** status not plan list price alone (BUG-074).
+
+### BUG-074 technical note (code audit)
+
+**MRR calculation** (`AdminPremiumPage`):
+```typescript
+const activeSubs = suppliers.filter(
+  (s) => s.subscription?.status === 'active' && s.subscription.plan.price_mad_monthly > 0,
+)
+const mrr = activeSubs.reduce((sum, s) => sum + s.subscription.plan.price_mad_monthly, 0)
+```
+Label: **MRR estimé** — sums **catalog list prices** for subscriptions with `status === 'active'`; does **not** verify payment received, exclude expired-by-date (`expires_at` past but status still active), or distinguish trial vs paid.
+
+**KPI row:** MRR + paid count + trial count + free count — **no drill-down table** tying MRR line items to supplier names/plans/payment state.
+
+**Supplier list:** Collapsible rows show plan badge + status + started/expires + assign form — **no monthly amount in summary row**, no payment status column, no “included in MRR” indicator.
+
+**Gap:** Owner sees **2.000 MAD** and **2 payants** but cannot reconcile which two suppliers, whether 500+1500 or 2×1000, or if payment was ever collected vs admin-assigned active status.
+
+**Fix direction (when approved):** MRR breakdown table (supplier, plan, price, payment_status, renewal, included/excluded reason); separate **MRR estimé** vs **MRR encaissé**; auto-exclude expired/cancelled/unpaid; export for finance; reuse in owner dashboard (BUG-030) and analytics (BUG-067 consistency pattern).
 
 ### BUG-053 specification
 
