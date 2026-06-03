@@ -1,7 +1,7 @@
 # QA Backlog — Mozouna Group Platform
 
 > **Status:** Manual QA in progress — documentation only.  
-> **Last updated:** 2026-06-02 (BUG-069 added)  
+> **Last updated:** 2026-06-02 (BUG-070–072 added)  
 > **Do not implement from this file without explicit approval.**
 
 ---
@@ -87,7 +87,10 @@ Back-office, roles, cash, profit truth, sourcing ops, and compliance. Not launch
 | **BUG-066** | Admin COD order search cannot find displayed short reference | **Admin → Commandes COD** list shows short ref e.g. **#14C20579**, but searching `14C20579` or `#14C20579` returns **0 results**. Searching customer name (e.g. “abdou”) works. | Search must find orders by the **exact short reference shown in the UI**. Support: `14C20579`, `#14C20579`, full order UUID, customer name, phone, city, affiliate name, product name. **Impact:** high ops friction — admins copy refs from WhatsApp, screenshots, support tickets, and commission pages; failed lookup slows order handling and increases errors. Related: BUG-010, BUG-047, BUG-063, BUG-064. See [BUG-066 technical note](#bug-066-technical-note-code-audit). |
 | **BUG-067** | Analytics payment counters are inconsistent | **Admin → Analytics → Grossiste — Paiements** shows **Acomptes reçus: 500,00 MAD** but **0 cmdes avec acompte** — amount and count contradict each other. | Analytics payment counters must be **internally consistent**. Required: **Acomptes reçus** amount matches count of orders with received deposits; **cmdes avec acompte** counts orders where `deposit_received_amount > 0`; **Soldes en attente** equals total order amount minus confirmed deposits/payments; payment-status breakdown counts match actual order payment states. **Impact:** critical finance reporting — owner may make wrong cashflow decisions when amounts and counts diverge. Related: BUG-029, BUG-030, BUG-048, BUG-027, BUG-044, **BUG-068**. See [BUG-067 technical note](#bug-067-technical-note-code-audit). |
 | **BUG-068** | Analytics COD revenue may count delivered orders without COD reconciliation | **Admin → Analytics** shows **COD encaissé = 700 MAD**. Separately, an order detail showed status **Livrée**, **COD attendu: 400 MAD**, **COD reçu: —** — delivered but not reconciled. | Analytics must separate: **delivered orders**, **COD expected**, **COD actually collected**, **COD pending reconciliation**, **COD missing**. **COD encaissé** must include only **confirmed collected/reconciled** COD — not delivered order totals alone. **Impact:** critical finance risk — analytics may overstate collected revenue if delivered orders are counted as cash received before COD reconciliation. Related: BUG-063, BUG-064, BUG-067, BUG-029, BUG-030, BUG-048. See [BUG-068 technical note](#bug-068-technical-note-code-audit). |
-| **BUG-069** | Supplier reliability score defaults to 100/100 without enough history | **Admin → Performance fournisseurs** shows many suppliers with **score fiabilité = 100/100** despite **0 orders**, **0 revenue**, no average delivery time, no delay data, and no incident data. | Reliability must **not** default to 100/100 when there is no operational history. Expected states: **New supplier / no data**, **Insufficient data**, **Reliable**, **Warning**, **Risky**, **Blocked**. Score from real signals: completed orders, delivery delays, incidents, cancellations, sample/document quality, response time, dispute rate, stock accuracy, refund/return issues, admin manual incidents. If insufficient data → display **“Données insuffisantes”** (not 100/100). **Impact:** high operational risk — admin may trust suppliers as reliable with no evidence. Related: BUG-039, BUG-031, BUG-035, BUG-053. See [BUG-069 technical note](#bug-069-technical-note-code-audit). |
+| **BUG-069** | Supplier reliability score defaults to 100/100 without enough history | **Admin → Performance fournisseurs** shows many suppliers with **score fiabilité = 100/100** despite **0 orders**, **0 revenue**, no average delivery time, no delay data, and no incident data. | Reliability must **not** default to 100/100 when there is no operational history. Expected states: **New supplier / no data**, **Insufficient data**, **Reliable**, **Warning**, **Risky**, **Blocked**. Score from real signals: completed orders, delivery delays, incidents, cancellations, sample/document quality, response time, dispute rate, stock accuracy, refund/return issues, admin manual incidents. If insufficient data → display **“Données insuffisantes”** (not 100/100). **Impact:** high operational risk — admin may trust suppliers as reliable with no evidence. Related: BUG-039, BUG-031, BUG-035, BUG-053, **BUG-070**. See [BUG-069 technical note](#bug-069-technical-note-code-audit). |
+| **BUG-070** | RFQ matching shows suppliers with weak scores without clear eligibility explanation | **Admin → Moteur RFQ** shows e.g. **10 matched suppliers**; some have weak/incomplete score components (e.g. **Cat:0/30**, **Pays:0/20**, **Délai:0/10**) yet still appear as matched and can be notified. | Matching must clearly explain **why** each supplier was matched. Required: eligibility reason; score breakdown explanation; missing-data warning; **hard-block** if not eligible; **insufficient data** state; sort by best operational fit; ability to **exclude weak matches** before notification. **Impact:** high sourcing risk — admin may notify irrelevant or unqualified suppliers. Related: BUG-031, BUG-037, BUG-069, **BUG-071**, **BUG-072**. See [BUG-070 technical note](#bug-070-technical-note-code-audit). |
+| **BUG-071** | RFQ supplier notification action lacks confirmation and channel clarity | **Admin → Moteur RFQ:** **Notifier 10 fournisseurs** and per-row **Notifier** buttons — no notification channel, message preview, recipient details, real vs simulated indicator, confirmation modal, or audit trail. | Before notifying: show **selected suppliers**, **channel** (email / WhatsApp / platform / internal), **message preview**, **response deadline**, **confirmation step**, then **sent status**, **sent by**, **timestamp**. **Impact:** critical operational risk — admin may notify wrong suppliers or trigger real communication without control. Related: BUG-053, BUG-040, **BUG-070**, **BUG-072**. See [BUG-071 technical note](#bug-071-technical-note-code-audit). |
+| **BUG-072** | RFQ module lacks supplier offer workflow after matching | **Admin → Moteur RFQ** shows matched suppliers but no structured end-to-end offer workflow visible to admin. | Per matched supplier: offer record with proposed price, MOQ, delivery delay, available quantity, payment terms, notes, attachments; status **notified → opened → responded → expired → selected → rejected**; **admin comparison table**; **conversion to wholesaler quote**. **Impact:** critical sourcing workflow gap — matching alone is insufficient for professional RFQ-to-offer-to-quote. Related: BUG-031, BUG-037, BUG-041, **BUG-070**, **BUG-071**, BUG-051. See [BUG-072 technical note](#bug-072-technical-note-code-audit). |
 | **BUG-030** | Missing owner dashboard | No single ops/finance command view. | Critical alerts, blocked orders, cash balances, real profit, pending payments, late sourcing, top suppliers, cancellation risk. Related: BUG-025, BUG-026, **BUG-057**, **BUG-067**, **BUG-068**. |
 | **BUG-049** | No cancellation/return workflow for wholesale | No structured post-submit lifecycle. | Statuses: cancellation requested, cancelled by admin, returned, partially delivered, refund/credit note if needed. Related: BUG-019. |
 | **BUG-031** | Sourcing admin cannot process requests professionally | Admin sourcing is a static list. | Detail page: assign agent, create quote, contact supplier, notes, files, status changes, reply to client. Related: BUG-033–BUG-037, BUG-041, **BUG-052**. |
@@ -96,7 +99,7 @@ Back-office, roles, cash, profit truth, sourcing ops, and compliance. Not launch
 | **BUG-034** | Sourcing assignment missing | Requests not routed to team. | Assign request to **team member / agent**. Related: **BUG-053**. |
 | **BUG-035** | Sourcing SLA / alarms missing | No timeliness tracking. | On time / late / critical with owner/admin alerts. Related: BUG-025, **BUG-053**. |
 | **BUG-036** | Internal sourcing notes missing | No private ops notes. | Private notes visible only to **owner / admin / assigned agent**. |
-| **BUG-037** | Cannot create quote from sourcing | Sourcing → quote → order chain broken. | Sourcing request → supplier offers → create quote → send to grossiste → accept/refuse → order. |
+| **BUG-037** | Cannot create quote from sourcing | Sourcing → quote → order chain broken. | Sourcing request → supplier offers → create quote → send to grossiste → accept/refuse → order. Related: **BUG-072**. |
 | **BUG-041** | Admin sourcing module too static | Not a workable mini-CRM. | Professional **mini-CRM**, not static list. Related: BUG-031, **BUG-059** (parallel gap for samples). |
 | **BUG-053** | Role-based alerts, permissions, and task routing missing | Alert/notification logic not designed for real team ops. Owner would receive every notification in production; no role-based routing, assignment, or escalation. | **Role-based notifications, permissions, and task assignment** for a multi-person ops team. Required roles: Owner/Super Admin, Admin, Supervisor/Manager, Sourcing Agent, Client Support Agent, Confirmation Agent, Finance/Cashier, Supplier, Wholesaler. Per-event routing with SLA timers and escalation (assigned agent → supervisor → owner by severity). Modules: notification center, task center, assigned-to field, RBAC, SLA timers, escalation rules, audit trail. **Impact:** critical operational scalability — owner noise, missed tasks, unescalated blockers, uncontrolled financial actions. Related: BUG-024, BUG-025, BUG-026, BUG-034, BUG-035, BUG-040, BUG-045, BUG-048. See [BUG-053 specification](#bug-053-specification). |
 
@@ -136,8 +139,8 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | Group | Bug IDs | Rationale |
 |-------|---------|-----------|
 | **Critical launch blocker** | BUG-017, BUG-042, BUG-001, BUG-013, BUG-004, BUG-005, BUG-044, BUG-022 | Core rule: stock = buy, import = RFQ; payment stays human-approved; stock guards. |
-| **High ROI** | BUG-002, BUG-008, BUG-009, BUG-006, BUG-007, BUG-014, BUG-046, BUG-018, BUG-010, BUG-019, BUG-020, BUG-021, BUG-047, BUG-051, BUG-054, BUG-055, BUG-056, BUG-057, **BUG-058**, BUG-016 | Catalog clarity, CTAs, dashboard routing, **wholesaler sample page**, quote tracking. |
-| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066**, **BUG-067**, **BUG-068**, **BUG-069** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, **analytics payment/COD consistency**, **supplier reliability scoring**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
+| **High ROI** | BUG-002, BUG-008, BUG-009, BUG-006, BUG-007, BUG-014, BUG-046, BUG-018, BUG-010, BUG-019, BUG-020, BUG-021, BUG-047, BUG-051, BUG-054, BUG-055, BUG-056, BUG-057, **BUG-058**, BUG-016, **BUG-070**, **BUG-071**, **BUG-072** | Catalog clarity, CTAs, dashboard routing, **wholesaler sample page**, quote tracking, **RFQ engine matching/notify/offer workflow**. |
+| **Medium (operations & finance)** | BUG-023–BUG-030, BUG-024, BUG-045, BUG-048, BUG-049, BUG-031–BUG-037, BUG-041, BUG-052, BUG-053, BUG-059, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-066**, **BUG-067**, **BUG-068**, **BUG-069**, **BUG-070**, **BUG-071**, **BUG-072** | Roles, cashboxes, profit truth, affiliate payout controls, **payout approval + correction workflow**, **COD ↔ commission gating**, **proof upload + validation workflow**, **admin COD order search**, **analytics payment/COD consistency**, **supplier reliability scoring**, **RFQ engine ops**, actionable sourcing/RFQ rows, alerts, tasks, sample mediation CRM, audit trail. |
 | **Later** | BUG-003, BUG-011, BUG-012, BUG-015, BUG-043, BUG-038, BUG-039, BUG-040, BUG-050 | Wording polish, attachments, upsell, images, basic notifications (see BUG-053 for full ops routing), advanced stock/production. |
 
 ### Suggested fix order (do not batch all 50)
@@ -170,10 +173,11 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | Payment & proof | BUG-005, BUG-027, BUG-028, BUG-044, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065** |
 | Wholesale order lifecycle | BUG-010, BUG-019, BUG-047, BUG-049, **BUG-066** |
 | Admin COD ops & search | **BUG-066**, BUG-063, BUG-064, BUG-010, **BUG-068** |
-| Quote / RFQ admin & wholesaler routing | BUG-051, BUG-052, BUG-054, BUG-047, BUG-031, BUG-037, **BUG-057** |
+| Quote / RFQ admin & wholesaler routing | BUG-051, BUG-052, BUG-054, BUG-047, BUG-031, BUG-037, **BUG-057**, **BUG-070**, **BUG-071**, **BUG-072** |
+| RFQ engine (admin) | **BUG-070**, **BUG-071**, **BUG-072**, BUG-031, BUG-037, BUG-069 |
 | Sample & document requests | BUG-012, BUG-055, BUG-056, BUG-057, BUG-058, **BUG-059** |
 | Dashboard & counter routing | **BUG-057**, BUG-030, BUG-053 |
-| Sourcing ops | BUG-011, BUG-031–BUG-041, **BUG-052**, **BUG-069** |
+| Sourcing ops | BUG-011, BUG-031–BUG-041, **BUG-052**, **BUG-069**, **BUG-070**, **BUG-072** |
 | Roles & audit | BUG-024, BUG-045, BUG-048, **BUG-053**, **BUG-062**, **BUG-065** |
 | Finance & profit | BUG-029, BUG-030, BUG-060, BUG-061, **BUG-062**, BUG-063, **BUG-064**, **BUG-065**, **BUG-067**, **BUG-068** |
 | Analytics & reporting | **BUG-067**, **BUG-068**, BUG-029, BUG-030, BUG-023, BUG-063, BUG-064 |
@@ -206,6 +210,9 @@ Valuable but defer until core purchase, ops, and finance foundations exist.
 | 2026-06-02 | BUG-067 added — analytics payment counters inconsistent (amount vs order count). |
 | 2026-06-02 | BUG-068 added — analytics COD encaissé may count delivered orders without reconciliation. |
 | 2026-06-02 | BUG-069 added — supplier reliability score defaults to 100/100 without history. |
+| 2026-06-02 | BUG-070 added — RFQ matching weak scores without eligibility explanation. |
+| 2026-06-02 | BUG-071 added — RFQ notification lacks confirmation and channel clarity. |
+| 2026-06-02 | BUG-072 added — RFQ module lacks post-match offer workflow. |
 
 ---
 
@@ -559,6 +566,57 @@ With **0 incidents** and **0 delays** → score is always **100**, regardless of
 3. Separate **computed score** from **admin status override** (Blocked).
 4. Sync `supplier_matching_profiles.reliability_score` from computed stats — remove DEFAULT 100 for profiles with zero offers.
 5. Color/badge rules: insufficient data = neutral gray, not green.
+
+### BUG-070 technical note (code audit)
+
+**Page:** `/admin/rfq` — **Moteur RFQ** (`src/app/(admin)/admin/rfq/page.tsx`).
+
+**Matching engine** (`scoreSuppliers()` in `src/app/actions/rfq-engine.ts`):
+- Scores all active `supplier_matching_profiles` — category (0–30), country (0–20), MOQ (0–20), lead time (0–10), reliability (0–12), response rate (0–8), optional premium boost (0–40).
+- **No minimum threshold** per dimension — supplier with Cat:0, Pays:0, Délai:0 can still have `totalScore > 0` via default MOQ (15 if `moq_min` null), default lead (10 if no deadline), reliability default 100→12 pts (BUG-069), premium boost.
+- Filter: `results.filter((r) => r.totalScore > 0)` — any positive total qualifies.
+- Inserts **top 10** matches regardless of weak components.
+
+**UI:** Score breakdown shown as raw numbers (`Cat:0/30`, etc.) — no eligibility narrative, no missing-data badge, no exclude checkbox, no hard-block for zero category/country match.
+
+**Fix direction (when approved):** Minimum eligibility rules (e.g. require Cat > 0 OR explicit override); `insufficient_data` flag; explain match reason text; admin deselect before notify; sort already by `total_score DESC` — add secondary operational signals.
+
+### BUG-071 technical note (code audit)
+
+**UI:** `NotifyButton` / `MatchStatusButton` in `AdminRfqActions.tsx` — one-click **Notifier N fournisseurs** with no modal.
+
+**Server action** (`notifyMatchedSuppliers()` in `rfq-engine.ts`):
+```typescript
+.update({ status: 'notified', notified_at: now })
+.in('id', rfqMatchIds)
+.eq('status', 'new')
+```
+- **No email, WhatsApp, or push** — status flip only; supplier sees opportunity on `/supplier/opportunities` if they log in.
+- **No message body**, recipient preview, channel selection, or confirmation step.
+- **No audit log** — `notified_at` timestamp only; no `notified_by` column.
+
+**Gap vs BUG-053 event #2:** RFQ notification routing spec not implemented; admin cannot tell if action is internal status vs external comms.
+
+**Fix direction (when approved):** Confirmation modal with supplier list + channel + message template + deadline; separate **simulate / internal only** vs **send**; record `notified_by`, channel, message snapshot; integrate real channels when available (BUG-040).
+
+### BUG-072 technical note (code audit)
+
+**What exists today:**
+| Layer | Status |
+|-------|--------|
+| `rfq_matches` + score columns | ✅ migration `037_rfq_matching_engine.sql` |
+| `rfq_offers` table + `submitRfqOffer()` | ✅ supplier can submit offer/decline/clarification |
+| Supplier UI | ✅ `/supplier/opportunities` + `OfferForm.tsx` |
+| Admin list | ✅ `/admin/rfq` shows matches; inline offer snippet if `m.offers.length > 0` |
+| Admin comparison table | ❌ |
+| Payment terms, attachments, qty on offer | ❌ limited fields (`unit_price_usd`, `moq_offered`, `lead_time_days`, `notes`, `message`) |
+| Status **opened** / response deadline / expiry automation | ❌ |
+| Convert selected offer → wholesaler quote | ❌ no link to `quote_requests` / BUG-037 chain |
+| Notify → offer → select → quote pipeline | ❌ fragmented |
+
+**Admin actions today:** Notifier, Sélectionner, Expirer — no **prepare quote**, **send to grossiste**, or side-by-side offer comparison.
+
+**Fix direction (when approved):** Admin RFQ detail per sourcing request; offer comparison grid; extend `rfq_offers` (payment terms, attachments, available qty); deadline + auto-expire; **opened** tracking; bridge to quote creation (BUG-037); align with sourcing CRM (BUG-031/041). Fix together with BUG-070/071.
 
 ### BUG-053 specification
 
