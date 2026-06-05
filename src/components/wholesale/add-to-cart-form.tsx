@@ -32,10 +32,10 @@ export function AddToCartForm({
   const subtotal = unitPrice * qty
 
   const decrement = () => setQty((q) => Math.max(minQty, q - 1))
-  const increment = () => setQty((q) => q + 1)
+  const increment = () => setQty((q) => Math.min(stockCount, q + 1))
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10)
-    if (!isNaN(val) && val >= minQty) setQty(val)
+    if (!isNaN(val) && val >= minQty) setQty(Math.min(stockCount, val))
   }
 
   return (
@@ -108,6 +108,7 @@ export function AddToCartForm({
               value={qty}
               onChange={handleInput}
               min={minQty}
+              max={stockCount}
               className="w-20 text-center py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
             <button

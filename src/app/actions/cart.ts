@@ -35,6 +35,22 @@ export async function addToCart(
   if (isNaN(quantity) || quantity < 1)
     return { error: 'Quantité invalide.', success: false }
 
+  const { data: product } = (await supabase
+    .from('products')
+    .select('stock_count, availability_type')
+    .eq('id', productId)
+    .eq('active', true)
+    .single()) as { data: { stock_count: number; availability_type: string } | null; error: unknown }
+
+  if (!product) return { error: 'Produit introuvable.', success: false }
+
+  if (product.availability_type === 'local_stock' && quantity > product.stock_count) {
+    return {
+      error: `Stock insuffisant — ${product.stock_count} unités disponibles.`,
+      success: false,
+    }
+  }
+
   const { error } = await supabase.from('wholesale_cart_items').upsert(
     { buyer_id: user.id, product_id: productId, quantity },
     { onConflict: 'buyer_id,product_id' }

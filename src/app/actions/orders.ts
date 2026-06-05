@@ -603,6 +603,14 @@ export async function submitWholesaleOrder(
         `« ${item.product.name} » : minimum ${item.product.wholesale_min_qty} unités requises.`
       )
     }
+    if (
+      item.product.availability_type === 'local_stock' &&
+      item.quantity > item.product.stock_count
+    ) {
+      return fail(
+        `« ${item.product.name} » — Stock insuffisant — ${item.product.stock_count} unités disponibles.`
+      )
+    }
   }
 
   let total = 0

@@ -21,10 +21,19 @@ export function CartItemRow({ item }: CartItemRowProps) {
   const subtotal = unitPrice * qty
 
   const decrement = () => setQty((q) => Math.max(product.wholesale_min_qty, q - 1))
-  const increment = () => setQty((q) => q + 1)
+  const increment = () => setQty((q) =>
+    product.availability_type === 'local_stock'
+      ? Math.min(product.stock_count, q + 1)
+      : q + 1
+  )
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10)
-    if (!isNaN(val) && val >= 1) setQty(val)
+    if (!isNaN(val) && val >= 1)
+      setQty(
+        product.availability_type === 'local_stock'
+          ? Math.min(product.stock_count, val)
+          : val
+      )
   }
 
   const coverUrl = getProductCoverUrl(product)
@@ -86,12 +95,14 @@ export function CartItemRow({ item }: CartItemRowProps) {
               value={qty}
               onChange={handleInput}
               min={product.wholesale_min_qty}
+              max={product.availability_type === 'local_stock' ? product.stock_count : undefined}
               className="w-14 text-center py-1 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
             />
             <button
               type="button"
               onClick={increment}
-              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 text-base leading-none"
+              disabled={product.availability_type === 'local_stock' && qty >= product.stock_count}
+              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-base leading-none"
             >
               +
             </button>
