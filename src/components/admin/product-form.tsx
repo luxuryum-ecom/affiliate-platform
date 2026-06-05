@@ -106,6 +106,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
 
   // ── Taxonomy (migration 039) ────────────────────────────────────────────────
   const [productCategory, setProductCategory] = useState<string>(product?.category ?? '')
+  const [productSubcategory, setProductSubcategory] = useState<string>(product?.subcategory ?? '')
   const subcategoryOptions = getSubcategories(productCategory)
 
   // ── Import-on-demand fields (migrations 019 + 020 + 022) ────────────────
@@ -376,7 +377,15 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
               name="category"
               disabled={isPending}
               value={productCategory}
-              onChange={(e) => setProductCategory(e.target.value)}
+              onChange={(e) => {
+                const newCat = e.target.value
+                setProductCategory(newCat)
+                // Reset subcategory only if it no longer belongs to the new category
+                const newSubs = getSubcategories(newCat) as readonly string[]
+                if (newSubs.length > 0 && !newSubs.includes(productSubcategory)) {
+                  setProductSubcategory('')
+                }
+              }}
               className={INPUT}
             >
               <option value="">Sélectionner une catégorie...</option>
@@ -395,10 +404,15 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                 id="subcategory"
                 name="subcategory"
                 disabled={isPending}
-                defaultValue={product?.subcategory ?? ''}
+                value={productSubcategory}
+                onChange={(e) => setProductSubcategory(e.target.value)}
                 className={INPUT}
               >
                 <option value="">Sélectionner...</option>
+                {/* Preserve legacy value if it doesn't match any current option */}
+                {productSubcategory && !(subcategoryOptions as readonly string[]).includes(productSubcategory) && (
+                  <option value={productSubcategory}>{productSubcategory} (⚠ valeur legacy)</option>
+                )}
                 {subcategoryOptions.map((sub) => (
                   <option key={sub} value={sub}>{sub}</option>
                 ))}
@@ -409,7 +423,8 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
                 name="subcategory"
                 type="text"
                 disabled={isPending || !productCategory}
-                defaultValue={product?.subcategory ?? ''}
+                value={productSubcategory}
+                onChange={(e) => setProductSubcategory(e.target.value)}
                 className={INPUT}
                 placeholder={productCategory ? 'Précisez...' : 'Sélectionnez une catégorie'}
               />
