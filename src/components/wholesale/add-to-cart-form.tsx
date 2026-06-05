@@ -38,6 +38,13 @@ export function AddToCartForm({
     if (!isNaN(val) && val >= minQty) setQty(Math.min(stockCount, val))
   }
 
+  const nextTier = tiers
+    .filter((t) => t.min_qty > qty)
+    .sort((a, b) => a.min_qty - b.min_qty)[0] ?? null
+  const nextTierReachable = nextTier != null && nextTier.min_qty <= stockCount
+  const unitsToNextTier = nextTier ? nextTier.min_qty - qty : 0
+  const savingsPerUnit = nextTier ? unitPrice - nextTier.price_per_unit : 0
+
   return (
     <div className="space-y-5">
       {/* Tier pricing table */}
@@ -120,6 +127,13 @@ export function AddToCartForm({
             </button>
           </div>
         </div>
+
+        {/* Next-tier nudge */}
+        {nextTierReachable && savingsPerUnit > 0 && (
+          <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            Ajoutez <strong>{unitsToNextTier} u.</strong> pour passer au palier suivant et économiser <strong>{savingsPerUnit.toFixed(0)} MAD/u.</strong>
+          </p>
+        )}
 
         {/* Live pricing summary */}
         <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
