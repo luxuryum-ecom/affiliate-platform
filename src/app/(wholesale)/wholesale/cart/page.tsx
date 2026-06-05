@@ -134,7 +134,7 @@ export default async function WholesaleCartPage() {
               </p>
 
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                Frais de livraison, d&apos;emballage et de service non inclus — notre équipe vous les communiquera après confirmation.
+                Ce total est estimatif — hors frais de livraison, emballage, assurance et service. Notre équipe vous communique un devis définitif avant toute validation de commande.
               </p>
 
               <SubmitWholesaleOrderForm />
