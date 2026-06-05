@@ -114,6 +114,10 @@ export function CreatePayoutForm({ affiliates }: CreatePayoutFormProps) {
         </p>
       )}
 
+      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        ⚠ Vérifiez manuellement les preuves de paiement avant d'enregistrer. La validation est toujours humaine — aucune approbation automatique.
+      </p>
+
       <button
         type="submit"
         disabled={isPending || eligibleAffiliates.length === 0}
