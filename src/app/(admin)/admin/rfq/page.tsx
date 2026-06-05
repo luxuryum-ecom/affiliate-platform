@@ -100,8 +100,9 @@ export default async function AdminRfqPage() {
   const converted      = sourcingRequests.filter((r) => r.status === 'quoted' || r.status === 'closed').length
   const conversionRate = totalSourcing > 0 ? Math.round((converted / totalSourcing) * 100) : 0
 
-  // New matches to notify
-  const newMatchIds = matches.filter((m) => m.status === 'new').map((m) => m.id)
+  // Eligible new matches (score_category > 0 = at least one common category)
+  const eligibleNewMatchIds = matches.filter((m) => m.status === 'new' && m.score_category > 0).map((m) => m.id)
+  const ineligibleNewCount  = matches.filter((m) => m.status === 'new' && m.score_category === 0).length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,8 +126,15 @@ export default async function AdminRfqPage() {
             <h1 className="text-lg font-semibold text-gray-900">Moteur de matching RFQ</h1>
             <p className="text-sm text-gray-500 mt-0.5">Scores automatiques, réponses fournisseurs, suivi des offres.</p>
           </div>
-          {newMatchIds.length > 0 && (
-            <NotifyButton matchIds={newMatchIds} />
+          {(eligibleNewMatchIds.length > 0 || ineligibleNewCount > 0) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {ineligibleNewCount > 0 && (
+                <span className="text-xs text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
+                  {ineligibleNewCount} inéligible{ineligibleNewCount > 1 ? 's' : ''} exclu{ineligibleNewCount > 1 ? 's' : ''}
+                </span>
+              )}
+              <NotifyButton matchIds={eligibleNewMatchIds} ineligibleCount={ineligibleNewCount} />
+            </div>
           )}
         </div>
 
@@ -230,52 +238,69 @@ export default async function AdminRfqPage() {
                 <div className="divide-y divide-gray-100">
                   {reqMatches.map((m, idx) => {
                     const badge = STATUS_BADGE[m.status]
+                    const isIneligible = m.score_category === 0
+                    const hasNoReliabilityData = m.score_reliability === 0 && m.score_response_rate === 0
                     return (
-                      <div key={m.id} className="p-4">
+                      <div key={m.id} className={`p-4 ${isIneligible ? 'bg-red-50' : ''}`}>
                         <div className="flex items-start justify-between gap-3 flex-wrap">
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-gray-400 w-5">#{idx + 1}</span>
                               <p className="text-sm font-medium text-gray-900">{m.supplier?.full_name ?? '—'}</p>
+                              {isIneligible && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold border border-red-200">
+                                  Inéligible
+                                </span>
+                              )}
                             </div>
 
                             {/* Score bar */}
                             <div className="flex items-center gap-2 mt-1 ml-7">
                               <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-indigo-500 rounded-full"
+                                  className={`h-full rounded-full ${isIneligible ? 'bg-red-400' : 'bg-indigo-500'}`}
                                   style={{ width: `${Math.min(100, m.total_score)}%` }}
                                 />
                               </div>
                               <span className="text-xs text-gray-600 font-semibold">{Math.round(m.total_score)}/100</span>
                             </div>
 
-                            {/* Score details */}
-                            <div className="flex flex-wrap gap-2 mt-1.5 ml-7 text-xs text-gray-400">
+                            {/* Score details — expanded labels */}
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 ml-7 text-xs text-gray-400">
                               <span className={m.score_category === 0 ? 'text-red-500 font-semibold' : ''}>
-                                Cat:{Math.round(m.score_category)}/30
+                                Catégorie : {Math.round(m.score_category)}/30
                               </span>
                               <span className={m.score_country === 0 && request.target_country ? 'text-amber-600 font-semibold' : ''}>
-                                Pays:{Math.round(m.score_country)}/20
+                                Pays cible : {Math.round(m.score_country)}/20
                               </span>
-                              <span>MOQ:{Math.round(m.score_moq)}/20</span>
-                              <span>Délai:{Math.round(m.score_lead_time)}/10</span>
-                              <span>Fiab:{Math.round(m.score_reliability)}/12</span>
-                              <span>React:{Math.round(m.score_response_rate)}/8</span>
+                              <span>MOQ : {Math.round(m.score_moq)}/20</span>
+                              <span>Délai livr. : {Math.round(m.score_lead_time)}/10</span>
+                              <span className={hasNoReliabilityData ? 'text-gray-300 italic' : ''}>
+                                Fiabilité : {hasNoReliabilityData ? '—' : `${Math.round(m.score_reliability)}/12`}
+                              </span>
+                              <span className={hasNoReliabilityData ? 'text-gray-300 italic' : ''}>
+                                Réactivité : {hasNoReliabilityData ? '—' : `${Math.round(m.score_response_rate)}/8`}
+                              </span>
                             </div>
+
                             {/* Eligibility warnings */}
                             <div className="flex flex-wrap gap-1.5 mt-1.5 ml-7">
-                              {m.score_category === 0 && (
+                              {isIneligible && (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
-                                  ⚠ Pas de catégorie commune
+                                  ⚠ Aucune catégorie commune — notification bloquée
                                 </span>
                               )}
                               {m.score_country === 0 && request.target_country && (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
-                                  Pays non couvert
+                                  Pays cible non couvert
                                 </span>
                               )}
-                              {m.total_score < 20 && (
+                              {hasNoReliabilityData && !isIneligible && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                                  Données insuffisantes (historique)
+                                </span>
+                              )}
+                              {!isIneligible && m.total_score < 20 && (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
                                   Match faible
                                 </span>
@@ -286,7 +311,11 @@ export default async function AdminRfqPage() {
                           <div className="flex flex-col items-end gap-2">
                             <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>{badge.label}</span>
                             <div className="flex gap-1.5 flex-wrap justify-end">
-                              {m.status === 'new' && <MatchStatusButton matchId={m.id} newStatus="notified" label="Notifier" />}
+                              {m.status === 'new' && (
+                                isIneligible
+                                  ? <span className="text-xs px-2.5 py-1 bg-red-100 text-red-400 rounded-lg cursor-not-allowed" title="Aucune catégorie commune — notification bloquée">Notifier bloqué</span>
+                                  : <MatchStatusButton matchId={m.id} newStatus="notified" label="Notifier" />
+                              )}
                               {m.status === 'offer_received' && <MatchStatusButton matchId={m.id} newStatus="selected" label="Sélectionner" />}
                               {!['expired','selected'].includes(m.status) && <MatchStatusButton matchId={m.id} newStatus="expired" label="Expirer" />}
                               {m.status === 'selected' && (

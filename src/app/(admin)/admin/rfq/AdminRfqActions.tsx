@@ -17,11 +17,14 @@ export function RunMatchingButton({ sourcingId }: { sourcingId: string }) {
   )
 }
 
-export function NotifyButton({ matchIds }: { matchIds: string[] }) {
+export function NotifyButton({ matchIds, ineligibleCount = 0 }: { matchIds: string[]; ineligibleCount?: number }) {
   const [isPending, startTransition] = useTransition()
   const handleClick = () => {
+    const ineligibleNote = ineligibleCount > 0
+      ? `\n⚠ ${ineligibleCount} fournisseur${ineligibleCount > 1 ? 's' : ''} inéligible${ineligibleCount > 1 ? 's' : ''} (aucune catégorie commune) exclu${ineligibleCount > 1 ? 's' : ''} de cette notification.`
+      : ''
     const confirmed = window.confirm(
-      `Notifier ${matchIds.length} fournisseur${matchIds.length > 1 ? 's' : ''} ?\n\n` +
+      `Notifier ${matchIds.length} fournisseur${matchIds.length > 1 ? 's' : ''} éligible${matchIds.length > 1 ? 's' : ''} ?${ineligibleNote}\n\n` +
       `Action : changement de statut interne "nouveau → notifié".\n` +
       `Aucun email ni WhatsApp n'est envoyé automatiquement.\n\n` +
       `Les fournisseurs verront l'opportunité sur leur espace /supplier/opportunities.`
