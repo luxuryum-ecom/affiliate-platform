@@ -347,12 +347,18 @@ export default async function SupplierPerformancePage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span
-                            className={`inline-block text-sm font-bold tabular-nums ${scoreColor(score)}`}
-                          >
-                            {score}
-                            <span className="text-xs font-normal text-gray-400">/100</span>
-                          </span>
+                          {row.totalOrders === 0 && row.issueCount === 0 ? (
+                            <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">
+                              Données insuffisantes
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-block text-sm font-bold tabular-nums ${scoreColor(score)}`}
+                            >
+                              {score}
+                              <span className="text-xs font-normal text-gray-400">/100</span>
+                            </span>
+                          )}
                         </td>
                       </tr>
                     )
