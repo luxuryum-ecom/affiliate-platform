@@ -5,6 +5,7 @@ import { toggleProductActive, deleteProduct } from '@/app/actions/products'
 
 interface ProductActionsProps {
   id: string
+  name: string
   active: boolean
 }
 
@@ -12,7 +13,7 @@ interface ProductActionsProps {
  * Inline action buttons for the product list row.
  * Uses bound server actions as form actions — no client-side fetch needed.
  */
-export function ProductActions({ id, active }: ProductActionsProps) {
+export function ProductActions({ id, name, active }: ProductActionsProps) {
   const toggleAction = toggleProductActive.bind(null, id, !active)
   const deleteAction = deleteProduct.bind(null, id)
 
@@ -27,7 +28,20 @@ export function ProductActions({ id, active }: ProductActionsProps) {
       </Link>
 
       {/* Toggle active */}
-      <form action={toggleAction}>
+      <form
+        action={toggleAction}
+        onSubmit={(e) => {
+          if (active) {
+            const ok = window.confirm(
+              `Désactiver "${name}" ?\n\n` +
+              `Le produit sera masqué du catalogue et de la marketplace — ` +
+              `les commandes et paniers en cours ne seront pas affectés.\n\n` +
+              `Vous pourrez le réactiver à tout moment.`
+            )
+            if (!ok) e.preventDefault()
+          }
+        }}
+      >
         <button
           type="submit"
           className={`inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
@@ -44,9 +58,14 @@ export function ProductActions({ id, active }: ProductActionsProps) {
       <form
         action={deleteAction}
         onSubmit={(e) => {
-          if (!confirm('Supprimer définitivement ce produit ?')) {
-            e.preventDefault()
-          }
+          const ok = window.confirm(
+            `Supprimer définitivement "${name}" ?\n\n` +
+            `⚠ Cette action est irréversible.\n` +
+            `Le produit sera supprimé du catalogue, de la marketplace et des résultats de recherche.\n` +
+            `Les commandes existantes conservent leur snapshot — elles ne seront pas affectées.\n\n` +
+            `Confirmez uniquement si ce produit n'a pas de commandes actives en cours.`
+          )
+          if (!ok) e.preventDefault()
         }}
       >
         <button

@@ -354,7 +354,7 @@ function ProductRow({ product }: { product: Product }) {
       </div>
 
       {/* Actions */}
-      <ProductActions id={product.id} active={product.active} />
+      <ProductActions id={product.id} name={product.name} active={product.active} />
     </div>
   )
 }
