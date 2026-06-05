@@ -34,6 +34,8 @@ interface OrderRow {
   quantity: number
   total_amount: number
   status: string
+  cod_expected: number | null
+  cod_received: number | null
   product_price_snapshot: number | null
   affiliate_commission_mad_snapshot: number | null
   delivery_fee_snapshot: number | null
@@ -72,11 +74,11 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     (since
       ? supabase
           .from('orders')
-          .select('id, product_id, affiliate_id, quantity, total_amount, status, product_price_snapshot, affiliate_commission_mad_snapshot, delivery_fee_snapshot, packaging_fee_snapshot, confirmation_fee_snapshot, created_at')
+          .select('id, product_id, affiliate_id, quantity, total_amount, status, cod_expected, cod_received, product_price_snapshot, affiliate_commission_mad_snapshot, delivery_fee_snapshot, packaging_fee_snapshot, confirmation_fee_snapshot, created_at')
           .gte('created_at', since)
       : supabase
           .from('orders')
-          .select('id, product_id, affiliate_id, quantity, total_amount, status, product_price_snapshot, affiliate_commission_mad_snapshot, delivery_fee_snapshot, packaging_fee_snapshot, confirmation_fee_snapshot, created_at')
+          .select('id, product_id, affiliate_id, quantity, total_amount, status, cod_expected, cod_received, product_price_snapshot, affiliate_commission_mad_snapshot, delivery_fee_snapshot, packaging_fee_snapshot, confirmation_fee_snapshot, created_at')
     ) as unknown as Promise<{ data: OrderRow[] | null; error: unknown }>,
 
     supabase
@@ -180,9 +182,15 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     : '0'
 
   // ── Revenue metrics (all orders) ─────────────────────────────────────────────
-  const deliveredOrders = orders.filter((o) => o.status === 'delivered')
-  const totalCodCollected = deliveredOrders.reduce((s, o) => s + o.total_amount, 0)
-  const totalGrossProfit  = deliveredOrders.reduce((s, o) => s + platformProfit(o), 0)
+  const deliveredOrders    = orders.filter((o) => o.status === 'delivered')
+  // COD réconcilié : somme des montants effectivement reçus (cod_received non-null)
+  const codReconciled      = deliveredOrders.reduce((s, o) => s + (o.cod_received ?? 0), 0)
+  // COD attendu : montant prévu (cod_expected ou total_amount si non renseigné)
+  const codExpected        = deliveredOrders.reduce((s, o) => s + (o.cod_expected ?? o.total_amount), 0)
+  // Commandes livrées sans réconciliation COD
+  const codPendingOrders   = deliveredOrders.filter((o) => o.cod_received == null)
+  const codPendingAmount   = codPendingOrders.reduce((s, o) => s + (o.cod_expected ?? o.total_amount), 0)
+  const totalGrossProfit   = deliveredOrders.reduce((s, o) => s + platformProfit(o), 0)
   const totalCommissions  = deliveredOrders.reduce(
     (s, o) => s + (o.affiliate_commission_mad_snapshot ?? 0), 0
   )
@@ -283,12 +291,18 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
         {/* Revenue */}
         <section>
           <SectionLabel>Revenus (commandes livrées)</SectionLabel>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatCard
-              label="COD encaissé"
-              value={formatMAD(totalCodCollected)}
-              sub="Montant total des livraisons"
+              label="COD réconcilié"
+              value={formatMAD(codReconciled)}
+              sub={`Attendu : ${formatMAD(codExpected)}`}
               variant="default"
+            />
+            <StatCard
+              label="En attente réconciliation"
+              value={formatMAD(codPendingAmount)}
+              sub={`${codPendingOrders.length} commande${codPendingOrders.length !== 1 ? 's' : ''} sans COD reçu`}
+              variant={codPendingOrders.length > 0 ? 'warning' : 'muted'}
             />
             <StatCard
               label="Profit brut plateforme"
