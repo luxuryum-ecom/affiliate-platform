@@ -34,9 +34,18 @@ export default async function AdminPremiumPage() {
   ])
 
   // Revenue KPIs
-  const activeSubs = suppliers.filter(
-    (s) => s.subscription?.status === 'active' && s.subscription.plan.price_mad_monthly > 0,
-  )
+  const now = new Date()
+  const activeSubs = suppliers.filter((s) => {
+    const sub = s.subscription
+    if (!sub || sub.plan.price_mad_monthly === 0) return false
+    // Exclude if expires_at is in the past (status may still be 'active' in DB)
+    if (sub.expires_at && new Date(sub.expires_at) < now) return false
+    return true
+  })
+  const expiredByDate = suppliers.filter((s) => {
+    const sub = s.subscription
+    return sub && sub.plan.price_mad_monthly > 0 && sub.expires_at && new Date(sub.expires_at) < now
+  })
   const mrr = activeSubs.reduce(
     (sum, s) => sum + (s.subscription?.plan.price_mad_monthly ?? 0),
     0,
@@ -64,6 +73,7 @@ export default async function AdminPremiumPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <p className="text-2xl font-bold text-indigo-700 tabular-nums">{formatMAD(mrr)}</p>
             <p className="text-xs text-gray-500 mt-1">MRR estimé</p>
+            <p className="text-xs text-gray-400 mt-0.5">{paidCount} abonné{paidCount !== 1 ? 's' : ''} actif{paidCount !== 1 ? 's' : ''} non expirés</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <p className="text-2xl font-bold text-green-600">{paidCount}</p>
@@ -78,6 +88,56 @@ export default async function AdminPremiumPage() {
             <p className="text-xs text-gray-500 mt-1">Plan gratuit (sans abonnement)</p>
           </div>
         </div>
+
+        {/* MRR breakdown */}
+        {(activeSubs.length > 0 || expiredByDate.length > 0) && (
+          <section>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Détail MRR</h2>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr className="text-left text-gray-500">
+                    <th className="px-4 py-2.5 font-medium">Fournisseur</th>
+                    <th className="px-4 py-2.5 font-medium">Plan</th>
+                    <th className="px-4 py-2.5 font-medium">Prix/mois</th>
+                    <th className="px-4 py-2.5 font-medium">Expire le</th>
+                    <th className="px-4 py-2.5 font-medium">MRR</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {activeSubs.map(({ supplier, subscription: sub }) => (
+                    <tr key={supplier.id} className="text-gray-700">
+                      <td className="px-4 py-2.5 font-medium">{supplier.full_name}</td>
+                      <td className="px-4 py-2.5">{sub!.plan.name}</td>
+                      <td className="px-4 py-2.5 tabular-nums">{formatMAD(sub!.plan.price_mad_monthly)}</td>
+                      <td className="px-4 py-2.5">
+                        {sub!.expires_at
+                          ? new Date(sub!.expires_at).toLocaleDateString('fr-FR')
+                          : <span className="text-gray-400">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className="text-green-700 font-medium">✓ inclus</span>
+                      </td>
+                    </tr>
+                  ))}
+                  {expiredByDate.map(({ supplier, subscription: sub }) => (
+                    <tr key={supplier.id} className="text-gray-400 bg-red-50">
+                      <td className="px-4 py-2.5">{supplier.full_name}</td>
+                      <td className="px-4 py-2.5">{sub!.plan.name}</td>
+                      <td className="px-4 py-2.5 tabular-nums line-through">{formatMAD(sub!.plan.price_mad_monthly)}</td>
+                      <td className="px-4 py-2.5 text-red-500">
+                        {new Date(sub!.expires_at!).toLocaleDateString('fr-FR')}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className="text-red-500 font-medium">✗ expiré</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* Plans overview */}
         <section>
