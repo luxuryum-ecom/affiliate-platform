@@ -229,6 +229,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
 
             {ctaMode === 'direct' ? (
               <>
+                {/* Primary: direct order */}
                 <div className="bg-white rounded-xl border border-emerald-200 p-4">
                   <p className="text-sm font-semibold text-gray-900 mb-1">Commander en gros</p>
                   <p className="text-xs text-gray-500 mb-3">
@@ -242,32 +243,43 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                     unit={product.unit}
                   />
                 </div>
+                {/* Secondary: sample / document */}
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">Vous préférez un devis ?</p>
+                  <p className="text-sm font-semibold text-gray-900 mb-1">Demander un échantillon / document</p>
                   <p className="text-xs text-gray-500 mb-3">
-                    Volume important, conditions spéciales ou produit non encore référencé — notre équipe vous répond.
+                    Recevez des photos, vidéos ou une fiche technique via la plateforme.
+                  </p>
+                  <SampleRequestClient supplierProductId={product.id} />
+                </div>
+                {/* Tertiary: quote for edge cases */}
+                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Volume important ou conditions spéciales ?</p>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Quantité hors stock disponible, délai personnalisé ou négociation tarifaire — notre équipe vous répond.
                   </p>
                   <MarketplaceQuoteForm supplierProductId={product.id} minQuantity={product.min_quantity} />
                 </div>
               </>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-sm font-semibold text-gray-900 mb-1">Demander un devis</p>
-                <p className="text-xs text-gray-500 mb-3">
-                  Import, prix sur mesure ou volume à négocier — notre équipe prépare une offre.
-                </p>
-                <MarketplaceQuoteForm supplierProductId={product.id} minQuantity={product.min_quantity} />
-              </div>
+              <>
+                {/* Primary: quote */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-1">Demander un devis</p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Import, prix sur mesure ou volume à négocier — notre équipe prépare une offre.
+                  </p>
+                  <MarketplaceQuoteForm supplierProductId={product.id} minQuantity={product.min_quantity} />
+                </div>
+                {/* Secondary: sample / document */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-1">Demander un échantillon / document</p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Recevez des photos, vidéos ou une fiche technique via la plateforme.
+                  </p>
+                  <SampleRequestClient supplierProductId={product.id} />
+                </div>
+              </>
             )}
-
-            {/* Sample request */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-sm font-semibold text-gray-900 mb-1">Demander un échantillon / document</p>
-              <p className="text-xs text-gray-500 mb-3">
-                Recevez des photos, vidéos ou une fiche technique via la plateforme.
-              </p>
-              <SampleRequestClient supplierProductId={product.id} />
-            </div>
           </div>
         </div>
       </main>
