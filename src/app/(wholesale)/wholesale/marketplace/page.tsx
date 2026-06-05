@@ -95,7 +95,10 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     )
   }
   if (filters.availability) {
-    products = products.filter((p) => p.availability_type === filters.availability)
+    products = products.filter((p) =>
+      p.availability_type === filters.availability &&
+      (filters.availability !== 'local_stock' || p.stock_quantity == null || p.stock_quantity > 0)
+    )
   }
   if (filters.supplier_type) {
     products = products.filter((p) => p.supplier_type === filters.supplier_type)
@@ -287,7 +290,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
               >
                 <option value="">Tout</option>
-                <option value="local_stock">Stock disponible</option>
+                <option value="local_stock">Stock local Maroc</option>
                 <option value="import_on_demand">Import / Commande</option>
               </select>
             </div>
