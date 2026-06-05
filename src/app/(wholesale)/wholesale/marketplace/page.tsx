@@ -168,6 +168,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         {/* ── Country source section ───────────────────────────────────────────── */}
         <CountrySourceSection
           activeOrigin={filters.origin}
+          activeAvailability={filters.availability}
           totalProducts={totalProductCount}
           verifiedSuppliers={verifiedSupplierCount}
           localStockProducts={localStockProductCount}
@@ -442,17 +443,19 @@ const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000'
 
 function CountrySourceSection({
   activeOrigin,
+  activeAvailability,
   totalProducts = 0,
   verifiedSuppliers = 0,
   localStockProducts = 0,
 }: {
   activeOrigin?: string
+  activeAvailability?: string
   totalProducts?: number
   verifiedSuppliers?: number
   localStockProducts?: number
 }) {
   const active = activeOrigin?.toLowerCase()
-  const moroccoActive = active === 'maroc'
+  const moroccoActive = activeAvailability === 'local_stock'
 
   return (
     <section className="mb-7 pb-6 border-b border-gray-200">
@@ -473,7 +476,7 @@ function CountrySourceSection({
 
       {/* ── Section 1: Morocco hero ───────────────────────────────────────── */}
       <Link
-        href="/wholesale/marketplace?origin=Maroc&in_stock=1"
+        href="/wholesale/marketplace?availability=local_stock"
         className={`block rounded-2xl border-2 p-5 mb-4 transition-all duration-200 ${
           moroccoActive
             ? 'border-emerald-500 bg-emerald-600 shadow-lg shadow-emerald-200'

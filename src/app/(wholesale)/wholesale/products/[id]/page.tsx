@@ -156,6 +156,22 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               )}
             </div>
 
+            {/* Stock location + origin — local_stock only (import block covers import products) */}
+            {product.availability_type === 'local_stock' && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Localisation stock</span>
+                  <span className="font-medium text-green-700">🇲🇦 Stock au Maroc</span>
+                </div>
+                {product.origin_country && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Pays d&apos;origine</span>
+                    <span className="font-medium text-gray-700">{product.origin_country}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Import-on-demand sourcing details */}
             {product.availability_type === 'import_on_demand' && (
               <ImportInfoBlock product={product} globalTariff={globalTariff} />

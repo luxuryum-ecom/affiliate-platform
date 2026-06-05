@@ -189,10 +189,16 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
               {product.origin_country && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Origine</span>
+                  <span className="text-gray-500">Pays d&apos;origine</span>
                   <span className="font-medium text-gray-900">{product.origin_country}</span>
                 </div>
               )}
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Localisation stock</span>
+                <span className={`font-medium ${product.availability_type === 'local_stock' ? 'text-green-700' : 'text-purple-700'}`}>
+                  {product.availability_type === 'local_stock' ? '🇲🇦 Stock au Maroc' : 'Import sur demande'}
+                </span>
+              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">MOQ</span>
                 <span className="font-medium text-gray-900">{product.min_quantity} {product.unit}</span>
