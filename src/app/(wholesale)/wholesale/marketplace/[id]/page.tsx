@@ -228,19 +228,28 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
             )}
 
             {ctaMode === 'direct' ? (
-              <div className="bg-white rounded-xl border border-emerald-200 p-4">
-                <p className="text-sm font-semibold text-gray-900 mb-1">Commander en gros</p>
-                <p className="text-xs text-gray-500 mb-3">
-                  Prix affiché, stock et MOQ connus — ajout au panier puis validation de commande.
-                </p>
-                <MarketplaceDirectOrderForm
-                  supplierProductId={product.id}
-                  unitPrice={directUnitPrice}
-                  minQty={product.min_quantity}
-                  stockCount={directStock}
-                  unit={product.unit}
-                />
-              </div>
+              <>
+                <div className="bg-white rounded-xl border border-emerald-200 p-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-1">Commander en gros</p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Prix affiché, stock et MOQ connus — ajout au panier puis validation de commande.
+                  </p>
+                  <MarketplaceDirectOrderForm
+                    supplierProductId={product.id}
+                    unitPrice={directUnitPrice}
+                    minQty={product.min_quantity}
+                    stockCount={directStock}
+                    unit={product.unit}
+                  />
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-1">Vous préférez un devis ?</p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Volume important, conditions spéciales ou produit non encore référencé — notre équipe vous répond.
+                  </p>
+                  <MarketplaceQuoteForm supplierProductId={product.id} minQuantity={product.min_quantity} />
+                </div>
+              </>
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <p className="text-sm font-semibold text-gray-900 mb-1">Demander un devis</p>
