@@ -103,9 +103,13 @@ export function CartItemRow({ item }: CartItemRowProps) {
             <input type="hidden" name="quantity" value={qty} />
             <button
               type="submit"
-              className="text-xs text-gray-500 border border-gray-200 px-2.5 py-1 rounded-md hover:bg-gray-50 transition-colors"
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors border ${
+                qty !== item.quantity
+                  ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-700'
+                  : 'text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}
             >
-              Mettre à jour
+              {qty !== item.quantity ? 'Sauvegarder' : 'Mettre à jour'}
             </button>
           </form>
 

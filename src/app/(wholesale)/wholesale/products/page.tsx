@@ -211,7 +211,7 @@ function WholesaleProductCard({
           href={productUrl}
           className="block w-full text-center text-xs font-bold py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors"
         >
-          {isRfq ? 'Demander un devis →' : 'Ajouter au panier'}
+          {isRfq ? 'Demander un devis →' : 'Commander →'}
         </Link>
       </div>
     </div>
