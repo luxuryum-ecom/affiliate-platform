@@ -213,12 +213,34 @@ export default async function AdminRfqPage() {
 
                             {/* Score details */}
                             <div className="flex flex-wrap gap-2 mt-1.5 ml-7 text-xs text-gray-400">
-                              <span>Cat:{Math.round(m.score_category)}/30</span>
-                              <span>Pays:{Math.round(m.score_country)}/20</span>
+                              <span className={m.score_category === 0 ? 'text-red-500 font-semibold' : ''}>
+                                Cat:{Math.round(m.score_category)}/30
+                              </span>
+                              <span className={m.score_country === 0 && request.target_country ? 'text-amber-600 font-semibold' : ''}>
+                                Pays:{Math.round(m.score_country)}/20
+                              </span>
                               <span>MOQ:{Math.round(m.score_moq)}/20</span>
                               <span>Délai:{Math.round(m.score_lead_time)}/10</span>
                               <span>Fiab:{Math.round(m.score_reliability)}/12</span>
                               <span>React:{Math.round(m.score_response_rate)}/8</span>
+                            </div>
+                            {/* Eligibility warnings */}
+                            <div className="flex flex-wrap gap-1.5 mt-1.5 ml-7">
+                              {m.score_category === 0 && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
+                                  ⚠ Pas de catégorie commune
+                                </span>
+                              )}
+                              {m.score_country === 0 && request.target_country && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+                                  Pays non couvert
+                                </span>
+                              )}
+                              {m.total_score < 20 && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                                  Match faible
+                                </span>
+                              )}
                             </div>
                           </div>
 
