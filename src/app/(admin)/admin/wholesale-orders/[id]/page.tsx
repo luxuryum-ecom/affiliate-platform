@@ -177,7 +177,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 <div><p className="text-xs text-gray-400">Téléphone</p><p className="font-medium">{order.buyer.phone ?? '—'}</p></div>
                 <div><p className="text-xs text-gray-400">Ville</p><p className="font-medium">{order.city ?? order.buyer.city ?? '—'}</p></div>
                 <div><p className="text-xs text-gray-400">Adresse</p><p className="font-medium">{order.address ?? '—'}</p></div>
-                {order.buyer_notes && <div className="col-span-2"><p className="text-xs text-gray-400">Note acheteur</p><p className="text-gray-700">{order.buyer_notes}</p></div>}
+                {order.buyer_notes && (
+                  <div className="col-span-2 mt-1 flex gap-2 items-start rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+                    <span className="text-amber-500 mt-0.5 shrink-0">⚠</span>
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700">Note acheteur</p>
+                      <p className="text-sm text-amber-900 mt-0.5">{order.buyer_notes}</p>
+                    </div>
+                  </div>
+                )}
                 {order.agent_notes && <div className="col-span-2"><p className="text-xs text-gray-400">Note agent</p><p className="text-gray-700">{order.agent_notes}</p></div>}
               </div>
             </div>
