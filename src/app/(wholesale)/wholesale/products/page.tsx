@@ -89,9 +89,16 @@ export default async function WholesaleProductsPage() {
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Catalogue grossiste</h1>
             <p className="text-sm text-gray-500 mt-0.5">
+              Stock interne Mozouna — commande directe.{' '}
               {products.length} produit{products.length !== 1 ? 's' : ''} disponible
               {products.length !== 1 ? 's' : ''}.
             </p>
+            <Link
+              href="/wholesale/marketplace"
+              className="mt-1.5 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              Chercher chez nos fournisseurs → Marketplace
+            </Link>
           </div>
           {cartCount > 0 && (
             <Link

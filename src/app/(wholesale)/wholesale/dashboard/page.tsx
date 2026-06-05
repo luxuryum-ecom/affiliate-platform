@@ -128,7 +128,7 @@ export default async function WholesaleDashboardPage() {
             <div>
               <h2 className="text-sm font-semibold text-gray-900">Catalogue produits</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Parcourez notre sélection et ajoutez au panier.
+                Stock interne Mozouna — commande directe, livraison rapide. Paliers de prix grossiste.
               </p>
             </div>
             <Link
@@ -180,7 +180,7 @@ export default async function WholesaleDashboardPage() {
           <div>
             <h2 className="text-sm font-semibold text-gray-900">Marketplace fournisseurs</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Découvrez des produits proposés par nos fournisseurs et demandez un devis.
+              Fournisseurs vérifiés — stock local (commande directe) ou import sur mesure (devis).
             </p>
           </div>
           <Link
