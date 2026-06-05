@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { submitSampleRequest } from '@/app/actions/sample-requests'
 
@@ -22,6 +23,12 @@ export default function SampleRequestClient({ supplierProductId }: { supplierPro
         <p className="text-xs text-green-600 mt-1">
           Notre équipe traitera votre demande et vous contactera sous 24–48h.
         </p>
+        <Link
+          href="/wholesale/samples"
+          className="inline-block mt-3 text-xs text-green-700 underline underline-offset-2 hover:no-underline"
+        >
+          Suivre ma demande →
+        </Link>
       </div>
     )
   }
