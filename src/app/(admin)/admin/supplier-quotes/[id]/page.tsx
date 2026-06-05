@@ -267,7 +267,7 @@ export default async function AdminSupplierQuoteDetailPage({ params }: PageProps
                 {(quote.buyer_purchase_profile || quote.buyer_volume_tier) && (
                   <>
                     <div>
-                      <dt className="text-rose-500 text-xs">Profil d&apos;achat</dt>
+                      <dt className="text-rose-500 text-xs">Type d&apos;activité</dt>
                       <dd className="text-gray-900 font-medium">
                         {labelPurchaseProfile(quote.buyer_purchase_profile)}
                       </dd>
