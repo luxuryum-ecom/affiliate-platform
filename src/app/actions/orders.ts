@@ -935,9 +935,9 @@ export async function updateWholesalePaymentStatus(
 // =============================================================================
 
 /**
- * Wholesaler submits a payment proof URL for one of their wholesale orders.
+ * Wholesaler submits a payment proof for one of their wholesale orders.
+ * Accepts file upload to order-proofs bucket or fallback URL.
  * Ownership is verified via .eq('buyer_id', user.id) before insert.
- * URL-only — no file upload (BUG-065 scope).
  */
 export async function addWholesaleOrderProof(
   _prev: ActionState,
@@ -950,12 +950,10 @@ export async function addWholesaleOrderProof(
 
   const orderId   = (formData.get('orderId') as string)?.trim()
   const proofType = (formData.get('proofType') as string)?.trim()
-  const fileUrl   = (formData.get('fileUrl') as string)?.trim()
   const notes     = (formData.get('notes') as string)?.trim() || null
 
   if (!orderId)   return fail('Commande non spécifiée.')
   if (!proofType) return fail('Type de preuve requis.')
-  if (!fileUrl)   return fail('URL du justificatif requis.')
 
   const ALLOWED: string[] = ['bank_receipt', 'transfer_proof', 'other']
   if (!ALLOWED.includes(proofType)) return fail('Type de preuve invalide.')
@@ -970,10 +968,33 @@ export async function addWholesaleOrderProof(
 
   if (!order) return fail('Commande introuvable.')
 
+  // File upload (priority) — falls back to URL field
+  const file = formData.get('file') as File | null
+  let resolvedUrl: string | null = null
+
+  if (file && file.size > 0) {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
+    const storagePath = `${orderId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const arrayBuffer = await file.arrayBuffer()
+
+    const { error: uploadErr } = await supabase.storage
+      .from('order-proofs')
+      .upload(storagePath, arrayBuffer, { contentType: file.type || `application/${ext}`, upsert: false })
+
+    if (uploadErr) return fail(`Erreur upload : ${uploadErr.message}`)
+
+    const { data: urlData } = supabase.storage.from('order-proofs').getPublicUrl(storagePath)
+    resolvedUrl = urlData.publicUrl
+  } else {
+    const fallbackUrl = (formData.get('fileUrl') as string)?.trim()
+    if (!fallbackUrl) return fail('Fichier ou URL requis.')
+    resolvedUrl = fallbackUrl
+  }
+
   const { error } = await supabase.from('order_proofs').insert({
     related_wholesale_order_id: orderId,
     proof_type:  proofType,
-    file_url:    fileUrl,
+    file_url:    resolvedUrl,
     uploaded_by: user.id,
     notes,
   })

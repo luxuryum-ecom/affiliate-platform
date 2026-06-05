@@ -66,10 +66,9 @@ export async function bulkApproveCommissions(
 export async function addOrderProof(formData: FormData): Promise<{ error: string | null }> {
   const orderId = (formData.get('orderId') as string)?.trim()
   const proofType = formData.get('proofType') as ProofType
-  const fileUrl = (formData.get('fileUrl') as string)?.trim()
   const notes = ((formData.get('notes') as string)?.trim()) || null
 
-  if (!orderId || !fileUrl) return { error: 'Commande et URL du fichier requis.' }
+  if (!orderId) return { error: 'Commande non spécifiée.' }
 
   const validTypes: ProofType[] = [
     'bank_receipt',
@@ -84,9 +83,32 @@ export async function addOrderProof(formData: FormData): Promise<{ error: string
   const { supabase, error, userId } = await requireAdmin({ allowAgent: true })
   if (error || !userId) return { error: error ?? 'Erreur.' }
 
+  // File upload path (priority) — falls back to URL field
+  const file = formData.get('file') as File | null
+  let resolvedUrl: string | null = null
+
+  if (file && file.size > 0) {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
+    const storagePath = `${orderId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const arrayBuffer = await file.arrayBuffer()
+
+    const { error: uploadErr } = await supabase.storage
+      .from('order-proofs')
+      .upload(storagePath, arrayBuffer, { contentType: file.type || `application/${ext}`, upsert: false })
+
+    if (uploadErr) return { error: `Erreur upload : ${uploadErr.message}` }
+
+    const { data: urlData } = supabase.storage.from('order-proofs').getPublicUrl(storagePath)
+    resolvedUrl = urlData.publicUrl
+  } else {
+    const fallbackUrl = (formData.get('fileUrl') as string)?.trim()
+    if (!fallbackUrl) return { error: 'Fichier ou URL requis.' }
+    resolvedUrl = fallbackUrl
+  }
+
   const { error: insertErr } = await supabase.from('order_proofs').insert({
     proof_type: proofType,
-    file_url: fileUrl,
+    file_url: resolvedUrl,
     uploaded_by: userId,
     related_order_id: orderId,
     notes,
