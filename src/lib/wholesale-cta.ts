@@ -20,7 +20,7 @@ export function getSupplierProductCtaMode(product: {
 
   const hasPrice =
     product.suggested_wholesale_price_mad != null && product.suggested_wholesale_price_mad > 0
-  const hasStock = product.stock_quantity != null && product.stock_quantity > 0
+  const hasStock = product.stock_quantity == null || product.stock_quantity > 0
   const hasMoq = product.min_quantity >= 1
 
   if (hasPrice && hasStock && hasMoq) return 'direct'
