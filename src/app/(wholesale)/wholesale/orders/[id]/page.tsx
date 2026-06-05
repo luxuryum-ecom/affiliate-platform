@@ -7,6 +7,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
 import { InvoiceRequestForm } from '@/components/wholesale/invoice-request-form'
+import { WholesaleProofForm } from '@/components/wholesale/wholesale-proof-form'
 import type {
   WholesaleOrder,
   WholesaleOrderItem,
@@ -14,6 +15,7 @@ import type {
   WholesaleOrderPaymentHistory,
   WholesaleImportStatus,
   WholesalePaymentStatus,
+  OrderProof,
   Product,
   Profile,
 } from '@/types/database'
@@ -71,7 +73,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [profileRes, orderRes, itemsRes, importHistoryRes, paymentHistoryRes] = await Promise.all([
+  const [profileRes, orderRes, itemsRes, importHistoryRes, paymentHistoryRes, proofsRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('full_name, company_name, ice, registre_commerce, billing_address')
@@ -97,6 +99,11 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
       .select('*')
       .eq('order_id', id)
       .order('changed_at', { ascending: false }),
+    supabase
+      .from('order_proofs')
+      .select('*')
+      .eq('related_wholesale_order_id', id)
+      .order('uploaded_at', { ascending: false }),
   ])
 
   const profile = profileRes.data as BillingProfile | null
@@ -104,6 +111,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
   const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
+  const proofs = (proofsRes.data ?? []) as unknown as OrderProof[]
 
   if (!order) notFound()
 
@@ -366,6 +374,16 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                     Notre équipe vous contactera pour les modalités de paiement.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Payment proof upload */}
+            {!['cancelled'].includes(order.status) && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">
+                  Justificatif de paiement
+                </h2>
+                <WholesaleProofForm orderId={order.id} existingProofs={proofs} />
               </div>
             )}
 

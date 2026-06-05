@@ -921,3 +921,58 @@ export async function updateWholesalePaymentStatus(
   revalidatePath('/admin/analytics')
   return { error: null, success: true }
 }
+
+// =============================================================================
+// WHOLESALER — SOUMETTRE UN JUSTIFICATIF DE PAIEMENT
+// =============================================================================
+
+/**
+ * Wholesaler submits a payment proof URL for one of their wholesale orders.
+ * Ownership is verified via .eq('buyer_id', user.id) before insert.
+ * URL-only — no file upload (BUG-065 scope).
+ */
+export async function addWholesaleOrderProof(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return fail('Non authentifié.')
+
+  const orderId   = (formData.get('orderId') as string)?.trim()
+  const proofType = (formData.get('proofType') as string)?.trim()
+  const fileUrl   = (formData.get('fileUrl') as string)?.trim()
+  const notes     = (formData.get('notes') as string)?.trim() || null
+
+  if (!orderId)   return fail('Commande non spécifiée.')
+  if (!proofType) return fail('Type de preuve requis.')
+  if (!fileUrl)   return fail('URL du justificatif requis.')
+
+  const ALLOWED: string[] = ['bank_receipt', 'transfer_proof', 'other']
+  if (!ALLOWED.includes(proofType)) return fail('Type de preuve invalide.')
+
+  // Verrou propriété — le grossiste ne peut attacher une preuve qu'à ses propres commandes
+  const { data: order } = await supabase
+    .from('wholesale_orders')
+    .select('id')
+    .eq('id', orderId)
+    .eq('buyer_id', user.id)
+    .single()
+
+  if (!order) return fail('Commande introuvable.')
+
+  const { error } = await supabase.from('order_proofs').insert({
+    related_wholesale_order_id: orderId,
+    proof_type:  proofType,
+    file_url:    fileUrl,
+    uploaded_by: user.id,
+    notes,
+  })
+
+  if (error) return fail(error.message)
+
+  revalidatePath(`/wholesale/orders/${orderId}`)
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  return ok
+}

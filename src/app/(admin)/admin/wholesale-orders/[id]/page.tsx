@@ -10,7 +10,7 @@ import { WholesaleImportStatusForm } from '@/components/admin/wholesale-import-s
 import { WholesalePaymentForm } from '@/components/admin/wholesale-payment-form'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
 import { WholesaleCostForm } from '@/components/admin/wholesale-cost-form'
-import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, WholesaleOrderPaymentHistory, WholesalePaymentStatus, QuoteRequest } from '@/types/database'
+import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, WholesaleOrderPaymentHistory, WholesalePaymentStatus, QuoteRequest, OrderProof } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -58,7 +58,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = adminProfileRes.data as { full_name: string } | null
 
-  const [orderRes, itemsRes, importHistoryRes, paymentHistoryRes] = await Promise.all([
+  const [orderRes, itemsRes, importHistoryRes, paymentHistoryRes, proofsRes] = await Promise.all([
     supabase
       .from('wholesale_orders')
       .select('*, buyer:profiles!buyer_id(id,full_name,phone,city), agent:profiles!agent_id(id,full_name)')
@@ -78,12 +78,18 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       .select('*')
       .eq('order_id', id)
       .order('changed_at', { ascending: false }),
+    supabase
+      .from('order_proofs')
+      .select('*')
+      .eq('related_wholesale_order_id', id)
+      .order('uploaded_at', { ascending: false }),
   ])
 
   const order = orderRes.data as unknown as OrderDetail | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
   const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
+  const proofs = (proofsRes.data ?? []) as unknown as OrderProof[]
 
   // Fetch linked quote if this order was created from a quote
   let linkedQuote: LinkedQuote | null = null
@@ -241,6 +247,39 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 <OrderTimeline steps={paymentTimeline} />
               )}
             </div>
+
+            {/* Justificatifs soumis par le grossiste */}
+            {proofs.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">
+                  Justificatifs de paiement
+                </h2>
+                <ul className="space-y-2">
+                  {proofs.map((p) => (
+                    <li key={p.id} className="flex items-center gap-3 text-xs">
+                      <a
+                        href={p.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {p.proof_type === 'bank_receipt'
+                          ? 'Reçu bancaire'
+                          : p.proof_type === 'transfer_proof'
+                          ? 'Preuve de virement'
+                          : 'Autre'}
+                      </a>
+                      <span className="text-gray-400 shrink-0">
+                        {new Date(p.uploaded_at).toLocaleDateString('fr-MA')}
+                      </span>
+                      {p.notes && (
+                        <span className="text-gray-500 italic truncate">{p.notes}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* ── Right: status update + cost breakdown ── */}
