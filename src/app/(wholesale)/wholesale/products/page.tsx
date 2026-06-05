@@ -5,6 +5,7 @@ import { signOut } from '@/app/actions/auth'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
+import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
 import type { Product, WholesaleCartItem } from '@/types/database'
 
 export const metadata = {
@@ -153,7 +154,7 @@ function WholesaleProductCard({
     .map((t) => t.min_qty)
   const hasTiers = tierQtys.length > 0
   const productUrl = `/wholesale/products/${product.id}`
-  const isRfq = product.availability_type === 'import_on_demand'
+  const isRfq = getCatalogProductCtaMode(product.availability_type) === 'rfq'
 
   return (
     <div className="group bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">

@@ -11,7 +11,7 @@ interface Props {
   supplierProductId: string
   unitPrice: number
   minQty: number
-  stockCount: number
+  stockCount: number | null
   unit: string
 }
 
@@ -25,12 +25,15 @@ export function MarketplaceDirectOrderForm({
   const [state, action, isPending] = useActionState(addMarketplaceToCart, initialState)
   const [qty, setQty] = useState(minQty)
 
+  const isOutOfStock   = stockCount === 0
+  const hasKnownStock  = stockCount != null && stockCount > 0
+
   const subtotal = unitPrice * qty
   const decrement = () => setQty((q) => Math.max(minQty, q - 1))
-  const increment = () => setQty((q) => Math.min(stockCount, q + 1))
+  const increment = () => setQty((q) => hasKnownStock ? Math.min(stockCount!, q + 1) : q + 1)
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10)
-    if (!isNaN(val) && val >= minQty) setQty(Math.min(stockCount, val))
+    if (!isNaN(val) && val >= minQty) setQty(hasKnownStock ? Math.min(stockCount!, val) : val)
   }
 
   return (
@@ -61,13 +64,13 @@ export function MarketplaceDirectOrderForm({
               value={qty}
               onChange={handleInput}
               min={minQty}
-              max={stockCount}
+              max={stockCount ?? undefined}
               className="w-20 text-center py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
             <button
               type="button"
               onClick={increment}
-              disabled={qty >= stockCount}
+              disabled={hasKnownStock && qty >= stockCount!}
               className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-lg leading-none"
             >
               +
@@ -85,9 +88,11 @@ export function MarketplaceDirectOrderForm({
             <span className="font-bold text-gray-900 text-base">{formatMAD(subtotal)}</span>
           </div>
           <p className="text-xs text-gray-400">
-            {stockCount > 0
-              ? `${stockCount.toLocaleString('fr-MA')} ${unit} en stock`
-              : 'Stock limité'}
+            {hasKnownStock
+              ? `${stockCount!.toLocaleString('fr-MA')} ${unit} en stock`
+              : isOutOfStock
+              ? 'Produit épuisé'
+              : 'Stock disponible'}
           </p>
         </div>
 
@@ -110,14 +115,10 @@ export function MarketplaceDirectOrderForm({
 
         <button
           type="submit"
-          disabled={isPending || stockCount === 0}
+          disabled={isPending || isOutOfStock}
           className="w-full py-3 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isPending
-            ? 'Ajout en cours…'
-            : stockCount === 0
-            ? 'Produit épuisé'
-            : 'Ajouter au panier'}
+          {isPending ? 'Ajout en cours…' : isOutOfStock ? 'Produit épuisé' : 'Ajouter au panier'}
         </button>
       </form>
     </div>

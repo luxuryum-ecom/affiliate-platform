@@ -74,7 +74,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const isMorocco = product.supplier_type === 'morocco'
   const ctaMode = getSupplierProductCtaMode(product)
   const directUnitPrice = product.suggested_wholesale_price_mad ?? 0
-  const directStock = product.stock_quantity ?? 0
+  const directStock = product.stock_quantity
 
   const hasCatalog = attachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
   const hasVideo   = attachments.some((a) => a.attachment_type === 'video')
