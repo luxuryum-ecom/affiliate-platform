@@ -313,8 +313,12 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
           {/* ── Right: timeline ── */}
           <div className="space-y-4">
-            {order.status === 'pending' && (
-              <WholesalePendingActions orderId={order.id} currentNote={order.buyer_notes} />
+            {!['cancelled'].includes(order.status) && (
+              <WholesalePendingActions
+                orderId={order.id}
+                currentNote={order.buyer_notes}
+                status={order.status}
+              />
             )}
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
