@@ -179,9 +179,17 @@ export default async function AdminSourcingPage() {
                           <p className="text-xs text-gray-500 mt-1 italic">&ldquo;{r.notes}&rdquo;</p>
                         )}
                       </div>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>
-                        {badge.label}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                        <Link
+                          href={`/admin/sourcing/${r.id}`}
+                          className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium"
+                        >
+                          Détail →
+                        </Link>
+                      </div>
                     </div>
                     {r.delivery_deadline && (
                       <p className="text-xs text-gray-400 mt-2">
