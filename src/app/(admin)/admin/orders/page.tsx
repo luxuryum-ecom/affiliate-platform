@@ -67,17 +67,18 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const raw = search?.trim().replace(/^#/, '') ?? ''
   const isRefSearch = /^[0-9a-f]{8}$/i.test(raw)
 
-  if (raw && !isRefSearch) {
-    const term = `%${raw}%`
-    query = query.or(`customer_name.ilike.${term},customer_phone.ilike.${term}`)
+  if (raw) {
+    if (isRefSearch) {
+      // UUID prefix — PostgREST casts UUID to text automatically for LIKE
+      query = query.like('id', `${raw.toLowerCase()}%`)
+    } else {
+      const term = `%${raw}%`
+      query = query.or(`customer_name.ilike.${term},customer_phone.ilike.${term},customer_city.ilike.${term}`)
+    }
   }
 
   const { data: orders } = (await query) as { data: OrderRow[] | null; error: unknown }
-  let list = orders ?? []
-
-  if (isRefSearch) {
-    list = list.filter(o => o.id.toLowerCase().startsWith(raw.toLowerCase()))
-  }
+  const list = orders ?? []
 
   // ── Status counts (always over full dataset) ──────────────────────────────
   const { data: allStatuses } = (await supabase
