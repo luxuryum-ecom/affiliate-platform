@@ -64,13 +64,20 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   if (filterStatus)  query = query.eq('status', filterStatus)
   if (affiliate_id)  query = query.eq('affiliate_id', affiliate_id)
-  if (search?.trim()) {
-    const term = `%${search.trim()}%`
+  const raw = search?.trim().replace(/^#/, '') ?? ''
+  const isRefSearch = /^[0-9a-f]{8}$/i.test(raw)
+
+  if (raw && !isRefSearch) {
+    const term = `%${raw}%`
     query = query.or(`customer_name.ilike.${term},customer_phone.ilike.${term}`)
   }
 
   const { data: orders } = (await query) as { data: OrderRow[] | null; error: unknown }
-  const list = orders ?? []
+  let list = orders ?? []
+
+  if (isRefSearch) {
+    list = list.filter(o => o.id.toLowerCase().startsWith(raw.toLowerCase()))
+  }
 
   // ── Status counts (always over full dataset) ──────────────────────────────
   const { data: allStatuses } = (await supabase
