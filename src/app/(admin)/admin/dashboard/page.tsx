@@ -39,6 +39,8 @@ export default async function AdminDashboardPage() {
     pendingCommissionsRes,
     { count: pendingSupplierProducts },
     { count: pendingSourcingRequests },
+    { count: pendingMarketplaceRFQs },
+    { count: pendingSampleRequests },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -77,6 +79,14 @@ export default async function AdminDashboardPage() {
       .eq('approval_status', 'pending_review'),
     supabase
       .from('sourcing_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabase
+      .from('supplier_quote_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['new', 'studying']),
+    supabase
+      .from('sample_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending'),
   ])
@@ -231,6 +241,12 @@ export default async function AdminDashboardPage() {
                 href: '/admin/quote-requests',
               },
               {
+                title: 'Devis marketplace',
+                description: 'RFQ grossistes sur produits fournisseurs.',
+                badge: pendingMarketplaceRFQs ?? 0,
+                href: '/admin/supplier-quotes',
+              },
+              {
                 title: 'Produits fournisseurs',
                 description: 'Examiner et approuver les soumissions des fournisseurs.',
                 badge: pendingSupplierProducts ?? 0,
@@ -257,7 +273,7 @@ export default async function AdminDashboardPage() {
               {
                 title: 'Médiation échantillons',
                 description: 'Valider fichiers, catalogues et demandes d\'échantillons.',
-                badge: null,
+                badge: pendingSampleRequests ?? 0,
                 href: '/admin/samples',
               },
               {

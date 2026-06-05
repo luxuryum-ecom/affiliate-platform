@@ -6,6 +6,7 @@ import { MozounaLogo } from '@/components/shared/branding'
 import type { Profile, WholesaleOrder } from '@/types/database'
 
 type QuoteCountRow = { status: string }
+type SupplierQuoteCountRow = { status: string }
 
 export const metadata = {
   title: 'Tableau de bord — Espace Grossiste',
@@ -29,6 +30,8 @@ export default async function WholesaleDashboardPage() {
     { count: cartItemCount },
     { data: orderRows },
     { data: quoteStatusRows },
+    { data: supplierQuoteRows },
+    { count: pendingSampleCount },
   ] = await Promise.all([
     supabase
       .from('wholesale_orders')
@@ -46,6 +49,15 @@ export default async function WholesaleDashboardPage() {
       .from('quote_requests')
       .select('status')
       .eq('buyer_id', user!.id) as unknown as Promise<{ data: QuoteCountRow[] | null; error: unknown }>,
+    supabase
+      .from('supplier_quote_requests')
+      .select('status')
+      .eq('buyer_id', user!.id) as unknown as Promise<{ data: SupplierQuoteCountRow[] | null; error: unknown }>,
+    supabase
+      .from('sample_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('wholesaler_id', user!.id)
+      .eq('status', 'pending'),
   ])
 
   const totalSpend = (orderRows ?? [])
@@ -57,9 +69,13 @@ export default async function WholesaleDashboardPage() {
   ).length
 
   const quoteRows = quoteStatusRows ?? []
+  const sqRows = supplierQuoteRows ?? []
   const preparedQuotes  = quoteRows.filter((q) => q.status === 'quote_prepared').length
+                        + sqRows.filter((q) => q.status === 'quoted').length
   const acceptedQuotes  = quoteRows.filter((q) => q.status === 'accepted_by_client').length
+                        + sqRows.filter((q) => q.status === 'approved').length
   const rejectedQuotes  = quoteRows.filter((q) => q.status === 'rejected_by_client').length
+                        + sqRows.filter((q) => q.status === 'rejected').length
 
   const stats = [
     { label: 'Commandes passées', value: String(totalOrders ?? 0) },
@@ -221,9 +237,18 @@ export default async function WholesaleDashboardPage() {
         {/* Sample requests */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Demandes d&apos;échantillons</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-900">Demandes d&apos;échantillons</h2>
+              {(pendingSampleCount ?? 0) > 0 && (
+                <span className="text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                  {pendingSampleCount}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-gray-500 mt-0.5">
-              Demandez des photos, vidéos ou échantillons physiques depuis la marketplace.
+              {(pendingSampleCount ?? 0) > 0
+                ? `${pendingSampleCount} demande${(pendingSampleCount as number) > 1 ? 's' : ''} en attente de traitement.`
+                : 'Demandez des photos, vidéos ou échantillons physiques depuis la marketplace.'}
             </p>
           </div>
           <Link
