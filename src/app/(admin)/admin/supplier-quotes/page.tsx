@@ -78,7 +78,7 @@ export default async function AdminSupplierQuotesPage({ searchParams }: PageProp
               ← Dashboard
             </Link>
             <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Devis fournisseurs</span>
+            <span className="font-semibold text-gray-900 text-sm">Demandes de devis — Marketplace</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/admin/supplier-analytics" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
@@ -95,6 +95,16 @@ export default async function AdminSupplierQuotesPage({ searchParams }: PageProp
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Demandes de devis — Marketplace</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Devis issus de la marketplace fournisseurs (produits supplier). Pour les devis catalogue interne, voir{' '}
+            <Link href="/admin/quote-requests" className="underline underline-offset-2 hover:text-gray-800">
+              Demandes de devis →
+            </Link>
+          </p>
+        </div>
 
         {/* Analytics strip */}
         <div className="grid grid-cols-3 gap-4">

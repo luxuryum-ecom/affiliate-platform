@@ -69,7 +69,7 @@ export default async function AdminQuoteRequestsPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-2">
           <h1 className="text-sm font-semibold text-gray-900">
             Demandes de devis
           </h1>
@@ -77,6 +77,12 @@ export default async function AdminQuoteRequestsPage() {
             {requests.length}
           </span>
         </div>
+        <p className="text-xs text-gray-500 mb-4">
+          Devis catalogue interne uniquement. Pour les devis issus de la marketplace fournisseurs, voir{' '}
+          <Link href="/admin/supplier-quotes" className="underline underline-offset-2 hover:text-gray-800">
+            Demandes de devis — Marketplace →
+          </Link>
+        </p>
 
         {/* Analytics strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
