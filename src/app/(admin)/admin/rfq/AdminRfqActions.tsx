@@ -19,10 +19,20 @@ export function RunMatchingButton({ sourcingId }: { sourcingId: string }) {
 
 export function NotifyButton({ matchIds }: { matchIds: string[] }) {
   const [isPending, startTransition] = useTransition()
+  const handleClick = () => {
+    const confirmed = window.confirm(
+      `Notifier ${matchIds.length} fournisseur${matchIds.length > 1 ? 's' : ''} ?\n\n` +
+      `Action : changement de statut interne "nouveau → notifié".\n` +
+      `Aucun email ni WhatsApp n'est envoyé automatiquement.\n\n` +
+      `Les fournisseurs verront l'opportunité sur leur espace /supplier/opportunities.`
+    )
+    if (!confirmed) return
+    startTransition(async () => { await notifyMatchedSuppliers(matchIds) })
+  }
   return (
     <button
       disabled={isPending || matchIds.length === 0}
-      onClick={() => startTransition(async () => { await notifyMatchedSuppliers(matchIds) })}
+      onClick={handleClick}
       className="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
     >
       {isPending ? '...' : `🔔 Notifier ${matchIds.length} fournisseur${matchIds.length > 1 ? 's' : ''}`}
