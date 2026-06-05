@@ -143,7 +143,12 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               )}
               {product.stock_count === 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-                  Stock épuisé
+                  Indisponible
+                </span>
+              )}
+              {product.stock_count > 0 && product.stock_count < product.wholesale_min_qty && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                  Stock partiel
                 </span>
               )}
             </div>
