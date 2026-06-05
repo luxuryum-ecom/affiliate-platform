@@ -380,7 +380,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
               className={INPUT}
             >
               <option value="">Sélectionner une catégorie...</option>
-              {productCategory && !PRODUCT_CATEGORIES.includes(productCategory) && (
+              {productCategory && !(PRODUCT_CATEGORIES as readonly string[]).includes(productCategory) && (
                 <option value={productCategory}>{productCategory} (⚠ valeur legacy)</option>
               )}
               {PRODUCT_CATEGORIES.map((cat) => (

@@ -161,6 +161,7 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     (s, o) => s + Math.max(0, o.total_amount - (o.deposit_received_amount ?? 0)), 0
   )
   const wsFullyPaidRevenue = wsFullyPaid.reduce((s, o) => s + o.total_amount, 0)
+  const wsWithDeposit      = wsActiveOrders.filter((o) => (o.deposit_received_amount ?? 0) > 0)
 
   const productMap   = new Map(products.map((p) => [p.id, p.name]))
   const affiliateMap = new Map(affiliates.map((a) => [a.id, a.full_name]))
@@ -440,7 +441,7 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
               <StatCard
                 label="Acomptes reçus"
                 value={formatMAD(wsTotalDepositsReceived)}
-                sub={`${wsDepositReceived.length + wsFullyPaid.length} cmde${wsDepositReceived.length + wsFullyPaid.length !== 1 ? 's' : ''} avec acompte`}
+                sub={`${wsWithDeposit.length} cmde${wsWithDeposit.length !== 1 ? 's' : ''} avec acompte`}
                 variant="success"
               />
               <StatCard
