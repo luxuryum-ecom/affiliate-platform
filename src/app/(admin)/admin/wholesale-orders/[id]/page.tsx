@@ -157,6 +157,9 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                     <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
                       {paymentBadge.label}
                     </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      {order.quote_request_id ? '📋 Via devis' : '🛒 Commande directe'}
+                    </span>
                   </div>
                   <p className="mt-2 text-xs text-gray-400">
                     Créée le {new Date(order.created_at).toLocaleString('fr-MA')}
