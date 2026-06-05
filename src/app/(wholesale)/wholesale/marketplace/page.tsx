@@ -158,7 +158,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         <div className="mb-5">
           <h1 className="text-xl font-bold text-gray-900">Marketplace fournisseurs</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Produits sélectionnés de nos fournisseurs vérifiés. Demandez un devis directement.
+            Produits sélectionnés de nos fournisseurs vérifiés. Stock local disponible ou import sur mesure.
           </p>
         </div>
 

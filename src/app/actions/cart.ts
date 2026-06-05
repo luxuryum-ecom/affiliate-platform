@@ -133,7 +133,7 @@ export async function addMarketplaceToCart(
   if (!catalogProduct) {
     return {
       error:
-        'Commande panier indisponible pour ce produit marketplace. Utilisez « Demander un devis » ou le catalogue Mozouna.',
+        'Ce produit n\'est pas encore disponible en commande directe. Utilisez « Demander un devis » pour recevoir une offre de notre équipe.',
       success: false,
     }
   }
