@@ -188,6 +188,45 @@ export default async function AdminRfqPage() {
                   </p>
                 </div>
 
+                {/* Offer comparison table — shown when ≥2 actual offers received */}
+                {(() => {
+                  const offersWithPrice = reqMatches
+                    .flatMap((m) => m.offers.filter((o) => o.response_type === 'offer').map((o) => ({ m, o })))
+                  if (offersWithPrice.length < 2) return null
+                  return (
+                    <div className="px-5 py-4 border-b border-gray-200 bg-amber-50">
+                      <p className="text-xs font-semibold text-amber-800 mb-2">Comparaison des offres reçues</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-left text-gray-500 border-b border-amber-200">
+                              <th className="pb-1.5 pr-4 font-medium">Fournisseur</th>
+                              <th className="pb-1.5 pr-4 font-medium">Prix/u.</th>
+                              <th className="pb-1.5 pr-4 font-medium">MOQ</th>
+                              <th className="pb-1.5 pr-4 font-medium">Délai</th>
+                              <th className="pb-1.5 font-medium">Score</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-100">
+                            {offersWithPrice.map(({ m, o }) => (
+                              <tr key={o.id} className={m.status === 'selected' ? 'font-semibold text-green-800' : 'text-gray-700'}>
+                                <td className="py-1.5 pr-4">
+                                  {m.supplier?.full_name ?? '—'}
+                                  {m.status === 'selected' && <span className="ml-1 text-green-600">✓</span>}
+                                </td>
+                                <td className="py-1.5 pr-4">{o.unit_price_usd != null ? `$${o.unit_price_usd}` : '—'}</td>
+                                <td className="py-1.5 pr-4">{o.moq_offered != null ? o.moq_offered : '—'}</td>
+                                <td className="py-1.5 pr-4">{o.lead_time_days != null ? `${o.lead_time_days}j` : '—'}</td>
+                                <td className="py-1.5">{Math.round(m.total_score)}/100</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 <div className="divide-y divide-gray-100">
                   {reqMatches.map((m, idx) => {
                     const badge = STATUS_BADGE[m.status]
@@ -250,6 +289,14 @@ export default async function AdminRfqPage() {
                               {m.status === 'new' && <MatchStatusButton matchId={m.id} newStatus="notified" label="Notifier" />}
                               {m.status === 'offer_received' && <MatchStatusButton matchId={m.id} newStatus="selected" label="Sélectionner" />}
                               {!['expired','selected'].includes(m.status) && <MatchStatusButton matchId={m.id} newStatus="expired" label="Expirer" />}
+                              {m.status === 'selected' && (
+                                <Link
+                                  href="/admin/quote-requests"
+                                  className="text-xs px-2.5 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors font-medium"
+                                >
+                                  → Créer un devis
+                                </Link>
+                              )}
                             </div>
                           </div>
                         </div>
