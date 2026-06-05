@@ -152,14 +152,13 @@ function WholesaleProductCard({
     .sort((a, b) => a.min_qty - b.min_qty)
     .map((t) => t.min_qty)
   const hasTiers = tierQtys.length > 0
+  const productUrl = `/wholesale/products/${product.id}`
+  const isRfq = product.availability_type === 'import_on_demand'
 
   return (
-    <Link
-      href={`/wholesale/products/${product.id}`}
-      className="group bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
-    >
+    <div className="group bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
       {/* Thumbnail */}
-      <div className="aspect-square relative overflow-hidden">
+      <Link href={productUrl} className="aspect-square relative overflow-hidden block">
         <ProductThumbnail
           src={coverUrl}
           name={product.name}
@@ -172,19 +171,19 @@ function WholesaleProductCard({
             {inCartQty} au panier
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Info */}
       <div className="p-3 flex flex-col gap-1.5 flex-1">
         <div className="flex items-center gap-1.5">
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
-              product.availability_type === 'import_on_demand'
+              isRfq
                 ? 'bg-purple-100 text-purple-700'
                 : 'bg-green-100 text-green-700'
             }`}
           >
-            {product.availability_type === 'import_on_demand' ? 'Import / Demande' : 'Stock Maroc'}
+            {isRfq ? 'Import / Demande' : 'Stock Maroc'}
           </span>
           {hasTiers && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
@@ -193,9 +192,11 @@ function WholesaleProductCard({
           )}
         </div>
 
-        <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2">
-          {product.name}
-        </h3>
+        <Link href={productUrl}>
+          <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2 hover:text-gray-600 transition-colors">
+            {product.name}
+          </h3>
+        </Link>
 
         <div className="mt-auto pt-1.5 border-t border-gray-100">
           <p className="text-sm font-bold text-gray-900">{formatMAD(displayPrice)}</p>
@@ -203,7 +204,15 @@ function WholesaleProductCard({
             {hasTiers ? 'À partir de · ' : ''}{product.wholesale_min_qty} u. min.
           </p>
         </div>
+
+        {/* CTA */}
+        <Link
+          href={productUrl}
+          className="block w-full text-center text-xs font-bold py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+        >
+          {isRfq ? 'Demander un devis →' : 'Ajouter au panier'}
+        </Link>
       </div>
-    </Link>
+    </div>
   )
 }
