@@ -486,7 +486,7 @@ function CountrySourceSection({
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-                  MAROC — STOCK DISPONIBLE
+                  MAROC — STOCK LOCAL DISPONIBLE
                 </h3>
                 {moroccoActive && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-emerald-700 border border-emerald-200">
@@ -512,7 +512,7 @@ function CountrySourceSection({
           </div>
           <div className="flex-shrink-0">
             <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-emerald-700 font-bold text-sm shadow-sm hover:shadow transition-shadow whitespace-nowrap">
-              Voir les produits disponibles →
+              Voir le stock local Maroc →
             </span>
           </div>
         </div>
