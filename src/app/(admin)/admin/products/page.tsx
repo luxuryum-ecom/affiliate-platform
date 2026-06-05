@@ -228,11 +228,18 @@ function ProductRow({ product }: { product: Product }) {
   return (
     <div className="flex items-start gap-3 p-4">
       {/* Thumbnail */}
-      <ProductThumbnail
-        src={coverUrl}
-        name={product.name}
-        className="w-12 h-12 rounded-lg border border-gray-200 text-xs"
-      />
+      <div className="relative shrink-0">
+        <ProductThumbnail
+          src={coverUrl}
+          name={product.name}
+          className="w-12 h-12 rounded-lg border border-gray-200 text-xs"
+        />
+        {!coverUrl && (
+          <span className="absolute -bottom-1.5 -right-1.5 text-xs bg-amber-100 text-amber-700 rounded px-1 leading-tight font-medium">
+            !
+          </span>
+        )}
+      </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
@@ -250,6 +257,13 @@ function ProductRow({ product }: { product: Product }) {
           <span className={`text-xs px-2 py-0.5 rounded-full ${approvalBadge.cls}`}>
             {approvalBadge.label}
           </span>
+
+          {/* No image badge */}
+          {!coverUrl && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+              Sans image
+            </span>
+          )}
 
           {/* Affiliate enabled badge */}
           {!product.affiliate_enabled && (
