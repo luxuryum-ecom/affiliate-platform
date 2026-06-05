@@ -8,6 +8,7 @@ import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
 import { InvoiceRequestForm } from '@/components/wholesale/invoice-request-form'
 import { WholesaleProofForm } from '@/components/wholesale/wholesale-proof-form'
+import { WholesalePendingActions } from '@/components/wholesale/wholesale-pending-actions'
 import type {
   WholesaleOrder,
   WholesaleOrderItem,
@@ -312,6 +313,10 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
           {/* ── Right: timeline ── */}
           <div className="space-y-4">
+            {order.status === 'pending' && (
+              <WholesalePendingActions orderId={order.id} currentNote={order.buyer_notes} />
+            )}
+
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de commande</h2>
               <OrderTimeline steps={timeline} />

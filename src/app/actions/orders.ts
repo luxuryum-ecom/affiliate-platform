@@ -984,3 +984,69 @@ export async function addWholesaleOrderProof(
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
   return ok
 }
+
+export async function cancelWholesaleOrderBuyer(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return fail('Non authentifié.')
+
+  const orderId = (formData.get('orderId') as string)?.trim()
+  if (!orderId) return fail('Commande non spécifiée.')
+
+  const { data: order } = await supabase
+    .from('wholesale_orders')
+    .select('id, status')
+    .eq('id', orderId)
+    .eq('buyer_id', user.id)
+    .single()
+
+  if (!order) return fail('Commande introuvable.')
+  if (order.status !== 'pending') return fail('Cette commande ne peut plus être annulée.')
+
+  const { error } = await supabase
+    .from('wholesale_orders')
+    .update({ status: 'cancelled' })
+    .eq('id', orderId)
+
+  if (error) return fail(error.message)
+
+  revalidatePath(`/wholesale/orders/${orderId}`)
+  revalidatePath('/wholesale/orders')
+  return ok
+}
+
+export async function updateWholesaleOrderBuyerNote(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return fail('Non authentifié.')
+
+  const orderId = (formData.get('orderId') as string)?.trim()
+  const note = (formData.get('buyer_notes') as string)?.trim() || null
+  if (!orderId) return fail('Commande non spécifiée.')
+
+  const { data: order } = await supabase
+    .from('wholesale_orders')
+    .select('id, status')
+    .eq('id', orderId)
+    .eq('buyer_id', user.id)
+    .single()
+
+  if (!order) return fail('Commande introuvable.')
+  if (order.status !== 'pending') return fail('Cette commande ne peut plus être modifiée.')
+
+  const { error } = await supabase
+    .from('wholesale_orders')
+    .update({ buyer_notes: note })
+    .eq('id', orderId)
+
+  if (error) return fail(error.message)
+
+  revalidatePath(`/wholesale/orders/${orderId}`)
+  return ok
+}
