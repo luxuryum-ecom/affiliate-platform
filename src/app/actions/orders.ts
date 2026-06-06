@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { calculateNetAffiliateCommission, getWholesaleTier } from '@/lib/utils'
@@ -35,7 +36,8 @@ export async function placeOrder(
   _prevState: OrderFormState,
   formData: FormData
 ): Promise<OrderFormState> {
-  const supabase = await createClient()
+  // COD public flow — no session. Use service_role to bypass anon RLS policies.
+  const supabase = createAdminClient()
 
   const productId  = (formData.get('productId') as string)?.trim()
   const affiliateIdRaw = (formData.get('affiliateId') as string)?.trim() || null

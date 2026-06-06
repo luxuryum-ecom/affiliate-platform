@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { formatMAD } from '@/lib/utils'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getDeliveryEstimate } from '@/lib/order-analytics'
@@ -49,10 +50,12 @@ export default async function PublicProductPage({ params, searchParams }: Params
   const affiliateId = ref ?? null
 
   // Look up affiliate's custom sell price if a referral is present.
+  // Uses service_role to bypass "aff_prices: anon read" policy (removed in migration 047).
   // Falls back to product.sell_price when no custom price is set.
   let customSellPrice: number | null = null
   if (affiliateId) {
-    const { data: priceRow } = (await supabase
+    const adminClient = createAdminClient()
+    const { data: priceRow } = (await adminClient
       .from('affiliate_product_prices')
       .select('custom_sell_price_mad')
       .eq('affiliate_id', affiliateId)

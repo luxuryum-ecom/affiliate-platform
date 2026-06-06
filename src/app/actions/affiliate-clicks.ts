@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { headers } from 'next/headers'
 
 export async function recordAffiliateClick(
@@ -10,6 +11,7 @@ export async function recordAffiliateClick(
 ): Promise<{ clickId: string | null }> {
   if (!affiliateId || !productId) return { clickId: null }
 
+  // Validate affiliate via anon client (profiles is readable by anon for this check).
   const supabase = await createClient()
 
   const { data: affiliate } = (await supabase
@@ -26,7 +28,10 @@ export async function recordAffiliateClick(
   const userAgent = hdrs.get('user-agent') ?? undefined
   const referrerPath = hdrs.get('referer') ?? undefined
 
-  const { data: click } = (await supabase
+  // INSERT via service_role to bypass "clicks: anon insert" policy (removed in migration 047).
+  const adminClient = createAdminClient()
+
+  const { data: click } = (await adminClient
     .from('affiliate_clicks')
     .insert({
       affiliate_id: affiliateId,
