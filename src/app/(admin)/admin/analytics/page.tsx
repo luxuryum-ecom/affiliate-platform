@@ -88,7 +88,8 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     supabase
       .from('profiles')
       .select('id, full_name')
-      .eq('role', 'affiliate') as unknown as Promise<{ data: Pick<Profile, 'id' | 'full_name'>[] | null; error: unknown }>,
+      .eq('role', 'affiliate')
+      .eq('status', 'approved') as unknown as Promise<{ data: Pick<Profile, 'id' | 'full_name'>[] | null; error: unknown }>,
 
     (since
       ? supabase
