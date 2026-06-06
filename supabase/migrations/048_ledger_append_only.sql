@@ -76,6 +76,14 @@ CREATE TRIGGER trg_ledger_block_mutations
   BEFORE UPDATE OR DELETE ON public.ledger_entries
   FOR EACH ROW EXECUTE FUNCTION public.ledger_block_mutations();
 
+-- TRUNCATE n'est pas couvert par un trigger FOR EACH ROW : on le bloque
+-- explicitement par un trigger STATEMENT (sinon le ledger pourrait être vidé
+-- d'un coup sans déclencher la garde ci-dessus). Append-only complet.
+DROP TRIGGER IF EXISTS trg_ledger_block_truncate ON public.ledger_entries;
+CREATE TRIGGER trg_ledger_block_truncate
+  BEFORE TRUNCATE ON public.ledger_entries
+  FOR EACH STATEMENT EXECUTE FUNCTION public.ledger_block_mutations();
+
 -- ── 3. RLS (deny par défaut) ─────────────────────────────────────────────────
 
 ALTER TABLE public.ledger_entries ENABLE ROW LEVEL SECURITY;
