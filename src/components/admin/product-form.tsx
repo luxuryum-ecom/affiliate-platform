@@ -86,11 +86,13 @@ const MEDIA_TYPE_LABELS: Record<MediaItem['type'], string> = {
 interface ProductFormProps {
   product?: Product
   tariffs?: ImportTariff[]
+  /** Taux centraux courants par devise (rate_vs_mad), ex. { MAD:1, USD:10, ... }. */
+  rates?: Record<string, number>
 }
 
 const initialState: ProductFormState = { error: null }
 
-export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
+export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormProps) {
   const [state, action, isPending] = useActionState(upsertProduct, initialState)
 
   // ── Availability state ────────────────────────────────────────────────────
@@ -148,9 +150,17 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
   const [purchaseCurrency, setPurchaseCurrency] = useState<string>(
     product?.purchase_currency ?? 'MAD'
   )
+  // Taux central par défaut d'une devise (réconciliation Étape 2). MAD ⇒ 1.
+  const centralRateFor = (code: string): number => (code === 'MAD' ? 1 : rates[code] ?? 1)
   const [exchangeRate, setExchangeRate] = useState<string>(
-    String(product?.exchange_rate_to_mad ?? 1)
+    // Produit existant : on garde le taux enregistré (override). Nouveau : taux central.
+    String(product?.exchange_rate_to_mad ?? centralRateFor(product?.purchase_currency ?? 'MAD'))
   )
+  // À la bascule de devise, pré-remplir le taux central (l'admin peut surcharger ensuite).
+  const handleCurrencyChange = (code: string) => {
+    setPurchaseCurrency(code)
+    setExchangeRate(String(centralRateFor(code)))
+  }
   const [margin, setMargin] = useState<string>(
     String(product?.margin_percentage ?? 30)
   )
@@ -890,7 +900,7 @@ export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
             <select
               id="purchase_currency" name="purchase_currency" disabled={isPending}
               value={purchaseCurrency}
-              onChange={(e) => setPurchaseCurrency(e.target.value)}
+              onChange={(e) => handleCurrencyChange(e.target.value)}
               className={INPUT}
             >
               <option value="MAD">MAD — Dirham marocain</option>

@@ -1068,6 +1068,9 @@ export type Database = {
           created_at: string
           destination_city: string | null
           destination_country: string
+          display_currency: string | null
+          fx_rate_display_vs_mad: number | null
+          fx_rate_source_to_mad: number | null
           id: string
           preferred_shipping_mode: string | null
           product_id: string
@@ -1080,7 +1083,9 @@ export type Database = {
           quoted_shipping_mode: string | null
           quoted_transport_total_mad: number | null
           quoted_unit_price_mad: number | null
+          quoted_unit_price_source: number | null
           sizes: string | null
+          source_currency: string | null
           status: string
           updated_at: string
           whatsapp_number: string
@@ -1095,6 +1100,9 @@ export type Database = {
           created_at?: string
           destination_city?: string | null
           destination_country: string
+          display_currency?: string | null
+          fx_rate_display_vs_mad?: number | null
+          fx_rate_source_to_mad?: number | null
           id?: string
           preferred_shipping_mode?: string | null
           product_id: string
@@ -1107,7 +1115,9 @@ export type Database = {
           quoted_shipping_mode?: string | null
           quoted_transport_total_mad?: number | null
           quoted_unit_price_mad?: number | null
+          quoted_unit_price_source?: number | null
           sizes?: string | null
+          source_currency?: string | null
           status?: string
           updated_at?: string
           whatsapp_number: string
@@ -1122,6 +1132,9 @@ export type Database = {
           created_at?: string
           destination_city?: string | null
           destination_country?: string
+          display_currency?: string | null
+          fx_rate_display_vs_mad?: number | null
+          fx_rate_source_to_mad?: number | null
           id?: string
           preferred_shipping_mode?: string | null
           product_id?: string
@@ -1134,7 +1147,9 @@ export type Database = {
           quoted_shipping_mode?: string | null
           quoted_transport_total_mad?: number | null
           quoted_unit_price_mad?: number | null
+          quoted_unit_price_source?: number | null
           sizes?: string | null
+          source_currency?: string | null
           status?: string
           updated_at?: string
           whatsapp_number?: string
@@ -1148,11 +1163,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quote_requests_display_currency_fkey"
+            columns: ["display_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
             foreignKeyName: "quote_requests_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_requests_source_currency_fkey"
+            columns: ["source_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -2391,6 +2420,7 @@ export type Database = {
           deposit_received_at: string | null
           deposit_requested_at: string | null
           fully_paid_at: string | null
+          fx_rate_source_to_mad: number | null
           gross_margin_percent: number | null
           gross_profit_mad: number | null
           id: string
@@ -2401,9 +2431,11 @@ export type Database = {
           invoice_registre_commerce: string | null
           invoice_requested: boolean
           invoice_requested_at: string | null
+          merchandise_source_amount: number | null
           payment_status: string
           quote_request_id: string | null
           shipped_at: string | null
+          source_currency: string | null
           sourcing_at: string | null
           status: string
           supplier_cost_mad: number
@@ -2431,6 +2463,7 @@ export type Database = {
           deposit_received_at?: string | null
           deposit_requested_at?: string | null
           fully_paid_at?: string | null
+          fx_rate_source_to_mad?: number | null
           gross_margin_percent?: number | null
           gross_profit_mad?: number | null
           id?: string
@@ -2441,9 +2474,11 @@ export type Database = {
           invoice_registre_commerce?: string | null
           invoice_requested?: boolean
           invoice_requested_at?: string | null
+          merchandise_source_amount?: number | null
           payment_status?: string
           quote_request_id?: string | null
           shipped_at?: string | null
+          source_currency?: string | null
           sourcing_at?: string | null
           status?: string
           supplier_cost_mad?: number
@@ -2471,6 +2506,7 @@ export type Database = {
           deposit_received_at?: string | null
           deposit_requested_at?: string | null
           fully_paid_at?: string | null
+          fx_rate_source_to_mad?: number | null
           gross_margin_percent?: number | null
           gross_profit_mad?: number | null
           id?: string
@@ -2481,9 +2517,11 @@ export type Database = {
           invoice_registre_commerce?: string | null
           invoice_requested?: boolean
           invoice_requested_at?: string | null
+          merchandise_source_amount?: number | null
           payment_status?: string
           quote_request_id?: string | null
           shipped_at?: string | null
+          source_currency?: string | null
           sourcing_at?: string | null
           status?: string
           supplier_cost_mad?: number
@@ -2513,6 +2551,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "quote_requests"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_orders_source_currency_fkey"
+            columns: ["source_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -2675,6 +2720,7 @@ export type Database = {
       }
     }
     Functions: {
+      client_currency_for: { Args: { p_label: string }; Returns: string }
       create_payout: {
         Args: {
           p_affiliate_id: string
@@ -2700,6 +2746,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fx_rate_to_mad: { Args: { p_code: string }; Returns: number }
       get_orders_by_phone: {
         Args: { p_phone: string }
         Returns: {
@@ -2727,6 +2774,7 @@ export type Database = {
         Args: { p_product_id: string; p_qty: number }
         Returns: boolean
       }
+      resolve_country_code: { Args: { p_label: string }; Returns: string }
       restore_stock: {
         Args: { p_product_id: string; p_qty: number }
         Returns: undefined

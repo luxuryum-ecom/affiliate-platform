@@ -1,7 +1,8 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { prepareQuote } from '@/app/actions/quote-requests'
+import { formatCurrency } from '@/lib/utils'
 import type { QuoteRequest } from '@/types/database'
 
 interface Props {
@@ -16,38 +17,85 @@ interface Props {
     | 'quoted_delivery_delay'
     | 'quote_validity_date'
     | 'quote_public_note'
-  >
+  > & {
+    source_currency?: string | null
+    quoted_unit_price_source?: number | null
+  }
+  /** Taux centraux courants par devise (rate_vs_mad), ex. { MAD:1, USD:10, ... }. */
+  rates: Record<string, number>
+  /** Devise d'affichage du client (= devise du pays destination), pour information. */
+  displayCurrency: string
 }
 
 const initialState = { error: null }
 
-export function PrepareQuoteForm({ requestId, quantityRequested, currentQuote }: Props) {
+export function PrepareQuoteForm({
+  requestId,
+  quantityRequested,
+  currentQuote,
+  rates,
+  displayCurrency,
+}: Props) {
   const [state, action, isPending] = useActionState(prepareQuote, initialState)
+
+  const currencyCodes = Object.keys(rates)
+  const [sourceCurrency, setSourceCurrency] = useState<string>(
+    currentQuote.source_currency ?? 'MAD',
+  )
+  const [sourceUnitPrice, setSourceUnitPrice] = useState<string>(
+    String(currentQuote.quoted_unit_price_source ?? currentQuote.quoted_unit_price_mad ?? ''),
+  )
+  const [fxOverride, setFxOverride] = useState<string>('')
+
+  const centralRate = sourceCurrency === 'MAD' ? 1 : rates[sourceCurrency] ?? null
+  const overrideNum = fxOverride.trim() !== '' ? parseFloat(fxOverride) : null
+  const effectiveRate =
+    sourceCurrency === 'MAD' ? 1 : overrideNum && overrideNum > 0 ? overrideNum : centralRate
+  const priceNum = parseFloat(sourceUnitPrice)
+  const previewMad =
+    effectiveRate && !isNaN(priceNum) ? parseFloat((priceNum * effectiveRate).toFixed(2)) : null
 
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="request_id" value={requestId} />
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* ── Prix marchandise en devise source → conversion MAD ── */}
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Prix unitaire (MAD) <span className="text-red-500">*</span>
+            Devise source <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="source_currency"
+            value={sourceCurrency}
+            onChange={(e) => setSourceCurrency(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          >
+            {currencyCodes.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Prix unitaire ({sourceCurrency}) <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
-            name="quoted_unit_price_mad"
-            step="0.01"
-            min="0.01"
+            name="quoted_unit_price_source"
+            step="0.0001"
+            min="0.0001"
             required
-            defaultValue={currentQuote.quoted_unit_price_mad ?? ''}
+            value={sourceUnitPrice}
+            onChange={(e) => setSourceUnitPrice(e.target.value)}
             placeholder="0.00"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Quantité <span className="text-red-500">*</span>
-          </label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Quantité <span className="text-red-500">*</span></label>
           <input
             type="number"
             name="quoted_quantity"
@@ -57,6 +105,39 @@ export function PrepareQuoteForm({ requestId, quantityRequested, currentQuote }:
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
           />
         </div>
+      </div>
+
+      {/* ── Taux de change (override optionnel) + aperçu MAD ── */}
+      {sourceCurrency !== 'MAD' && (
+        <div className="grid grid-cols-2 gap-3 items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Taux {sourceCurrency}→MAD (override)
+            </label>
+            <input
+              type="number"
+              name="fx_rate_override"
+              step="0.00000001"
+              min="0"
+              value={fxOverride}
+              onChange={(e) => setFxOverride(e.target.value)}
+              placeholder={centralRate != null ? `central : ${centralRate}` : 'aucun taux central'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+            />
+          </div>
+          <div className="text-xs text-gray-600">
+            Taux appliqué : <span className="font-semibold">{effectiveRate ?? '—'}</span>
+            {centralRate == null && overrideNum == null && (
+              <span className="text-red-600 block">Aucun taux central — saisissez un override.</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
+        Prix unitaire converti :{' '}
+        <span className="font-bold">{previewMad != null ? formatCurrency(previewMad, 'MAD') : '—'}</span>
+        <span className="text-indigo-500"> (pivot interne MAD)</span>
       </div>
 
       <div>
@@ -117,6 +198,10 @@ export function PrepareQuoteForm({ requestId, quantityRequested, currentQuote }:
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none resize-none"
         />
       </div>
+
+      <p className="text-xs text-gray-400">
+        Le client verra ce devis dans sa devise : <span className="font-medium">{displayCurrency}</span>.
+      </p>
 
       {state.error && (
         <p className="text-xs px-3 py-2 rounded-lg bg-red-50 text-red-600">{state.error}</p>

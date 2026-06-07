@@ -68,6 +68,8 @@ export default async function AdminQuotePreviewPage({ params }: Params) {
             quote_prepared_at:          req.quote_prepared_at,
             destination_country:        req.destination_country,
             destination_city:           req.destination_city,
+            display_currency:           req.display_currency,
+            fx_rate_display_vs_mad:     req.fx_rate_display_vs_mad,
             buyer:                      req.buyer,
             product:                    req.product,
           }}

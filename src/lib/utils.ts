@@ -88,11 +88,16 @@ export function getWholesaleTier(
   return { price_per_unit: match.price_per_unit, label }
 }
 
-/** Format a number as Moroccan dirham. */
-export function formatMAD(amount: number): string {
+/** Format a number in the given ISO 4217 currency (default MAD). */
+export function formatCurrency(amount: number, currency: string = 'MAD'): string {
   return new Intl.NumberFormat('fr-MA', {
     style: 'currency',
-    currency: 'MAD',
+    currency,
     minimumFractionDigits: 2,
   }).format(amount)
+}
+
+/** Format a number as Moroccan dirham. Thin wrapper over formatCurrency. */
+export function formatMAD(amount: number): string {
+  return formatCurrency(amount, 'MAD')
 }

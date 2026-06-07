@@ -31,9 +31,20 @@ export default async function WholesaleQuotePage({ params }: Params) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Liste blanche stricte (IMP-A) : NE JAMAIS renvoyer au grossiste les champs
+  // internes (source_currency, quoted_unit_price_source, fx_rate_source_to_mad,
+  // admin_notes…) qui révéleraient le coût d'achat et la marge.
   const { data } = await supabase
     .from('quote_requests')
-    .select('*, buyer:profiles!buyer_id(id,full_name,company_name), product:products!product_id(id,name,origin_country)')
+    .select(
+      'id, status, client_decision_at, ' +
+      'quoted_unit_price_mad, quoted_quantity, quoted_transport_total_mad, ' +
+      'quoted_shipping_mode, quoted_delivery_delay, quote_validity_date, ' +
+      'quote_public_note, quote_prepared_at, destination_country, destination_city, ' +
+      'display_currency, fx_rate_display_vs_mad, ' +
+      'buyer:profiles!buyer_id(id,full_name,company_name), ' +
+      'product:products!product_id(id,name,origin_country)',
+    )
     .eq('id', id)
     .eq('buyer_id', user.id)
     .single()
@@ -119,6 +130,8 @@ export default async function WholesaleQuotePage({ params }: Params) {
             quote_prepared_at:          req.quote_prepared_at,
             destination_country:        req.destination_country,
             destination_city:           req.destination_city,
+            display_currency:           req.display_currency,
+            fx_rate_display_vs_mad:     req.fx_rate_display_vs_mad,
             buyer:                      req.buyer,
             product:                    req.product,
           }}
