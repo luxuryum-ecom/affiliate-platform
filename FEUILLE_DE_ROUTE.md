@@ -76,15 +76,21 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
 - **Pivot interne = MAD** ; COD-Maroc et ledger Phase 2 non touchés (vérifié).
 
 ## 🔧 Reste à faire (ordre à respecter)
-1. **Reconnexion comptes test** — diagnostiquer/rétablir l'accès aux comptes de test (cloud Supabase) : 86 comptes intacts ; vérifier flux auth, retrouver/réinitialiser les mots de passe de seed des comptes démo.
-2. **Relecture des traductions arabes** — relire/corriger `messages/ar.json` (et `en.json`) par un humain (qualité MSA) avant prod. Modifs dans les fichiers JSON, sans toucher au code.
-3. **Extension multilingue aux autres pages** — extraire les textes page par page (auth → marketplace + fiche produit → dashboards → admin/fournisseur), convertir les classes directionnelles en logiques (RTL propre) à chaque page.
-4. **Raccord colonnes pays texte → codes ISO** — normaliser `import_tariffs.country`, `origin_country`, `destination_country`, `countries_served[]` via `country_aliases` (+ `resolve_country_code`). Ajouter colonnes `*_country_code` (FK), sans casser l'existant.
-5. **Stock multi-entrepôt par pays** — rattacher le stock aux pays `has_warehouse` ; notions réservé / provisoire / en transit / retour (aujourd'hui : `stock_count` scalaire mono-pays).
-6. **Commande sourcing 2 lignes** — marchandise + transport séparés, pays_source + pays_destination, suivi paiement/échéances (mini-compta sur le ledger Phase 2).
-7. **Branchement transport / courier (API)** — activer les champs `courier_*` préparés (table `cities`, migr. 015) + `logistics_settings.api_config` ; sync transporteur.
-8. **Features métier (backlog)** — cadrer puis construire B1–B5 (voir plus bas) + secteur « grossistes locaux Maroc » ; fil rouge = simplicité maximale (utilisateurs pas tech).
-9. **Durcissement final + push GitHub + prod** — rate limiting, audit complet `@security-reviewer`, puis push/merge des branches et go-live (sur GO d'Abdou).
+
+> ⛔ **1. PRIORITAIRE — CORRECTION MOTEUR COMMISSION AFFILIÉ** (argent — à **planifier + auditer `@finance`/`@security-reviewer` AVANT commit**). Diagnostics déjà faits.
+> 1. **Garde-fou livraison JAMAIS zéro** : validation `fee > 0` (pas `≥ 0`) dans `addCity` / `updateCity` / `updateLogisticsSettings`, **+** plancher `Math.max(MIN_DELIVERY, …)` dans `resolveDeliveryFeeByCity`, **+** fallback jamais 0. **Règle métier : la livraison est TOUJOURS payée par l'affilié, déduite de sa commission.** (Aujourd'hui aucun plancher → un 0 sur une ville ou sur le défaut ferait absorber le transport par la plateforme.)
+> 2. **Commission de base affichée périmée** : ex. « Portefeuille » affiche **25** au lieu de **~116** réel (colonne `commission_amount` figée avant le rétro-remplissage `factory_cost_mad`, migr. 016). → Afficher la **commission recalculée en direct** par la formule (`calculateNetAffiliateCommission`) au lieu de la colonne stockée.
+> - **Fichiers identifiés** : `src/app/actions/cities.ts` (`resolveDeliveryFeeByCity`), `src/app/actions/logistics.ts`, `src/app/actions/orders.ts`, `src/lib/utils.ts` (`calculateNetAffiliateCommission`), `src/app/actions/products.ts`, page `src/app/(affiliate)/affiliate/products/page.tsx`.
+
+2. **Reconnexion comptes test** — diagnostiquer/rétablir l'accès aux comptes de test (cloud Supabase) : 86 comptes intacts ; vérifier flux auth, retrouver/réinitialiser les mots de passe de seed des comptes démo.
+3. **Relecture des traductions arabes** — relire/corriger `messages/ar.json` (et `en.json`) par un humain (qualité MSA) avant prod. Modifs dans les fichiers JSON, sans toucher au code.
+4. **Extension multilingue aux autres pages** — extraire les textes page par page (auth → marketplace + fiche produit → dashboards → admin/fournisseur), convertir les classes directionnelles en logiques (RTL propre) à chaque page.
+5. **Raccord colonnes pays texte → codes ISO** — normaliser `import_tariffs.country`, `origin_country`, `destination_country`, `countries_served[]` via `country_aliases` (+ `resolve_country_code`). Ajouter colonnes `*_country_code` (FK), sans casser l'existant.
+6. **Stock multi-entrepôt par pays** — rattacher le stock aux pays `has_warehouse` ; notions réservé / provisoire / en transit / retour (aujourd'hui : `stock_count` scalaire mono-pays).
+7. **Commande sourcing 2 lignes** — marchandise + transport séparés, pays_source + pays_destination, suivi paiement/échéances (mini-compta sur le ledger Phase 2).
+8. **Branchement transport / courier (API)** — activer les champs `courier_*` préparés (table `cities`, migr. 015) + `logistics_settings.api_config` ; sync transporteur.
+9. **Features métier (backlog)** — cadrer puis construire B1–B5 (voir plus bas) + secteur « grossistes locaux Maroc » ; fil rouge = simplicité maximale (utilisateurs pas tech).
+10. **Durcissement final + push GitHub + prod** — rate limiting, audit complet `@security-reviewer`, puis push/merge des branches et go-live (sur GO d'Abdou).
 
 ## 💡 Nouveau secteur (idée — à cadrer plus tard) — Grossistes locaux Maroc (B2B local)
 **Idée :** fournitures, snacks, agro-alimentaire ; achat direct chez les **usines/fabricants marocains**.
