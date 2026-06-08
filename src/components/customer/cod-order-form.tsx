@@ -23,7 +23,7 @@ interface CodOrderFormProps {
 const initialState: OrderFormState = { error: null, success: false, orderId: null }
 
 const INPUT =
-  'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50'
+  'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-300 disabled:bg-gray-50'
 
 export function CodOrderForm({
   productId,
@@ -199,7 +199,7 @@ export function CodOrderForm({
         <button
           type="submit"
           disabled={isPending || maxQty === 0}
-          className="w-full py-3.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          className="w-full py-3.5 bg-ink-900 text-white font-semibold rounded-xl shadow-gold hover:bg-ink-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
           {isPending
             ? 'Envoi en cours…'

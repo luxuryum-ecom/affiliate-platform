@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+/* ─── Design tokens — identité premium Noir + Or (Mozouna Group) ───────────────
+   Mécanisme natif Tailwind v4 : ces tokens génèrent automatiquement les
+   utilitaires (bg-gold-500, text-gold-600, border-gold-300, ring-gold-400,
+   shadow-premium, shadow-gold). 100 % additif — n'altère aucun style existant. */
+@theme {
+  /* Or métallique — accent, jamais envahissant */
+  --color-gold-50:  #fbf8ef;
+  --color-gold-100: #f4ecd2;
+  --color-gold-200: #e7d7a6;   /* bordures subtiles */
+  --color-gold-300: #d8be73;   /* bordures / anneaux */
+  --color-gold-400: #cdae4d;
+  --color-gold-500: #c9a227;   /* OR principal (accents, filets, liens clés) */
+  --color-gold-600: #a8851c;   /* survol / texte or sur fond clair */
+  --color-gold-700: #856914;
+
+  /* Encre — boutons principaux, titres */
+  --color-ink-900: #0a0a0a;
+  --color-ink-800: #1a1a1a;    /* survol bouton */
+  --color-ink-700: #2a2a2a;
+
+  /* Surface claire chaude (fond premium) */
+  --color-cream: #fafaf7;
+
+  /* Ombres premium */
+  --shadow-premium: 0 1px 2px rgba(10, 10, 10, .04), 0 12px 32px -16px rgba(10, 10, 10, .18);
+  --shadow-gold:    0 8px 24px -12px rgba(201, 162, 39, .35);
+
+  /* Typo premium */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}

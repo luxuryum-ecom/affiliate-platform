@@ -12,12 +12,12 @@ export function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
   return (
     <div className="flex items-center gap-2.5">
-      <div className={`${s.monogram} rounded-lg bg-gray-900 flex items-center justify-center font-bold text-white flex-shrink-0`}>
+      <div className={`${s.monogram} rounded-lg bg-ink-900 ring-1 ring-gold-400/60 flex items-center justify-center font-bold text-gold-400 flex-shrink-0`}>
         M
       </div>
       <div>
-        <p className={`${s.name} font-bold text-gray-900 leading-none`}>Mozouna Group</p>
-        <p className={`${s.tagline} text-gray-400 leading-none mt-0.5`}>Plateforme B2B Maroc</p>
+        <p className={`${s.name} font-bold text-ink-900 leading-none`}>Mozouna Group</p>
+        <p className={`${s.tagline} text-gold-700/70 leading-none mt-0.5`}>Plateforme B2B Maroc</p>
       </div>
     </div>
   )

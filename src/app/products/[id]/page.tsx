@@ -7,6 +7,7 @@ import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getDeliveryEstimate } from '@/lib/order-analytics'
 import { CodOrderForm } from '@/components/customer/cod-order-form'
 import { ProductGallery } from '@/components/customer/product-gallery'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Product } from '@/types/database'
 
 interface Params {
@@ -77,13 +78,13 @@ export default async function PublicProductPage({ params, searchParams }: Params
   const lowStock = product.stock_count > 0 && product.stock_count <= 5
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+    <div className="min-h-screen bg-cream">
+      <header className="bg-white border-b border-gold-200/60 sticky top-0 z-10">
         <div className="max-w-lg md:max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
-          <Link href="/" className="text-sm font-semibold text-gray-900">
-            AffiPartner
+          <Link href="/" aria-label="Mozouna Group — accueil">
+            <MozounaLogo size="sm" />
           </Link>
-          <span className="text-xs text-gray-400">COD · Maroc 🇲🇦</span>
+          <span className="text-xs font-medium text-gold-700">COD · Maroc 🇲🇦</span>
         </div>
       </header>
 
@@ -122,7 +123,8 @@ export default async function PublicProductPage({ params, searchParams }: Params
                 )}
               </div>
 
-              <h1 className="text-2xl font-bold text-gray-900 leading-tight">{product.name}</h1>
+              <div className="h-0.5 w-10 bg-gold-400 rounded-full mb-2" aria-hidden />
+              <h1 className="text-2xl font-bold text-ink-900 leading-tight">{product.name}</h1>
 
               {product.description && (
                 <p className="text-sm text-gray-600 mt-3 leading-relaxed whitespace-pre-line">
@@ -132,13 +134,13 @@ export default async function PublicProductPage({ params, searchParams }: Params
             </div>
 
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-gray-900">
+              <span className="text-3xl font-bold text-ink-900">
                 {formatMAD(displayPrice)}
               </span>
-              <span className="text-sm text-gray-400">/ unité</span>
+              <span className="text-sm font-medium text-gold-600">/ unité</span>
             </div>
 
-            <div className="flex items-start gap-3 bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex items-start gap-3 bg-white border border-gold-200/70 rounded-xl p-4 shadow-premium">
               <span className="text-lg" aria-hidden>
                 🚚
               </span>
@@ -149,8 +151,8 @@ export default async function PublicProductPage({ params, searchParams }: Params
               </div>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Commander en COD</h2>
+            <div className="bg-white border border-gold-200/70 rounded-2xl p-5 shadow-premium">
+              <h2 className="text-sm font-semibold text-ink-900 mb-4">Commander en COD</h2>
               <CodOrderForm
                 productId={product.id}
                 affiliateIdFromUrl={affiliateId}
@@ -163,8 +165,8 @@ export default async function PublicProductPage({ params, searchParams }: Params
         </div>
       </main>
 
-      <footer className="border-t border-gray-100 bg-white mt-8">
-        <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 text-center text-xs text-gray-400">
+      <footer className="border-t border-gold-200/50 bg-white mt-8">
+        <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 text-center text-xs text-gray-500">
           Livraison partout au Maroc · Paiement sécurisé à la livraison
         </div>
       </footer>
