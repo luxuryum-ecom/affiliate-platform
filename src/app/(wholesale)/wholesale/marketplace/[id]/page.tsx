@@ -229,7 +229,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
 
             {!isMorocco && (
               <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
-                Prix défini par la plateforme. Transport et douane inclus. Paiement via AffiPartner uniquement.
+                Prix défini par la plateforme. Transport et douane inclus. Paiement via Mozouna Group uniquement.
               </p>
             )}
 

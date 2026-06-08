@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Params) {
     .single()) as { data: { name: string; description: string | null } | null; error: unknown }
   if (!data) return { title: 'Produit non disponible' }
   return {
-    title: `${data.name} — AffiPartner`,
+    title: `${data.name} — Mozouna Group`,
     description: data.description ?? undefined,
   }
 }
@@ -78,13 +78,13 @@ export default async function PublicProductPage({ params, searchParams }: Params
   const lowStock = product.stock_count > 0 && product.stock_count <= 5
 
   return (
-    <div className="min-h-screen bg-cream">
-      <header className="bg-white border-b border-gold-200/60 sticky top-0 z-10">
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
+      <header className="bg-surface border-b border-line sticky top-0 z-10">
         <div className="max-w-lg md:max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
           <Link href="/" aria-label="Mozouna Group — accueil">
             <MozounaLogo size="sm" />
           </Link>
-          <span className="text-xs font-medium text-gold-700">COD · Maroc 🇲🇦</span>
+          <span className="text-xs font-medium text-gold-400">COD · Maroc 🇲🇦</span>
         </div>
       </header>
 
@@ -109,7 +109,7 @@ export default async function PublicProductPage({ params, searchParams }: Params
                 {inStock ? (
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
-                      lowStock ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
+                      lowStock ? 'bg-amber-100 text-amber-700' : 'bg-surface-2 text-muted'
                     }`}
                   >
                     {lowStock
@@ -124,35 +124,35 @@ export default async function PublicProductPage({ params, searchParams }: Params
               </div>
 
               <div className="h-0.5 w-10 bg-gold-400 rounded-full mb-2" aria-hidden />
-              <h1 className="text-2xl font-bold text-ink-900 leading-tight">{product.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground leading-tight">{product.name}</h1>
 
               {product.description && (
-                <p className="text-sm text-gray-600 mt-3 leading-relaxed whitespace-pre-line">
+                <p className="text-sm text-muted mt-3 leading-relaxed whitespace-pre-line">
                   {product.description}
                 </p>
               )}
             </div>
 
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-ink-900">
+              <span className="text-3xl font-bold text-foreground">
                 {formatMAD(displayPrice)}
               </span>
-              <span className="text-sm font-medium text-gold-600">/ unité</span>
+              <span className="text-sm font-medium text-gold-400">/ unité</span>
             </div>
 
-            <div className="flex items-start gap-3 bg-white border border-gold-200/70 rounded-xl p-4 shadow-premium">
+            <div className="flex items-start gap-3 bg-surface border border-line rounded-xl p-4 shadow-premium">
               <span className="text-lg" aria-hidden>
                 🚚
               </span>
               <div>
-                <p className="text-sm font-medium text-gray-900">Livraison estimée</p>
-                <p className="text-xs text-gray-500 mt-0.5">{delivery.label}</p>
-                <p className="text-xs text-gray-400 mt-1">Partout au Maroc · paiement à la réception</p>
+                <p className="text-sm font-medium text-foreground">Livraison estimée</p>
+                <p className="text-xs text-muted mt-0.5">{delivery.label}</p>
+                <p className="text-xs text-faint mt-1">Partout au Maroc · paiement à la réception</p>
               </div>
             </div>
 
-            <div className="bg-white border border-gold-200/70 rounded-2xl p-5 shadow-premium">
-              <h2 className="text-sm font-semibold text-ink-900 mb-4">Commander en COD</h2>
+            <div className="bg-surface border border-line rounded-2xl p-5 shadow-premium">
+              <h2 className="text-sm font-semibold text-foreground mb-4">Commander en COD</h2>
               <CodOrderForm
                 productId={product.id}
                 affiliateIdFromUrl={affiliateId}
@@ -165,8 +165,8 @@ export default async function PublicProductPage({ params, searchParams }: Params
         </div>
       </main>
 
-      <footer className="border-t border-gold-200/50 bg-white mt-8">
-        <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 text-center text-xs text-gray-500">
+      <footer className="border-t border-line bg-surface mt-8">
+        <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 text-center text-xs text-muted">
           Livraison partout au Maroc · Paiement sécurisé à la livraison
         </div>
       </footer>

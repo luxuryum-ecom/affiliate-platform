@@ -12,7 +12,7 @@ export function LoginForm() {
   return (
     <form action={action} className="space-y-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="email" className="block text-sm font-medium text-muted mb-1">
           Email
         </label>
         <input
@@ -22,13 +22,13 @@ export function LoginForm() {
           required
           autoComplete="email"
           disabled={isPending}
-          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
           placeholder="vous@exemple.com"
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="password" className="block text-sm font-medium text-muted mb-1">
           Mot de passe
         </label>
         <input
@@ -38,7 +38,7 @@ export function LoginForm() {
           required
           autoComplete="current-password"
           disabled={isPending}
-          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
           placeholder="Votre mot de passe"
         />
       </div>
@@ -52,14 +52,14 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isPending ? 'Connexion…' : 'Se connecter'}
       </button>
 
-      <p className="text-center text-sm text-gray-500">
+      <p className="text-center text-sm text-muted">
         Pas encore de compte ?{' '}
-        <Link href="/signup" className="text-gray-900 font-medium underline underline-offset-2">
+        <Link href="/signup" className="text-foreground font-medium underline underline-offset-2">
           S&apos;inscrire
         </Link>
       </p>

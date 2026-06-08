@@ -4,7 +4,7 @@ import { signOut } from '@/app/actions/auth'
 import type { Profile } from '@/types/database'
 
 export const metadata = {
-  title: 'Compte en attente — AffiPartner',
+  title: 'Compte en attente — Mozouna Group',
 }
 
 const ROLE_REDIRECTS: Record<string, string> = {
@@ -80,11 +80,11 @@ export default async function PendingPage() {
     PENDING_COPY.affiliate
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+    <div className="theme-dark bg-bg text-foreground min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-5">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 mb-5">
           <svg
-            className="w-8 h-8 text-amber-600"
+            className="w-8 h-8 text-amber-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -98,21 +98,21 @@ export default async function PendingPage() {
           </svg>
         </div>
 
-        <h1 className="text-xl font-semibold text-gray-900">{copy.title}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{copy.title}</h1>
 
-        <p className="mt-2 text-sm text-gray-500 max-w-xs mx-auto">
-          Bonjour <span className="font-medium text-gray-700">{profile.full_name}</span>,{' '}
+        <p className="mt-2 text-sm text-muted max-w-xs mx-auto">
+          Bonjour <span className="font-medium text-foreground">{profile.full_name}</span>,{' '}
           {copy.intro}
         </p>
 
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5 text-left">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        <div className="mt-6 bg-surface rounded-xl border border-line p-5 text-left">
+          <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
             Prochaines étapes
           </p>
-          <ol className="space-y-2 text-sm text-gray-600">
+          <ol className="space-y-2 text-sm text-muted">
             {copy.steps.map((step, i) => (
               <li key={step} className="flex gap-3">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-surface-2 text-muted text-xs flex items-center justify-center font-medium">
                   {i + 1}
                 </span>
                 {step}
@@ -124,7 +124,7 @@ export default async function PendingPage() {
         <form action={signOut} className="mt-6">
           <button
             type="submit"
-            className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+            className="text-sm text-faint hover:text-foreground underline underline-offset-2 transition-colors"
           >
             Se déconnecter
           </button>

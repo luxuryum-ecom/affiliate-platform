@@ -16,8 +16,8 @@ export function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
         M
       </div>
       <div>
-        <p className={`${s.name} font-bold text-ink-900 leading-none`}>Mozouna Group</p>
-        <p className={`${s.tagline} text-gold-700/70 leading-none mt-0.5`}>Plateforme B2B Maroc</p>
+        <p className={`${s.name} font-bold text-foreground leading-none`}>Mozouna Group</p>
+        <p className={`${s.tagline} text-gold-600 leading-none mt-0.5`}>Plateforme B2B Maroc</p>
       </div>
     </div>
   )

@@ -131,24 +131,24 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-surface border-b border-line sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <MozounaLogo size="md" />
-            <span className="hidden sm:block text-gray-300">|</span>
+            <span className="hidden sm:block text-line">|</span>
             <nav className="hidden sm:flex items-center gap-4 text-sm">
-              <Link href="/wholesale/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+              <Link href="/wholesale/dashboard" className="text-muted hover:text-foreground transition-colors">
                 Dashboard
               </Link>
-              <span className="font-semibold text-gray-900">Marketplace</span>
+              <span className="font-semibold text-gold-400">Marketplace</span>
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden md:block">{profile?.full_name}</span>
+            <span className="text-sm text-muted hidden md:block">{profile?.full_name}</span>
             <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
+              <button type="submit" className="text-sm text-muted hover:text-foreground transition-colors">
                 Déconnexion
               </button>
             </form>
@@ -159,8 +159,8 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* ── Page title ──────────────────────────────────────────────────────── */}
         <div className="mb-5">
-          <h1 className="text-xl font-bold text-gray-900">Marketplace fournisseurs</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-bold text-foreground">Marketplace fournisseurs</h1>
+          <p className="text-sm text-muted mt-0.5">
             Produits sélectionnés de nos fournisseurs vérifiés. Stock local disponible ou import sur mesure.
           </p>
         </div>
@@ -175,7 +175,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         />
 
         {/* ── Trust strip ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap gap-2 mb-6 pb-5 border-b border-gray-200">
+        <div className="flex flex-wrap gap-2 mb-6 pb-5 border-b border-line">
           <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-medium">
             ✓ Fournisseurs vérifiés
           </span>
@@ -201,26 +201,26 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 
         {/* ── Filters ─────────────────────────────────────────────────────────── */}
         <MarketplaceFilters>
-        <form method="GET" className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <form method="GET" className="bg-surface rounded-xl border border-line p-4 shadow-premium">
           {/* Row 1: keyword + category + subcategory + origin */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             <div className="lg:col-span-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Recherche</label>
+              <label className="block text-xs font-medium text-muted mb-1">Recherche</label>
               <input
                 name="q"
                 type="text"
                 defaultValue={filters.q ?? ''}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
                 placeholder="Nom, catégorie, description..."
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Catégorie</label>
+              <label className="block text-xs font-medium text-muted mb-1">Catégorie</label>
               <select
                 name="category"
                 defaultValue={filters.category ?? ''}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
               >
                 <option value="">Toutes les catégories</option>
                 {PRODUCT_CATEGORIES.map((cat) => (
@@ -230,12 +230,12 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Sous-catégorie</label>
+              <label className="block text-xs font-medium text-muted mb-1">Sous-catégorie</label>
               {subcategoryOptions.length > 0 ? (
                 <select
                   name="subcategory"
                   defaultValue={filters.subcategory ?? ''}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
                 >
                   <option value="">Toutes</option>
                   {subcategoryOptions.map((sub) => (
@@ -247,18 +247,18 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
                   name="subcategory"
                   type="text"
                   defaultValue={filters.subcategory ?? ''}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
                   placeholder="ex: Femme, Hijab..."
                 />
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Pays d&apos;origine</label>
+              <label className="block text-xs font-medium text-muted mb-1">Pays d&apos;origine</label>
               <select
                 name="origin"
                 defaultValue={filters.origin ?? ''}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
               >
                 <option value="">Tous pays</option>
                 {ORIGIN_COUNTRIES.map((o) => (
@@ -271,11 +271,11 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           {/* Row 2: supplier type + availability + MOQ max + lead time max + in stock */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Fournisseur</label>
+              <label className="block text-xs font-medium text-muted mb-1">Fournisseur</label>
               <select
                 name="supplier_type"
                 defaultValue={filters.supplier_type ?? ''}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
               >
                 <option value="">Tous</option>
                 <option value="morocco">🇲🇦 Maroc</option>
@@ -284,11 +284,11 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Disponibilité</label>
+              <label className="block text-xs font-medium text-muted mb-1">Disponibilité</label>
               <select
                 name="availability"
                 defaultValue={filters.availability ?? ''}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
               >
                 <option value="">Tout</option>
                 <option value="local_stock">Stock local Maroc</option>
@@ -297,25 +297,25 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">MOQ max (unités)</label>
+              <label className="block text-xs font-medium text-muted mb-1">MOQ max (unités)</label>
               <input
                 name="max_moq"
                 type="number"
                 min={1}
                 defaultValue={filters.max_moq ?? ''}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
                 placeholder="ex: 500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Délai max (jours)</label>
+              <label className="block text-xs font-medium text-muted mb-1">Délai max (jours)</label>
               <input
                 name="max_lead_time"
                 type="number"
                 min={1}
                 defaultValue={filters.max_lead_time ?? ''}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
                 placeholder="ex: 30"
               />
             </div>
@@ -327,9 +327,9 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
                   type="checkbox"
                   value="1"
                   defaultChecked={filters.in_stock === '1'}
-                  className="rounded border-gray-300 w-4 h-4 accent-gray-900"
+                  className="rounded border-line w-4 h-4 accent-gold-500"
                 />
-                <span className="text-xs text-gray-600 font-medium">En stock seulement</span>
+                <span className="text-xs text-muted font-medium">En stock seulement</span>
               </label>
             </div>
           </div>
@@ -337,14 +337,14 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
             >
               Filtrer
             </button>
             {isFiltered && (
               <Link
                 href="/wholesale/marketplace"
-                className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-line text-muted text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors"
               >
                 Effacer les filtres
               </Link>
@@ -354,21 +354,21 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         </MarketplaceFilters>
 
         {/* ── Result count ─────────────────────────────────────────────────────── */}
-        <p className="text-sm text-gray-500 mb-4">
-          <span className="font-semibold text-gray-900">{products.length}</span>{' '}
+        <p className="text-sm text-muted mb-4">
+          <span className="font-semibold text-foreground">{products.length}</span>{' '}
           produit{products.length !== 1 ? 's' : ''}
           {isFiltered ? ' trouvé' + (products.length !== 1 ? 's' : '') : ' disponible' + (products.length !== 1 ? 's' : '')}
         </p>
 
         {/* ── Product grid ─────────────────────────────────────────────────────── */}
         {products.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
             <p className="text-2xl mb-2">🔍</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted">
               {isFiltered ? 'Aucun produit ne correspond à ces filtres.' : 'Aucun produit disponible pour le moment.'}
             </p>
             {isFiltered && (
-              <Link href="/wholesale/marketplace" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+              <Link href="/wholesale/marketplace" className="mt-3 inline-block text-sm text-gold-400 hover:underline">
                 Effacer les filtres
               </Link>
             )}
@@ -399,10 +399,10 @@ const INTERNATIONAL_SOURCES = [
     name: 'Turquie',
     tagline: 'Textile & prêt-à-porter',
     note: 'Import 7–14 j · MOQ souple',
-    activeCls: 'border-red-400 bg-red-50 ring-2 ring-red-300',
-    inactiveCls: 'border-gray-200 bg-white hover:border-red-200 hover:bg-red-50',
-    nameCls: 'text-red-800',
-    taglineCls: 'text-red-600',
+    activeCls: 'border-red-400 bg-red-500/15 ring-2 ring-red-400/50',
+    inactiveCls: 'border-line bg-surface hover:border-red-400/50 hover:bg-red-500/10',
+    nameCls: 'text-red-300',
+    taglineCls: 'text-red-400',
   },
   {
     origin: 'Chine',
@@ -410,10 +410,10 @@ const INTERNATIONAL_SOURCES = [
     name: 'Chine',
     tagline: 'Gros volume · Prix usine',
     note: 'Maritime & aérien · 20–45 j',
-    activeCls: 'border-rose-400 bg-rose-50 ring-2 ring-rose-300',
-    inactiveCls: 'border-gray-200 bg-white hover:border-rose-200 hover:bg-rose-50',
-    nameCls: 'text-rose-800',
-    taglineCls: 'text-rose-600',
+    activeCls: 'border-rose-400 bg-rose-500/15 ring-2 ring-rose-400/50',
+    inactiveCls: 'border-line bg-surface hover:border-rose-400/50 hover:bg-rose-500/10',
+    nameCls: 'text-rose-300',
+    taglineCls: 'text-rose-400',
   },
   {
     origin: 'Égypte',
@@ -421,10 +421,10 @@ const INTERNATIONAL_SOURCES = [
     name: 'Égypte',
     tagline: 'Coton & textile',
     note: 'Prix avantageux · Stock variable',
-    activeCls: 'border-amber-400 bg-amber-50 ring-2 ring-amber-300',
-    inactiveCls: 'border-gray-200 bg-white hover:border-amber-200 hover:bg-amber-50',
-    nameCls: 'text-amber-800',
-    taglineCls: 'text-amber-600',
+    activeCls: 'border-amber-400 bg-amber-500/15 ring-2 ring-amber-400/50',
+    inactiveCls: 'border-line bg-surface hover:border-amber-400/50 hover:bg-amber-500/10',
+    nameCls: 'text-amber-300',
+    taglineCls: 'text-amber-400',
   },
   {
     origin: 'Dubai',
@@ -432,10 +432,10 @@ const INTERNATIONAL_SOURCES = [
     name: 'Dubai',
     tagline: 'Hub logistique multi-origines',
     note: 'Commande groupée · Réexportation',
-    activeCls: 'border-sky-400 bg-sky-50 ring-2 ring-sky-300',
-    inactiveCls: 'border-gray-200 bg-white hover:border-sky-200 hover:bg-sky-50',
-    nameCls: 'text-sky-800',
-    taglineCls: 'text-sky-600',
+    activeCls: 'border-sky-400 bg-sky-500/15 ring-2 ring-sky-400/50',
+    inactiveCls: 'border-line bg-surface hover:border-sky-400/50 hover:bg-sky-500/10',
+    nameCls: 'text-sky-300',
+    taglineCls: 'text-sky-400',
   },
 ] as const
 
@@ -458,16 +458,16 @@ function CountrySourceSection({
   const moroccoActive = activeAvailability === 'local_stock'
 
   return (
-    <section className="mb-7 pb-6 border-b border-gray-200">
+    <section className="mb-7 pb-6 border-b border-line">
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Choisissez votre source d&apos;achat</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Sélectionnez un pays pour filtrer les produits disponibles</p>
+          <h2 className="text-base font-bold text-foreground">Choisissez votre source d&apos;achat</h2>
+          <p className="text-xs text-muted mt-0.5">Sélectionnez un pays pour filtrer les produits disponibles</p>
         </div>
         {active && (
           <Link
             href="/wholesale/marketplace"
-            className="text-xs text-gray-500 hover:text-gray-800 underline underline-offset-2 transition-colors"
+            className="text-xs text-muted hover:text-foreground underline underline-offset-2 transition-colors"
           >
             Voir tout
           </Link>
@@ -539,7 +539,7 @@ function CountrySourceSection({
 
       {/* ── Section 2: International grid ────────────────────────────────── */}
       <div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+        <p className="text-xs font-semibold text-gold-500 uppercase tracking-wider mb-3">
           🌍 Importation internationale
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -556,14 +556,14 @@ function CountrySourceSection({
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-2xl leading-none">{src.flag}</span>
                   {isActive && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/80 text-gray-700 border border-gray-200">
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-surface text-foreground border border-line">
                       Actif
                     </span>
                   )}
                 </div>
                 <p className={`text-sm font-bold leading-tight ${src.nameCls}`}>{src.name}</p>
                 <p className={`text-[11px] leading-snug ${src.taglineCls}`}>{src.tagline}</p>
-                <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{src.note}</p>
+                <p className="text-[10px] text-muted leading-snug mt-0.5">{src.note}</p>
               </Link>
             )
           })}
@@ -619,7 +619,7 @@ function MarketplaceProductCard({
     ? 'border-amber-300 ring-1 ring-amber-100'
     : isFeatured
     ? 'border-indigo-300 ring-1 ring-indigo-100'
-    : 'border-gray-200'
+    : 'border-line'
 
   const deliveryLabel = isLocalStock
     ? '24–72h'
@@ -640,7 +640,7 @@ function MarketplaceProductCard({
   const waUrl = `https://wa.me/${whatsappPhone}?text=${waText}`
 
   return (
-    <article className={`group bg-white rounded-xl border overflow-hidden flex flex-col hover:shadow-lg transition-all duration-200 ${cardBorder}`}>
+    <article className={`group bg-surface rounded-xl border overflow-hidden flex flex-col hover:shadow-premium transition-all duration-200 ${cardBorder}`}>
       {/* Square image — compact density */}
       <Link href={productUrl} className="block relative aspect-[5/3] overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50">
         {product.photos.length > 0 ? (
@@ -680,7 +680,7 @@ function MarketplaceProductCard({
       <div className="p-2.5 flex flex-col gap-1.5 flex-1">
         {/* Supplier + verification badge */}
         <div className="flex items-center gap-1 flex-wrap">
-          <span className="text-[9px] text-gray-400 font-medium leading-none">
+          <span className="text-[9px] text-muted font-medium leading-none">
             {isMorocco ? '🇲🇦 Maroc' : '🌍 Intl'}
           </span>
           {isVerified && (
@@ -697,7 +697,7 @@ function MarketplaceProductCard({
 
         {/* Product name — linked */}
         <Link href={productUrl} className="block">
-          <h3 className="text-xs font-semibold text-gray-900 leading-snug line-clamp-2 flex-1 hover:text-emerald-700 transition-colors">
+          <h3 className="text-xs font-semibold text-foreground leading-snug line-clamp-2 flex-1 hover:text-gold-400 transition-colors">
             {displayName}
           </h3>
         </Link>
@@ -720,26 +720,26 @@ function MarketplaceProductCard({
         )}
 
         {/* Price + resale/margin + CTAs */}
-        <div className="pt-1.5 border-t border-gray-100 mt-auto">
+        <div className="pt-1.5 border-t border-line mt-auto">
           {price != null ? (
             <>
-              <p className="text-sm font-bold text-gray-900 leading-none">
+              <p className="text-sm font-bold text-foreground leading-none">
                 À partir de {price.toLocaleString('fr-MA')}{' '}
-                <span className="text-xs font-semibold text-gray-500">MAD</span>
+                <span className="text-xs font-semibold text-muted">MAD</span>
                 {hasTiers && (
-                  <span className="text-[9px] font-normal text-gray-400 ml-1">· paliers dispo</span>
+                  <span className="text-[9px] font-normal text-faint ml-1">· paliers dispo</span>
                 )}
               </p>
               {resaleLow != null && resaleHigh != null && (
                 <div className="mt-0.5 space-y-0.5">
-                  <p className="text-[9px] text-gray-500 leading-none">
+                  <p className="text-[9px] text-muted leading-none">
                     Revente conseillée :{' '}
-                    <span className="font-semibold text-gray-700">
+                    <span className="font-semibold text-foreground">
                       {resaleLow.toLocaleString('fr-MA')}–{resaleHigh.toLocaleString('fr-MA')} MAD
                     </span>
                   </p>
                   {marginLow != null && marginHigh != null && (
-                    <p className="text-[9px] text-emerald-600 font-semibold leading-none">
+                    <p className="text-[9px] text-emerald-400 font-semibold leading-none">
                       Marge estimée : {marginLow.toLocaleString('fr-MA')}–{marginHigh.toLocaleString('fr-MA')} MAD
                     </p>
                   )}
@@ -747,13 +747,13 @@ function MarketplaceProductCard({
               )}
             </>
           ) : (
-            <p className="text-xs font-semibold text-gray-500">Sur devis</p>
+            <p className="text-xs font-semibold text-muted">Sur devis</p>
           )}
 
           {/* Primary CTA */}
           <Link
             href={productUrl}
-            className="mt-1.5 block w-full text-center text-[10px] font-bold py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+            className="mt-1.5 block w-full text-center text-[10px] font-bold py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             {ctaMode === 'direct' ? 'Commander →' : 'Demander un devis →'}
           </Link>
@@ -764,7 +764,7 @@ function MarketplaceProductCard({
               href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 block w-full text-center text-[8px] font-normal py-1 text-emerald-600 hover:text-emerald-700 hover:underline underline-offset-2"
+              className="mt-1 block w-full text-center text-[8px] font-normal py-1 text-emerald-400 hover:text-emerald-300 hover:underline underline-offset-2"
             >
               🟢 Devis WhatsApp
             </a>

@@ -22,24 +22,24 @@ function StatCard({
   variant?: 'default' | 'success' | 'warning' | 'muted'
 }) {
   const bg = {
-    default: 'bg-white border-gray-200',
-    success: 'bg-green-50 border-green-200',
-    warning: 'bg-amber-50 border-amber-200',
-    muted:   'bg-gray-50 border-gray-200',
+    default: 'bg-surface border-line',
+    success: 'bg-emerald-500/10 border-emerald-500/30',
+    warning: 'bg-amber-500/10 border-amber-500/30',
+    muted:   'bg-surface-2 border-line',
   }[variant]
 
   const text = {
-    default: 'text-gray-900',
-    success: 'text-green-700',
-    warning: 'text-amber-700',
-    muted:   'text-gray-400',
+    default: 'text-foreground',
+    success: 'text-emerald-300',
+    warning: 'text-amber-300',
+    muted:   'text-faint',
   }[variant]
 
   return (
     <div className={`rounded-xl border p-4 ${bg}`}>
-      <p className="text-xs text-gray-500 leading-tight">{label}</p>
+      <p className="text-xs text-muted leading-tight">{label}</p>
       <p className={`mt-1.5 text-xl font-bold tabular-nums ${text}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-faint mt-0.5">{sub}</p>}
     </div>
   )
 }
@@ -99,18 +99,18 @@ export default async function AffiliateDashboardPage() {
   const returnRate     = formatReturnRate(delivered, returned)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
+      <header className="bg-surface border-b border-line">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MozounaLogo size="md" />
-            <span className="hidden sm:block text-gray-300">|</span>
-            <span className="hidden sm:block text-sm font-medium text-gray-600">Espace Affilié</span>
+            <span className="hidden sm:block text-line">|</span>
+            <span className="hidden sm:block text-sm font-medium text-muted">Espace Affilié</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
+            <span className="text-sm text-muted hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
+              <button type="submit" className="text-sm text-muted hover:text-foreground transition-colors">
                 Déconnexion
               </button>
             </form>
@@ -120,13 +120,13 @@ export default async function AffiliateDashboardPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Bonjour, {profile?.full_name}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Performance de vos liens affiliés COD.</p>
+          <h1 className="text-lg font-semibold text-foreground">Bonjour, {profile?.full_name}</h1>
+          <p className="text-sm text-muted mt-0.5">Performance de vos liens affiliés COD.</p>
         </div>
 
         {/* Traffic & conversion */}
         <section>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
             Trafic & conversion
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -149,7 +149,7 @@ export default async function AffiliateDashboardPage() {
 
         {/* Order breakdown */}
         <section>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
             Commandes
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
@@ -163,27 +163,27 @@ export default async function AffiliateDashboardPage() {
 
         {/* Commissions */}
         <section>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
             Commissions
           </p>
 
           <div className={`rounded-xl border p-5 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-            pendingBalance > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'
+            pendingBalance > 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-surface border-line'
           }`}>
             <div>
-              <p className="text-xs text-gray-500">Solde en attente de paiement</p>
+              <p className="text-xs text-muted">Solde en attente de paiement</p>
               <p className={`text-3xl font-bold tabular-nums mt-1 ${
-                pendingBalance > 0 ? 'text-amber-700' : 'text-gray-400'
+                pendingBalance > 0 ? 'text-amber-300' : 'text-faint'
               }`}>
                 {formatMAD(pendingBalance)}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-faint mt-1">
                 Commissions gagnées uniquement sur commandes livrées
               </p>
             </div>
             <Link
               href="/affiliate/orders"
-              className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap self-start sm:self-center"
+              className="text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap self-start sm:self-center"
             >
               Voir mes commandes →
             </Link>
@@ -211,40 +211,40 @@ export default async function AffiliateDashboardPage() {
         </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="bg-surface rounded-xl border border-line p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Catalogue produits</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Copiez vos liens et partagez-les.</p>
+              <h2 className="text-sm font-semibold text-foreground">Catalogue produits</h2>
+              <p className="text-xs text-muted mt-0.5">Copiez vos liens et partagez-les.</p>
             </div>
             <Link
               href="/affiliate/products"
-              className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+              className="text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
             >
               Voir le catalogue →
             </Link>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="bg-surface rounded-xl border border-line p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Mes commandes</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Suivi détaillé et commissions.</p>
+              <h2 className="text-sm font-semibold text-foreground">Mes commandes</h2>
+              <p className="text-xs text-muted mt-0.5">Suivi détaillé et commissions.</p>
             </div>
             <Link
               href="/affiliate/orders"
-              className="text-xs px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+              className="text-xs px-4 py-2 border border-line text-foreground rounded-lg hover:bg-surface-2 transition-colors whitespace-nowrap"
             >
               Voir mes commandes →
             </Link>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="bg-surface rounded-xl border border-line p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Mes commissions</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Historique détaillé et virements reçus.</p>
+              <h2 className="text-sm font-semibold text-foreground">Mes commissions</h2>
+              <p className="text-xs text-muted mt-0.5">Historique détaillé et virements reçus.</p>
             </div>
             <Link
               href="/affiliate/commissions"
-              className="text-xs px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+              className="text-xs px-4 py-2 border border-line text-foreground rounded-lg hover:bg-surface-2 transition-colors whitespace-nowrap"
             >
               Voir mes commissions →
             </Link>
