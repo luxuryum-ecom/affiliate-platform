@@ -1,0 +1,56 @@
+{
+  "common": {
+    "login": "Se connecter",
+    "createAccount": "Créer mon compte",
+    "language": "Langue"
+  },
+  "home": {
+    "hero": {
+      "slogan": "Votre passerelle vers le commerce mondial",
+      "subtitle": "Sourcing, gros & COD — au Maroc et au-delà",
+      "ctaAffiliate": "Je fais de l'affiliation",
+      "ctaWholesale": "J'achète en gros",
+      "ctaSupplier": "Je vends mes produits",
+      "note": "COD · Sourcing · Maroc 🇲🇦 — partout au Maroc, paiement à la livraison"
+    },
+    "steps": {
+      "eyebrow": "Comment ça marche",
+      "heading": "Démarrez en 3 étapes simples",
+      "s1Title": "Créez votre compte",
+      "s1Text": "Choisissez votre profil — affilié, acheteur en gros ou fournisseur — et inscrivez-vous gratuitement en quelques minutes.",
+      "s2Title": "Sourcez ou vendez",
+      "s2Text": "Accédez au catalogue B2B et au stock local, partagez vos liens d'affiliation, ou référencez vos produits sur la marketplace.",
+      "s3Title": "Encaissez en sécurité",
+      "s3Text": "Paiement à la livraison (COD) au Maroc, commissions suivies, transport et douane gérés par la plateforme."
+    },
+    "countries": {
+      "eyebrow": "Nos pays",
+      "heading": "Présents sur 5 marchés clés",
+      "intro": "Du stock local marocain aux grands hubs d'importation — transport et douane gérés par la plateforme.",
+      "maroc": "Maroc",
+      "marocTag": "Stock local · COD",
+      "chine": "Chine",
+      "chineTag": "Prix usine · gros volume",
+      "turquie": "Turquie",
+      "turquieTag": "Textile & prêt-à-porter",
+      "egypte": "Égypte",
+      "egypteTag": "Coton & textile",
+      "emirats": "Émirats",
+      "emiratsTag": "Hub logistique",
+      "trust1": "Paiement sécurisé plateforme",
+      "trust2": "Transport & douane inclus",
+      "trust3": "Fournisseurs vérifiés"
+    },
+    "finalCta": {
+      "heading": "Prêt à développer votre activité ?",
+      "text": "Rejoignez Mozouna Group et accédez dès aujourd'hui à l'affiliation COD, au catalogue grossiste et au sourcing international."
+    },
+    "footer": {
+      "about": "Plateforme B2B — affiliation COD, achat en gros et sourcing international. Livraison partout au Maroc, paiement sécurisé.",
+      "whatsapp": "Contact WhatsApp",
+      "clientSpace": "Espace client",
+      "location": "🇲🇦 Maroc · COD & Sourcing",
+      "rights": "© 2026 Mozouna Group — Tous droits réservés."
+    }
+  }
+}

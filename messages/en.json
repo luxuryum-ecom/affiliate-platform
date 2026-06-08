@@ -1,0 +1,56 @@
+{
+  "common": {
+    "login": "Sign in",
+    "createAccount": "Create my account",
+    "language": "Language"
+  },
+  "home": {
+    "hero": {
+      "slogan": "Your Gateway to Global Trade",
+      "subtitle": "Sourcing, wholesale & COD — Morocco and beyond",
+      "ctaAffiliate": "I'm an affiliate",
+      "ctaWholesale": "I buy wholesale",
+      "ctaSupplier": "I sell my products",
+      "note": "COD · Sourcing · Morocco 🇲🇦 — nationwide delivery, cash on delivery"
+    },
+    "steps": {
+      "eyebrow": "How it works",
+      "heading": "Get started in 3 simple steps",
+      "s1Title": "Create your account",
+      "s1Text": "Choose your profile — affiliate, wholesale buyer or supplier — and sign up for free in a few minutes.",
+      "s2Title": "Source or sell",
+      "s2Text": "Access the B2B catalog and local stock, share your affiliate links, or list your products on the marketplace.",
+      "s3Title": "Get paid securely",
+      "s3Text": "Cash on delivery (COD) in Morocco, tracked commissions, shipping and customs handled by the platform."
+    },
+    "countries": {
+      "eyebrow": "Our countries",
+      "heading": "Present in 5 key markets",
+      "intro": "From local Moroccan stock to major import hubs — shipping and customs handled by the platform.",
+      "maroc": "Morocco",
+      "marocTag": "Local stock · COD",
+      "chine": "China",
+      "chineTag": "Factory prices · high volume",
+      "turquie": "Turkey",
+      "turquieTag": "Textile & ready-to-wear",
+      "egypte": "Egypt",
+      "egypteTag": "Cotton & textile",
+      "emirats": "UAE",
+      "emiratsTag": "Logistics hub",
+      "trust1": "Secure platform payment",
+      "trust2": "Shipping & customs included",
+      "trust3": "Verified suppliers"
+    },
+    "finalCta": {
+      "heading": "Ready to grow your business?",
+      "text": "Join Mozouna Group and get instant access to COD affiliation, the wholesale catalog and international sourcing."
+    },
+    "footer": {
+      "about": "B2B platform — COD affiliation, wholesale buying and international sourcing. Nationwide delivery across Morocco, secure payment.",
+      "whatsapp": "WhatsApp contact",
+      "clientSpace": "Client area",
+      "location": "🇲🇦 Morocco · COD & Sourcing",
+      "rights": "© 2026 Mozouna Group — All rights reserved."
+    }
+  }
+}
