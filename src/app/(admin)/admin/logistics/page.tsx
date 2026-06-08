@@ -10,7 +10,7 @@ export default async function AdminLogisticsPage() {
   const defaults = {
     id: 'default',
     casablanca_delivery_fee_mad: 25,
-    default_delivery_fee_mad: 40,
+    default_delivery_fee_mad: 35,
     return_fee_mad: 10,
     api_config: {},
     updated_at: new Date().toISOString(),

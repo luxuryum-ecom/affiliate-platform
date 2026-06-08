@@ -6,7 +6,8 @@ import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
 import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
-import { formatMAD } from '@/lib/utils'
+import { formatMAD, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
+import { getLogisticsSettings } from '@/app/actions/logistics'
 import { MozounaLogo } from '@/components/shared/branding'
 import type { Product } from '@/types/database'
 
@@ -77,6 +78,14 @@ export default async function AffiliateProductsPage() {
   const list = productsRes.data ?? []
   const customPriceMap = new Map(
     (customPricesRes.data ?? []).map((r) => [r.product_id, Number(r.custom_sell_price_mad)])
+  )
+
+  // Frais de livraison de référence pour la « commission de base » du catalogue
+  // (pas de ville cliente ici). D2 = défaut logistique, planché à MIN_DELIVERY_FEE_MAD.
+  const logistics = await getLogisticsSettings()
+  const refDeliveryFee = Math.max(
+    MIN_DELIVERY_FEE_MAD,
+    logistics ? Number(logistics.default_delivery_fee_mad) : 35
   )
 
   // Build per-product stats maps
@@ -159,6 +168,19 @@ export default async function AffiliateProductsPage() {
               const referralUrl = `${APP_URL}/products/${product.id}?ref=${user.id}`
               const customPrice = customPriceMap.get(product.id) ?? null
               const stats = statsMap.get(product.id) ?? { clicks: 0, orders: 0, delivered: 0, commissionEarned: 0 }
+              // Commission recalculée EN DIRECT par la formule (bug : la colonne
+              // commission_amount stockée est périmée). Non clampée : une valeur
+              // ≤ 0 signale un produit non rentable pour l'affilié (cf. D4).
+              const baseCommission = calculateNetAffiliateCommission({
+                affiliateSellPrice: product.sell_price,
+                factoryCostMad: product.factory_cost_mad ?? product.purchase_price_mad ?? 0,
+                marginType: product.platform_margin_type,
+                marginValue: product.platform_margin_value ?? 0,
+                packagingFee: product.packaging_fee_mad ?? 10,
+                confirmationFee: product.confirmation_fee_mad ?? 10,
+                deliveryFee: refDeliveryFee,
+                quantity: 1,
+              })
               return (
                 <AffiliateProductCard
                   key={product.id}
@@ -166,6 +188,7 @@ export default async function AffiliateProductsPage() {
                   referralUrl={referralUrl}
                   customPrice={customPrice}
                   stats={stats}
+                  baseCommission={baseCommission}
                 />
               )
             })}
@@ -183,11 +206,13 @@ function AffiliateProductCard({
   referralUrl,
   customPrice,
   stats,
+  baseCommission,
 }: {
   product: Product
   referralUrl: string
   customPrice: number | null
   stats: ProductStats
+  baseCommission: number
 }) {
   const coverUrl = getProductCoverUrl(product)
   const convRate =
@@ -232,9 +257,13 @@ function AffiliateProductCard({
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400">Commission de base</p>
-            <p className="text-base font-bold text-green-600">
-              {formatMAD(product.commission_amount)}
-            </p>
+            {baseCommission > 0 ? (
+              <p className="text-base font-bold text-green-600">
+                {formatMAD(baseCommission)}
+              </p>
+            ) : (
+              <p className="text-sm font-bold text-red-500">Non rentable</p>
+            )}
           </div>
         </div>
 

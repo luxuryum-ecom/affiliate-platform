@@ -21,7 +21,8 @@ import type {
 function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
   return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
 }
-import { calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
+import { calculatePlatformPrice, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
+import { getLogisticsSettings } from './logistics'
 import { getRateToMad } from '@/lib/fx'
 
 export type ProductFormState = { error: string | null }
@@ -150,6 +151,14 @@ export async function upsertProduct(
   // commission = sell_price − factory_cost − platform_margin − delivery_fee − confirmation_fee − packaging_fee
   // Returns 0 when affiliate is disabled or factory_cost_mad is not set yet.
 
+  // Base de livraison de l'aperçu = défaut logistique planché (D2), identique à
+  // l'affichage catalogue (page.tsx) → aperçu stocké et affiché cohérents.
+  const logisticsSettings = await getLogisticsSettings()
+  const previewDeliveryFee = Math.max(
+    MIN_DELIVERY_FEE_MAD,
+    logisticsSettings ? Number(logisticsSettings.default_delivery_fee_mad) : 35
+  )
+
   const commission_amount: number = (() => {
     if (!affiliate_enabled || factory_cost_mad === null) return 0
     const raw = calculateNetAffiliateCommission({
@@ -158,7 +167,9 @@ export async function upsertProduct(
       marginType: platform_margin_type,
       marginValue: platform_margin_value,
       packagingFee: packaging_fee_mad,
-      deliveryFee: delivery_fee_mad,
+      // La livraison n'est jamais 0 ; on utilise le défaut logistique planché
+      // (et non delivery_fee_mad du produit) pour rester cohérent avec page.tsx.
+      deliveryFee: previewDeliveryFee,
       confirmationFee: confirmation_fee_mad,
       quantity: 1,
     })

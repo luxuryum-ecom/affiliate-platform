@@ -28,6 +28,18 @@ export function calculatePlatformPrice(
 }
 
 /**
+ * Plancher de frais de livraison (MAD) — différencié par zone.
+ *
+ * Règle métier non négociable : la livraison est TOUJOURS payée par l'affilié,
+ * déduite de sa commission — jamais 0. Toute résolution de frais de livraison
+ * est planchée à ces valeurs (D1) :
+ *   - Casablanca (hub)      → 25 MAD
+ *   - Reste du Maroc / défaut → 35 MAD
+ */
+export const MIN_DELIVERY_FEE_MAD = 35
+export const MIN_DELIVERY_FEE_CASABLANCA_MAD = 25
+
+/**
  * Compute the net affiliate commission per unit.
  *
  * net = affiliate_sell_price
