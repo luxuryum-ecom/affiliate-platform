@@ -6,6 +6,12 @@ const INPUT =
   'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
 const LABEL = 'block text-xs font-medium text-gray-500 mb-1'
 
+// Static French labels for the modal fields — these are internal UX strings
+// that don't require per-locale translation in this component (server context
+// is unavailable here). The parent page passes whatsappPhone only.
+// NOTE: If full i18n of this modal is required in the future, convert this
+// component to receive a `tSourcing` prop from the server parent.
+
 export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string }) {
   const [open, setOpen] = useState(false)
   const [productDesc, setProductDesc] = useState('')
