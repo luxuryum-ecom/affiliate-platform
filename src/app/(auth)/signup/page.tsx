@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { SignupForm } from '@/components/auth/signup-form'
 import { MozounaLogo } from '@/components/shared/branding'
 import { cn } from '@/lib/utils'
@@ -7,12 +8,15 @@ interface SignupPageProps {
   searchParams: Promise<{ type?: string }>
 }
 
-export const metadata = {
-  title: 'Inscription — Mozouna Group',
+export async function generateMetadata() {
+  const t = await getTranslations('auth.signup')
+  return { title: t('metaTitle') }
 }
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const params = await searchParams
+  const t = await getTranslations('auth.signup')
+  const ta = await getTranslations('auth')
   const role: 'affiliate' | 'wholesaler' | 'supplier' =
     params.type === 'wholesale'
       ? 'wholesaler'
@@ -25,22 +29,22 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
       type: 'affiliate',
       href: '/signup?type=affiliate',
       icon: '🔗',
-      label: "Je fais de l'affiliation",
-      sub: 'Partagez des liens, encaissez des commissions COD',
+      label: ta('roleAffiliate'),
+      sub: t('subAffiliate'),
     },
     {
       type: 'wholesale',
       href: '/signup?type=wholesale',
       icon: '📦',
-      label: "J'achète en gros",
-      sub: 'Catalogue B2B, paliers de prix, commandes groupées',
+      label: ta('roleWholesaler'),
+      sub: t('subWholesaler'),
     },
     {
       type: 'supplier',
       href: '/signup?type=supplier',
       icon: '🏭',
-      label: 'Je vends mes produits',
-      sub: 'Référencez vos produits sur la marketplace',
+      label: ta('roleSupplier'),
+      sub: t('subSupplier'),
     },
   ] as const
 
@@ -55,9 +59,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
         <div className="bg-surface rounded-2xl border border-line shadow-premium p-6">
           <div className="mb-5">
-            <h1 className="text-xl font-semibold text-foreground">Créer un compte</h1>
+            <h1 className="text-xl font-semibold text-foreground">{t('title')}</h1>
             <p className="mt-1 text-sm text-muted">
-              Comment comptez-vous utiliser la plateforme ?
+              {t('subtitle')}
             </p>
           </div>
 
@@ -100,9 +104,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         </div>
 
         <p className="mt-4 text-center text-xs text-faint">
-          Vous êtes admin ?{' '}
+          {t('adminQuestion')}{' '}
           <Link href="/login" className="text-gold-400 underline underline-offset-2">
-            Connexion directe
+            {t('directLogin')}
           </Link>
         </p>
       </div>

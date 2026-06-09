@@ -1,12 +1,15 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { LoginForm } from '@/components/auth/login-form'
 import { MozounaLogo } from '@/components/shared/branding'
 
-export const metadata = {
-  title: 'Connexion — Mozouna Group',
+export async function generateMetadata() {
+  const t = await getTranslations('auth.login')
+  return { title: t('metaTitle') }
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getTranslations('auth.login')
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -19,9 +22,9 @@ export default function LoginPage() {
 
         <div className="bg-surface rounded-2xl border border-line shadow-premium p-8">
           <div className="mb-6">
-            <h1 className="text-xl font-semibold text-foreground">Connexion</h1>
+            <h1 className="text-xl font-semibold text-foreground">{t('title')}</h1>
             <p className="mt-1 text-sm text-muted">
-              Accédez à votre espace de travail.
+              {t('subtitle')}
             </p>
           </div>
 

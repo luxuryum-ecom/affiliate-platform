@@ -17,7 +17,9 @@ const LANGS = [
  * variant="light" : en-têtes blancs — espaces grossiste / fournisseur.
  */
 export function LanguageSwitcher({ variant = 'dark' }: { variant?: 'dark' | 'light' }) {
-  const active = useLocale()
+  // useLocale peut renvoyer un suffixe de formatage (ex. 'ar-u-nu-latn') —
+  // on compare sur la langue de base.
+  const active = useLocale().split('-')[0]
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 

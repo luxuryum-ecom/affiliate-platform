@@ -175,5 +175,73 @@
       "partially_paid": "Partially paid",
       "paid": "Paid"
     }
+  },
+  "auth": {
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "roleAffiliate": "I'm an affiliate",
+    "roleWholesaler": "I buy wholesale",
+    "roleSupplier": "I sell my products",
+    "login": {
+      "metaTitle": "Sign in — Mozouna Group",
+      "title": "Sign in",
+      "subtitle": "Access your workspace.",
+      "passwordPlaceholder": "Your password",
+      "submitting": "Signing in…",
+      "submit": "Sign in",
+      "noAccount": "No account yet?",
+      "signupLink": "Sign up"
+    },
+    "signup": {
+      "metaTitle": "Sign up — Mozouna Group",
+      "title": "Create an account",
+      "subtitle": "How do you plan to use the platform?",
+      "subAffiliate": "Share links, earn COD commissions",
+      "subWholesaler": "B2B catalog, price tiers, bulk orders",
+      "subSupplier": "List your products on the marketplace",
+      "fullNameLabel": "Full name",
+      "fullNamePlaceholder": "Mohamed Benali",
+      "passwordPlaceholder": "8 characters minimum",
+      "submitting": "Creating account…",
+      "submit": "Create my account",
+      "haveAccount": "Already registered?",
+      "loginLink": "Sign in",
+      "adminQuestion": "Are you an admin?",
+      "directLogin": "Direct login"
+    },
+    "pending": {
+      "metaTitle": "Account pending — Mozouna Group",
+      "nextSteps": "Next steps",
+      "signOut": "Sign out",
+      "hello": "Hello {name},",
+      "affiliate": {
+        "title": "Your affiliate account is under review",
+        "intro": "Your request to become an affiliate (COD dropshipping) has been received. Our team will process it within 24 to 48 hours.",
+        "steps": [
+          "Verification of your profile",
+          "Email notification once approved",
+          "Access to the catalog, referral links and commission tracking"
+        ]
+      },
+      "wholesaler": {
+        "title": "Your wholesale account is under review",
+        "intro": "Your request to buy wholesale (B2B) has been received. Our team will process it within 24 to 48 hours.",
+        "steps": [
+          "Verification of your profile",
+          "Email notification once approved",
+          "Access to the wholesale catalog, price tiers and B2B orders"
+        ]
+      },
+      "supplier": {
+        "title": "Your supplier account is under review",
+        "intro": "Your request to sell your products on the marketplace has been received. Our team will process it within 24 to 48 hours.",
+        "steps": [
+          "Verification of your supplier profile",
+          "Email notification once approved",
+          "Access to managing your products and quote requests"
+        ]
+      }
+    }
   }
 }

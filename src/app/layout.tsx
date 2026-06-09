@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale()
   const messages = await getMessages()
-  const dir = locale === 'ar' ? 'rtl' : 'ltr'
+  const dir = locale.startsWith('ar') ? 'rtl' : 'ltr'
 
   return (
     <html lang={locale} dir={dir} className={inter.variable}>

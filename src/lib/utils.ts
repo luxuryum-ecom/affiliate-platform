@@ -100,13 +100,19 @@ export function getWholesaleTier(
   return { price_per_unit: match.price_per_unit, label }
 }
 
-/** Format a number in the given ISO 4217 currency (default MAD). */
+/** Format a number in the given ISO 4217 currency (default MAD).
+ *
+ * Le résultat est entouré d'isolats bidi Unicode (FSI U+2068 … PDI U+2069) :
+ * en contexte RTL (arabe), le montant « 30,40 MAD » reste affiché dans le bon
+ * ordre au lieu d'être réordonné en « MAD 30,40 ». Invisible en LTR. Chiffres
+ * latins conservés (locale fr-MA). */
 export function formatCurrency(amount: number, currency: string = 'MAD'): string {
-  return new Intl.NumberFormat('fr-MA', {
+  const formatted = new Intl.NumberFormat('fr-MA', {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
   }).format(amount)
+  return `⁨${formatted}⁩`
 }
 
 /** Format a number as Moroccan dirham. Thin wrapper over formatCurrency. */

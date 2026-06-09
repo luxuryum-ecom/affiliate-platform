@@ -2,15 +2,10 @@
 
 import { useActionState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { signUp, type AuthState } from '@/app/actions/auth'
 
 const initialState: AuthState = { error: null }
-
-const ROLE_LABELS: Record<string, string> = {
-  affiliate: "Je fais de l'affiliation",
-  wholesaler: "J'achète en gros",
-  supplier: 'Je vends mes produits',
-}
 
 interface SignupFormProps {
   defaultRole: 'affiliate' | 'wholesaler' | 'supplier'
@@ -18,6 +13,14 @@ interface SignupFormProps {
 
 export function SignupForm({ defaultRole }: SignupFormProps) {
   const [state, action, isPending] = useActionState(signUp, initialState)
+  const t = useTranslations('auth')
+  const ts = useTranslations('auth.signup')
+
+  const roleLabel = {
+    affiliate: t('roleAffiliate'),
+    wholesaler: t('roleWholesaler'),
+    supplier: t('roleSupplier'),
+  }[defaultRole]
 
   return (
     <form action={action} className="space-y-4">
@@ -26,12 +29,12 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
       {/* Role badge */}
       <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-2 rounded-full text-xs font-medium text-muted">
         <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-        {ROLE_LABELS[defaultRole]}
+        {roleLabel}
       </div>
 
       <div>
         <label htmlFor="full_name" className="block text-sm font-medium text-muted mb-1">
-          Nom complet
+          {ts('fullNameLabel')}
         </label>
         <input
           id="full_name"
@@ -41,13 +44,13 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
           autoComplete="name"
           disabled={isPending}
           className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
-          placeholder="Mohamed Benali"
+          placeholder={ts('fullNamePlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-muted mb-1">
-          Email
+          {t('emailLabel')}
         </label>
         <input
           id="email"
@@ -57,13 +60,13 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
           autoComplete="email"
           disabled={isPending}
           className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
-          placeholder="vous@exemple.com"
+          placeholder={t('emailPlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-muted mb-1">
-          Mot de passe
+          {t('passwordLabel')}
         </label>
         <input
           id="password"
@@ -74,7 +77,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
           minLength={8}
           disabled={isPending}
           className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
-          placeholder="8 caractères minimum"
+          placeholder={ts('passwordPlaceholder')}
         />
       </div>
 
@@ -89,13 +92,13 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
         disabled={isPending}
         className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isPending ? 'Création du compte…' : 'Créer mon compte'}
+        {isPending ? ts('submitting') : ts('submit')}
       </button>
 
       <p className="text-center text-sm text-muted">
-        Déjà inscrit ?{' '}
+        {ts('haveAccount')}{' '}
         <Link href="/login" className="text-foreground font-medium underline underline-offset-2">
-          Se connecter
+          {ts('loginLink')}
         </Link>
       </p>
     </form>
