@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { useTranslations } from 'next-intl'
 import { cancelWholesaleOrderBuyer, updateWholesaleOrderBuyerNote } from '@/app/actions/orders'
 import type { ActionState } from '@/types/orders'
 import type { WholesaleOrderStatus } from '@/types/database'
@@ -26,47 +27,46 @@ interface Props {
 const init: ActionState = { error: null, success: false }
 
 export function WholesalePendingActions({ orderId, currentNote, status, orderRef }: Props) {
+  const t = useTranslations('wholesale.orderDetail')
   const [cancelState, cancelAction, cancelPending] = useActionState(cancelWholesaleOrderBuyer, init)
   const [noteState, noteAction, notePending] = useActionState(updateWholesaleOrderBuyerNote, init)
 
   const shortRef = orderRef ?? orderId.slice(0, 8).toUpperCase()
 
   function handleCancel(e: React.FormEvent) {
-    if (!window.confirm('Annuler définitivement cette commande ?')) e.preventDefault()
+    if (!window.confirm(t('pendingCancelConfirm'))) e.preventDefault()
   }
 
   if (status === 'pending') {
     return (
       <div className="bg-white rounded-xl border border-amber-200 p-5 space-y-4">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Modifier la commande</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Commande en attente — vous pouvez mettre à jour votre note ou l&apos;annuler avant traitement.
-          </p>
+          <h2 className="text-sm font-semibold text-gray-900">{t('pendingModifyTitle')}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{t('pendingModifySubtitle')}</p>
         </div>
 
         <form action={noteAction} className="space-y-2">
           <input type="hidden" name="orderId" value={orderId} />
-          <label className="block text-xs font-medium text-gray-600">Note pour l&apos;équipe</label>
+          <label className="block text-xs font-medium text-gray-600">{t('pendingNoteLabel')}</label>
           <textarea
             name="buyer_notes"
             defaultValue={currentNote ?? ''}
             rows={2}
-            placeholder="Délai souhaité, instructions spéciales…"
+            placeholder={t('pendingNotePlaceholder')}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
           />
           {noteState.error && (
             <p className="text-xs text-red-600">{noteState.error}</p>
           )}
           {noteState.success && (
-            <p className="text-xs text-green-600">Note mise à jour.</p>
+            <p className="text-xs text-green-600">{t('pendingNoteUpdated')}</p>
           )}
           <button
             type="submit"
             disabled={notePending}
             className="px-4 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
           >
-            {notePending ? 'Sauvegarde…' : 'Sauvegarder la note'}
+            {notePending ? t('pendingNoteSaving') : t('pendingNoteSave')}
           </button>
         </form>
 
@@ -82,7 +82,7 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
             disabled={cancelPending}
             className="px-4 py-1.5 text-xs font-medium bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors"
           >
-            {cancelPending ? 'Annulation…' : 'Annuler la commande'}
+            {cancelPending ? t('pendingCancelCancelling') : t('pendingCancelBtn')}
           </button>
         </form>
       </div>
@@ -91,15 +91,13 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
 
   if (status === 'confirmed' || status === 'sourcing' || status === 'shipped') {
     const msg = encodeURIComponent(
-      `Bonjour, je souhaite demander l'annulation de ma commande #${shortRef}. Merci de me confirmer la procédure.`
+      t('pendingCancelWaMsg', { ref: shortRef })
     )
     return (
       <div className="bg-white rounded-xl border border-amber-200 p-5 space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Demander une annulation</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Commande en cours de traitement — l&apos;annulation se fait via notre équipe.
-          </p>
+          <h2 className="text-sm font-semibold text-gray-900">{t('pendingCancelRequestTitle')}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{t('pendingCancelRequestSubtitle')}</p>
         </div>
         <a
           href={`https://wa.me/${WHATSAPP_PHONE}?text=${msg}`}
@@ -108,7 +106,7 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
           className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           <WhatsAppIcon />
-          Contacter via WhatsApp — #{shortRef}
+          {t('pendingCancelWaBtn', { ref: shortRef })}
         </a>
       </div>
     )
@@ -116,15 +114,13 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
 
   if (status === 'delivered') {
     const msg = encodeURIComponent(
-      `Bonjour, je souhaite signaler un problème ou initier un retour pour ma commande #${shortRef}. Merci de me guider.`
+      t('pendingReturnWaMsg', { ref: shortRef })
     )
     return (
       <div className="bg-white rounded-xl border border-teal-200 p-5 space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Signaler un problème ou un retour</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Commande livrée — contactez-nous dans les 48h pour tout problème ou demande de retour.
-          </p>
+          <h2 className="text-sm font-semibold text-gray-900">{t('pendingReturnTitle')}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{t('pendingReturnSubtitle')}</p>
         </div>
         <a
           href={`https://wa.me/${WHATSAPP_PHONE}?text=${msg}`}
@@ -133,7 +129,7 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
           className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           <WhatsAppIcon />
-          Contacter via WhatsApp — #{shortRef}
+          {t('pendingReturnWaBtn', { ref: shortRef })}
         </a>
       </div>
     )
