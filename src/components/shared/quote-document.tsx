@@ -1,8 +1,25 @@
 import { formatCurrency } from '@/lib/utils'
 import type { QuoteRequest, QuoteRequestWithDetails } from '@/types/database'
 
-const LEGAL_NOTICE =
-  `Les prix, frais de transport, frais de douane et délais de livraison communiqués sont des estimations basées sur les informations disponibles au moment de l'établissement du devis. Le transport international peut être impacté par la météo, la situation géopolitique, les contrôles douaniers, les retards transporteurs ou tout cas de force majeure. Les délais annoncés ne constituent pas un engagement ferme. Mozouna Group s'engage à effectuer les procédures légales nécessaires à l'importation et à la livraison de la marchandise, ainsi qu'à fournir la facture commerciale relative à la commande.`
+export interface QuoteDocumentLabels {
+  docIssueDate: string
+  docValidUntil: string
+  docAddressedTo: string
+  docProduct: string
+  docOriginPrefix: string   // e.g. "Origine : " / "Origin: " / "المنشأ: "
+  docDescCol: string
+  docQtyCol: string
+  docUnitPriceCol: string
+  docSubtotalCol: string
+  docTransportRow: string
+  docGrandTotal: string
+  docShippingMode: string
+  docDelivery: string
+  docNote: string
+  docLegal: string
+  docLegalText: string
+  docLabel: string          // "Devis" / "Quote" / "عرض سعر"
+}
 
 type QuoteDocumentData = Pick<
   QuoteRequest,
@@ -24,11 +41,17 @@ type QuoteDocumentData = Pick<
   product: Pick<QuoteRequestWithDetails['product'], 'name' | 'origin_country'>
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-MA', { day: '2-digit', month: 'long', year: 'numeric' })
+interface Props {
+  data: QuoteDocumentData
+  labels: QuoteDocumentLabels
+  dateLocale?: string
 }
 
-export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
+function formatDate(iso: string, dateLocale: string) {
+  return new Date(iso).toLocaleDateString(dateLocale, { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+export function QuoteDocument({ data, labels, dateLocale = 'fr-MA' }: Props) {
   // Montants stockés en MAD (pivot = vérité contractuelle). Affichage dans la devise
   // du client au taux FIGÉ du devis. IMP-B : on arrondit le prix unitaire affiché puis
   // on dérive le sous-total/total de cette valeur, pour que unitaire × qté = sous-total
@@ -45,9 +68,9 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
   const grandTotal = round2(productSubtotal + transportTotal)
 
   const refNo = `DV-${data.id.slice(0, 8).toUpperCase()}`
-  const preparedAt = data.quote_prepared_at ? formatDate(data.quote_prepared_at) : '—'
+  const preparedAt = data.quote_prepared_at ? formatDate(data.quote_prepared_at, dateLocale) : '—'
   const validUntil = data.quote_validity_date
-    ? new Date(data.quote_validity_date).toLocaleDateString('fr-MA', { day: '2-digit', month: 'long', year: 'numeric' })
+    ? formatDate(data.quote_validity_date, dateLocale)
     : '—'
 
   return (
@@ -61,17 +84,17 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
             <p className="text-indigo-200 text-xs mt-0.5">Import &amp; Distribution B2B — Maroc</p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-mono text-indigo-200 uppercase tracking-widest">Devis</p>
+            <p className="text-xs font-mono text-indigo-200 uppercase tracking-widest">{labels.docLabel}</p>
             <p className="text-xl font-bold mt-0.5">{refNo}</p>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-4 text-xs text-indigo-100">
           <div>
-            <span className="block text-indigo-300 mb-0.5">Date d&apos;émission</span>
+            <span className="block text-indigo-300 mb-0.5">{labels.docIssueDate}</span>
             <span className="font-medium text-white">{preparedAt}</span>
           </div>
           <div>
-            <span className="block text-indigo-300 mb-0.5">Valide jusqu&apos;au</span>
+            <span className="block text-indigo-300 mb-0.5">{labels.docValidUntil}</span>
             <span className="font-medium text-white">{validUntil}</span>
           </div>
         </div>
@@ -82,7 +105,9 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
         {/* ── Client block ── */}
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Adressé à</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              {labels.docAddressedTo}
+            </p>
             <p className="text-sm font-semibold text-gray-900">
               {data.buyer.company_name ?? data.buyer.full_name}
             </p>
@@ -94,10 +119,14 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Produit</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              {labels.docProduct}
+            </p>
             <p className="text-sm font-medium text-gray-900">{data.product.name}</p>
             {data.product.origin_country && (
-              <p className="text-xs text-gray-500 mt-0.5">Origine : {data.product.origin_country}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {labels.docOriginPrefix}{data.product.origin_country}
+              </p>
             )}
           </div>
         </div>
@@ -107,10 +136,10 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</th>
-                <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Qté</th>
-                <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Prix unit.</th>
-                <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sous-total</th>
+                <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{labels.docDescCol}</th>
+                <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{labels.docQtyCol}</th>
+                <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{labels.docUnitPriceCol}</th>
+                <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{labels.docSubtotalCol}</th>
               </tr>
             </thead>
             <tbody>
@@ -121,7 +150,7 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
                 <td className="py-3 px-3 text-right font-semibold text-gray-900">{fmt(productSubtotal)}</td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-3 px-3 text-gray-700">Transport &amp; Douane</td>
+                <td className="py-3 px-3 text-gray-700">{labels.docTransportRow}</td>
                 <td className="py-3 px-3 text-right text-gray-400">—</td>
                 <td className="py-3 px-3 text-right text-gray-400">—</td>
                 <td className="py-3 px-3 text-right font-semibold text-gray-900">{fmt(transportTotal)}</td>
@@ -130,7 +159,7 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
             <tfoot>
               <tr className="bg-indigo-50">
                 <td colSpan={3} className="py-3 px-3 text-sm font-bold text-indigo-900 text-right">
-                  Total général
+                  {labels.docGrandTotal}
                 </td>
                 <td className="py-3 px-3 text-right text-base font-bold text-indigo-900">
                   {fmt(grandTotal)}
@@ -145,13 +174,13 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
           <div className="grid grid-cols-2 gap-4 border border-gray-100 rounded-xl p-4 bg-gray-50">
             {data.quoted_shipping_mode && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Mode de transport</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{labels.docShippingMode}</p>
                 <p className="text-sm text-gray-800">{data.quoted_shipping_mode}</p>
               </div>
             )}
             {data.quoted_delivery_delay && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Délai de livraison estimé</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{labels.docDelivery}</p>
                 <p className="text-sm text-gray-800">{data.quoted_delivery_delay}</p>
               </div>
             )}
@@ -161,15 +190,15 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
         {/* ── Public note ── */}
         {data.quote_public_note && (
           <div className="border-l-4 border-indigo-300 pl-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Note</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{labels.docNote}</p>
             <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{data.quote_public_note}</p>
           </div>
         )}
 
         {/* ── Legal notice ── */}
         <div className="border-t border-gray-100 pt-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Mentions légales</p>
-          <p className="text-xs text-gray-500 leading-relaxed">{LEGAL_NOTICE}</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{labels.docLegal}</p>
+          <p className="text-xs text-gray-500 leading-relaxed">{labels.docLegalText}</p>
         </div>
 
         {/* ── Footer ── */}

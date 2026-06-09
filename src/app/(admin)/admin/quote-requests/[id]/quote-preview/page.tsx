@@ -45,7 +45,7 @@ export default async function AdminQuotePreviewPage({ params }: Params) {
             <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
               Vue admin — coûts internes non affichés
             </span>
-            <PrintButton />
+            <PrintButton label="Imprimer / PDF" />
           </div>
         </div>
       </div>
@@ -73,6 +73,26 @@ export default async function AdminQuotePreviewPage({ params }: Params) {
             buyer:                      req.buyer,
             product:                    req.product,
           }}
+          labels={{
+            docIssueDate:    "Date d'émission",
+            docValidUntil:   "Valide jusqu'au",
+            docAddressedTo:  "Adressé à",
+            docProduct:      "Produit",
+            docOriginPrefix: "Origine : ",
+            docDescCol:      "Description",
+            docQtyCol:       "Qté",
+            docUnitPriceCol: "Prix unit.",
+            docSubtotalCol:  "Sous-total",
+            docTransportRow: "Transport & Douane",
+            docGrandTotal:   "Total général",
+            docShippingMode: "Mode de transport",
+            docDelivery:     "Délai de livraison estimé",
+            docNote:         "Note",
+            docLegal:        "Mentions légales",
+            docLegalText:    "Les prix, frais de transport, frais de douane et délais de livraison communiqués sont des estimations basées sur les informations disponibles au moment de l'établissement du devis. Le transport international peut être impacté par la météo, la situation géopolitique, les contrôles douaniers, les retards transporteurs ou tout cas de force majeure. Les délais annoncés ne constituent pas un engagement ferme. Mozouna Group s'engage à effectuer les procédures légales nécessaires à l'importation et à la livraison de la marchandise, ainsi qu'à fournir la facture commerciale relative à la commande.",
+            docLabel:        "Devis",
+          }}
+          dateLocale="fr-MA"
         />
 
         <div className="print:hidden mt-8 text-center">
