@@ -1,13 +1,16 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { formatConversionRate, formatReturnRate } from '@/lib/order-analytics'
 import { MozounaLogo } from '@/components/shared/branding'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { Profile, Commission } from '@/types/database'
 
-export const metadata = {
-  title: 'Tableau de bord — Espace Affilié',
+export async function generateMetadata() {
+  const t = await getTranslations('affiliateDashboard')
+  return { title: t('metaTitle') }
 }
 
 function StatCard({
@@ -46,6 +49,8 @@ function StatCard({
 
 export default async function AffiliateDashboardPage() {
   const supabase = await createClient()
+  const t = await getTranslations('affiliateDashboard')
+  const tc = await getTranslations('common')
 
   const {
     data: { user },
@@ -105,13 +110,14 @@ export default async function AffiliateDashboardPage() {
           <div className="flex items-center gap-3">
             <MozounaLogo size="md" />
             <span className="hidden sm:block text-line">|</span>
-            <span className="hidden sm:block text-sm font-medium text-muted">Espace Affilié</span>
+            <span className="hidden sm:block text-sm font-medium text-muted">{t('spaceLabel')}</span>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <span className="text-sm text-muted hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-muted hover:text-foreground transition-colors">
-                Déconnexion
+                {tc('signOut')}
               </button>
             </form>
           </div>
@@ -120,28 +126,28 @@ export default async function AffiliateDashboardPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Bonjour, {profile?.full_name}</h1>
-          <p className="text-sm text-muted mt-0.5">Performance de vos liens affiliés COD.</p>
+          <h1 className="text-lg font-semibold text-foreground">{t('greeting', { name: profile?.full_name ?? '' })}</h1>
+          <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
 
         {/* Traffic & conversion */}
         <section>
           <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
-            Trafic & conversion
+            {t('sectionTraffic')}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <StatCard label="Clics sur vos liens" value={String(clicks)} />
-            <StatCard label="Commandes" value={String(totalOrders)} />
+            <StatCard label={t('statClicks')} value={String(clicks)} />
+            <StatCard label={t('statOrders')} value={String(totalOrders)} />
             <StatCard
-              label="Taux de conversion"
+              label={t('statConversion')}
               value={conversionRate}
-              sub={clicks > 0 ? `${totalOrders} / ${clicks} clics` : 'Aucun clic enregistré'}
+              sub={clicks > 0 ? t('conversionSub', { orders: totalOrders, clicks }) : t('noClicks')}
               variant={clicks > 0 && totalOrders > 0 ? 'success' : 'muted'}
             />
             <StatCard
-              label="Taux de retour"
+              label={t('statReturnRate')}
               value={returnRate}
-              sub={`${returned} retour${returned !== 1 ? 's' : ''} / ${delivered + returned} livrées+retours`}
+              sub={t('returnSub', { returned, total: delivered + returned })}
               variant={returned > 0 ? 'warning' : 'muted'}
             />
           </div>
@@ -150,61 +156,61 @@ export default async function AffiliateDashboardPage() {
         {/* Order breakdown */}
         <section>
           <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
-            Commandes
+            {t('sectionOrders')}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            <StatCard label="À confirmer"  value={String(count('pending_confirmation'))} variant="warning" />
-            <StatCard label="Confirmées"   value={String(count('confirmed'))} />
-            <StatCard label="Expédiées"    value={String(count('shipped'))} />
-            <StatCard label="Livrées"      value={String(delivered)} variant={delivered > 0 ? 'success' : 'default'} />
-            <StatCard label="Retournées"   value={String(returned)}  variant={returned > 0 ? 'warning' : 'muted'} />
+            <StatCard label={t('orderPending')}   value={String(count('pending_confirmation'))} variant="warning" />
+            <StatCard label={t('orderConfirmed')} value={String(count('confirmed'))} />
+            <StatCard label={t('orderShipped')}   value={String(count('shipped'))} />
+            <StatCard label={t('orderDelivered')} value={String(delivered)} variant={delivered > 0 ? 'success' : 'default'} />
+            <StatCard label={t('orderReturned')}  value={String(returned)}  variant={returned > 0 ? 'warning' : 'muted'} />
           </div>
         </section>
 
         {/* Commissions */}
         <section>
           <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
-            Commissions
+            {t('sectionCommissions')}
           </p>
 
           <div className={`rounded-xl border p-5 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
             pendingBalance > 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-surface border-line'
           }`}>
             <div>
-              <p className="text-xs text-muted">Solde en attente de paiement</p>
+              <p className="text-xs text-muted">{t('pendingBalance')}</p>
               <p className={`text-3xl font-bold tabular-nums mt-1 ${
                 pendingBalance > 0 ? 'text-amber-300' : 'text-faint'
               }`}>
                 {formatMAD(pendingBalance)}
               </p>
               <p className="text-xs text-faint mt-1">
-                Commissions gagnées uniquement sur commandes livrées
+                {t('earnedOnlyDelivered')}
               </p>
             </div>
             <Link
               href="/affiliate/orders"
               className="text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap self-start sm:self-center"
             >
-              Voir mes commandes →
+              {t('viewOrders')}
             </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard
-              label="Commissions gagnées"
+              label={t('commEarned')}
               value={formatMAD(earnedCommissions)}
-              sub="Créées à la livraison"
+              sub={t('commEarnedSub')}
             />
             <StatCard
-              label="En attente (pending)"
+              label={t('commPending')}
               value={formatMAD(pendingCommissions)}
-              sub="Livrées, non encore approuvées"
+              sub={t('commPendingSub')}
               variant={pendingCommissions > 0 ? 'warning' : 'muted'}
             />
             <StatCard
-              label="Payées"
+              label={t('commPaid')}
               value={formatMAD(paidCommissions)}
-              sub="Versées sur votre compte"
+              sub={t('commPaidSub')}
               variant={paidCommissions > 0 ? 'success' : 'muted'}
             />
           </div>
@@ -213,40 +219,40 @@ export default async function AffiliateDashboardPage() {
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-surface rounded-xl border border-line p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Catalogue produits</h2>
-              <p className="text-xs text-muted mt-0.5">Copiez vos liens et partagez-les.</p>
+              <h2 className="text-sm font-semibold text-foreground">{t('cardCatalogTitle')}</h2>
+              <p className="text-xs text-muted mt-0.5">{t('cardCatalogDesc')}</p>
             </div>
             <Link
               href="/affiliate/products"
               className="text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
             >
-              Voir le catalogue →
+              {t('cardCatalogCta')}
             </Link>
           </div>
 
           <div className="bg-surface rounded-xl border border-line p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Mes commandes</h2>
-              <p className="text-xs text-muted mt-0.5">Suivi détaillé et commissions.</p>
+              <h2 className="text-sm font-semibold text-foreground">{t('cardOrdersTitle')}</h2>
+              <p className="text-xs text-muted mt-0.5">{t('cardOrdersDesc')}</p>
             </div>
             <Link
               href="/affiliate/orders"
               className="text-xs px-4 py-2 border border-line text-foreground rounded-lg hover:bg-surface-2 transition-colors whitespace-nowrap"
             >
-              Voir mes commandes →
+              {t('viewOrders')}
             </Link>
           </div>
 
           <div className="bg-surface rounded-xl border border-line p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Mes commissions</h2>
-              <p className="text-xs text-muted mt-0.5">Historique détaillé et virements reçus.</p>
+              <h2 className="text-sm font-semibold text-foreground">{t('cardCommTitle')}</h2>
+              <p className="text-xs text-muted mt-0.5">{t('cardCommDesc')}</p>
             </div>
             <Link
               href="/affiliate/commissions"
               className="text-xs px-4 py-2 border border-line text-foreground rounded-lg hover:bg-surface-2 transition-colors whitespace-nowrap"
             >
-              Voir mes commissions →
+              {t('cardCommCta')}
             </Link>
           </div>
         </section>

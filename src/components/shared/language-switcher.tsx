@@ -11,7 +11,12 @@ const LANGS = [
   { code: 'en', label: 'EN' },
 ] as const
 
-export function LanguageSwitcher() {
+/**
+ * Sélecteur de langue.
+ * variant="dark" (défaut) : thème sombre/or — accueil, espace affilié.
+ * variant="light" : en-têtes blancs — espaces grossiste / fournisseur.
+ */
+export function LanguageSwitcher({ variant = 'dark' }: { variant?: 'dark' | 'light' }) {
   const active = useLocale()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -24,9 +29,21 @@ export function LanguageSwitcher() {
     })
   }
 
+  const container =
+    variant === 'light'
+      ? 'border-gray-300 bg-gray-100'
+      : 'border-gold-500/30 bg-black/30 backdrop-blur-sm'
+
+  const buttonClasses = (isActive: boolean) => {
+    if (variant === 'light') {
+      return isActive ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900'
+    }
+    return isActive ? 'bg-gold-500 text-ink-900' : 'text-gold-300 hover:text-gold-200'
+  }
+
   return (
     <div
-      className="inline-flex items-center gap-0.5 rounded-lg border border-gold-500/30 bg-black/30 p-0.5 backdrop-blur-sm"
+      className={`inline-flex items-center gap-0.5 rounded-lg border p-0.5 ${container}`}
       role="group"
       aria-label="Langue"
     >
@@ -37,11 +54,9 @@ export function LanguageSwitcher() {
           onClick={() => change(l.code)}
           disabled={isPending}
           aria-pressed={active === l.code}
-          className={`rounded-md px-2 py-1 text-xs font-bold transition-colors disabled:opacity-60 ${
+          className={`rounded-md px-2 py-1 text-xs font-bold transition-colors disabled:opacity-60 ${buttonClasses(
             active === l.code
-              ? 'bg-gold-500 text-ink-900'
-              : 'text-gold-300 hover:text-gold-200'
-          }`}
+          )}`}
         >
           {l.label}
         </button>
