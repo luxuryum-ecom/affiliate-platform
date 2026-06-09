@@ -1,15 +1,18 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { Product, WholesaleCartItem } from '@/types/database'
 
-export const metadata = {
-  title: 'Catalogue — Espace Grossiste',
+export async function generateMetadata() {
+  const t = await getTranslations('wholesale.products')
+  return { title: t('metaTitle') }
 }
 
 export default async function WholesaleProductsPage() {
@@ -39,6 +42,9 @@ export default async function WholesaleProductsPage() {
   const products = (productsResult.data ?? []) as Product[]
   const cartItems = (cartResult.data ?? []) as WholesaleCartItem[]
 
+  const t = await getTranslations('wholesale.products')
+  const tc = await getTranslations('wholesale.common')
+
   // Build a quick lookup: productId → qty in cart
   const cartMap = new Map(cartItems.map((c) => [c.product_id, c.quantity]))
   const cartCount = cartItems.length
@@ -53,10 +59,10 @@ export default async function WholesaleProductsPage() {
               href="/wholesale/dashboard"
               className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
             >
-              ← Dashboard
+              {tc('backToDashboard')}
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Catalogue</span>
+            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
+            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
           </div>
           <div className="flex items-center gap-3">
             {cartCount > 0 && (
@@ -71,12 +77,13 @@ export default async function WholesaleProductsPage() {
               </Link>
             )}
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
+            <LanguageSwitcher variant="light" />
             <form action={signOut}>
               <button
                 type="submit"
                 className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
               >
-                Déconnexion
+                {tc('signOut')}
               </button>
             </form>
           </div>
@@ -87,17 +94,15 @@ export default async function WholesaleProductsPage() {
         {/* Header */}
         <div className="flex items-start justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Catalogue grossiste</h1>
+            <h1 className="text-lg font-semibold text-gray-900">{t('pageTitle')}</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Stock interne Mozouna — commande directe.{' '}
-              {products.length} produit{products.length !== 1 ? 's' : ''} disponible
-              {products.length !== 1 ? 's' : ''}.
+              {t('subtitle', { count: products.length })}
             </p>
             <Link
               href="/wholesale/marketplace"
               className="mt-1.5 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
             >
-              Chercher chez nos fournisseurs → Marketplace
+              {t('browseMarketplace')}
             </Link>
           </div>
           {cartCount > 0 && (
@@ -105,20 +110,19 @@ export default async function WholesaleProductsPage() {
               href="/wholesale/cart"
               className="shrink-0 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
             >
-              Voir le panier ({cartCount})
+              {t('viewCart', { count: cartCount })}
             </Link>
           )}
         </div>
 
         {products.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">Aucun produit disponible pour le moment.</p>
+            <p className="text-sm text-gray-400">{t('empty')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {products.map((product) => {
               const inCart = cartMap.get(product.id)
-              // Cheapest available tier price for display
               const lowestTier =
                 product.wholesale_tiers.length > 0
                   ? getWholesaleTier(
@@ -134,6 +138,14 @@ export default async function WholesaleProductsPage() {
                   product={product}
                   displayPrice={displayPrice}
                   inCartQty={inCart}
+                  badgeImport={t('badgeImport')}
+                  badgeStock={t('badgeStock')}
+                  badgeTiers={t('badgeTiers')}
+                  inCartLabel={t('inCart', { count: inCart ?? 0 })}
+                  ctaRfq={t('ctaRfq')}
+                  ctaOrder={t('ctaOrder')}
+                  fromPrice={t('fromPrice')}
+                  minQtyLabel={t('minQty', { count: product.wholesale_min_qty })}
                 />
               )
             })}
@@ -150,10 +162,26 @@ function WholesaleProductCard({
   product,
   displayPrice,
   inCartQty,
+  badgeImport,
+  badgeStock,
+  badgeTiers,
+  inCartLabel,
+  ctaRfq,
+  ctaOrder,
+  fromPrice,
+  minQtyLabel,
 }: {
   product: Product
   displayPrice: number
   inCartQty: number | undefined
+  badgeImport: string
+  badgeStock: string
+  badgeTiers: string
+  inCartLabel: string
+  ctaRfq: string
+  ctaOrder: string
+  fromPrice: string
+  minQtyLabel: string
 }) {
   const coverUrl = getProductCoverUrl(product)
   const tierQtys = [...product.wholesale_tiers]
@@ -175,8 +203,8 @@ function WholesaleProductCard({
 
         {/* In-cart badge */}
         {inCartQty != null && (
-          <div className="absolute top-2 right-2 bg-gray-900 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-            {inCartQty} au panier
+          <div className="absolute top-2 end-2 bg-gray-900 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {inCartLabel}
           </div>
         )}
       </Link>
@@ -191,11 +219,11 @@ function WholesaleProductCard({
                 : 'bg-green-100 text-green-700'
             }`}
           >
-            {isRfq ? 'Import / Demande' : 'Stock Maroc'}
+            {isRfq ? badgeImport : badgeStock}
           </span>
           {hasTiers && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-              Paliers
+              {badgeTiers}
             </span>
           )}
         </div>
@@ -209,7 +237,7 @@ function WholesaleProductCard({
         <div className="mt-auto pt-1.5 border-t border-gray-100">
           <p className="text-sm font-bold text-gray-900">{formatMAD(displayPrice)}</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            {hasTiers ? 'À partir de · ' : ''}{product.wholesale_min_qty} u. min.
+            {hasTiers ? fromPrice : ''}{minQtyLabel}
           </p>
         </div>
 
@@ -218,7 +246,7 @@ function WholesaleProductCard({
           href={productUrl}
           className="block w-full text-center text-xs font-bold py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors"
         >
-          {isRfq ? 'Demander un devis →' : 'Commander →'}
+          {isRfq ? ctaRfq : ctaOrder}
         </Link>
       </div>
     </div>

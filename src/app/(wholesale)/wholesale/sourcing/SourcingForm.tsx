@@ -8,17 +8,34 @@ const COUNTRIES = ['Chine', 'Turquie', 'Égypte', 'Dubai', 'Maroc', 'Inde', 'Aut
 
 const initialState = { error: null, success: false }
 
-export default function SourcingForm() {
+interface SourcingFormLabels {
+  fieldProduct: string
+  fieldProductPlaceholder: string
+  fieldCategory: string
+  fieldCategoryPlaceholder: string
+  fieldQty: string
+  fieldQtyPlaceholder: string
+  fieldBudget: string
+  fieldBudgetPlaceholder: string
+  fieldCountry: string
+  fieldCountryNone: string
+  fieldDeadline: string
+  fieldNotes: string
+  fieldNotesPlaceholder: string
+  submit: string
+  submitting: string
+  successTitle: string
+  successSubtitle: string
+}
+
+export default function SourcingForm({ labels }: { labels: SourcingFormLabels }) {
   const [state, action, isPending] = useActionState(submitSourcingRequest, initialState)
 
   if (state.success) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-        <p className="text-sm font-semibold text-green-800 mb-1">Demande envoyée avec succès</p>
-        <p className="text-xs text-green-600">
-          Notre équipe va analyser votre besoin et identifier les meilleurs fournisseurs.
-          Vous serez contacté sous 24–48h.
-        </p>
+        <p className="text-sm font-semibold text-green-800 mb-1">{labels.successTitle}</p>
+        <p className="text-xs text-green-600">{labels.successSubtitle}</p>
       </div>
     )
   }
@@ -34,27 +51,27 @@ export default function SourcingForm() {
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Produit recherché <span className="text-red-500">*</span>
+            {labels.fieldProduct} <span className="text-red-500">*</span>
           </label>
           <input
             name="product_name"
             type="text"
             required
-            placeholder="ex: T-shirt coton homme"
+            placeholder={labels.fieldProductPlaceholder}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Catégorie <span className="text-red-500">*</span>
+            {labels.fieldCategory} <span className="text-red-500">*</span>
           </label>
           <select
             name="category"
             required
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           >
-            <option value="">Sélectionner...</option>
+            <option value="">{labels.fieldCategoryPlaceholder}</option>
             {SUPPLIER_CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -65,21 +82,21 @@ export default function SourcingForm() {
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Quantité souhaitée <span className="text-red-500">*</span>
+            {labels.fieldQty} <span className="text-red-500">*</span>
           </label>
           <input
             name="quantity"
             type="number"
             min={10}
             required
-            placeholder="ex: 500"
+            placeholder={labels.fieldQtyPlaceholder}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Budget cible (MAD / unité) <span className="text-red-500">*</span>
+            {labels.fieldBudget} <span className="text-red-500">*</span>
           </label>
           <input
             name="target_budget_mad"
@@ -87,7 +104,7 @@ export default function SourcingForm() {
             min={1}
             step={0.01}
             required
-            placeholder="ex: 45.00"
+            placeholder={labels.fieldBudgetPlaceholder}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
@@ -96,13 +113,13 @@ export default function SourcingForm() {
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Pays d&apos;origine souhaité
+            {labels.fieldCountry}
           </label>
           <select
             name="target_country"
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           >
-            <option value="">Aucune préférence</option>
+            <option value="">{labels.fieldCountryNone}</option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -111,7 +128,7 @@ export default function SourcingForm() {
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Délai de livraison souhaité
+            {labels.fieldDeadline}
           </label>
           <input
             name="delivery_deadline"
@@ -123,12 +140,12 @@ export default function SourcingForm() {
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1.5">
-          Notes complémentaires
+          {labels.fieldNotes}
         </label>
         <textarea
           name="notes"
           rows={3}
-          placeholder="Spécifications techniques, coloris, matière, certifications..."
+          placeholder={labels.fieldNotesPlaceholder}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
         />
       </div>
@@ -138,7 +155,7 @@ export default function SourcingForm() {
         disabled={isPending}
         className="w-full sm:w-auto px-6 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
       >
-        {isPending ? 'Envoi en cours...' : 'Soumettre la demande'}
+        {isPending ? labels.submitting : labels.submit}
       </button>
     </form>
   )

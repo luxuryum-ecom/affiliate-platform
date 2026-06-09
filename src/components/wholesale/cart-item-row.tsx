@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { updateCartQty, removeCartItem } from '@/app/actions/cart'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
@@ -13,6 +14,7 @@ interface CartItemRowProps {
 }
 
 export function CartItemRow({ item }: CartItemRowProps) {
+  const t = useTranslations('wholesale.cart')
   const { product } = item
   const [qty, setQty] = useState(item.quantity)
 
@@ -56,6 +58,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
             href={`/wholesale/products/${product.id}`}
             className="font-medium text-gray-900 text-sm leading-snug hover:underline"
           >
+            {/* product.name is DB data */}
             {product.name}
           </Link>
           {/* Remove */}
@@ -64,7 +67,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
             <button
               type="submit"
               className="text-gray-300 hover:text-red-500 transition-colors text-lg leading-none"
-              aria-label="Supprimer"
+              aria-label={t('itemRemoveAriaLabel')}
             >
               ×
             </button>
@@ -75,7 +78,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
         {tier ? (
           <p className="text-xs text-green-600">{tier.label}</p>
         ) : (
-          <p className="text-xs text-gray-400">Prix public · {formatMAD(product.sell_price)}/u.</p>
+          <p className="text-xs text-gray-400">{formatMAD(product.sell_price)}/u.</p>
         )}
 
         {/* Qty + price row */}
@@ -120,12 +123,12 @@ export function CartItemRow({ item }: CartItemRowProps) {
                   : 'text-gray-500 border-gray-200 hover:bg-gray-50'
               }`}
             >
-              {qty !== item.quantity ? 'Sauvegarder' : 'Mettre à jour'}
+              {qty !== item.quantity ? t('itemUpdate') : t('itemUpdated')}
             </button>
           </form>
 
           {/* Live subtotal */}
-          <div className="ml-auto text-right">
+          <div className="ms-auto text-end">
             <p className="text-xs text-gray-400">{formatMAD(unitPrice)}/u.</p>
             <p className="font-bold text-gray-900 text-sm">{formatMAD(subtotal)}</p>
           </div>

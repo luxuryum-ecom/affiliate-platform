@@ -4,9 +4,35 @@ import { useActionState } from 'react'
 import { submitWholesaleOrder } from '@/app/actions/orders'
 import type { ActionState } from '@/types/orders'
 
+interface SubmitOrderLabels {
+  deliverySection: string
+  deliveryOptional: string
+  fieldCity: string
+  fieldCityPlaceholder: string
+  fieldAddress: string
+  fieldAddressPlaceholder: string
+  fieldNotes: string
+  fieldNotesPlaceholder: string
+  submitOrder: string
+  submittingOrder: string
+}
+
+const defaultLabels: SubmitOrderLabels = {
+  deliverySection: 'Informations de livraison',
+  deliveryOptional: '(optionnel)',
+  fieldCity: 'Ville',
+  fieldCityPlaceholder: 'Ex: Casablanca',
+  fieldAddress: 'Adresse',
+  fieldAddressPlaceholder: 'Ex: 123 Rue Mohammed V',
+  fieldNotes: "Note pour l'équipe",
+  fieldNotesPlaceholder: 'Délai souhaité, instructions spéciales, variantes…',
+  submitOrder: 'Soumettre la commande grossiste',
+  submittingOrder: 'Envoi de la commande…',
+}
+
 const initialState: ActionState = { error: null, success: false }
 
-export function SubmitWholesaleOrderForm() {
+export function SubmitWholesaleOrderForm({ labels = defaultLabels }: { labels?: SubmitOrderLabels }) {
   const [state, action, isPending] = useActionState(submitWholesaleOrder, initialState)
 
   return (
@@ -15,34 +41,35 @@ export function SubmitWholesaleOrderForm() {
         {/* Delivery details */}
         <div className="space-y-3">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Informations de livraison <span className="font-normal normal-case text-gray-400">(optionnel)</span>
+            {labels.deliverySection}{' '}
+            <span className="font-normal normal-case text-gray-400">{labels.deliveryOptional}</span>
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Ville</label>
+              <label className="block text-xs text-gray-500 mb-1">{labels.fieldCity}</label>
               <input
                 name="city"
-                placeholder="Ex: Casablanca"
+                placeholder={labels.fieldCityPlaceholder}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Adresse</label>
+              <label className="block text-xs text-gray-500 mb-1">{labels.fieldAddress}</label>
               <input
                 name="address"
-                placeholder="Ex: 123 Rue Mohammed V"
+                placeholder={labels.fieldAddressPlaceholder}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Note pour l&apos;équipe</label>
+            <label className="block text-xs text-gray-500 mb-1">{labels.fieldNotes}</label>
             <textarea
               name="buyer_notes"
               rows={2}
-              placeholder="Délai souhaité, instructions spéciales, variantes…"
+              placeholder={labels.fieldNotesPlaceholder}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
             />
           </div>
@@ -53,7 +80,7 @@ export function SubmitWholesaleOrderForm() {
           disabled={isPending}
           className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isPending ? 'Envoi de la commande…' : 'Soumettre la commande grossiste'}
+          {isPending ? labels.submittingOrder : labels.submitOrder}
         </button>
       </form>
 
