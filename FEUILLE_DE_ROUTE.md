@@ -143,3 +143,42 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
 - **Validation ADMIN obligatoire avant publication** au catalogue.
 - **Prix qui changent souvent :** le fournisseur renvoie un message **« nouveau prix »** → **historique des prix conservé (façon ledger)**.
 - *À cadrer :* **API officielle vs bot**, format des messages attendus, parsing/robustesse, rattachement au circuit fournisseur existant (`supplier_products`, modération).
+
+---
+
+# 🧭 VISION ABDOU — grands chantiers (à CONCEVOIR, pas à coder maintenant)
+
+> ⚠️ **Règle d'or de ces chantiers** : on en conçoit/construit **UN SEUL à la fois, jamais en parallèle**. Chacun démarre par `@architect` (plan) + audit avant tout code. On NE reconstruit PAS l'existant — **audit préalable obligatoire**.
+
+## SECTION 1 — PARCOURS FOURNISSEUR (refonte)
+
+**Objectif :** un parcours digne d'un gros SaaS international (Shopify / Faire / Alibaba), **ultra-simple** pour des fournisseurs de **tous niveaux** (vendeur de légumes/viande → alimentaire → construction → déco → électronique), **nationaux et internationaux**.
+
+**Ordre de conception :**
+1. **Ajout produit SANS rien taper** : le fournisseur envoie une **photo/vidéo** → l'**IA remplit** automatiquement nom, catégorie, sous-catégorie, description, **prix suggéré**.
+2. **Onboarding ultra-simple** : 2-3 champs maximum.
+3. **Gestion des commandes + disponibilité** (côté fournisseur).
+4. **IA** : classification produits + analyse/benchmark des prix.
+
+**⚠️ Audit préalable obligatoire** : import CSV, catalogue PDF/XLSX/ZIP et ajout produit **semblent déjà présents** (espace fournisseur déjà construit/i18n). **Ne pas reconstruire** — partir de l'existant (`supplier_products`, formulaires actuels, BulkImport, CatalogUpload) et n'ajouter que la couche IA + simplification.
+
+## SECTION 2 — COUCHE OPÉRATIONS & ÉQUIPE (agents de sourcing)
+
+**Principe fondateur :** **Abdou = INTERMÉDIAIRE**. Ni les agents, ni les fournisseurs, ni les grossistes ne se contactent directement.
+
+1. **Rôles « agent de sourcing » par pays** : **assignation AUTOMATIQUE** des commandes selon le pays (Chine, Dubaï, Turquie, Égypte). Chaque agent = compte + rôle + **permissions définies par l'admin**.
+2. **PERMISSION CRITIQUE** : les agents **NE voient PAS** les données sensibles client (**téléphone, adresse**) → empêcher le court-circuitage / les deals dans le dos. **Idem côté fournisseur** (identité acheteur masquée).
+3. **Tableau de performance par agent** : commandes traitées, délais, qui traîne.
+4. **Alertes admin** : commande non traitée, fournisseur qui ne répond pas / ne livre pas.
+5. **Compte-rendu obligatoire** par l'agent sur chaque commande.
+
+**⚠️ Chantier RÔLES + PERMISSIONS + DONNÉES SENSIBLES → audit sécurité RLS Supabase OBLIGATOIRE avant tout code** (`@security-reviewer` + `@backend-db`). C'est le sujet le plus sensible après l'argent.
+
+## SECTION 3 — DETTES & SUJETS EN ATTENTE (consolidation)
+
+- 🧾 **i18n contenu DB** : noms/descriptions produits (et libellés saisis) non traduisibles par i18n → stratégie à cadrer (**colonnes `name_ar`/`name_en`** ou **table de traductions**, ou traduction à la saisie/IA).
+- 🛡️ **Dette sécurité — RLS `products`** : expose `factory_cost_mad` à `anon` (migr. 012) → à corriger (vue/colonne masquée).
+- ⏱️ **Dette — rate-limiting manquant** sur `placeOrder` (flux public COD).
+- 🧪 **Dette — test d'intégration DB** de l'idempotence réelle de `create_payout` (RPC Postgres : rejeu/atomicité/ON CONFLICT) ; les tests unitaires couvrent seulement le contrat JS.
+- 🌐 **Espace ADMIN non traduit** (hors périmètre Phase A) — à faire si besoin.
+- 🔀 **MERGE vers `main`** : `origin/main` est figé/en retard ; **`MERGE_PLAN.md` prêt** (Option B, jalonnée `--no-ff`). Merger `feat/habillage-premium` → `main` = **décision séparée, sur GO explicite d'Abdou** (un seul commit/lot à la fois, jamais auto).
