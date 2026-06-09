@@ -1,11 +1,16 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import BulkImportClient from './BulkImportClient'
 import type { Profile, SupplierBulkImport } from '@/types/database'
 
-export const metadata = { title: 'Import en masse — Espace Fournisseur' }
+export async function generateMetadata() {
+  const t = await getTranslations('supplier.import')
+  return { title: t('metaTitle') }
+}
 
 export default async function SupplierBulkImportPage() {
   const supabase = await createClient()
@@ -24,11 +29,16 @@ export default async function SupplierBulkImportPage() {
 
   const imports = (importsData ?? []) as SupplierBulkImport[]
 
+  const t = await getTranslations('supplier.import')
+  const tc = await getTranslations('supplier.common')
+  const tp = await getTranslations('supplier.products')
+  const locale = await getLocale()
+
   const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-    pending:   { label: 'En attente',  cls: 'bg-gray-100 text-gray-500' },
-    validated: { label: 'Validé',      cls: 'bg-blue-100 text-blue-700' },
-    imported:  { label: 'Importé',     cls: 'bg-green-100 text-green-700' },
-    failed:    { label: 'Échoué',      cls: 'bg-red-100 text-red-600' },
+    pending:   { label: t('statusPending'),   cls: 'bg-gray-100 text-gray-500' },
+    validated: { label: t('statusValidated'), cls: 'bg-blue-100 text-blue-700' },
+    imported:  { label: t('statusImported'),  cls: 'bg-green-100 text-green-700' },
+    failed:    { label: t('statusFailed'),    cls: 'bg-red-100 text-red-600' },
   }
 
   return (
@@ -36,14 +46,15 @@ export default async function SupplierBulkImportPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/supplier/products" className="text-gray-400 hover:text-gray-600 text-sm">← Mes produits</Link>
+            <Link href="/supplier/products" className="text-gray-400 hover:text-gray-600 text-sm">← {tp('breadcrumb')}</Link>
             <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Import en masse</span>
+            <span className="font-semibold text-gray-900 text-sm">{t('breadcrumb')}</span>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher variant="light" />
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">Déconnexion</button>
+              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">{tc('signOut')}</button>
             </form>
           </div>
         </div>
@@ -51,9 +62,9 @@ export default async function SupplierBulkImportPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Import en masse</h1>
+          <h1 className="text-lg font-semibold text-gray-900">{t('pageTitle')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Importez votre catalogue complet via un fichier CSV. Les produits seront soumis en attente d&apos;approbation admin.
+            {t('pageSubtitle')}
           </p>
         </div>
 
@@ -61,7 +72,7 @@ export default async function SupplierBulkImportPage() {
 
         {imports.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Historique des imports</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">{t('historyTitle')}</h2>
             <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
               {imports.map((imp) => {
                 const badge = STATUS_LABEL[imp.status] ?? STATUS_LABEL.pending
@@ -70,9 +81,13 @@ export default async function SupplierBulkImportPage() {
                     <div>
                       <p className="text-sm font-medium text-gray-900">{imp.filename}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {imp.rows_total} lignes · {imp.rows_valid} valides · {imp.rows_imported} importées
+                        {t('historyRows', {
+                          total: imp.rows_total,
+                          valid: imp.rows_valid,
+                          imported: imp.rows_imported,
+                        })}
                       </p>
-                      <p className="text-xs text-gray-400">{new Date(imp.created_at).toLocaleDateString('fr-FR')}</p>
+                      <p className="text-xs text-gray-400">{new Date(imp.created_at).toLocaleDateString(locale)}</p>
                     </div>
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>{badge.label}</span>
                   </div>

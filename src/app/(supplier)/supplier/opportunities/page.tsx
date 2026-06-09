@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import MatchingProfileForm from './MatchingProfileForm'
 import OfferForm from './OfferForm'
 import type {
@@ -12,16 +14,19 @@ import type {
   SourcingRequest,
 } from '@/types/database'
 
-export const metadata = { title: 'Opportunités RFQ — Espace Fournisseur' }
+export async function generateMetadata() {
+  const t = await getTranslations('supplier.opportunities')
+  return { title: t('metaTitle') }
+}
 
-const STATUS_BADGE: Record<RfqMatchStatus, { label: string; cls: string }> = {
-  new:            { label: 'Nouveau',         cls: 'bg-blue-100 text-blue-700' },
-  notified:       { label: 'Notifié',         cls: 'bg-indigo-100 text-indigo-700' },
-  offer_received: { label: 'Offre envoyée',   cls: 'bg-amber-100 text-amber-700' },
-  declined:       { label: 'Décliné',         cls: 'bg-gray-100 text-gray-500' },
-  clarification:  { label: 'En clarification', cls: 'bg-purple-100 text-purple-700' },
-  selected:       { label: 'Sélectionné ✓',   cls: 'bg-green-100 text-green-700' },
-  expired:        { label: 'Expiré',          cls: 'bg-red-100 text-red-500' },
+const STATUS_BADGE_CLS: Record<RfqMatchStatus, string> = {
+  new:            'bg-blue-100 text-blue-700',
+  notified:       'bg-indigo-100 text-indigo-700',
+  offer_received: 'bg-amber-100 text-amber-700',
+  declined:       'bg-gray-100 text-gray-500',
+  clarification:  'bg-purple-100 text-purple-700',
+  selected:       'bg-green-100 text-green-700',
+  expired:        'bg-red-100 text-red-500',
 }
 
 const URGENCY_DAYS = 7
@@ -57,6 +62,10 @@ export default async function SupplierOpportunitiesPage() {
   const matchingProfile = matchingProfileRes.data as SupplierMatchingProfile | null
   const matches = (matchesRes.data ?? []) as unknown as MatchRow[]
 
+  const t = await getTranslations('supplier.opportunities')
+  const tc = await getTranslations('supplier.common')
+  const locale = await getLocale()
+
   const now = Date.now()
   const newCount     = matches.filter((m) => m.status === 'new' || m.status === 'notified').length
   const urgentCount  = matches.filter((m) => {
@@ -65,18 +74,29 @@ export default async function SupplierOpportunitiesPage() {
     return (new Date(dd).getTime() - now) / 86400000 <= URGENCY_DAYS
   }).length
 
+  const STATUS_BADGE_LABEL: Record<RfqMatchStatus, string> = {
+    new:            t('statusNew'),
+    notified:       t('statusNotified'),
+    offer_received: t('statusOfferReceived'),
+    declined:       t('statusDeclined'),
+    clarification:  t('statusClarification'),
+    selected:       t('statusSelected'),
+    expired:        t('statusExpired'),
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/supplier/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">← Dashboard</Link>
+            <Link href="/supplier/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">← {tc('dashboard')}</Link>
             <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Opportunités RFQ</span>
+            <span className="font-semibold text-gray-900 text-sm">{t('breadcrumb')}</span>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher variant="light" />
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}><button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">Déconnexion</button></form>
+            <form action={signOut}><button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">{tc('signOut')}</button></form>
           </div>
         </div>
       </header>
@@ -85,15 +105,15 @@ export default async function SupplierOpportunitiesPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500">Opportunités actives</p>
+            <p className="text-xs text-gray-500">{t('statActive')}</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">{matches.length}</p>
           </div>
           <div className={`rounded-xl border p-4 ${newCount > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200'}`}>
-            <p className="text-xs text-gray-500">Nouvelles</p>
+            <p className="text-xs text-gray-500">{t('statNew')}</p>
             <p className={`text-2xl font-bold mt-1 ${newCount > 0 ? 'text-indigo-700' : 'text-gray-900'}`}>{newCount}</p>
           </div>
           <div className={`rounded-xl border p-4 ${urgentCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-            <p className="text-xs text-gray-500">Urgentes ({URGENCY_DAYS}j)</p>
+            <p className="text-xs text-gray-500">{t('statUrgent', { days: URGENCY_DAYS })}</p>
             <p className={`text-2xl font-bold mt-1 ${urgentCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>{urgentCount}</p>
           </div>
         </div>
@@ -102,11 +122,11 @@ export default async function SupplierOpportunitiesPage() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Profil de matching RFQ</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Le moteur utilise ces données pour vous matcher sur les demandes entrantes.</p>
+              <h2 className="text-sm font-semibold text-gray-900">{t('matchingTitle')}</h2>
+              <p className="text-xs text-gray-500 mt-0.5">{t('matchingSubtitle')}</p>
             </div>
             {matchingProfile && (
-              <span className="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">Actif</span>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">{t('matchingActiveBadge')}</span>
             )}
           </div>
           <div className="p-6">
@@ -117,20 +137,19 @@ export default async function SupplierOpportunitiesPage() {
         {/* Opportunities */}
         <div>
           <h2 className="text-sm font-semibold text-gray-900 mb-3">
-            Demandes correspondantes ({matches.length})
+            {t('opportunitiesTitle', { count: matches.length })}
           </h2>
 
           {matches.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-              <p className="text-sm text-gray-400 mb-2">Aucune demande correspondante pour le moment.</p>
-              <p className="text-xs text-gray-300">
-                Complétez votre profil RFQ ci-dessus pour être inclus dans les prochains matchings.
-              </p>
+              <p className="text-sm text-gray-400 mb-2">{t('emptyTitle')}</p>
+              <p className="text-xs text-gray-300">{t('emptySubtitle')}</p>
             </div>
           ) : (
             <div className="space-y-4">
               {matches.map((m) => {
-                const badge = STATUS_BADGE[m.status]
+                const badgeCls = STATUS_BADGE_CLS[m.status]
+                const badgeLabel = STATUS_BADGE_LABEL[m.status]
                 const sr = m.sourcing_request
                 const daysLeft = sr?.delivery_deadline
                   ? Math.ceil((new Date(sr.delivery_deadline).getTime() - now) / 86400000)
@@ -146,34 +165,34 @@ export default async function SupplierOpportunitiesPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-semibold text-gray-900">
-                              {sr?.product_name ?? 'Produit non précisé'}
+                              {sr?.product_name ?? t('labelProduct')}
                             </p>
                             {isUrgent && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">🔴 Urgent — {daysLeft}j</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">🔴 {t('urgentBadge', { days: daysLeft })}</span>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-3 mt-1.5">
                             {sr?.category && (
-                              <span className="text-xs text-gray-500">Catégorie : <span className="font-medium text-gray-700">{sr.category}</span></span>
+                              <span className="text-xs text-gray-500">{t('labelCategory', { value: sr.category })}</span>
                             )}
                             {sr?.quantity != null && (
-                              <span className="text-xs text-gray-500">Quantité : <span className="font-medium text-gray-700">{sr.quantity} u.</span></span>
+                              <span className="text-xs text-gray-500">{t('labelQty', { value: sr.quantity })}</span>
                             )}
                             {sr?.target_country && (
-                              <span className="text-xs text-gray-500">Destination : <span className="font-medium text-gray-700">{sr.target_country}</span></span>
+                              <span className="text-xs text-gray-500">{t('labelDestination', { value: sr.target_country })}</span>
                             )}
                           </div>
                           {sr?.notes && (
                             <p className="text-xs text-gray-600 mt-1.5 italic">&ldquo;{sr.notes}&rdquo;</p>
                           )}
                           <p className="text-xs text-gray-400 mt-1">
-                            Reçu le {new Date(m.created_at).toLocaleDateString('fr-FR')}
-                            {sr?.delivery_deadline && ` · Deadline ${new Date(sr.delivery_deadline).toLocaleDateString('fr-FR')}`}
+                            {t('receivedOn', { date: new Date(m.created_at).toLocaleDateString(locale) })}
+                            {sr?.delivery_deadline && t('deadline', { date: new Date(sr.delivery_deadline).toLocaleDateString(locale) })}
                           </p>
                         </div>
 
                         <div className="flex flex-col items-end gap-2 shrink-0">
-                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>{badge.label}</span>
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badgeCls}`}>{badgeLabel}</span>
                           {/* Score bar */}
                           <div className="flex items-center gap-1.5">
                             <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -190,12 +209,12 @@ export default async function SupplierOpportunitiesPage() {
                       {/* Score breakdown */}
                       <div className="mt-3 flex flex-wrap gap-3 text-xs">
                         {[
-                          { label: 'Catégorie', val: m.score_category, max: 30 },
-                          { label: 'Pays',      val: m.score_country, max: 20 },
-                          { label: 'MOQ',       val: m.score_moq, max: 20 },
-                          { label: 'Délai',     val: m.score_lead_time, max: 10 },
-                          { label: 'Fiabilité', val: m.score_reliability, max: 12 },
-                          { label: 'Réactivité', val: m.score_response_rate, max: 8 },
+                          { label: t('scoreCategory'), val: m.score_category, max: 30 },
+                          { label: t('scoreCountry'),  val: m.score_country, max: 20 },
+                          { label: t('scoreMoq'),      val: m.score_moq, max: 20 },
+                          { label: t('scoreLead'),     val: m.score_lead_time, max: 10 },
+                          { label: t('scoreReliability'), val: m.score_reliability, max: 12 },
+                          { label: t('scoreResponse'), val: m.score_response_rate, max: 8 },
                         ].map((s) => (
                           <span key={s.label} className="text-gray-400">
                             {s.label}: <span className={`font-medium ${s.val > 0 ? 'text-gray-700' : 'text-gray-300'}`}>{Math.round(s.val)}/{s.max}</span>
