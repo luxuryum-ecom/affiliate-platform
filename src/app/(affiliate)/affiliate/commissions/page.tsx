@@ -3,22 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { getTranslations, getLocale } from 'next-intl/server'
 import type { Commission, CommissionStatus, Payout } from '@/types/database'
 
-export const metadata = {
-  title: 'Commissions — Espace Affilié',
-}
-
-const STATUS_BADGE: Record<CommissionStatus, { label: string; cls: string }> = {
-  pending:  { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Approuvée',   cls: 'bg-blue-100 text-blue-700' },
-  paid:     { label: 'Payée',       cls: 'bg-green-100 text-green-700' },
-}
-
-const PAYOUT_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:    { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
-  processing: { label: 'En cours',    cls: 'bg-blue-100 text-blue-700' },
-  paid:       { label: 'Versé',       cls: 'bg-green-100 text-green-700' },
+export async function generateMetadata() {
+  const t = await getTranslations('affiliate.commissions')
+  return { title: t('metaTitle') }
 }
 
 type CommissionWithOrder = Commission & {
@@ -34,6 +25,9 @@ const STATUSES: CommissionStatus[] = ['pending', 'approved', 'paid']
 export default async function AffiliateCommissionsPage({ searchParams }: PageProps) {
   const { status: filterStatus } = await searchParams
   const supabase = await createClient()
+  const t = await getTranslations('affiliate.commissions')
+  const tCommon = await getTranslations('affiliate.common')
+  const locale = await getLocale()
 
   const { data: { user } } = await supabase.auth.getUser()
   const affiliateId = user!.id
@@ -62,13 +56,11 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
   const allCommissions = commissionsRes.data ?? []
   const payouts = payoutsRes.data ?? []
 
-  // Apply status filter on the already-fetched list (small dataset per affiliate)
   const filtered =
     filterStatus && STATUSES.includes(filterStatus as CommissionStatus)
       ? allCommissions.filter((c) => c.status === filterStatus)
       : allCommissions
 
-  // Summary totals from full list
   const sum = (s: CommissionStatus) =>
     allCommissions.filter((c) => c.status === s).reduce((acc, c) => acc + Number(c.amount), 0)
 
@@ -81,11 +73,50 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
     return acc
   }, {})
 
+  const STATUS_LABEL: Record<CommissionStatus, string> = {
+    pending:  t('statusPending'),
+    approved: t('statusApproved'),
+    paid:     t('statusPaid'),
+  }
+
+  const STATUS_CLS: Record<CommissionStatus, string> = {
+    pending:  'bg-amber-100 text-amber-700',
+    approved: 'bg-blue-100 text-blue-700',
+    paid:     'bg-green-100 text-green-700',
+  }
+
+  const PAYOUT_LABEL: Record<string, string> = {
+    pending:    t('payoutStatusPending'),
+    processing: t('payoutStatusProcessing'),
+    paid:       t('payoutStatusPaid'),
+  }
+
+  const PAYOUT_CLS: Record<string, string> = {
+    pending:    'bg-amber-100 text-amber-700',
+    processing: 'bg-blue-100 text-blue-700',
+    paid:       'bg-green-100 text-green-700',
+  }
+
   function buildHref(params: { status?: string }) {
     const p = new URLSearchParams()
     if (params.status) p.set('status', params.status)
     const s = p.toString()
     return `/affiliate/commissions${s ? `?${s}` : ''}`
+  }
+
+  function fmtDate(iso: string) {
+    return new Date(iso).toLocaleDateString(locale, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
+  function fmtDateShort(iso: string) {
+    return new Date(iso).toLocaleDateString(locale, {
+      day: '2-digit',
+      month: 'short',
+    })
   }
 
   return (
@@ -94,14 +125,15 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/affiliate/dashboard"><MozounaLogo size="sm" /></Link>
-            <span className="text-gray-300 shrink-0">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate">Mes commissions</span>
+            <span className="text-gray-300 shrink-0">{tCommon('breadcrumbSep')}</span>
+            <span className="font-semibold text-gray-900 text-sm truncate">{t('pageTitle')}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="light" />
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                Déconnexion
+                {tCommon('signOut')}
               </button>
             </form>
           </div>
@@ -116,33 +148,31 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
             ? 'bg-amber-50 border-amber-200'
             : 'bg-white border-gray-200'
         }`}>
-          <p className="text-xs text-gray-500">Solde en attente de paiement</p>
+          <p className="text-xs text-gray-500">{t('pendingBalanceLabel')}</p>
           <p className={`text-3xl font-bold tabular-nums mt-1 ${
             pendingBalance > 0 ? 'text-amber-700' : 'text-gray-400'
           }`}>
             {formatMAD(pendingBalance)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">
-            Commissions en attente + approuvées — versement par virement sur votre compte
-          </p>
+          <p className="text-xs text-gray-400 mt-1">{t('pendingBalanceNote')}</p>
         </div>
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-xs text-amber-700">En attente</p>
+            <p className="text-xs text-amber-700">{t('statPending')}</p>
             <p className="mt-1 text-xl font-bold text-amber-800 tabular-nums">{formatMAD(totalPending)}</p>
-            <p className="text-xs text-amber-600 mt-0.5">{countByStatus.pending ?? 0} commission{(countByStatus.pending ?? 0) !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-amber-600 mt-0.5">{t('statPendingCount', { count: countByStatus.pending ?? 0 })}</p>
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-xs text-blue-700">Approuvées</p>
+            <p className="text-xs text-blue-700">{t('statApproved')}</p>
             <p className="mt-1 text-xl font-bold text-blue-800 tabular-nums">{formatMAD(totalApproved)}</p>
-            <p className="text-xs text-blue-600 mt-0.5">{countByStatus.approved ?? 0} commission{(countByStatus.approved ?? 0) !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-blue-600 mt-0.5">{t('statApprovedCount', { count: countByStatus.approved ?? 0 })}</p>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <p className="text-xs text-green-700">Payées</p>
+            <p className="text-xs text-green-700">{t('statPaid')}</p>
             <p className="mt-1 text-xl font-bold text-green-800 tabular-nums">{formatMAD(totalPaid)}</p>
-            <p className="text-xs text-green-600 mt-0.5">{countByStatus.paid ?? 0} commission{(countByStatus.paid ?? 0) !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-green-600 mt-0.5">{t('statPaidCount', { count: countByStatus.paid ?? 0 })}</p>
           </div>
         </div>
 
@@ -157,7 +187,7 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                   : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              Toutes ({allCommissions.length})
+              {t('filterAll', { count: allCommissions.length })}
             </Link>
             {STATUSES.map((s) => (
               <Link
@@ -169,19 +199,18 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                {STATUS_BADGE[s].label} ({countByStatus[s] ?? 0})
+                {t('filterLabel', { label: STATUS_LABEL[s], count: countByStatus[s] ?? 0 })}
               </Link>
             ))}
           </div>
 
           {filtered.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-              <p className="text-sm text-gray-400">Aucune commission pour ce filtre.</p>
+              <p className="text-sm text-gray-400">{t('emptyFilter')}</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
               {filtered.map((commission) => {
-                const badge = STATUS_BADGE[commission.status]
                 const order = commission.order
                 return (
                   <div key={commission.id} className="p-4 flex items-start justify-between gap-3">
@@ -190,8 +219,8 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                         <span className="text-xs font-mono text-gray-400">
                           #{commission.id.slice(0, 8).toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                          {badge.label}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_CLS[commission.status]}`}>
+                          {STATUS_LABEL[commission.status]}
                         </span>
                       </div>
                       {order && (
@@ -200,23 +229,13 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                         </p>
                       )}
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {new Date(commission.created_at).toLocaleDateString('fr-MA', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {fmtDate(commission.created_at)}
                         {commission.paid_at && (
-                          <> · Payée le{' '}
-                            {new Date(commission.paid_at).toLocaleDateString('fr-MA', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </>
+                          <> · {t('paidOn', { date: fmtDate(commission.paid_at) })}</>
                         )}
                       </p>
                     </div>
-                    <div className="shrink-0 text-right">
+                    <div className="shrink-0 text-end">
                       <p className="text-base font-bold text-gray-900 tabular-nums">
                         {formatMAD(Number(commission.amount))}
                       </p>
@@ -232,11 +251,12 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
         {payouts.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold text-gray-900 mb-3">
-              Historique des virements ({payouts.length})
+              {t('payoutsTitle', { count: payouts.length })}
             </h2>
             <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
               {payouts.map((payout) => {
-                const badge = PAYOUT_STATUS_BADGE[payout.status]
+                const cls = PAYOUT_CLS[payout.status] ?? 'bg-gray-100 text-gray-600'
+                const label = PAYOUT_LABEL[payout.status] ?? payout.status
                 return (
                   <div key={payout.id} className="p-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -244,33 +264,25 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                         <span className="text-xs font-mono text-gray-400">
                           #{payout.id.slice(0, 8).toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                          {badge.label}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>
+                          {label}
                         </span>
                       </div>
                       <p className="text-xs text-gray-400">
-                        {new Date(payout.created_at).toLocaleDateString('fr-MA', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {fmtDate(payout.created_at)}
                         {payout.reference && (
-                          <> · Réf&nbsp;: <span className="font-mono">{payout.reference}</span></>
+                          <> · {t('payoutRef', { ref: payout.reference })}</>
                         )}
                         {payout.notes && <> · {payout.notes}</>}
                       </p>
                     </div>
-                    <div className="shrink-0 text-right">
+                    <div className="shrink-0 text-end">
                       <p className="text-base font-bold text-green-700 tabular-nums">
                         +{formatMAD(Number(payout.amount))}
                       </p>
                       {payout.paid_at && (
                         <p className="text-xs text-gray-400 mt-0.5">
-                          versé le{' '}
-                          {new Date(payout.paid_at).toLocaleDateString('fr-MA', {
-                            day: '2-digit',
-                            month: 'short',
-                          })}
+                          {t('payoutPaidOn', { date: fmtDateShort(payout.paid_at) })}
                         </p>
                       )}
                     </div>
