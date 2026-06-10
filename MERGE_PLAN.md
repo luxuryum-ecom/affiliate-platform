@@ -31,7 +31,7 @@ git fetch --all --prune
 
 # Vérifier que rien n'a divergé depuis la rédaction de ce plan :
 git rev-parse --short origin/main            # attendu : 6505e97
-git rev-parse --short feat/habillage-premium # attendu : a083142
+git rev-parse --short feat/habillage-premium # attendu : 997c9f9 (+ commit de maj de ce plan)
 git status -sb                               # working tree doit être propre
 git stash list                               # idéalement vide
 ```
@@ -96,7 +96,7 @@ git merge --no-ff feat/etape3-ledger-currency \
 ### 6. Design premium + i18n + ÉTAPE #1 commission
 ```bash
 git merge --no-ff feat/habillage-premium \
-  -m "merge: design premium noir & or + i18n FR/AR/EN + ÉTAPE #1 moteur commission"
+  -m "merge: design premium + i18n FR/AR/EN + lot multi-devise fournisseur (053→055, Telegram/web/CSV)"
 ```
 
 > Après l'étape 6, l'arbre de `main` est **identique** à
@@ -109,7 +109,7 @@ git merge --no-ff feat/habillage-premium \
 ```bash
 git diff --stat main feat/habillage-premium   # doit être VIDE (arbres identiques)
 git log --oneline --graph -12                 # doit montrer les 6 commits de jalon
-npm test                                       # 22/22 attendu
+node_modules/.bin/vitest run                   # 115/115 attendu
 node_modules/.bin/tsc --noEmit                 # typecheck OK attendu
 ```
 
