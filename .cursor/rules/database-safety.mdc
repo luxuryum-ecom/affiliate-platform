@@ -1,0 +1,94 @@
+---
+description: Database migration safety — idempotency, approval gates, no data destruction
+globs: supabase/**,src/types/**,src/app/actions/**
+alwaysApply: false
+---
+
+# Database Safety
+
+## Golden rules
+1. **Never destroy data** without explicit user approval
+2. **Never DROP** tables or columns in migrations (deprecate instead)
+3. **Always idempotent** — safe to re-run on an existing remote DB via `npm run migrate`
+4. **Always explain risk** before applying a migration to remote
+
+## Safe patterns (use these)
+```sql
+CREATE TABLE IF NOT EXISTS ...
+CREATE INDEX IF NOT EXISTS ...
+ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...
+CREATE OR REPLACE FUNCTION ...
+DROP TRIGGER IF EXISTS ... ; CREATE TRIGGER ...
+DROP POLICY IF EXISTS ... ; CREATE POLICY ...
+UPDATE ... WHERE <condition that limits scope>   -- data backfill only
+```
+
+## Forbidden without user approval
+```sql
+DROP TABLE ...
+DROP COLUMN ...
+TRUNCATE ...
+DELETE FROM ... (without WHERE or with broad WHERE)
+ALTER TABLE ... DROP CONSTRAINT ... (if it loosens security)
+-- Broad RLS policy rewrites affecting multiple roles
+```
+
+## Migration file checklist
+Before committing a migration:
+```
+□ Sequential number (next after highest in supabase/migrations/)
+□ Idempotent (IF NOT EXISTS / DROP IF EXISTS / CREATE OR REPLACE)
+□ No DROP TABLE / DROP COLUMN
+□ Data backfill UPDATEs are scoped (WHERE clause)
+□ CHECK constraints use DROP CONSTRAINT IF EXISTS before ADD
+□ Functions/triggers/policies use DROP IF EXISTS before CREATE
+□ src/types/database.ts updated to match
+```
+
+## Applying migrations
+```bash
+# 1. Ensure Supabase CLI is linked
+supabase link --project-ref owvtfzxvirttrbcsiveg
+
+# 2. Apply
+npm run migrate
+
+# 3. Regenerate types
+npm run types
+
+# 4. Verify
+npm run check
+```
+
+## Risk classification
+
+| Risk | Examples | Agent action |
+|---|---|---|
+| **Low** | ADD COLUMN IF NOT EXISTS, new index, new RLS policy (additive) | Execute autonomously |
+| **Medium** | UPDATE backfill, DROP+CREATE policy (same name), status enum migration | Execute + explain in report |
+| **High** | DROP column/table, TRUNCATE, broad RLS rewrite, auth.users trigger change | **STOP — ask user** |
+| **Critical** | Production data DELETE, disable RLS, expose service role key | **STOP — ask user** |
+
+## RLS changes
+- **Additive** (new policy for one role/action): autonomous
+- **Modify existing policy** (DROP IF EXISTS + CREATE): explain impact, usually autonomous
+- **Broad rewrite** (multiple tables, role model change): **ask user**
+
+## Rollback strategy
+Migrations are forward-only. To undo:
+1. Write a new migration that reverses the change safely
+2. Never edit an already-applied migration file in place on main
+3. For partial manual runs in SQL Editor, use idempotent recovery SQL
+
+## Schema ↔ TypeScript sync
+After every schema change, update `src/types/database.ts`:
+- New columns, enums, interfaces
+- `Pick<Product, ...>` types in joined interfaces must include new fields (e.g. `media`)
+
+## Commission trigger guard (do not remove)
+`handle_order_delivered` must keep:
+```sql
+AND new.affiliate_id IS NOT NULL
+AND new.commission_amount > 0
+```
+Removing this guard causes CHECK constraint violations on zero-commission orders.

@@ -1,0 +1,141 @@
+---
+description: Master AI agent operating system — autonomous execution with approval gates
+alwaysApply: true
+---
+
+# Agent Operating System — AffiPartner Morocco
+
+## Routing first
+Before any work, apply `.cursor/rules/agent-routing.mdc`:
+- pick **Composer / Sonnet / Opus**
+- warn if a **new focused chat** is cheaper or clearer
+- post a **short execution plan** before the first file edit
+
+## Mission
+The user gives **business/product instructions**. The agent executes code, migrations, checks, and preparation **autonomously**. The user approves only **high-risk actions** (see `docs/RISK_APPROVAL_MATRIX.md`).
+
+## Default mode: autonomous
+Unless a task is in the approval matrix, the agent MUST:
+1. Inspect relevant files before changing anything
+2. Implement the smallest correct diff
+3. Run verification commands (see below)
+4. Report what changed, why, and how to test
+5. Commit only when the user explicitly asks
+
+## Pre-change checklist (always)
+```
+□ Read files that will be touched (not just grep snippets)
+□ Read .cursor/rules/business-model.mdc if the task touches products, pricing, orders, or roles
+□ Read .cursor/rules/database-safety.mdc if the task touches schema, RLS, triggers, or migrations
+□ Read .cursor/rules/deployment-safety.mdc if the task touches deploy, env, or CI
+□ Confirm the task does not violate .cursor/rules/constraints.mdc
+```
+
+## Execution loop
+```
+0. ROUTE       → model tier + chat-split warning (agent-routing.mdc)
+1. UNDERSTAND  → restate goal + success criteria in one sentence
+2. PLAN        → short execution plan BEFORE any file edit
+3. INSPECT     → read relevant src/, supabase/, types/ files
+4. IMPLEMENT   → minimal diff, match existing conventions
+5. VERIFY      → stop dev server if needed → npm run safe-check
+6. REPORT      → summary, test URLs/commands, pending approvals
+```
+
+## Bug workflow
+```
+reproduce → root cause → minimal fix → verify → summarize
+```
+Use `npm run check` for single-file fixes; `safe-check` when multiple files or routes affected.
+
+## Feature workflow
+```
+benchmark SaaS patterns → design → implement → test → summarize
+```
+Read `business-model.mdc` for pricing, commissions, roles. Do not expand scope beyond the user request.
+
+## Repo stability (do not break)
+- **COD WIP** — keep migration 009 + COD engine stable; no rewrites unless explicitly requested
+- **Affiliate flow** — referral links, commissions, `/affiliate/*` dashboards
+- **Wholesale flow** — tier pricing, cart, WhatsApp submit, `/wholesale/*`
+
+## Verification commands (prefer npm scripts)
+| When | Command |
+|---|---|
+| After any code change | `npm run check` |
+| Before claiming "builds" | `npm run build` |
+| Full safe gate | `npm run safe-check` |
+| After new migration file | `npm run migrate` then `npm run types` then `npm run check` |
+| Stale Turbopack cache | `npm run reset-cache` then restart dev server |
+
+## Database workflow
+1. Create `supabase/migrations/NNN_name.sql` (next sequential number)
+2. Migration MUST be idempotent (`IF NOT EXISTS`, `DROP … IF EXISTS`, `CREATE OR REPLACE`)
+3. NEVER `DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, or destructive `DELETE` without explicit user approval
+4. Update `src/types/database.ts` to match schema changes
+5. Explain migration risk in the agent response before applying
+6. Apply via `npm run migrate` (Supabase CLI) — NOT manual SQL Editor paste unless user requests it
+7. Regenerate types: `npm run types`
+
+## Git checkpoint workflow (risky changes)
+Before migrations, auth changes, or multi-file refactors:
+```bash
+git status
+git add -A && git commit -m "checkpoint: before <short description>"
+```
+Only commit when user asks OR when creating an explicit checkpoint before risky work.
+
+## Approval gates — STOP and ask user
+Do NOT proceed without explicit user confirmation:
+- Destructive DB change (DROP, TRUNCATE, irreversible data migration)
+- Production deploy or push to `main` with deploy intent
+- Env secrets (reading/writing `.env.local`, Vercel secrets, GitHub secrets)
+- Payment gateway, security hardening, or auth flow changes
+- Deleting production or staging data
+- Broad RLS policy rewrites (not additive single-policy fixes)
+
+Everything else: execute autonomously and report.
+
+## What the agent must NEVER do
+- Drop tables/columns or destroy data silently
+- Commit secrets or `.env.local`
+- Force-push `main`
+- Skip `npm run check` after TypeScript changes
+- Use `any` types, client-side Supabase mutations, or microservices
+- Over-engineer (no AI orchestration, no ORM, no external UI libs — see constraints.mdc)
+
+## Feature request intake
+When the user sends a business instruction, parse:
+- **Who** (admin / affiliate / wholesaler / public customer)
+- **What** (create, update, display, filter, calculate)
+- **Business rule** (pricing, commission, stock, approval)
+- **Out of scope** (explicit "do not build X")
+
+See `docs/AGENT_WORKFLOW.md` for the full request template.
+
+## Related rules (read on demand)
+| Rule file | When to read |
+|---|---|
+| `agent-routing.mdc` | Model tier, chat splits, token control, task routing (always) |
+| `business-model.mdc` | Products, pricing, commissions, roles, COD/wholesale flows |
+| `architecture.mdc` | Stack, folder structure, server actions, patterns |
+| `database.mdc` | Schema details, tables, triggers, RLS patterns |
+| `database-safety.mdc` | Migrations, idempotency, approval gates |
+| `deployment-safety.mdc` | Vercel, env vars, CI, production |
+| `workflow.mdc` | Commit conventions, npm scripts |
+| `constraints.mdc` | What NOT to build |
+
+## Reporting format (after each task)
+```
+## Done
+- <bullet: what changed>
+
+## Verification
+- `npm run safe-check` → pass/fail
+
+## Test locally
+- <exact URLs or steps>
+
+## Needs your approval (if any)
+- <item + why>
+```

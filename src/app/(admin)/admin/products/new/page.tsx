@@ -1,7 +1,9 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { signOut } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/server'
 import { ProductForm } from '@/components/admin/product-form'
+import { getTariffs } from '@/app/actions/tariffs'
 
 export const metadata = {
   title: 'Nouveau produit — Administration',
@@ -13,11 +15,14 @@ export default async function NewProductPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user!.id)
-    .single() as { data: { full_name: string } | null; error: unknown }
+  if (!user) redirect('/login')
+
+  const [profileResult, tariffs] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    getTariffs(),
+  ])
+
+  const profile = profileResult.data as { full_name: string } | null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -51,7 +56,7 @@ export default async function NewProductPage() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-lg font-semibold text-gray-900 mb-6">Créer un produit</h1>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <ProductForm />
+          <ProductForm tariffs={tariffs} />
         </div>
       </main>
     </div>

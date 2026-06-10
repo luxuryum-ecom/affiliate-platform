@@ -3,6 +3,8 @@ interface TimelineStep {
   timestamp: string | null
   /** 'done' = past step; 'current' = current status; 'future' = not yet reached; 'skipped' = cancelled/returned */
   state: 'done' | 'current' | 'future' | 'skipped'
+  /** Optional note shown below the timestamp. */
+  note?: string | null
 }
 
 interface OrderTimelineProps {
@@ -61,6 +63,9 @@ export function OrderTimeline({ steps }: OrderTimelineProps) {
               ) : step.state === 'future' ? (
                 <p className="text-xs text-gray-300 mt-0.5">En attente</p>
               ) : null}
+              {step.note && (
+                <p className="text-xs text-gray-400 italic mt-0.5">{step.note}</p>
+              )}
             </div>
           </li>
         )
@@ -76,27 +81,38 @@ import type { Order } from '@/types/database'
 export function buildCodTimeline(order: Order): TimelineStep[] {
   const { status } = order
 
-  const isCancelled = status === 'cancelled'
+  const isCancelled           = status === 'cancelled'
+  const isPendingConfirmation = status === 'pending_confirmation'
+  const reachedConfirmed      = ['confirmed', 'shipped', 'delivered', 'returned'].includes(status)
+  const reachedShipped        = ['shipped', 'delivered', 'returned'].includes(status)
+  const reachedDelivered      = ['delivered', 'returned'].includes(status) && !!order.delivered_at
+  const isReturned            = status === 'returned'
 
-  const reachedConfirmed = ['confirmed', 'shipped', 'delivered', 'returned'].includes(status)
-  const reachedShipped   = ['shipped', 'delivered', 'returned'].includes(status)
-  const reachedDelivered = status === 'delivered'
-  const reachedReturned  = status === 'returned'
-
-  return [
+  const steps: TimelineStep[] = [
     {
       label: 'Commande reçue',
       timestamp: order.created_at,
       state: 'done',
     },
     {
-      label: 'Confirmée',
-      timestamp: order.confirmed_at,
+      label: 'Confirmation téléphonique',
+      timestamp: isPendingConfirmation ? order.created_at : order.confirmed_at,
       state: isCancelled && !reachedConfirmed
         ? 'skipped'
         : reachedConfirmed
         ? 'done'
-        : status === 'pending'
+        : isPendingConfirmation
+        ? 'current'
+        : 'future',
+    },
+    {
+      label: 'Confirmée',
+      timestamp: order.confirmed_at,
+      state: isCancelled && !reachedConfirmed
+        ? 'skipped'
+        : reachedConfirmed && !isPendingConfirmation
+        ? 'done'
+        : status === 'confirmed'
         ? 'current'
         : 'future',
     },
@@ -112,19 +128,34 @@ export function buildCodTimeline(order: Order): TimelineStep[] {
         : 'future',
     },
     {
-      label: reachedReturned ? 'Retournée' : 'Livrée',
-      timestamp: reachedReturned ? order.returned_at : order.delivered_at,
-      state: reachedReturned
-        ? 'skipped'
-        : isCancelled
+      label: 'Livrée',
+      timestamp: order.delivered_at,
+      state: isCancelled
         ? 'skipped'
         : reachedDelivered
+        ? 'done'
+        : isReturned && !order.delivered_at
+        ? 'skipped'
+        : status === 'delivered'
         ? 'done'
         : status === 'shipped'
         ? 'current'
         : 'future',
     },
   ]
+
+  // Append a "Retournée" step only when the order is actually returned.
+  // This handles both shipped→returned (delivered step shows skipped) and
+  // delivered→returned (delivered step shows done, then Retournée appended).
+  if (isReturned) {
+    steps.push({
+      label: 'Retournée',
+      timestamp: order.returned_at,
+      state: 'skipped',
+    })
+  }
+
+  return steps
 }
 
 // ─── Helper: build wholesale order timeline steps ─────────────────────────────
@@ -194,4 +225,59 @@ export function buildWholesaleTimeline(order: WholesaleOrder): TimelineStep[] {
         : 'future',
     },
   ]
+}
+
+// ─── Helper: build import history as timeline steps ───────────────────────────
+
+import type { WholesaleOrderImportHistory, WholesaleImportStatus } from '@/types/database'
+
+const IMPORT_LABELS: Record<WholesaleImportStatus, string> = {
+  awaiting_supplier: 'En attente fournisseur',
+  purchased:         'Acheté',
+  in_production:     'En production',
+  ready_to_ship:     'Prêt à expédier',
+  shipped:           'Expédié (import)',
+  customs_clearance: 'Dédouanement',
+  delivered:         'Livré (import)',
+}
+
+/**
+ * Converts import history entries (newest first) into timeline steps.
+ * Most recent entry = 'current'; all others = 'done'.
+ */
+export function buildImportHistoryTimeline(
+  history: WholesaleOrderImportHistory[]
+): TimelineStep[] {
+  return history.map((entry, i) => ({
+    label:     IMPORT_LABELS[entry.import_status as WholesaleImportStatus] ?? entry.import_status,
+    timestamp: entry.changed_at,
+    state:     i === 0 ? 'current' : 'done',
+    note:      entry.notes ?? null,
+  }))
+}
+
+// ─── Helper: build payment history as timeline steps ─────────────────────────
+
+import type { WholesaleOrderPaymentHistory, WholesalePaymentStatus } from '@/types/database'
+
+const PAYMENT_LABELS: Record<WholesalePaymentStatus, string> = {
+  no_deposit:        'Aucun acompte',
+  deposit_requested: 'Acompte demandé',
+  deposit_received:  'Acompte reçu',
+  fully_paid:        'Entièrement réglé',
+}
+
+/**
+ * Converts payment history entries (newest first) into timeline steps.
+ * Most recent entry = 'current'; all others = 'done'.
+ */
+export function buildPaymentHistoryTimeline(
+  history: WholesaleOrderPaymentHistory[]
+): TimelineStep[] {
+  return history.map((entry, i) => ({
+    label:     PAYMENT_LABELS[entry.payment_status as WholesalePaymentStatus] ?? entry.payment_status,
+    timestamp: entry.changed_at,
+    state:     i === 0 ? 'current' : 'done',
+    note:      entry.notes ?? null,
+  }))
 }

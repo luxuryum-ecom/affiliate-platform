@@ -1,9 +1,12 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { signOut } from '@/app/actions/auth'
 import { ProductActions } from '@/components/admin/product-actions'
 import { ProductFilters } from '@/components/admin/product-filters'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
 import type { Product } from '@/types/database'
 
@@ -48,10 +51,12 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single() as { data: { full_name: string; role: string } | null; error: unknown }
 
   // ── Build query with filters ───────────────────────────────────────────────
@@ -216,21 +221,23 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
 // ─── Product row ──────────────────────────────────────────────────────────────
 
 function ProductRow({ product }: { product: Product }) {
-  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
+  const coverUrl = getProductCoverUrl(product)
   const approvalBadge = APPROVAL_BADGE[product.approval_status] ?? APPROVAL_BADGE.draft
   const sourceBadge = AVAILABILITY_BADGE[product.availability_type] ?? AVAILABILITY_BADGE.local_stock
 
   return (
     <div className="flex items-start gap-3 p-4">
       {/* Thumbnail */}
-      <div className="shrink-0 w-12 h-12 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
-        {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumb} alt={product.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
-            {product.name.slice(0, 2).toUpperCase()}
-          </div>
+      <div className="relative shrink-0">
+        <ProductThumbnail
+          src={coverUrl}
+          name={product.name}
+          className="w-12 h-12 rounded-lg border border-gray-200 text-xs"
+        />
+        {!coverUrl && (
+          <span className="absolute -bottom-1.5 -right-1.5 text-xs bg-amber-100 text-amber-700 rounded px-1 leading-tight font-medium">
+            !
+          </span>
         )}
       </div>
 
@@ -250,6 +257,13 @@ function ProductRow({ product }: { product: Product }) {
           <span className={`text-xs px-2 py-0.5 rounded-full ${approvalBadge.cls}`}>
             {approvalBadge.label}
           </span>
+
+          {/* No image badge */}
+          {!coverUrl && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+              Sans image
+            </span>
+          )}
 
           {/* Affiliate enabled badge */}
           {!product.affiliate_enabled && (
@@ -277,7 +291,10 @@ function ProductRow({ product }: { product: Product }) {
             <strong className="text-gray-700">{formatMAD(product.sell_price)}</strong>
           </span>
           <span className="text-gray-300">·</span>
-          <span>Commission&nbsp;: {formatMAD(product.commission_amount)}</span>
+          <span>
+            Commission&nbsp;:{' '}
+            <strong className="text-green-700">{formatMAD(product.commission_amount)}</strong>
+          </span>
           <span className="text-gray-300">·</span>
           <span>Stock&nbsp;: {product.stock_count}</span>
           {product.wholesale_tiers.length > 0 && (
@@ -291,24 +308,45 @@ function ProductRow({ product }: { product: Product }) {
           )}
         </p>
 
-        {/* Sourcing mini-line */}
-        {(product.supplier_name || product.origin_country || product.purchase_price_mad) && (
+        {/* Cost breakdown mini-line */}
+        {(product.factory_cost_mad != null || product.purchase_price_mad != null || product.supplier_name || product.origin_country) && (
           <p className="text-xs text-gray-400 leading-relaxed flex flex-wrap gap-x-2 mt-0.5">
-            {product.supplier_name && (
-              <span>Fournisseur&nbsp;: {product.supplier_name}</span>
-            )}
-            {product.origin_country && (
-              <span>Pays&nbsp;: {product.origin_country}</span>
-            )}
-            {product.purchase_price_mad != null && (
+            {(product.factory_cost_mad != null || product.purchase_price_mad != null) && (
               <>
+                <span>
+                  Coût&nbsp;: {formatMAD(product.factory_cost_mad ?? product.purchase_price_mad ?? 0)}
+                </span>
+                {product.platform_margin_value != null && (
+                  <>
+                    <span className="text-gray-200">·</span>
+                    <span>
+                      Marge&nbsp;:{' '}
+                      {product.platform_margin_type === 'percentage'
+                        ? `${product.platform_margin_value}%`
+                        : `${formatMAD(product.platform_margin_value)}`}
+                    </span>
+                  </>
+                )}
                 <span className="text-gray-200">·</span>
                 <span>
-                  Coût&nbsp;: {formatMAD(product.purchase_price_mad)}
-                  {product.margin_percentage
-                    ? ` (+${product.margin_percentage}%)`
-                    : ''}
+                  Frais&nbsp;: {formatMAD(
+                    (product.confirmation_fee_mad ?? 0) +
+                    (product.packaging_fee_mad ?? 0) +
+                    (product.delivery_fee_mad ?? 0)
+                  )}
                 </span>
+              </>
+            )}
+            {product.supplier_name && (
+              <>
+                <span className="text-gray-200">·</span>
+                <span>{product.supplier_name}</span>
+              </>
+            )}
+            {product.origin_country && (
+              <>
+                <span className="text-gray-200">·</span>
+                <span>{product.origin_country}</span>
               </>
             )}
           </p>
@@ -316,7 +354,7 @@ function ProductRow({ product }: { product: Product }) {
       </div>
 
       {/* Actions */}
-      <ProductActions id={product.id} active={product.active} />
+      <ProductActions id={product.id} name={product.name} active={product.active} />
     </div>
   )
 }

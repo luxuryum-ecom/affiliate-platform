@@ -5,6 +5,11 @@ alwaysApply: true
 
 # Business Model — AffiPartner Morocco
 
+> **For AI agents:** This file is the source of truth for business logic.
+> Before changing products, pricing, commissions, orders, or roles — read this fully.
+> Cross-check changes against `constraints.mdc` (what NOT to build).
+> See `docs/RISK_APPROVAL_MATRIX.md` for actions requiring user approval.
+
 ## Platform identity
 Morocco-focused affiliate + wholesale B2B platform. Primary currency: **MAD**.
 Allowed purchase currencies: MAD, USD, AED (convert to MAD via exchange_rate_to_mad).

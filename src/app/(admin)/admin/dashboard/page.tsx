@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
+import { formatMAD } from '@/lib/utils'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Profile } from '@/types/database'
 
 export const metadata = {
@@ -14,10 +17,12 @@ export default async function AdminDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single() as { data: Profile | null; error: unknown }
 
   const isAdmin = profile?.role === 'admin'
@@ -30,6 +35,12 @@ export default async function AdminDashboardPage() {
     { count: totalOrders },
     { count: todayOrders },
     { count: pendingWholesaleOrders },
+    { count: newQuoteRequests },
+    pendingCommissionsRes,
+    { count: pendingSupplierProducts },
+    { count: pendingSourcingRequests },
+    { count: pendingMarketplaceRFQs },
+    { count: pendingSampleRequests },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -54,7 +65,35 @@ export default async function AdminDashboardPage() {
       .from('wholesale_orders')
       .select('*', { count: 'exact', head: true })
       .in('status', ['pending', 'confirmed', 'sourcing']),
+    supabase
+      .from('quote_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['new', 'studying', 'quoted', 'negotiating']),
+    supabase
+      .from('commissions')
+      .select('amount')
+      .in('status', ['pending', 'approved']),
+    supabase
+      .from('supplier_products')
+      .select('*', { count: 'exact', head: true })
+      .eq('approval_status', 'pending_review'),
+    supabase
+      .from('sourcing_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabase
+      .from('supplier_quote_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['new', 'studying']),
+    supabase
+      .from('sample_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
   ])
+
+  const pendingCommissionRows = (pendingCommissionsRes.data ?? []) as { amount: number }[]
+  const pendingCommissionTotal = pendingCommissionRows.reduce((s, c) => s + Number(c.amount), 0)
+  const pendingCommissionCount = pendingCommissionRows.length
 
   const platformStats = [
     {
@@ -73,7 +112,7 @@ export default async function AdminDashboardPage() {
       highlight: (pendingUsers ?? 0) > 0,
     },
     {
-      label: 'Commandes aujourd\'hui',
+      label: "Commandes aujourd'hui",
       value: String(todayOrders ?? 0),
       highlight: false,
     },
@@ -87,6 +126,11 @@ export default async function AdminDashboardPage() {
       value: String(pendingWholesaleOrders ?? 0),
       highlight: (pendingWholesaleOrders ?? 0) > 0,
     },
+    {
+      label: 'Commissions dues',
+      value: formatMAD(pendingCommissionTotal),
+      highlight: pendingCommissionCount > 0,
+    },
   ]
 
   return (
@@ -94,9 +138,11 @@ export default async function AdminDashboardPage() {
       {/* Navbar */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-gray-900 text-sm">Administration</span>
-            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize">
+          <div className="flex items-center gap-4">
+            <MozounaLogo size="md" />
+            <span className="hidden sm:flex items-center gap-2 text-gray-300">|</span>
+            <span className="hidden sm:block text-sm font-medium text-gray-600">Administration</span>
+            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize hidden sm:block">
               {profile?.role}
             </span>
           </div>
@@ -150,13 +196,13 @@ export default async function AdminDashboardPage() {
 
         {/* Quick actions */}
           {isAdmin && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               {
                 title: 'Approuver les inscriptions',
                 description: 'Valider ou rejeter les nouveaux comptes.',
                 badge: pendingUsers ?? 0,
-                href: null,
+                href: '/admin/users',
               },
               {
                 title: 'Gérer les produits',
@@ -175,6 +221,72 @@ export default async function AdminDashboardPage() {
                 description: 'Gérer les commandes B2B et convertir les paniers.',
                 badge: pendingWholesaleOrders ?? 0,
                 href: '/admin/wholesale-orders',
+              },
+              {
+                title: 'Commissions affiliés',
+                description: 'Approuver et marquer les commissions comme payées.',
+                badge: pendingCommissionCount,
+                href: '/admin/commissions',
+              },
+              {
+                title: 'Paiements affiliés',
+                description: "Enregistrer les virements et suivre l'historique des paiements.",
+                badge: null,
+                href: '/admin/payouts',
+              },
+              {
+                title: 'Demandes de devis',
+                description: 'Devis import-on-demand des grossistes.',
+                badge: newQuoteRequests ?? 0,
+                href: '/admin/quote-requests',
+              },
+              {
+                title: 'Devis marketplace',
+                description: 'RFQ grossistes sur produits fournisseurs.',
+                badge: pendingMarketplaceRFQs ?? 0,
+                href: '/admin/supplier-quotes',
+              },
+              {
+                title: 'Produits fournisseurs',
+                description: 'Examiner et approuver les soumissions des fournisseurs.',
+                badge: pendingSupplierProducts ?? 0,
+                href: '/admin/supplier-products',
+              },
+              {
+                title: 'Analytiques',
+                description: 'Revenus, profit, top produits et performance affiliés.',
+                badge: null,
+                href: '/admin/analytics',
+              },
+              {
+                title: 'Performance fournisseurs',
+                description: 'Score de fiabilité, incidents et délais par fournisseur.',
+                badge: null,
+                href: '/admin/supplier-performance',
+              },
+              {
+                title: 'Sourcing intelligent',
+                description: 'Matching automatique grossiste → fournisseur optimal.',
+                badge: pendingSourcingRequests ?? 0,
+                href: '/admin/sourcing',
+              },
+              {
+                title: 'Médiation échantillons',
+                description: 'Valider fichiers, catalogues et demandes d\'échantillons.',
+                badge: pendingSampleRequests ?? 0,
+                href: '/admin/samples',
+              },
+              {
+                title: 'Moteur RFQ',
+                description: 'Matching automatique RFQ → fournisseurs. Scores et offres.',
+                badge: null,
+                href: '/admin/rfq',
+              },
+              {
+                title: 'Monétisation Premium',
+                description: 'Abonnements fournisseurs, badges Vedette/Vérifié, boost RFQ, MRR.',
+                badge: null,
+                href: '/admin/premium',
               },
             ].map((action) => (
               <div

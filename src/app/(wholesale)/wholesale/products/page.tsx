@@ -1,7 +1,11 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
+import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
 import type { Product, WholesaleCartItem } from '@/types/database'
 
 export const metadata = {
@@ -15,8 +19,10 @@ export default async function WholesaleProductsPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const [profileResult, productsResult, cartResult] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user!.id).single(),
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase
       .from('products')
       .select('*')
@@ -26,7 +32,7 @@ export default async function WholesaleProductsPage() {
     supabase
       .from('wholesale_cart_items')
       .select('*')
-      .eq('buyer_id', user!.id),
+      .eq('buyer_id', user.id),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
@@ -83,9 +89,16 @@ export default async function WholesaleProductsPage() {
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Catalogue grossiste</h1>
             <p className="text-sm text-gray-500 mt-0.5">
+              Stock interne Mozouna — commande directe.{' '}
               {products.length} produit{products.length !== 1 ? 's' : ''} disponible
               {products.length !== 1 ? 's' : ''}.
             </p>
+            <Link
+              href="/wholesale/marketplace"
+              className="mt-1.5 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              Chercher chez nos fournisseurs → Marketplace
+            </Link>
           </div>
           {cartCount > 0 && (
             <Link
@@ -102,7 +115,7 @@ export default async function WholesaleProductsPage() {
             <p className="text-sm text-gray-400">Aucun produit disponible pour le moment.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {products.map((product) => {
               const inCart = cartMap.get(product.id)
               // Cheapest available tier price for display
@@ -120,7 +133,6 @@ export default async function WholesaleProductsPage() {
                   key={product.id}
                   product={product}
                   displayPrice={displayPrice}
-                  hasTiers={product.wholesale_tiers.length > 0}
                   inCartQty={inCart}
                 />
               )
@@ -137,35 +149,29 @@ export default async function WholesaleProductsPage() {
 function WholesaleProductCard({
   product,
   displayPrice,
-  hasTiers,
   inCartQty,
 }: {
   product: Product
   displayPrice: number
-  hasTiers: boolean
   inCartQty: number | undefined
 }) {
-  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
+  const coverUrl = getProductCoverUrl(product)
+  const tierQtys = [...product.wholesale_tiers]
+    .sort((a, b) => a.min_qty - b.min_qty)
+    .map((t) => t.min_qty)
+  const hasTiers = tierQtys.length > 0
+  const productUrl = `/wholesale/products/${product.id}`
+  const isRfq = getCatalogProductCtaMode(product.availability_type) === 'rfq'
 
   return (
-    <Link
-      href={`/wholesale/products/${product.id}`}
-      className="group bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
-    >
+    <div className="group bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
       {/* Thumbnail */}
-      <div className="aspect-[4/3] bg-gray-100 overflow-hidden relative">
-        {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumb}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-300">
-            {product.name.slice(0, 2).toUpperCase()}
-          </div>
-        )}
+      <Link href={productUrl} className="aspect-square relative overflow-hidden block">
+        <ProductThumbnail
+          src={coverUrl}
+          name={product.name}
+          className="w-full h-full text-2xl group-hover:scale-105 transition-transform duration-300"
+        />
 
         {/* In-cart badge */}
         {inCartQty != null && (
@@ -173,19 +179,19 @@ function WholesaleProductCard({
             {inCartQty} au panier
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Info */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
+      <div className="p-3 flex flex-col gap-1.5 flex-1">
         <div className="flex items-center gap-1.5">
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
-              product.availability_type === 'import_on_demand'
+              isRfq
                 ? 'bg-purple-100 text-purple-700'
                 : 'bg-green-100 text-green-700'
             }`}
           >
-            {product.availability_type === 'import_on_demand' ? 'Import / Demande' : 'Stock Maroc'}
+            {isRfq ? 'Import / Demande' : 'Stock Maroc'}
           </span>
           {hasTiers && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
@@ -194,23 +200,27 @@ function WholesaleProductCard({
           )}
         </div>
 
-        <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2">
-          {product.name}
-        </h3>
+        <Link href={productUrl}>
+          <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2 hover:text-gray-600 transition-colors">
+            {product.name}
+          </h3>
+        </Link>
 
-        <div className="mt-auto pt-2 border-t border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400">
-              {hasTiers ? 'À partir de' : 'Prix / unité'}
-            </p>
-            <p className="text-base font-bold text-gray-900">{formatMAD(displayPrice)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Min. commande</p>
-            <p className="text-sm font-medium text-gray-700">{product.wholesale_min_qty} u.</p>
-          </div>
+        <div className="mt-auto pt-1.5 border-t border-gray-100">
+          <p className="text-sm font-bold text-gray-900">{formatMAD(displayPrice)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {hasTiers ? 'À partir de · ' : ''}{product.wholesale_min_qty} u. min.
+          </p>
         </div>
+
+        {/* CTA */}
+        <Link
+          href={productUrl}
+          className="block w-full text-center text-xs font-bold py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+        >
+          {isRfq ? 'Demander un devis →' : 'Commander →'}
+        </Link>
       </div>
-    </Link>
+    </div>
   )
 }

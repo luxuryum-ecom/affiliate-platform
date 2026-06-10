@@ -1,0 +1,16 @@
+---
+description: Model tier quick reference — full policy in agent-routing.mdc
+alwaysApply: false
+---
+
+# Model Selection (quick reference)
+
+> **Canonical policy:** `.cursor/rules/agent-routing.mdc` (always applied)
+
+| Tier | Use for | Never for |
+|---|---|---|
+| **Composer** | Terminal, logs, cache, dev server, git status, health checks | Migrations, auth, business logic, multi-file code |
+| **Sonnet** | Features, bugs, refactors, migrations, UI, server actions | Pure terminal tasks |
+| **Opus** | Architecture audit, security/RLS review, critical design forks | Routine coding, commands |
+
+Default: **Sonnet**. Opus only when deep system judgment is the deliverable.

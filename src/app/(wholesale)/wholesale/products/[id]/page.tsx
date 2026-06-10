@@ -1,10 +1,16 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
-import type { Product } from '@/types/database'
+import { QuoteRequestForm } from '@/components/wholesale/quote-request-form'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
+import { getActiveTariff } from '@/app/actions/tariffs'
+import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
+import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
+import type { Product, ImportTariff } from '@/types/database'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -29,9 +35,11 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const [profileResult, productResult] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user!.id).single(),
-    supabase.from('products').select('*').eq('id', id).eq('active', true).single(),
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase.from('products').select('*').eq('id', id).eq('active', true).eq('approval_status', 'approved').single(),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
@@ -39,12 +47,20 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   if (!product) notFound()
 
-  const mediaImages = product.media?.filter((m) => m.type === 'image') ?? []
-  const allImageUrls = mediaImages.length > 0
-    ? mediaImages.map((m) => m.url)
-    : (product.images ?? [])
-  const thumb = allImageUrls[0] ?? null
-  const extraImages = allImageUrls.slice(1)
+  // Fetch global tariff when product uses global tariff mode
+  let globalTariff: ImportTariff | null = null
+  if (
+    product.availability_type === 'import_on_demand' &&
+    product.tariff_mode === 'global' &&
+    product.origin_country &&
+    product.import_shipping_mode
+  ) {
+    globalTariff = await getActiveTariff(product.origin_country, product.import_shipping_mode)
+  }
+
+  const coverUrl = getProductCoverUrl(product)
+  const galleryUrls = getProductGalleryUrls(product)
+  const ctaMode = getCatalogProductCtaMode(product.availability_type)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,31 +103,20 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* ── Images ── */}
           <div className="space-y-3">
-            <div className="aspect-square bg-white rounded-2xl border border-gray-200 overflow-hidden">
-              {thumb ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={thumb}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-200">
-                  {product.name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
+            <ProductThumbnail
+              src={coverUrl}
+              name={product.name}
+              className="aspect-square w-full rounded-2xl border border-gray-200 text-4xl"
+            />
 
-            {extraImages.length > 0 && (
+            {galleryUrls.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {extraImages.map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
+                {galleryUrls.map((url, i) => (
+                  <ProductThumbnail
+                    key={url}
                     src={url}
-                    alt={`${product.name} ${i + 2}`}
-                    className="h-16 w-16 shrink-0 rounded-lg object-cover border border-gray-200"
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                    name={`${product.name} ${i + 2}`}
+                    className="h-16 w-16 shrink-0 rounded-lg border border-gray-200"
                   />
                 ))}
               </div>
@@ -138,7 +143,12 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               )}
               {product.stock_count === 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-                  Stock épuisé
+                  Indisponible
+                </span>
+              )}
+              {product.stock_count > 0 && product.stock_count < product.wholesale_min_qty && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                  Stock partiel
                 </span>
               )}
             </div>
@@ -151,23 +161,150 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               )}
             </div>
 
+            {/* Stock location + origin — local_stock only (import block covers import products) */}
+            {product.availability_type === 'local_stock' && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Localisation stock</span>
+                  <span className="font-medium text-green-700">🇲🇦 Stock au Maroc</span>
+                </div>
+                {product.origin_country && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Pays d&apos;origine</span>
+                    <span className="font-medium text-gray-700">{product.origin_country}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Import-on-demand sourcing details */}
+            {product.availability_type === 'import_on_demand' && (
+              <ImportInfoBlock product={product} globalTariff={globalTariff} />
+            )}
+
             {/* Public price reference */}
             <div className="flex items-center gap-3 text-sm">
               <span className="text-gray-400">Prix public :</span>
               <span className="font-medium text-gray-700">{formatMAD(product.sell_price)}</span>
             </div>
 
-            {/* Add to cart form (client component) */}
-            <AddToCartForm
-              productId={product.id}
-              sellPrice={product.sell_price}
-              tiers={product.wholesale_tiers}
-              minQty={product.wholesale_min_qty}
-              stockCount={product.stock_count}
-            />
+            {ctaMode === 'rfq' ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                  Produit import / sur demande
+                </p>
+                <QuoteRequestForm productId={product.id} productName={product.name} />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+                  Commande directe — stock Maroc
+                </p>
+                <AddToCartForm
+                  productId={product.id}
+                  sellPrice={product.sell_price}
+                  tiers={product.wholesale_tiers}
+                  minQty={product.wholesale_min_qty}
+                  stockCount={product.stock_count}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+
+// ─── Import info block ────────────────────────────────────────────────────────
+// Displays transport & customs info — from the global tariff table (tariff_mode='global')
+// or from the product's own custom fields (tariff_mode='custom').
+// Clearly labelled as transport/customs costs, separate from product purchase price.
+
+function ImportInfoBlock({
+  product,
+  globalTariff,
+}: {
+  product: Product
+  globalTariff: ImportTariff | null
+}) {
+  const tariff = product.tariff_mode === 'global' ? globalTariff : null
+
+  // Shipping mode label — prefer new shipping_mode, fall back to legacy
+  const shippingMode = tariff?.shipping_mode ?? product.import_shipping_mode
+  const shippingModeLabel = shippingMode ? (SHIPPING_MODE_LABELS[shippingMode] ?? null) : null
+
+  // Transport cost — prefer new transport_customs_price_mad, fall back to legacy
+  const transportCostMad =
+    tariff != null
+      ? Number(tariff.transport_customs_price_mad)
+      : product.estimated_import_price_mad ?? product.estimated_cost_mad
+  const unit = tariff?.unit ?? product.import_price_unit
+
+  const deliveryDays = tariff?.delivery_days ?? product.estimated_delivery_days
+  const notes = tariff?.notes ?? product.import_notes
+
+  return (
+    <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 space-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+            Frais transport &amp; douane
+          </p>
+          <p className="text-xs text-purple-500 mt-0.5">
+            Non inclus dans le prix produit
+          </p>
+        </div>
+        {product.tariff_mode === 'global' && globalTariff && (
+          <span className="text-xs text-purple-500 bg-purple-100 px-2 py-0.5 rounded-full shrink-0">
+            Tarif global
+          </span>
+        )}
+      </div>
+
+      {product.origin_country && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Pays d&apos;origine</span>
+          <span className="font-medium text-gray-900">{product.origin_country}</span>
+        </div>
+      )}
+
+      {shippingModeLabel && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Mode de transport</span>
+          <span className="font-medium text-gray-900">{shippingModeLabel}</span>
+        </div>
+      )}
+
+      {transportCostMad != null && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Frais transport &amp; douane estimés</span>
+          <span className="font-medium text-gray-900">
+            {formatMAD(transportCostMad)}{' '}
+            {unit && (
+              <span className="text-gray-500 font-normal">
+                / {unit === 'cbm' ? 'CBM' : 'kg'}
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {deliveryDays != null && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Délai estimé</span>
+          <span className="font-medium text-gray-900">
+            {deliveryDays} jour{deliveryDays > 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
+      {notes && (
+        <div className="pt-2 border-t border-purple-200">
+          <p className="text-xs text-purple-700 font-medium mb-1">Notes</p>
+          <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line">{notes}</p>
+        </div>
+      )}
     </div>
   )
 }

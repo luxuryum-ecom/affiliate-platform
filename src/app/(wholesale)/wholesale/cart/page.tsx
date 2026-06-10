@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { CartItemRow } from '@/components/wholesale/cart-item-row'
+import { SubmitWholesaleOrderForm } from '@/components/wholesale/submit-order-form'
 import { WhatsAppButton } from '@/components/wholesale/whatsapp-button'
 import type { WholesaleCartItemWithProduct } from '@/types/database'
 
@@ -132,7 +133,21 @@ export default async function WholesaleCartPage() {
                 chaque modification de quantité.
               </p>
 
-              {/* WhatsApp CTA */}
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Ce total est estimatif — hors frais de livraison, emballage, assurance et service. Notre équipe vous communique un devis définitif avant toute validation de commande.
+              </p>
+
+              <SubmitWholesaleOrderForm />
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-2 text-gray-400">ou contacter par WhatsApp</span>
+                </div>
+              </div>
+
               <WhatsAppButton
                 items={items}
                 total={total}

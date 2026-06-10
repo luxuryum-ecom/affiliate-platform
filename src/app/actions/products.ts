@@ -1,16 +1,27 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { isValidMediaUrl } from '@/lib/product-media'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { requireAdmin } from './_guards'
 import type {
   WholesaleTier,
   ProductSubmittedVia,
   ProductApprovalStatus,
   ProductAvailabilityType,
   ProductOriginDetail,
+  PlatformMarginType,
   MediaItem,
+  ImportPricingMode,
+  ImportPriceUnit,
+  TariffMode,
+  ImportShippingMode,
 } from '@/types/database'
+
+function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
+  return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
+}
+import { calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
 
 export type ProductFormState = { error: string | null }
 
@@ -31,12 +42,8 @@ export async function upsertProduct(
   _prevState: ProductFormState,
   formData: FormData
 ): Promise<ProductFormState> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non authentifié.' }
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return { error: authError ?? 'Erreur.' }
 
   // ── Basic fields ──────────────────────────────────────────────────────────
 
@@ -70,7 +77,20 @@ export async function upsertProduct(
 
   const purchase_currency = (formData.get('purchase_currency') as string) || 'MAD'
   const exchange_rate_to_mad = parseFloat(formData.get('exchange_rate_to_mad') as string) || 1
-  const margin_percentage = parseFloat(formData.get('margin_percentage') as string) || 30
+
+  // platform_margin_type: 'percentage' | 'fixed'
+  // Accept both the new field name and legacy 'margin_percentage' form field.
+  const platform_margin_type = (
+    (formData.get('platform_margin_type') as string) || 'percentage'
+  ) as PlatformMarginType
+
+  // platform_margin_value: preferred new field; fall back to legacy margin_percentage
+  const margin_value_raw =
+    formData.get('platform_margin_value') ?? formData.get('margin_percentage')
+  const platform_margin_value = parseFloat(margin_value_raw as string) || 30
+
+  // Keep margin_percentage in sync for backward compat with any legacy reads
+  const margin_percentage = platform_margin_type === 'percentage' ? platform_margin_value : 0
 
   const confirmation_fee_mad = parseFloat(formData.get('confirmation_fee_mad') as string) || 10
   const packaging_fee_mad = parseFloat(formData.get('packaging_fee_mad') as string) || 10
@@ -92,19 +112,92 @@ export async function upsertProduct(
       ? parseFloat((purchase_price * exchange_rate_to_mad).toFixed(2))
       : purchase_price
 
-    calculated_sale_price_mad = parseFloat(
-      (purchase_price_mad * (1 + margin_percentage / 100)).toFixed(2)
+    calculated_sale_price_mad = calculatePlatformPrice(
+      purchase_price_mad,
+      platform_margin_type,
+      platform_margin_value
     )
   }
+
+  // ── Factory cost (migration 016) — explicit MAD cost set by admin ────────
+
+  const factory_cost_mad_raw = formData.get('factory_cost_mad') as string
+  // Fall back to computed purchase_price_mad when not explicitly set
+  const factory_cost_mad: number | null =
+    factory_cost_mad_raw && !isNaN(parseFloat(factory_cost_mad_raw))
+      ? parseFloat(factory_cost_mad_raw)
+      : purchase_price_mad
 
   // ── Sales fields ──────────────────────────────────────────────────────────
 
   const sell_price = parseFloat(formData.get('sell_price') as string)
-  // commission only makes sense when affiliate_enabled
-  const commission_amount_raw = parseFloat(formData.get('commission_amount') as string) || 0
-  const commission_amount = affiliate_enabled ? commission_amount_raw : 0
   const wholesale_min_qty = parseInt(formData.get('wholesale_min_qty') as string) || 1
   const stock_count = parseInt(formData.get('stock_count') as string) || 0
+
+  // ── Auto-compute commission from cost formula ─────────────────────────────
+  // commission = sell_price − factory_cost − platform_margin − delivery_fee − confirmation_fee − packaging_fee
+  // Returns 0 when affiliate is disabled or factory_cost_mad is not set yet.
+
+  const commission_amount: number = (() => {
+    if (!affiliate_enabled || factory_cost_mad === null) return 0
+    const raw = calculateNetAffiliateCommission({
+      affiliateSellPrice: sell_price,
+      factoryCostMad: factory_cost_mad,
+      marginType: platform_margin_type,
+      marginValue: platform_margin_value,
+      packagingFee: packaging_fee_mad,
+      deliveryFee: delivery_fee_mad,
+      confirmationFee: confirmation_fee_mad,
+      quantity: 1,
+    })
+    return Math.max(0, raw)
+  })()
+
+  // ── Import-on-demand display fields (migrations 019 + 020) ──────────────
+  // Only stored when availability_type = 'import_on_demand'; cleared otherwise.
+
+  const estimated_delivery_days_raw = formData.get('estimated_delivery_days') as string
+  const estimated_delivery_days: number | null =
+    availability_type === 'import_on_demand' && estimated_delivery_days_raw
+      ? parseInt(estimated_delivery_days_raw) || null
+      : null
+
+  // ── Tariff mode (migration 021) ───────────────────────────────────────────
+  const tariff_mode_raw = (formData.get('tariff_mode') as string) || 'global'
+  const tariff_mode: TariffMode =
+    availability_type === 'import_on_demand' &&
+    (tariff_mode_raw === 'global' || tariff_mode_raw === 'custom')
+      ? tariff_mode_raw
+      : 'global'
+
+  // ── Import shipping mode (migration 022) — must be declared before import_price_unit ──
+  const import_shipping_mode_raw = (formData.get('import_shipping_mode') as string) || null
+  const import_shipping_mode: ImportShippingMode | null =
+    availability_type === 'import_on_demand' &&
+    import_shipping_mode_raw !== null &&
+    ['air_door_to_door_kg', 'sea_textile_kg', 'sea_volume_cbm'].includes(import_shipping_mode_raw)
+      ? (import_shipping_mode_raw as ImportShippingMode)
+      : null
+
+  // ── Migration 020 — import cost model (legacy fields kept for backward compat) ──
+  const estimated_import_price_mad_raw = formData.get('estimated_import_price_mad') as string
+  const estimated_import_price_mad: number | null =
+    availability_type === 'import_on_demand' && estimated_import_price_mad_raw
+      ? parseFloat(estimated_import_price_mad_raw) || null
+      : null
+
+  // Unit auto-derived from shipping mode
+  const import_price_unit: ImportPriceUnit | null =
+    availability_type === 'import_on_demand' && import_shipping_mode !== null
+      ? shippingModeToUnit(import_shipping_mode)
+      : null
+
+  const import_notes_raw = ((formData.get('import_notes') as string) || '').trim()
+  const import_notes: string | null =
+    availability_type === 'import_on_demand' && import_notes_raw ? import_notes_raw : null
+
+  // Keep estimated_cost_mad in sync with estimated_import_price_mad for backward compat
+  const estimated_cost_mad: number | null = estimated_import_price_mad
 
   // ── Approval ──────────────────────────────────────────────────────────────
 
@@ -133,11 +226,15 @@ export async function upsertProduct(
     return { error: 'Devise invalide. Utilisez MAD, USD ou AED.' }
   if (isNaN(sell_price) || sell_price <= 0)
     return { error: 'Le prix de vente doit être supérieur à 0 MAD.' }
-  if (commission_amount < 0) return { error: 'La commission ne peut pas être négative.' }
+  if (factory_cost_mad !== null && factory_cost_mad < 0)
+    return { error: 'Le coût usine ne peut pas être négatif.' }
   if (wholesale_min_qty < 1) return { error: 'La quantité minimale doit être ≥ 1.' }
   if (stock_count < 0) return { error: 'Le stock ne peut pas être négatif.' }
   if (exchange_rate_to_mad <= 0)
     return { error: "Le taux de change doit être supérieur à 0." }
+  if (!['percentage', 'fixed'].includes(platform_margin_type))
+    return { error: 'Type de marge invalide. Utilisez percentage ou fixed.' }
+  if (platform_margin_value < 0) return { error: 'La marge ne peut pas être négative.' }
   if (margin_percentage < 0) return { error: 'La marge ne peut pas être négative.' }
 
   // ── Parse JSON fields ─────────────────────────────────────────────────────
@@ -153,7 +250,10 @@ export async function upsertProduct(
   let media: MediaItem[] = []
   try {
     const parsed = JSON.parse((formData.get('media') as string) || '[]') as MediaItem[]
-    media = parsed.filter((m) => m?.url?.trim().length > 0)
+    media = parsed.filter((m) => {
+      if (!m?.url?.trim()) return false
+      return isValidMediaUrl(m.url)
+    })
   } catch {
     media = []
   }
@@ -181,6 +281,9 @@ export async function upsertProduct(
     purchase_price_mad,
     margin_percentage,
     calculated_sale_price_mad,
+    platform_margin_type,
+    platform_margin_value,
+    factory_cost_mad,
     confirmation_fee_mad,
     packaging_fee_mad,
     delivery_fee_mad,
@@ -193,6 +296,14 @@ export async function upsertProduct(
     stock_count,
     media,
     images,
+    estimated_cost_mad: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_cost_mad,
+    estimated_delivery_days: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_delivery_days,
+    import_pricing_mode: null as ImportPricingMode | null,
+    estimated_import_price_mad: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_import_price_mad,
+    import_price_unit: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_price_unit,
+    import_notes: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : import_notes,
+    tariff_mode,
+    import_shipping_mode: availability_type === 'import_on_demand' ? import_shipping_mode : null,
   }
 
   if (id) {
@@ -221,9 +332,9 @@ export async function upsertProduct(
       // Set approved_by/at when transitioning to approved
       approved_by:
         isNowApproved && !wasApproved
-          ? user.id
+          ? userId
           : isNowApproved
-          ? (existing?.approved_by ?? user.id)
+          ? (existing?.approved_by ?? userId)
           : null,
       approved_at:
         isNowApproved && !wasApproved
@@ -240,8 +351,8 @@ export async function upsertProduct(
 
     const insertPayload = {
       ...base,
-      submitted_by: user.id,
-      approved_by: approval_status === 'approved' ? user.id : null,
+      submitted_by: userId,
+      approved_by: approval_status === 'approved' ? userId : null,
       approved_at: approval_status === 'approved' ? now : null,
     }
 
@@ -260,7 +371,8 @@ export async function upsertProduct(
  * Refuses to activate a product that is not yet approved.
  */
 export async function toggleProductActive(id: string, newActive: boolean): Promise<void> {
-  const supabase = await createClient()
+  const { supabase, error } = await requireAdmin()
+  if (error) return
 
   if (newActive) {
     // Guard: only allow activation if product is approved
@@ -280,7 +392,9 @@ export async function toggleProductActive(id: string, newActive: boolean): Promi
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 export async function deleteProduct(id: string): Promise<void> {
-  const supabase = await createClient()
+  const { supabase, error } = await requireAdmin()
+  if (error) return
+
   await supabase.from('products').delete().eq('id', id)
   revalidatePath('/admin/products')
 }

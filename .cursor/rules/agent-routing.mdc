@@ -1,0 +1,127 @@
+---
+description: Model routing, chat splits, token cost control, and task-type workflows
+alwaysApply: true
+---
+
+# Agent Routing & Cost Control — AffiPartner Morocco
+
+## User contract
+The user describes **only the business feature or issue**. The agent decides:
+- which model tier fits the task
+- whether to stay in this chat or warn the user to open a focused new chat
+- how to minimize token use without skipping correctness
+
+## Model tiers (mandatory routing)
+
+### Composer — terminal & environment only
+Use when the task is **commands and inspection**, not code reasoning:
+- `git status`, diffs, logs, terminal output
+- `npm run dev`, `reset-cache`, `safe-check`, installs
+- Supabase CLI status (`migration list`), env/health probes
+- Restarting services, port checks, cache cleanup
+
+**Never Composer for:** migrations authoring, auth/RLS, commissions, COD logic, multi-file refactors, anything that edits business rules.
+
+### Sonnet — default implementation (~90% of work)
+Use for all **coding and product execution**:
+- Features, bug fixes, refactors, UI, server actions
+- Writing/applying migrations, updating types
+- Stabilization fixes, null guards, form logic
+- Reviews of specific files the agent will then edit
+
+**Never Sonnet for:** pure terminal tasks Composer can handle alone.
+
+### Opus — critical reasoning only (expensive)
+Use **only** when deep cross-system judgment is the deliverable:
+- Architecture review or major trade-off decisions
+- Security audit, RLS/auth threat modeling
+- Database design review (schema strategy, not routine migration SQL)
+- Commission/payout model design under ambiguity
+
+**Never Opus for:** routine coding, single-file fixes, running commands, implementing a spec Sonnet already has.
+
+## Decision tree (apply first)
+
+```
+Terminal / logs / cache / git status / dev server only?
+  → Composer
+
+Architecture audit, security review, or critical design fork?
+  → Opus (warn: open new focused chat)
+
+Everything else that touches code or product behavior?
+  → Sonnet
+```
+
+## Warn user — open a new Cursor chat when
+
+Tell the user explicitly before continuing deep work if any apply:
+1. **New isolated bug** unrelated to the current thread
+2. **Long debugging thread** (>3 failed fix attempts or circular logs)
+3. **Architecture audit** or system-wide review
+4. **New major feature** unrelated to current WIP (especially COD engine scope)
+5. **Context too large** — repeated re-reads, many unrelated files, or mixed goals
+
+Suggested opener: *"This is a new focus area — open a fresh chat with [one-line goal] to save tokens and reduce confusion."*
+
+## Token efficiency (always)
+
+- Read only files needed for the current step; do not re-read unchanged files
+- Prefer `Grep` / `Glob` over directory dumps
+- Sub-agents get minimal context, not full codebase exports
+- Summarize prior steps in handoffs; do not paste long logs twice
+- Stop dev server before `npm run build` / `safe-check`; restart after to avoid Turbopack 500s
+
+## Required before coding
+
+Post a **short execution plan** (5–8 bullets max) before the first file edit:
+
+```
+Goal: …
+Model: Composer | Sonnet | Opus
+Plan: inspect → change → verify
+Files: …
+Risk / approval: …
+Chat split?: yes/no + why
+```
+
+Then **inspect relevant files** (read, not guess). Only then implement.
+
+## Task workflows
+
+### Bugs
+`reproduce → identify root cause → minimal fix → verify → summarize`
+
+- Reproduce from error, route, or terminal evidence
+- One root cause; smallest diff that fixes it
+- Verify: `npm run check` minimum; `safe-check` if multi-file
+- Report: cause, fix, test URL
+
+### Features
+`benchmark common SaaS patterns → design → implement → test → summarize`
+
+- Match existing AffiPartner patterns first (server components, server actions)
+- Read `business-model.mdc` when touching products, orders, commissions, roles
+- Implement minimal MVP; no scope creep
+- Verify: `npm run safe-check` after stopping dev server if needed
+- Report: changed files, test URLs, pending approvals
+
+### Stabilization / ops
+No new features. Fix blocking issues only. Prefer Composer for health checks; Sonnet only if code change required.
+
+## Integration safety (Supabase · GitHub · Hostinger)
+
+- **Never guess** credentials, API keys, project refs, or destructive CLI flags
+- **Never run** destructive DB ops, force-push, or production deploy without explicit user approval
+- **Ask only when required** — missing secret, ambiguous target env, or high-risk action per `docs/RISK_APPROVAL_MATRIX.md`
+- Reference committed docs: `.env.production.example`, `deployment-safety.mdc`
+
+## Stability guardrails (this repo)
+
+- **Keep COD WIP stable** — do not rewrite COD engine, migration 009 scope, or attribution flows unless the user explicitly requests a rewrite
+- **Protect affiliate and wholesale flows** — COD changes must not break `/affiliate/*`, `/wholesale/*`, commissions, or tier pricing
+- Prefer additive migrations and minimal diffs on shared order/product paths
+
+## Handoff to execution rules
+
+After routing decision, follow `.cursor/rules/agent-operating-system.mdc` for approval gates, migrations, verification commands, and report format.

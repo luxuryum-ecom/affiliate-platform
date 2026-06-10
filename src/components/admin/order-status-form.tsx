@@ -5,16 +5,16 @@ import { updateOrderStatus } from '@/app/actions/orders'
 import type { OrderStatus } from '@/types/database'
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending:   ['confirmed', 'cancelled'],
-  confirmed: ['shipped', 'cancelled'],
-  shipped:   ['delivered', 'returned'],
-  delivered: [],
-  returned:  [],
-  cancelled: [],
+  pending_confirmation: ['confirmed'],
+  confirmed:            ['shipped'],
+  shipped:              ['delivered', 'returned'],
+  delivered:            ['returned'],
+  returned:             [],
+  cancelled:            [],
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending:   'En attente',
+  pending_confirmation: 'En attente de confirmation',
   confirmed: 'Confirmée',
   shipped:   'Expédiée',
   delivered: 'Livrée',

@@ -3,9 +3,14 @@
 import { useActionState, useState, useRef } from 'react'
 import Link from 'next/link'
 import { upsertProduct, type ProductFormState } from '@/app/actions/products'
-import { createClient } from '@/lib/supabase/client'
+import { ProductCoverUpload } from '@/components/admin/product-cover-upload'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { uploadProductImage, formatProductImageUploadError } from '@/lib/product-image-upload'
+import { isValidMediaUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
-import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem } from '@/types/database'
+import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportTariff, TariffMode, ImportShippingMode } from '@/types/database'
+import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
+import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,11 +85,12 @@ const MEDIA_TYPE_LABELS: Record<MediaItem['type'], string> = {
 
 interface ProductFormProps {
   product?: Product
+  tariffs?: ImportTariff[]
 }
 
 const initialState: ProductFormState = { error: null }
 
-export function ProductForm({ product }: ProductFormProps) {
+export function ProductForm({ product, tariffs = [] }: ProductFormProps) {
   const [state, action, isPending] = useActionState(upsertProduct, initialState)
 
   // ── Availability state ────────────────────────────────────────────────────
@@ -96,6 +102,43 @@ export function ProductForm({ product }: ProductFormProps) {
   )
   const [affiliateEnabled, setAffiliateEnabled] = useState<boolean>(
     product?.affiliate_enabled ?? true
+  )
+
+  // ── Taxonomy (migration 039) ────────────────────────────────────────────────
+  const [productCategory, setProductCategory] = useState<string>(product?.category ?? '')
+  const [productSubcategory, setProductSubcategory] = useState<string>(product?.subcategory ?? '')
+  const subcategoryOptions = getSubcategories(productCategory)
+
+  // ── Import-on-demand fields (migrations 019 + 020 + 022) ────────────────
+  const [importOriginCountry, setImportOriginCountry] = useState<string>(
+    product?.origin_country ?? ''
+  )
+
+  // Shipping mode (migration 022) — replaces importPricingMode
+  const [importShippingMode, setImportShippingMode] = useState<ImportShippingMode>(
+    product?.import_shipping_mode ??
+    (product?.import_pricing_mode === 'sea_freight_cbm_or_kg' && product?.import_price_unit === 'cbm'
+      ? 'sea_volume_cbm'
+      : product?.import_pricing_mode === 'sea_freight_cbm_or_kg'
+      ? 'sea_textile_kg'
+      : 'air_door_to_door_kg')
+  )
+
+  const [estimatedImportPriceMad, setEstimatedImportPriceMad] = useState<string>(
+    product?.estimated_import_price_mad != null
+      ? String(product.estimated_import_price_mad)
+      : product?.estimated_cost_mad != null
+      ? String(product.estimated_cost_mad)
+      : ''
+  )
+  const [estimatedDeliveryDays, setEstimatedDeliveryDays] = useState<string>(
+    product?.estimated_delivery_days != null ? String(product.estimated_delivery_days) : ''
+  )
+  const [importNotes, setImportNotes] = useState<string>(product?.import_notes ?? '')
+
+  // ── Tariff mode (migration 021) ───────────────────────────────────────────
+  const [tariffMode, setTariffMode] = useState<TariffMode>(
+    product?.tariff_mode ?? 'global'
   )
 
   // ── Cost/margin state (for live preview + auto-tier) ──────────────────────
@@ -110,6 +153,37 @@ export function ProductForm({ product }: ProductFormProps) {
   )
   const [margin, setMargin] = useState<string>(
     String(product?.margin_percentage ?? 30)
+  )
+
+  // ── Platform margin type & value (migration 013) ──────────────────────────
+  const [platformMarginType, setPlatformMarginType] = useState<string>(
+    product?.platform_margin_type ?? 'percentage'
+  )
+  const [platformMarginValue, setPlatformMarginValue] = useState<string>(
+    product?.platform_margin_value != null ? String(product.platform_margin_value) : '30'
+  )
+
+  // ── Factory cost (migration 016) ───────────────────────────────────────────
+  const [factoryCostMad, setFactoryCostMad] = useState<string>(
+    product?.factory_cost_mad != null
+      ? String(product.factory_cost_mad)
+      : product?.purchase_price_mad != null
+      ? String(product.purchase_price_mad)
+      : ''
+  )
+
+  // ── Sell price + operational fees (for commission preview) ────────────────
+  const [sellPrice, setSellPrice] = useState<string>(
+    product?.sell_price != null ? String(product.sell_price) : ''
+  )
+  const [confirmationFee, setConfirmationFee] = useState<string>(
+    String(product?.confirmation_fee_mad ?? 10)
+  )
+  const [packagingFee, setPackagingFee] = useState<string>(
+    String(product?.packaging_fee_mad ?? 10)
+  )
+  const [deliveryFee, setDeliveryFee] = useState<string>(
+    String(product?.delivery_fee_mad ?? 0)
   )
 
   // ── Approval state ────────────────────────────────────────────────────────
@@ -153,6 +227,40 @@ export function ProductForm({ product }: ProductFormProps) {
       ? parseFloat((purchasePriceMad * (1 + mg / 100)).toFixed(2))
       : null
 
+  // ── Platform cost & commission preview ────────────────────────────────────
+  const fCost = parseFloat(factoryCostMad)
+  const pmType = platformMarginType
+  const pmValue = parseFloat(platformMarginValue) || 0
+  const spVal = parseFloat(sellPrice)
+  const confFeeVal = parseFloat(confirmationFee) || 0
+  const packFeeVal = parseFloat(packagingFee) || 0
+  const delivFeeVal = parseFloat(deliveryFee) || 0
+
+  const platformMarginMad =
+    !isNaN(fCost) && fCost > 0
+      ? pmType === 'percentage'
+        ? parseFloat((fCost * (pmValue / 100)).toFixed(2))
+        : pmValue
+      : null
+
+  const platformCostMad =
+    !isNaN(fCost) && fCost > 0 && platformMarginMad !== null
+      ? parseFloat((fCost + platformMarginMad).toFixed(2))
+      : null
+
+  const estimatedCommission =
+    affiliateEnabled &&
+    !isNaN(fCost) && fCost > 0 &&
+    !isNaN(spVal) && spVal > 0 &&
+    platformMarginMad !== null
+      ? Math.max(
+          0,
+          parseFloat(
+            (spVal - fCost - platformMarginMad - delivFeeVal - confFeeVal - packFeeVal).toFixed(2)
+          )
+        )
+      : null
+
   // ── Tier helpers ──────────────────────────────────────────────────────────
   const addTier = () =>
     setTiers((prev) => [...prev, { min_qty: '', max_qty: '', price_per_unit: '' }])
@@ -160,14 +268,15 @@ export function ProductForm({ product }: ProductFormProps) {
   const updateTier = (i: number, key: keyof TierRow, val: string) =>
     setTiers((prev) => prev.map((t, idx) => (idx === i ? { ...t, [key]: val } : t)))
 
-  // Auto-generate standard tiers from cost price (10+/50+/100+/500+ pieces)
+  // Auto-generate standard tiers from factory cost (10+/50+/100+/500+ pieces)
   const autoGenerateTiers = () => {
-    if (!purchasePriceMad) return
+    const base = !isNaN(fCost) && fCost > 0 ? fCost : purchasePriceMad
+    if (!base) return
     setTiers([
-      { min_qty: '10',  max_qty: '49',  price_per_unit: String(Math.round(purchasePriceMad * 1.30)) },
-      { min_qty: '50',  max_qty: '99',  price_per_unit: String(Math.round(purchasePriceMad * 1.25)) },
-      { min_qty: '100', max_qty: '499', price_per_unit: String(Math.round(purchasePriceMad * 1.20)) },
-      { min_qty: '500', max_qty: '',    price_per_unit: String(Math.round(purchasePriceMad * 1.15)) },
+      { min_qty: '10',  max_qty: '49',  price_per_unit: String(Math.round(base * 1.30)) },
+      { min_qty: '50',  max_qty: '99',  price_per_unit: String(Math.round(base * 1.25)) },
+      { min_qty: '100', max_qty: '499', price_per_unit: String(Math.round(base * 1.20)) },
+      { min_qty: '500', max_qty: '',    price_per_unit: String(Math.round(base * 1.15)) },
     ])
   }
 
@@ -184,37 +293,40 @@ export function ProductForm({ product }: ProductFormProps) {
     setUploadingIndex(index)
     setUploadError(null)
 
-    const supabase = createClient()
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .upload(filename, file, { contentType: file.type, upsert: false })
-
-    if (error) {
-      const msg = error.message.includes('bucket')
-        ? 'Bucket "product-images" introuvable — vérifiez Supabase Storage.'
-        : error.message.includes('policy') || error.message.includes('permission')
-        ? 'Permission refusée — assurez-vous d\'être connecté en admin.'
-        : `Upload échoué : ${error.message}`
-      setUploadError(msg)
+    try {
+      const url = await uploadProductImage(file)
+      updateMediaUrl(index, url)
+      updateMediaType(index, 'image')
+    } catch (err) {
+      setUploadError(formatProductImageUploadError(err))
+    } finally {
       setUploadingIndex(null)
-      return
     }
-
-    const { data: urlData } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(data.path)
-
-    updateMediaUrl(index, urlData.publicUrl)
-    updateMediaType(index, 'image')
-    setUploadingIndex(null)
   }
+
+  const handleCoverUploaded = (url: string) => {
+    setUploadError(null)
+    setMediaItems((prev) => {
+      if (prev.length > 0 && prev[0].type === 'image') {
+        return prev.map((m, i) => (i === 0 ? { url, type: 'image' as const } : m))
+      }
+      const rest = prev.filter((m, i) => i > 0 || m.url.trim())
+      return [{ url, type: 'image' as const }, ...rest]
+    })
+  }
+
+  const coverUrl =
+    mediaItems.find((m) => m.type === 'image' && isValidMediaUrl(m.url))?.url ??
+    mediaItems[0]?.url ??
+    ''
+
+  const productDisplayName = product?.name ?? 'Produit'
 
   // ── Serialised hidden values ──────────────────────────────────────────────
   const validTiers = tiers.map(rowToTier).filter((t): t is WholesaleTier => t !== null)
-  const validMedia = mediaItems.filter((m) => m.url.trim().length > 0)
+  const validMedia = mediaItems.filter(
+    (m) => m.url.trim().length > 0 && (m.type !== 'image' || isValidMediaUrl(m.url))
+  )
 
   // Handle availability change: reset affiliate_enabled when import_on_demand
   const handleAvailabilityChange = (val: string) => {
@@ -229,6 +341,8 @@ export function ProductForm({ product }: ProductFormProps) {
       <input type="hidden" name="wholesale_tiers" value={JSON.stringify(validTiers)} />
       <input type="hidden" name="media" value={JSON.stringify(validMedia)} />
       <input type="hidden" name="submitted_via" value="admin_dashboard" />
+      <input type="hidden" name="tariff_mode" value={availabilityType === 'import_on_demand' ? tariffMode : 'global'} />
+      <input type="hidden" name="import_shipping_mode" value={availabilityType === 'import_on_demand' ? importShippingMode : ''} />
 
       {/* Error banner */}
       {state?.error && (
@@ -253,6 +367,69 @@ export function ProductForm({ product }: ProductFormProps) {
             className={INPUT}
             placeholder="Ex : Crème hydratante Argan"
           />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="category" className={LABEL}>Catégorie</label>
+            <select
+              id="category"
+              name="category"
+              disabled={isPending}
+              value={productCategory}
+              onChange={(e) => {
+                const newCat = e.target.value
+                setProductCategory(newCat)
+                // Reset subcategory only if it no longer belongs to the new category
+                const newSubs = getSubcategories(newCat) as readonly string[]
+                if (newSubs.length > 0 && !newSubs.includes(productSubcategory)) {
+                  setProductSubcategory('')
+                }
+              }}
+              className={INPUT}
+            >
+              <option value="">Sélectionner une catégorie...</option>
+              {productCategory && !(PRODUCT_CATEGORIES as readonly string[]).includes(productCategory) && (
+                <option value={productCategory}>{productCategory} (⚠ valeur legacy)</option>
+              )}
+              {PRODUCT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="subcategory" className={LABEL}>Sous-catégorie</label>
+            {subcategoryOptions.length > 0 ? (
+              <select
+                id="subcategory"
+                name="subcategory"
+                disabled={isPending}
+                value={productSubcategory}
+                onChange={(e) => setProductSubcategory(e.target.value)}
+                className={INPUT}
+              >
+                <option value="">Sélectionner...</option>
+                {/* Preserve legacy value if it doesn't match any current option */}
+                {productSubcategory && !(subcategoryOptions as readonly string[]).includes(productSubcategory) && (
+                  <option value={productSubcategory}>{productSubcategory} (⚠ valeur legacy)</option>
+                )}
+                {subcategoryOptions.map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="subcategory"
+                name="subcategory"
+                type="text"
+                disabled={isPending || !productCategory}
+                value={productSubcategory}
+                onChange={(e) => setProductSubcategory(e.target.value)}
+                className={INPUT}
+                placeholder={productCategory ? 'Précisez...' : 'Sélectionnez une catégorie'}
+              />
+            )}
+          </div>
         </div>
 
         <div>
@@ -338,6 +515,249 @@ export function ProductForm({ product }: ProductFormProps) {
           </div>
         )}
 
+        {/* import_on_demand display fields — only shown when relevant */}
+        {availabilityType === 'import_on_demand' && (
+          <div className="space-y-4 p-4 rounded-xl border border-purple-200 bg-purple-50">
+            <div>
+              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                Transport &amp; douane — affiché aux grossistes
+              </p>
+              <p className="text-xs text-purple-500 mt-0.5">
+                Ces champs représentent les <strong>frais de transport et douane</strong> uniquement —
+                séparés du coût d&apos;achat fournisseur (saisi dans la section « Coût usine » ci-dessous).
+              </p>
+            </div>
+
+            {/* Tariff mode selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(
+                [
+                  {
+                    val: 'global' as TariffMode,
+                    title: 'Tarif global',
+                    desc: 'Hérite du tarif centralisé pour ce pays (recommandé)',
+                  },
+                  {
+                    val: 'custom' as TariffMode,
+                    title: 'Tarif personnalisé',
+                    desc: 'Définit des tarifs spécifiques à ce produit',
+                  },
+                ] as const
+              ).map(({ val, title, desc }) => (
+                <label
+                  key={val}
+                  className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    tariffMode === val
+                      ? 'border-purple-600 bg-purple-100 ring-2 ring-purple-400'
+                      : 'border-purple-200 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="_tariff_mode_ui"
+                    value={val}
+                    checked={tariffMode === val}
+                    onChange={() => setTariffMode(val)}
+                    disabled={isPending}
+                    className="mt-0.5 w-4 h-4 accent-purple-700 shrink-0"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {/* Global tariff preview */}
+            {tariffMode === 'global' && (() => {
+              const matchingTariff = tariffs.find(
+                (t) =>
+                  t.country === importOriginCountry &&
+                  t.shipping_mode === importShippingMode &&
+                  t.active
+              )
+              const needsCountry = !importOriginCountry
+              return (
+                <div className="rounded-lg border border-purple-200 bg-white px-4 py-3 space-y-1.5 text-sm">
+                  <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">
+                    Tarif global actif (frais transport &amp; douane)
+                  </p>
+                  {needsCountry ? (
+                    <p className="text-xs text-gray-400 italic">
+                      Sélectionnez un pays et un mode de transport pour voir le tarif global.
+                    </p>
+                  ) : matchingTariff ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Mode</span>
+                        <span className="font-medium text-gray-900">
+                          {SHIPPING_MODE_LABELS[matchingTariff.shipping_mode]}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Frais transport &amp; douane</span>
+                        <span className="font-medium text-gray-900">
+                          {Number(matchingTariff.transport_customs_price_mad).toFixed(2)} MAD&nbsp;
+                          <span className="text-gray-400 font-normal text-xs">
+                            / {matchingTariff.unit === 'cbm' ? 'CBM' : 'kg'}
+                          </span>
+                        </span>
+                      </div>
+                      {matchingTariff.delivery_days != null && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Délai estimé</span>
+                          <span className="font-medium text-gray-900">
+                            {matchingTariff.delivery_days} jour{matchingTariff.delivery_days > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+                      {matchingTariff.notes && (
+                        <p className="text-xs text-gray-500 pt-1 border-t border-purple-100 mt-1">
+                          {matchingTariff.notes}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-amber-600">
+                      Aucun tarif actif pour {importOriginCountry} — {SHIPPING_MODE_LABELS[importShippingMode]}.{' '}
+                      <a
+                        href="/admin/import-tariffs"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        Configurer →
+                      </a>
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* Row: Origin country + Shipping mode — always visible */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="import_origin_country" className={LABEL}>
+                  Pays d&apos;origine <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="import_origin_country"
+                  name="origin_country"
+                  disabled={isPending}
+                  value={importOriginCountry}
+                  onChange={(e) => setImportOriginCountry(e.target.value)}
+                  className={INPUT}
+                >
+                  <option value="">— Sélectionner —</option>
+                  <option value="Turquie">Turquie</option>
+                  <option value="Chine">Chine</option>
+                  <option value="Égypte">Égypte</option>
+                  <option value="Dubai">Dubai</option>
+                  <option value="Autre">Autre</option>
+                  <option value="Mixte">Mixte (plusieurs origines)</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="import_shipping_mode_ui" className={LABEL}>
+                  Mode de transport
+                </label>
+                <select
+                  id="import_shipping_mode_ui"
+                  disabled={isPending}
+                  value={importShippingMode}
+                  onChange={(e) => setImportShippingMode(e.target.value as ImportShippingMode)}
+                  className={INPUT}
+                >
+                  {(Object.entries(SHIPPING_MODE_LABELS) as [ImportShippingMode, string][]).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Unité auto : <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'}</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* Custom tariff fields — only shown when tariffMode = 'custom' */}
+            {tariffMode === 'custom' && (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                  Frais de <strong>transport &amp; douane uniquement</strong> — ne pas inclure le prix d&apos;achat du produit.
+                </div>
+
+                {/* Price + delivery days */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="estimated_import_price_mad" className={LABEL}>
+                      Frais transport &amp; douane (MAD / {unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'})
+                    </label>
+                    <input
+                      id="estimated_import_price_mad"
+                      name="estimated_import_price_mad"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      disabled={isPending}
+                      value={estimatedImportPriceMad}
+                      onChange={(e) => setEstimatedImportPriceMad(e.target.value)}
+                      className={INPUT}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Unité auto-sélectionnée depuis le mode : <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'}</strong>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="estimated_delivery_days" className={LABEL}>
+                      Délai estimé (jours)
+                    </label>
+                    <input
+                      id="estimated_delivery_days"
+                      name="estimated_delivery_days"
+                      type="number"
+                      step="1"
+                      min="1"
+                      disabled={isPending}
+                      value={estimatedDeliveryDays}
+                      onChange={(e) => setEstimatedDeliveryDays(e.target.value)}
+                      className={INPUT}
+                      placeholder="Ex : 21"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label htmlFor="import_notes" className={LABEL}>
+                    Notes transport &amp; douane
+                    {importOriginCountry === 'Mixte' && (
+                      <span className="ml-1.5 text-amber-600 font-semibold">(recommandé — origines multiples)</span>
+                    )}
+                  </label>
+                  <textarea
+                    id="import_notes"
+                    name="import_notes"
+                    rows={2}
+                    disabled={isPending}
+                    value={importNotes}
+                    onChange={(e) => setImportNotes(e.target.value)}
+                    className={`${INPUT} resize-none ${importOriginCountry === 'Mixte' ? 'border-amber-400 ring-1 ring-amber-300' : ''}`}
+                    placeholder="Ex : taxe douanière variable, inspection aléatoire…"
+                  />
+                  {importOriginCountry === 'Mixte' && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Origine mixte détectée — précisez les pays et conditions dans les notes.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Channel availability toggles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className={`flex items-center justify-between px-3 py-2.5 border rounded-lg ${
@@ -401,15 +821,21 @@ export function ProductForm({ product }: ProductFormProps) {
             />
           </div>
 
-          <div>
-            <label htmlFor="origin_country" className={LABEL}>Pays d&apos;origine</label>
-            <input
-              id="origin_country" name="origin_country" type="text" disabled={isPending}
-              defaultValue={product?.origin_country ?? ''}
-              className={INPUT}
-              placeholder="Ex : Maroc, Chine, Turquie, EAU…"
-            />
-          </div>
+          {/* origin_country shown here for local_stock; for import_on_demand it is in the availability section */}
+          {availabilityType === 'local_stock' && (
+            <div>
+              <label htmlFor="origin_country" className={LABEL}>Pays d&apos;origine</label>
+              <input
+                id="origin_country"
+                name="origin_country"
+                type="text"
+                disabled={isPending}
+                defaultValue={product?.origin_country ?? ''}
+                className={INPUT}
+                placeholder="Ex : Maroc, Chine, Turquie…"
+              />
+            </div>
+          )}
         </div>
 
         <div>
@@ -440,14 +866,15 @@ export function ProductForm({ product }: ProductFormProps) {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          4. COÛT D'ACHAT & MARGE
+          4. COÛT USINE & MARGE PLATEFORME
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Coût d&apos;achat & marge</h2>
+        <h2 className={SECTION_TITLE}>Coût usine & marge plateforme</h2>
 
+        {/* Sourcing / traceability row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="purchase_price" className={LABEL}>Prix d&apos;achat / coût</label>
+            <label htmlFor="purchase_price" className={LABEL}>Prix d&apos;achat fournisseur</label>
             <input
               id="purchase_price" name="purchase_price" type="number"
               step="0.01" min="0" disabled={isPending}
@@ -472,7 +899,6 @@ export function ProductForm({ product }: ProductFormProps) {
             </select>
           </div>
 
-          {/* Exchange rate — only relevant for imported/demand products */}
           <div className={!needsConversion ? 'opacity-40' : ''}>
             <label htmlFor="exchange_rate_to_mad" className={LABEL}>
               Taux de change → MAD
@@ -492,37 +918,101 @@ export function ProductForm({ product }: ProductFormProps) {
           </div>
         </div>
 
+        {/* Factory cost MAD — the operative cost used for commission */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="margin_percentage" className={LABEL}>Marge cible (%)</label>
-            <input
-              id="margin_percentage" name="margin_percentage"
-              type="number" step="0.5" min="0" max="1000"
-              disabled={isPending}
-              value={margin}
-              onChange={(e) => setMargin(e.target.value)}
-              className={INPUT}
-              placeholder="30"
-            />
+            <label htmlFor="factory_cost_mad" className={LABEL}>
+              Coût usine (MAD) <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="factory_cost_mad" name="factory_cost_mad" type="number"
+                step="0.01" min="0" disabled={isPending}
+                value={factoryCostMad}
+                onChange={(e) => setFactoryCostMad(e.target.value)}
+                className={INPUT}
+                placeholder="0.00"
+              />
+              {purchasePriceMad !== null && (
+                <button
+                  type="button"
+                  onClick={() => setFactoryCostMad(String(purchasePriceMad))}
+                  disabled={isPending}
+                  className="shrink-0 text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                  title="Remplir depuis le prix d'achat converti"
+                >
+                  ← Auto
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Coût réel en MAD. Base de calcul de la commission affilié.
+              {purchasePriceMad !== null && (
+                <> Calculé&nbsp;: <strong>{formatMAD(purchasePriceMad)}</strong></>
+              )}
+            </p>
           </div>
 
-          {purchasePriceMad !== null && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Calcul automatique
-              </p>
-              <CalcRow label="Coût en MAD" value={formatMAD(purchasePriceMad)} />
+          {/* Legacy margin for auto-tier — hidden from main display but kept for backward compat */}
+          <input type="hidden" name="margin_percentage" value={margin} />
+        </div>
+
+        {/* Platform margin type + value */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="platform_margin_type" className={LABEL}>
+              Type de marge plateforme
+            </label>
+            <select
+              id="platform_margin_type" name="platform_margin_type" disabled={isPending}
+              value={platformMarginType}
+              onChange={(e) => setPlatformMarginType(e.target.value)}
+              className={INPUT}
+            >
+              <option value="percentage">Pourcentage (%)</option>
+              <option value="fixed">Montant fixe (MAD)</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="platform_margin_value" className={LABEL}>
+              {platformMarginType === 'percentage' ? 'Marge (%)' : 'Marge fixe (MAD)'}
+            </label>
+            <input
+              id="platform_margin_value" name="platform_margin_value"
+              type="number" step="0.5" min="0"
+              disabled={isPending}
+              value={platformMarginValue}
+              onChange={(e) => {
+                setPlatformMarginValue(e.target.value)
+                if (platformMarginType === 'percentage') setMargin(e.target.value)
+              }}
+              className={INPUT}
+              placeholder={platformMarginType === 'percentage' ? '30' : '0.00'}
+            />
+          </div>
+        </div>
+
+        {/* Cost breakdown preview */}
+        {!isNaN(fCost) && fCost > 0 && platformMarginMad !== null && (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Décomposition des coûts
+            </p>
+            <CalcRow label="Coût usine" value={formatMAD(fCost)} />
+            <CalcRow
+              label={`Marge plateforme (${pmType === 'percentage' ? `${pmValue}%` : `fixe`})`}
+              value={formatMAD(platformMarginMad)}
+            />
+            <div className="pt-1 border-t border-gray-200">
               <CalcRow
-                label={`Prix suggéré (+${margin}%)`}
-                value={suggestedSellPrice ? formatMAD(suggestedSellPrice) : '—'}
+                label="Prix plateforme (coût + marge)"
+                value={platformCostMad !== null ? formatMAD(platformCostMad) : '—'}
                 highlight
               />
-              <p className="text-xs text-gray-400 pt-1 border-t border-gray-200">
-                Vous pouvez fixer un prix de vente différent ci-dessous.
-              </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -531,44 +1021,24 @@ export function ProductForm({ product }: ProductFormProps) {
       <section className="space-y-4">
         <h2 className={SECTION_TITLE}>Prix de vente & commissions</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="sell_price" className={LABEL}>
-              Prix de base plateforme (MAD) <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="sell_price" name="sell_price" type="number"
-              step="0.01" min="0.01" required disabled={isPending}
-              defaultValue={product?.sell_price ?? suggestedSellPrice ?? undefined}
-              className={INPUT}
-              placeholder={suggestedSellPrice ? String(suggestedSellPrice) : '0.00'}
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Prix affiché aux affiliés / prix de référence plateforme.
-              {suggestedSellPrice && (
-                <> Suggéré&nbsp;: <strong>{formatMAD(suggestedSellPrice)}</strong></>
-              )}
-            </p>
-          </div>
-
-          <div className={!affiliateEnabled ? 'opacity-40' : ''}>
-            <label htmlFor="commission_amount" className={LABEL}>
-              Commission affilié (MAD)
-            </label>
-            <input
-              id="commission_amount" name="commission_amount"
-              type="number" step="0.01" min="0"
-              disabled={isPending || !affiliateEnabled}
-              defaultValue={product?.commission_amount ?? 0}
-              className={INPUT}
-              placeholder="0.00"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              {affiliateEnabled
-                ? 'Montant versé à l\'affilié à chaque livraison confirmée.'
-                : 'Non applicable (affiliés désactivés pour ce produit).'}
-            </p>
-          </div>
+        <div>
+          <label htmlFor="sell_price" className={LABEL}>
+            Prix de vente plateforme (MAD) <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="sell_price" name="sell_price" type="number"
+            step="0.01" min="0.01" required disabled={isPending}
+            value={sellPrice}
+            onChange={(e) => setSellPrice(e.target.value)}
+            className={INPUT}
+            placeholder={suggestedSellPrice ? String(suggestedSellPrice) : '0.00'}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Prix affiché aux affiliés / prix de référence plateforme.
+            {suggestedSellPrice && (
+              <> Suggéré depuis coût+marge&nbsp;: <strong>{formatMAD(suggestedSellPrice)}</strong></>
+            )}
+          </p>
         </div>
 
         {/* Operational fees */}
@@ -580,7 +1050,8 @@ export function ProductForm({ product }: ProductFormProps) {
             <input
               id="confirmation_fee_mad" name="confirmation_fee_mad"
               type="number" step="0.01" min="0" disabled={isPending}
-              defaultValue={product?.confirmation_fee_mad ?? 10}
+              value={confirmationFee}
+              onChange={(e) => setConfirmationFee(e.target.value)}
               className={INPUT}
             />
             <p className="text-xs text-gray-400 mt-1">Coût opérationnel par commande confirmée.</p>
@@ -593,7 +1064,8 @@ export function ProductForm({ product }: ProductFormProps) {
             <input
               id="packaging_fee_mad" name="packaging_fee_mad"
               type="number" step="0.01" min="0" disabled={isPending}
-              defaultValue={product?.packaging_fee_mad ?? 10}
+              value={packagingFee}
+              onChange={(e) => setPackagingFee(e.target.value)}
               className={INPUT}
             />
             <p className="text-xs text-gray-400 mt-1">Coût emballage par commande confirmée.</p>
@@ -606,27 +1078,56 @@ export function ProductForm({ product }: ProductFormProps) {
             <input
               id="delivery_fee_mad" name="delivery_fee_mad"
               type="number" step="0.01" min="0" disabled={isPending}
-              defaultValue={product?.delivery_fee_mad ?? 0}
+              value={deliveryFee}
+              onChange={(e) => setDeliveryFee(e.target.value)}
               className={INPUT}
             />
             <p className="text-xs text-gray-400 mt-1">Frais livreur estimés par commande.</p>
           </div>
         </div>
 
-        {/* Total operational cost preview */}
-        {(() => {
-          const confFee = product?.confirmation_fee_mad ?? 10
-          const packFee = product?.packaging_fee_mad ?? 10
-          const delivFee = product?.delivery_fee_mad ?? 0
-          const totalFees = confFee + packFee + delivFee
-          return (
-            <div className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
-              Coût opérationnel total estimé&nbsp;:{' '}
-              <strong className="text-gray-800">{totalFees} MAD / commande</strong>
-              <span className="text-gray-400 ml-1">(confirmation + emballage + livraison)</span>
-            </div>
-          )
-        })()}
+        {/* Auto-computed commission — read-only preview, no manual input */}
+        <div className={`rounded-xl border p-4 space-y-2 ${
+          !affiliateEnabled ? 'bg-gray-50 border-gray-100 opacity-60' : 'bg-green-50 border-green-100'
+        }`}>
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            Commission affilié — calculée automatiquement
+          </p>
+          {affiliateEnabled ? (
+            <>
+              <div className="space-y-1">
+                <CalcRow
+                  label="Prix de vente"
+                  value={!isNaN(spVal) && spVal > 0 ? formatMAD(spVal) : '—'}
+                />
+                <CalcRow label="− Coût usine" value={!isNaN(fCost) && fCost > 0 ? `−${formatMAD(fCost)}` : '—'} />
+                <CalcRow
+                  label={`− Marge plateforme (${pmType === 'percentage' ? `${pmValue}%` : 'fixe'})`}
+                  value={platformMarginMad !== null ? `−${formatMAD(platformMarginMad)}` : '—'}
+                />
+                <CalcRow label="− Frais de livraison" value={delivFeeVal > 0 ? `−${formatMAD(delivFeeVal)}` : `−${formatMAD(0)}`} />
+                <CalcRow label="− Frais de confirmation" value={`−${formatMAD(confFeeVal)}`} />
+                <CalcRow label="− Frais d'emballage" value={`−${formatMAD(packFeeVal)}`} />
+              </div>
+              <div className="pt-2 border-t border-green-200">
+                <CalcRow
+                  label="Commission nette affilié"
+                  value={estimatedCommission !== null ? formatMAD(estimatedCommission) : '—'}
+                  highlight
+                />
+              </div>
+              {estimatedCommission !== null && estimatedCommission <= 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Commission nulle ou négative — ajustez le prix de vente ou réduisez les frais.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-gray-400">
+              Les affiliés sont désactivés pour ce produit — aucune commission n&apos;est versée.
+            </p>
+          )}
+        </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -677,12 +1178,12 @@ export function ProductForm({ product }: ProductFormProps) {
             </p>
           </div>
           <div className="flex gap-2">
-            {purchasePriceMad !== null && (
+            {(!isNaN(fCost) && fCost > 0 || purchasePriceMad !== null) && (
               <button
                 type="button"
                 onClick={autoGenerateTiers}
                 className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
-                title="Génère 4 paliers standards à partir du coût MAD"
+                title="Génère 4 paliers standards à partir du coût usine MAD"
               >
                 ✦ Auto (coût + marges)
               </button>
@@ -700,9 +1201,9 @@ export function ProductForm({ product }: ProductFormProps) {
         {tiers.length === 0 ? (
           <p className="text-xs text-gray-400 py-3 bg-gray-50 rounded-lg text-center">
             Aucun palier.
-            {purchasePriceMad
+            {(!isNaN(fCost) && fCost > 0) || purchasePriceMad
               ? ' Cliquez « ✦ Auto » pour générer les 4 paliers standards.'
-              : ' Entrez un coût d\'achat pour activer la génération automatique.'}
+              : ' Entrez un coût usine pour activer la génération automatique.'}
           </p>
         ) : (
           <div className="space-y-2">
@@ -745,13 +1246,14 @@ export function ProductForm({ product }: ProductFormProps) {
         )}
 
         {/* Tier preview */}
-        {tiers.length > 0 && purchasePriceMad !== null && (
+        {tiers.length > 0 && (!isNaN(fCost) && fCost > 0 || purchasePriceMad !== null) && (
           <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 text-xs text-indigo-700 space-y-0.5">
             <p className="font-semibold mb-1">Aperçu des marges grossiste :</p>
             {tiers.map((t, i) => {
+              const costBase = !isNaN(fCost) && fCost > 0 ? fCost : (purchasePriceMad ?? 0)
               const price = parseFloat(t.price_per_unit)
-              const marginPct = purchasePriceMad > 0 && !isNaN(price)
-                ? (((price - purchasePriceMad) / purchasePriceMad) * 100).toFixed(0)
+              const marginPct = costBase > 0 && !isNaN(price)
+                ? (((price - costBase) / costBase) * 100).toFixed(0)
                 : '—'
               const label = t.max_qty ? `${t.min_qty}–${t.max_qty} u` : `${t.min_qty}+ u`
               return (
@@ -768,12 +1270,12 @@ export function ProductForm({ product }: ProductFormProps) {
       {/* ══════════════════════════════════════════════════════════════════════
           8. MÉDIAS (images, vidéos, liens Telegram)
          ══════════════════════════════════════════════════════════════════════ */}
-      <section className="space-y-3">
+      <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className={SECTION_TITLE}>Médias</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              Le premier média est utilisé comme miniature. Upload direct ou URL manuelle.
+              Image de couverture + médias additionnels (vidéo, Telegram, liens).
             </p>
           </div>
           <button
@@ -783,6 +1285,14 @@ export function ProductForm({ product }: ProductFormProps) {
             + Média
           </button>
         </div>
+
+        <ProductCoverUpload
+          coverUrl={coverUrl}
+          productName={productDisplayName}
+          disabled={isPending || uploadingIndex !== null}
+          onUploaded={handleCoverUploaded}
+          onError={setUploadError}
+        />
 
         {/* Upload error banner */}
         {uploadError && (
@@ -862,13 +1372,11 @@ export function ProductForm({ product }: ProductFormProps) {
                 )}
 
                 {/* Thumbnail preview */}
-                {item.type === 'image' && item.url.trim() && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                {item.type === 'image' && isValidMediaUrl(item.url) && (
+                  <ProductThumbnail
                     src={item.url}
-                    alt=""
-                    className="w-9 h-9 rounded object-cover border border-gray-200 shrink-0"
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                    name={productDisplayName}
+                    className="w-9 h-9 rounded border border-gray-200 text-[10px]"
                   />
                 )}
 

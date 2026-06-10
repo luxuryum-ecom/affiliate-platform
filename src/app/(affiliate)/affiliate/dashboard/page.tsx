@@ -2,13 +2,13 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { formatConversionRate, formatReturnRate } from '@/lib/order-analytics'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Profile, Commission } from '@/types/database'
 
 export const metadata = {
   title: 'Tableau de bord — Espace Affilié',
 }
-
-// ─── Stat card ────────────────────────────────────────────────────────────────
 
 function StatCard({
   label,
@@ -44,8 +44,6 @@ function StatCard({
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default async function AffiliateDashboardPage() {
   const supabase = await createClient()
 
@@ -53,46 +51,62 @@ export default async function AffiliateDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const affiliateId = user!.id
+
   const [
     { data: profileData },
     { data: orderRows },
     { data: commissionRows },
+    { count: clickCount },
   ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user!.id).single() as unknown as Promise<{ data: Profile | null; error: unknown }>,
+    supabase.from('profiles').select('*').eq('id', affiliateId).single() as unknown as Promise<{ data: Profile | null; error: unknown }>,
     supabase
       .from('orders')
-      .select('status')
-      .eq('affiliate_id', user!.id) as unknown as Promise<{ data: { status: string }[] | null; error: unknown }>,
+      .select('status, commission_amount, affiliate_commission_mad_snapshot')
+      .eq('affiliate_id', affiliateId) as unknown as Promise<{ data: { status: string; commission_amount: number; affiliate_commission_mad_snapshot: number | null }[] | null; error: unknown }>,
     supabase
       .from('commissions')
       .select('*')
-      .eq('affiliate_id', user!.id) as unknown as Promise<{ data: Commission[] | null; error: unknown }>,
+      .eq('affiliate_id', affiliateId) as unknown as Promise<{ data: Commission[] | null; error: unknown }>,
+    supabase
+      .from('affiliate_clicks')
+      .select('*', { count: 'exact', head: true })
+      .eq('affiliate_id', affiliateId),
   ])
 
   const profile = profileData
   const orders = orderRows ?? []
   const commissions = commissionRows ?? []
+  const clicks = clickCount ?? 0
 
-  // ── Order counts by status ────────────────────────────────────────────────
   const count = (s: string) => orders.filter((o) => o.status === s).length
-  const cancelledAndReturned = count('returned') + count('cancelled')
+  const delivered = count('delivered')
+  const returned = count('returned')
+  const totalOrders = orders.length
 
-  // ── Commission breakdown ──────────────────────────────────────────────────
-  const sum = (filter: (c: Commission) => boolean) =>
-    commissions.filter(filter).reduce((acc, c) => acc + Number(c.amount), 0)
+  // Reversed commissions (returned orders) are excluded from all financial totals.
+  const activeCommissions = commissions.filter((c) => !c.reversed)
+  const sumActive = (filter: (c: Commission) => boolean) =>
+    activeCommissions.filter(filter).reduce((acc, c) => acc + Number(c.amount), 0)
 
-  const earned   = sum(() => true)
-  const paid     = sum((c) => c.status === 'paid')
-  const pending  = sum((c) => c.status === 'pending')
-  const approved = sum((c) => c.status === 'approved')
-  const pendingBalance = pending + approved
+  const earnedCommissions = sumActive(() => true)
+  const paidCommissions   = sumActive((c) => c.status === 'paid')
+  const pendingCommissions  = sumActive((c) => c.status === 'pending')
+  const approvedCommissions = sumActive((c) => c.status === 'approved')
+  const pendingBalance = pendingCommissions + approvedCommissions
+
+  const conversionRate = formatConversionRate(clicks, totalOrders)
+  const returnRate     = formatReturnRate(delivered, returned)
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-semibold text-gray-900 text-sm">Espace Affilié</span>
+          <div className="flex items-center gap-3">
+            <MozounaLogo size="md" />
+            <span className="hidden sm:block text-gray-300">|</span>
+            <span className="hidden sm:block text-sm font-medium text-gray-600">Espace Affilié</span>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
@@ -105,45 +119,52 @@ export default async function AffiliateDashboardPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        {/* Welcome */}
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">
-            Bonjour, {profile?.full_name}
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">Voici un résumé de votre activité.</p>
+          <h1 className="text-lg font-semibold text-gray-900">Bonjour, {profile?.full_name}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Performance de vos liens affiliés COD.</p>
         </div>
 
-        {/* ── Order status breakdown ─────────────────────────────────────── */}
+        {/* Traffic & conversion */}
         <section>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Commandes
+            Trafic & conversion
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            <StatCard label="Total" value={String(orders.length)} />
-            <StatCard label="Confirmées" value={String(count('confirmed'))} variant="default" />
-            <StatCard label="Expédiées" value={String(count('shipped'))} variant="default" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <StatCard label="Clics sur vos liens" value={String(clicks)} />
+            <StatCard label="Commandes" value={String(totalOrders)} />
             <StatCard
-              label="Livrées"
-              value={String(count('delivered'))}
-              variant={count('delivered') > 0 ? 'success' : 'default'}
+              label="Taux de conversion"
+              value={conversionRate}
+              sub={clicks > 0 ? `${totalOrders} / ${clicks} clics` : 'Aucun clic enregistré'}
+              variant={clicks > 0 && totalOrders > 0 ? 'success' : 'muted'}
             />
             <StatCard
-              label="Retournées"
-              value={String(count('returned'))}
-              variant={count('returned') > 0 ? 'warning' : 'muted'}
-            />
-            <StatCard
-              label="Annulées"
-              value={String(count('cancelled'))}
-              variant={cancelledAndReturned > 0 ? 'warning' : 'muted'}
+              label="Taux de retour"
+              value={returnRate}
+              sub={`${returned} retour${returned !== 1 ? 's' : ''} / ${delivered + returned} livrées+retours`}
+              variant={returned > 0 ? 'warning' : 'muted'}
             />
           </div>
         </section>
 
-        {/* ── Commission balance ─────────────────────────────────────────── */}
+        {/* Order breakdown */}
         <section>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Commissions & solde
+            Commandes
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <StatCard label="À confirmer"  value={String(count('pending_confirmation'))} variant="warning" />
+            <StatCard label="Confirmées"   value={String(count('confirmed'))} />
+            <StatCard label="Expédiées"    value={String(count('shipped'))} />
+            <StatCard label="Livrées"      value={String(delivered)} variant={delivered > 0 ? 'success' : 'default'} />
+            <StatCard label="Retournées"   value={String(returned)}  variant={returned > 0 ? 'warning' : 'muted'} />
+          </div>
+        </section>
+
+        {/* Commissions */}
+        <section>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            Commissions
           </p>
 
           <div className={`rounded-xl border p-5 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
@@ -156,11 +177,9 @@ export default async function AffiliateDashboardPage() {
               }`}>
                 {formatMAD(pendingBalance)}
               </p>
-              {pendingBalance > 0 && (
-                <p className="text-xs text-amber-600 mt-1">
-                  En cours de traitement par l&apos;administration.
-                </p>
-              )}
+              <p className="text-xs text-gray-400 mt-1">
+                Commissions gagnées uniquement sur commandes livrées
+              </p>
             </div>
             <Link
               href="/affiliate/orders"
@@ -172,34 +191,30 @@ export default async function AffiliateDashboardPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard
-              label="Total gagné"
-              value={formatMAD(earned)}
-              sub="Toutes commissions cumulées"
-              variant="default"
+              label="Commissions gagnées"
+              value={formatMAD(earnedCommissions)}
+              sub="Créées à la livraison"
             />
             <StatCard
-              label="Approuvées (non payées)"
-              value={formatMAD(approved)}
-              sub="Validées, paiement en attente"
-              variant={approved > 0 ? 'warning' : 'muted'}
+              label="En attente (pending)"
+              value={formatMAD(pendingCommissions)}
+              sub="Livrées, non encore approuvées"
+              variant={pendingCommissions > 0 ? 'warning' : 'muted'}
             />
             <StatCard
               label="Payées"
-              value={formatMAD(paid)}
+              value={formatMAD(paidCommissions)}
               sub="Versées sur votre compte"
-              variant={paid > 0 ? 'success' : 'muted'}
+              variant={paidCommissions > 0 ? 'success' : 'muted'}
             />
           </div>
         </section>
 
-        {/* ── Quick links ────────────────────────────────────────────────── */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-gray-900">Catalogue produits</h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Copiez vos liens affiliés et partagez-les.
-              </p>
+              <p className="text-xs text-gray-500 mt-0.5">Copiez vos liens et partagez-les.</p>
             </div>
             <Link
               href="/affiliate/products"
@@ -212,15 +227,26 @@ export default async function AffiliateDashboardPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-gray-900">Mes commandes</h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Suivez le statut et vos commissions.
-              </p>
+              <p className="text-xs text-gray-500 mt-0.5">Suivi détaillé et commissions.</p>
             </div>
             <Link
               href="/affiliate/orders"
               className="text-xs px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               Voir mes commandes →
+            </Link>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Mes commissions</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Historique détaillé et virements reçus.</p>
+            </div>
+            <Link
+              href="/affiliate/commissions"
+              className="text-xs px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+            >
+              Voir mes commissions →
             </Link>
           </div>
         </section>

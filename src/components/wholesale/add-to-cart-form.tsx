@@ -6,6 +6,8 @@ import { addToCart, type CartState } from '@/app/actions/cart'
 import { getWholesaleTier, formatMAD } from '@/lib/utils'
 import type { WholesaleTier } from '@/types/database'
 
+const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000'
+
 interface AddToCartFormProps {
   productId: string
   sellPrice: number
@@ -32,14 +34,64 @@ export function AddToCartForm({
   const subtotal = unitPrice * qty
 
   const decrement = () => setQty((q) => Math.max(minQty, q - 1))
-  const increment = () => setQty((q) => q + 1)
+  const increment = () => setQty((q) => Math.min(stockCount, q + 1))
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10)
-    if (!isNaN(val) && val >= minQty) setQty(val)
+    if (!isNaN(val) && val >= minQty) setQty(Math.min(stockCount, val))
   }
+
+  const nextTier = tiers
+    .filter((t) => t.min_qty > qty)
+    .sort((a, b) => a.min_qty - b.min_qty)[0] ?? null
+  const nextTierReachable = nextTier != null && nextTier.min_qty <= stockCount
+  const unitsToNextTier = nextTier ? nextTier.min_qty - qty : 0
+  const savingsPerUnit = nextTier ? unitPrice - nextTier.price_per_unit : 0
+
+  // Stock=0 — show unavailable message with WhatsApp CTA instead of the full form
+  if (stockCount === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 space-y-2">
+          <p className="text-sm font-semibold text-red-700">Temporairement indisponible</p>
+          <p className="text-xs text-red-600">
+            Ce produit est actuellement en rupture de stock. Contactez-nous pour connaître les délais de réapprovisionnement.
+          </p>
+        </div>
+        <a
+          href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent('Bonjour, je souhaite être informé du réapprovisionnement de ce produit.')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
+        >
+          <span>💬</span> Être notifié via WhatsApp
+        </a>
+      </div>
+    )
+  }
+
+  // Partial stock — stock > 0 but below minimum order quantity
+  const isPartialStock = stockCount > 0 && stockCount < minQty
 
   return (
     <div className="space-y-5">
+      {/* Partial stock warning */}
+      {isPartialStock && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
+          <p className="text-sm font-semibold text-amber-800">Stock partiel</p>
+          <p className="text-xs text-amber-700">
+            Seulement <strong>{stockCount} unités</strong> disponibles — en dessous du MOQ minimum ({minQty} u.). Contactez-nous pour une commande partielle.
+          </p>
+          <a
+            href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`Bonjour, je souhaite commander ${stockCount} unités (stock partiel disponible).`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors"
+          >
+            💬 Commander le stock disponible
+          </a>
+        </div>
+      )}
+
       {/* Tier pricing table */}
       {tiers.length > 0 && (
         <div>
@@ -108,6 +160,7 @@ export function AddToCartForm({
               value={qty}
               onChange={handleInput}
               min={minQty}
+              max={stockCount}
               className="w-20 text-center py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
             <button
@@ -119,6 +172,13 @@ export function AddToCartForm({
             </button>
           </div>
         </div>
+
+        {/* Next-tier nudge */}
+        {nextTierReachable && savingsPerUnit > 0 && (
+          <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            Ajoutez <strong>{unitsToNextTier} u.</strong> pour passer au palier suivant et économiser <strong>{savingsPerUnit.toFixed(0)} MAD/u.</strong>
+          </p>
+        )}
 
         {/* Live pricing summary */}
         <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">

@@ -1,0 +1,262 @@
+'use server'
+
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from './_guards'
+import { getWholesaleTier } from '@/lib/utils'
+import type { QuoteRequest, Product, QuoteRequestStatus } from '@/types/database'
+
+export type QuoteRequestFormState = { error: string | null; success?: boolean }
+export type PrepareQuoteFormState = { error: string | null; success?: boolean }
+export type ConvertQuoteFormState = { error: string | null }
+export type QuoteDecisionFormState = { error: string | null; success?: boolean }
+
+// ─── Submit quote request (wholesaler) ────────────────────────────────────────
+
+export async function submitQuoteRequest(
+  _prev: QuoteRequestFormState,
+  formData: FormData,
+): Promise<QuoteRequestFormState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const quantity = parseInt(formData.get('quantity_requested') as string, 10)
+  if (!quantity || quantity < 1) return { error: 'Quantité invalide.' }
+
+  const destination_country = (formData.get('destination_country') as string)?.trim()
+  if (!destination_country) return { error: 'Pays de destination requis.' }
+
+  const whatsapp_number = (formData.get('whatsapp_number') as string)?.trim()
+  if (!whatsapp_number) return { error: 'Numéro WhatsApp requis.' }
+
+  const product_id = (formData.get('product_id') as string)?.trim()
+  if (!product_id) return { error: 'Produit manquant.' }
+
+  const { error } = await supabase.from('quote_requests').insert({
+    buyer_id: user.id,
+    product_id,
+    quantity_requested: quantity,
+    destination_country,
+    destination_city: (formData.get('destination_city') as string)?.trim() || null,
+    preferred_shipping_mode: (formData.get('preferred_shipping_mode') as string)?.trim() || null,
+    colors_or_variants: (formData.get('colors_or_variants') as string)?.trim() || null,
+    sizes: (formData.get('sizes') as string)?.trim() || null,
+    buyer_notes: (formData.get('buyer_notes') as string)?.trim() || null,
+    whatsapp_number,
+  })
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/wholesale/quote-requests')
+  return { error: null, success: true }
+}
+
+// ─── Update quote request status (admin) ──────────────────────────────────────
+
+export async function updateQuoteRequestStatus(
+  requestId: string,
+  status: QuoteRequestStatus,
+  adminNotes: string | undefined,
+  adminNotesPublic: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase, error, userId } = await requireAdmin()
+  if (error || !userId) return { success: false, error: error ?? 'Erreur.' }
+
+  const update: Record<string, unknown> = { status, admin_notes_public: adminNotesPublic }
+  if (adminNotes !== undefined) update.admin_notes = adminNotes || null
+
+  const { error: dbError } = await supabase
+    .from('quote_requests')
+    .update(update)
+    .eq('id', requestId)
+
+  if (dbError) return { success: false, error: dbError.message }
+
+  revalidatePath('/admin/quote-requests')
+  revalidatePath(`/admin/quote-requests/${requestId}`)
+  revalidatePath('/wholesale/quote-requests')
+  return { success: true }
+}
+
+// ─── Prepare formal quote document (admin) ────────────────────────────────────
+
+export async function prepareQuote(
+  _prev: PrepareQuoteFormState,
+  formData: FormData,
+): Promise<PrepareQuoteFormState> {
+  const { supabase, error, userId } = await requireAdmin()
+  if (error || !userId) return { error: error ?? 'Erreur.' }
+
+  const requestId = (formData.get('request_id') as string)?.trim()
+  if (!requestId) return { error: 'Identifiant manquant.' }
+
+  const unitPrice = parseFloat(formData.get('quoted_unit_price_mad') as string)
+  const quantity = parseInt(formData.get('quoted_quantity') as string, 10)
+  const transportTotal = parseFloat(formData.get('quoted_transport_total_mad') as string)
+
+  if (isNaN(unitPrice) || unitPrice <= 0) return { error: 'Prix unitaire invalide.' }
+  if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.' }
+  if (isNaN(transportTotal) || transportTotal < 0) return { error: 'Frais de transport invalides.' }
+
+  const shippingMode = (formData.get('quoted_shipping_mode') as string)?.trim() || null
+  const deliveryDelay = (formData.get('quoted_delivery_delay') as string)?.trim() || null
+  const validityDate = (formData.get('quote_validity_date') as string)?.trim() || null
+  const publicNote = (formData.get('quote_public_note') as string)?.trim() || null
+
+  const { error: dbError } = await supabase
+    .from('quote_requests')
+    .update({
+      status:                    'quote_prepared',
+      quoted_unit_price_mad:     unitPrice,
+      quoted_quantity:           quantity,
+      quoted_transport_total_mad: transportTotal,
+      quoted_shipping_mode:      shippingMode,
+      quoted_delivery_delay:     deliveryDelay,
+      quote_validity_date:       validityDate || null,
+      quote_public_note:         publicNote,
+      quote_prepared_at:         new Date().toISOString(),
+    })
+    .eq('id', requestId)
+
+  if (dbError) return { error: dbError.message }
+
+  revalidatePath('/admin/quote-requests')
+  revalidatePath(`/admin/quote-requests/${requestId}`)
+  revalidatePath('/wholesale/quote-requests')
+  revalidatePath(`/wholesale/quote-requests/${requestId}`)
+  return { error: null, success: true }
+}
+
+// ─── Wholesaler accepts or rejects a prepared quote ───────────────────────────
+
+export async function respondToQuote(
+  _prev: QuoteDecisionFormState,
+  formData: FormData,
+): Promise<QuoteDecisionFormState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  const requestId = (formData.get('request_id') as string)?.trim()
+  if (!requestId) return { error: 'Identifiant manquant.' }
+
+  const decision = formData.get('decision') as string
+  if (decision !== 'accepted_by_client' && decision !== 'rejected_by_client') {
+    return { error: 'Décision invalide.' }
+  }
+
+  // Verify current status before updating (gives a clear error if already decided)
+  const { data: existing } = await supabase
+    .from('quote_requests')
+    .select('status')
+    .eq('id', requestId)
+    .eq('buyer_id', user.id)
+    .single()
+
+  if (!existing) return { error: 'Devis introuvable.' }
+  if (existing.status !== 'quote_prepared') {
+    return { error: 'Ce devis ne peut plus être modifié.' }
+  }
+
+  const { error: dbError } = await supabase
+    .from('quote_requests')
+    .update({ status: decision, client_decision_at: new Date().toISOString() })
+    .eq('id', requestId)
+    .eq('buyer_id', user.id)
+
+  if (dbError) return { error: dbError.message }
+
+  revalidatePath('/wholesale/quote-requests')
+  revalidatePath(`/wholesale/quote-requests/${requestId}`)
+  revalidatePath(`/wholesale/quote-requests/${requestId}/quote`)
+  revalidatePath('/admin/quote-requests')
+  revalidatePath(`/admin/quote-requests/${requestId}`)
+  return { error: null, success: true }
+}
+
+// ─── Convert approved quote to wholesale order (admin) ────────────────────────
+
+type QuoteWithProduct = QuoteRequest & {
+  product: Pick<Product, 'id' | 'name' | 'wholesale_tiers' | 'wholesale_min_qty'>
+}
+
+export async function convertQuoteToOrder(
+  _prev: ConvertQuoteFormState,
+  formData: FormData,
+): Promise<ConvertQuoteFormState> {
+  const { supabase, error, userId } = await requireAdmin()
+  if (error || !userId) return { error: error ?? 'Erreur.' }
+
+  const requestId = (formData.get('request_id') as string)?.trim()
+  if (!requestId) return { error: 'Identifiant manquant.' }
+
+  const { data: raw } = await supabase
+    .from('quote_requests')
+    .select('*, product:products!product_id(id,name,wholesale_tiers,wholesale_min_qty)')
+    .eq('id', requestId)
+    .single()
+
+  const quote = raw as unknown as QuoteWithProduct | null
+  if (!quote) return { error: 'Demande introuvable.' }
+  if (quote.status !== 'approved') return { error: 'La demande doit être approuvée avant conversion.' }
+
+  const tier = getWholesaleTier(quote.product.wholesale_tiers ?? [], quote.quantity_requested)
+  const unitPrice = tier?.price_per_unit ?? 0
+  const tierLabel = tier?.label ?? 'Prix à définir'
+  const subtotal = parseFloat((unitPrice * quote.quantity_requested).toFixed(2))
+
+  const { data: newOrder, error: orderErr } = (await supabase
+    .from('wholesale_orders')
+    .insert({
+      buyer_id:            quote.buyer_id,
+      status:              'pending',
+      delivery_preference: 'delivery',
+      city:                quote.destination_city ?? null,
+      address:             quote.destination_country,
+      buyer_notes:         quote.buyer_notes ?? null,
+      total_amount:        subtotal,
+      delivery_cost:       0,
+      quote_request_id:    requestId,
+    })
+    .select('id')
+    .single()) as { data: { id: string } | null; error: unknown }
+
+  if (orderErr || !newOrder) {
+    const msg = (orderErr as { message?: string } | null)?.message
+    return { error: msg ?? 'Erreur lors de la création de la commande.' }
+  }
+
+  const { error: itemErr } = await supabase.from('wholesale_order_items').insert({
+    order_id:            newOrder.id,
+    product_id:          quote.product_id,
+    quantity:            quote.quantity_requested,
+    unit_price_snapshot: unitPrice,
+    subtotal,
+    tier_label_snapshot: tierLabel,
+  })
+
+  if (itemErr) {
+    await supabase.from('wholesale_orders').delete().eq('id', newOrder.id)
+    return { error: itemErr.message }
+  }
+
+  await supabase
+    .from('quote_requests')
+    .update({ status: 'converted_to_order' })
+    .eq('id', requestId)
+
+  revalidatePath('/admin/quote-requests')
+  revalidatePath(`/admin/quote-requests/${requestId}`)
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath(`/admin/wholesale-orders/${newOrder.id}`)
+  revalidatePath('/wholesale/quote-requests')
+  revalidatePath(`/wholesale/quote-requests/${requestId}`)
+  revalidatePath(`/wholesale/orders/${newOrder.id}`)
+
+  redirect(`/admin/wholesale-orders/${newOrder.id}`)
+}

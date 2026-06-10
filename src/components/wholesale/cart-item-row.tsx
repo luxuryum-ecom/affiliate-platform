@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { updateCartQty, removeCartItem } from '@/app/actions/cart'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { getWholesaleTier, formatMAD } from '@/lib/utils'
 import type { WholesaleCartItemWithProduct } from '@/types/database'
 
@@ -19,32 +21,32 @@ export function CartItemRow({ item }: CartItemRowProps) {
   const subtotal = unitPrice * qty
 
   const decrement = () => setQty((q) => Math.max(product.wholesale_min_qty, q - 1))
-  const increment = () => setQty((q) => q + 1)
+  const increment = () => setQty((q) =>
+    product.availability_type === 'local_stock'
+      ? Math.min(product.stock_count, q + 1)
+      : q + 1
+  )
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10)
-    if (!isNaN(val) && val >= 1) setQty(val)
+    if (!isNaN(val) && val >= 1)
+      setQty(
+        product.availability_type === 'local_stock'
+          ? Math.min(product.stock_count, val)
+          : val
+      )
   }
 
-  const thumb = product.images[0]
+  const coverUrl = getProductCoverUrl(product)
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row gap-4">
       {/* Thumbnail */}
       <Link href={`/wholesale/products/${product.id}`} className="shrink-0">
-        <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumb}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-gray-300">
-              {product.name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
+        <ProductThumbnail
+          src={coverUrl}
+          name={product.name}
+          className="w-20 h-20 rounded-lg text-sm"
+        />
       </Link>
 
       {/* Details */}
@@ -93,12 +95,14 @@ export function CartItemRow({ item }: CartItemRowProps) {
               value={qty}
               onChange={handleInput}
               min={product.wholesale_min_qty}
+              max={product.availability_type === 'local_stock' ? product.stock_count : undefined}
               className="w-14 text-center py-1 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
             />
             <button
               type="button"
               onClick={increment}
-              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 text-base leading-none"
+              disabled={product.availability_type === 'local_stock' && qty >= product.stock_count}
+              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-base leading-none"
             >
               +
             </button>
@@ -110,9 +114,13 @@ export function CartItemRow({ item }: CartItemRowProps) {
             <input type="hidden" name="quantity" value={qty} />
             <button
               type="submit"
-              className="text-xs text-gray-500 border border-gray-200 px-2.5 py-1 rounded-md hover:bg-gray-50 transition-colors"
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors border ${
+                qty !== item.quantity
+                  ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-700'
+                  : 'text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}
             >
-              Mettre à jour
+              {qty !== item.quantity ? 'Sauvegarder' : 'Mettre à jour'}
             </button>
           </form>
 

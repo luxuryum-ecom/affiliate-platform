@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { createWholesaleOrderAction } from '@/app/actions/orders'
-import type { WholesaleOrder, Profile, WholesaleCartItemWithProduct } from '@/types/database'
+import type { WholesaleOrder, Profile, WholesaleCartItemWithProduct, WholesaleImportStatus, WholesalePaymentStatus } from '@/types/database'
 
 export const metadata = { title: 'Commandes grossiste — Administration' }
 
@@ -14,6 +14,23 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
   delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700' },
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
+}
+
+const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
+  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-500' },
+  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
+  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
+  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
+  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
+  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
+  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+}
+
+const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
+  no_deposit:        { label: 'Aucun acompte',     cls: 'bg-gray-100 text-gray-500' },
+  deposit_requested: { label: 'Acompte demandé',   cls: 'bg-amber-100 text-amber-700' },
+  deposit_received:  { label: 'Acompte reçu',      cls: 'bg-blue-100 text-blue-700' },
+  fully_paid:        { label: 'Entièrement réglé', cls: 'bg-green-100 text-green-700' },
 }
 
 type OrderWithBuyer = WholesaleOrder & { buyer: Pick<Profile, 'id' | 'full_name' | 'phone'> }
@@ -142,16 +159,42 @@ export default async function AdminWholesaleOrdersPage() {
             <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
               {orders.map((order) => {
                 const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
+                const importBadge = order.import_status
+                  ? IMPORT_STATUS_BADGE[order.import_status]
+                  : null
+                const paymentBadge = order.payment_status
+                  ? PAYMENT_STATUS_BADGE[order.payment_status as WholesalePaymentStatus]
+                  : PAYMENT_STATUS_BADGE.no_deposit
                 return (
                   <div key={order.id} className="flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                         <span className="text-xs font-mono text-gray-400">#{order.id.slice(0,8).toUpperCase()}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                        {importBadge && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
+                            {importBadge.label}
+                          </span>
+                        )}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
+                          {paymentBadge.label}
+                        </span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{order.buyer?.full_name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Total&nbsp;: <strong>{formatMAD(order.total_amount)}</strong>
+                        Vente&nbsp;: <strong>{formatMAD(order.total_amount)}</strong>
+                        {order.gross_profit_mad != null && (
+                          <>
+                            {' · '}
+                            Profit&nbsp;:{' '}
+                            <strong className={order.gross_profit_mad >= 0 ? 'text-green-600' : 'text-red-500'}>
+                              {formatMAD(order.gross_profit_mad)}
+                            </strong>
+                            {order.gross_margin_percent != null && (
+                              <span className="text-gray-400"> ({order.gross_margin_percent.toFixed(1)}%)</span>
+                            )}
+                          </>
+                        )}
                         {' · '}
                         {new Date(order.created_at).toLocaleDateString('fr-MA', { day:'2-digit', month:'short', year:'numeric' })}
                       </p>

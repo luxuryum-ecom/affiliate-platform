@@ -3,9 +3,14 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
-import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
-import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus } from '@/types/database'
+import { WholesaleImportStatusForm } from '@/components/admin/wholesale-import-status-form'
+import { WholesalePaymentForm } from '@/components/admin/wholesale-payment-form'
+import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
+import { WholesaleCostForm } from '@/components/admin/wholesale-cost-form'
+import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, WholesaleOrderPaymentHistory, WholesalePaymentStatus, QuoteRequest, OrderProof } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -18,12 +23,32 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
 }
 
-type OrderItemWithProduct = WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'stock_count'> }
+const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
+  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-600' },
+  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
+  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
+  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
+  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
+  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
+  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+}
+
+const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
+  no_deposit:        { label: 'Aucun acompte',       cls: 'bg-gray-100 text-gray-500' },
+  deposit_requested: { label: 'Acompte demandé',     cls: 'bg-amber-100 text-amber-700' },
+  deposit_received:  { label: 'Acompte reçu',        cls: 'bg-blue-100 text-blue-700' },
+  fully_paid:        { label: 'Entièrement réglé',   cls: 'bg-green-100 text-green-700' },
+}
+
+type OrderItemWithProduct = WholesaleOrderItem & {
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'stock_count' | 'availability_type'>
+}
 type OrderDetail = WholesaleOrder & {
   buyer: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'>
   agent: Pick<Profile, 'id' | 'full_name'> | null
   items: OrderItemWithProduct[]
 }
+type LinkedQuote = Pick<QuoteRequest, 'id'>
 
 export default async function AdminWholesaleOrderDetailPage({ params }: Params) {
   const { id } = await params
@@ -33,7 +58,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = adminProfileRes.data as { full_name: string } | null
 
-  const [orderRes, itemsRes] = await Promise.all([
+  const [orderRes, itemsRes, importHistoryRes, paymentHistoryRes, proofsRes] = await Promise.all([
     supabase
       .from('wholesale_orders')
       .select('*, buyer:profiles!buyer_id(id,full_name,phone,city), agent:profiles!agent_id(id,full_name)')
@@ -41,18 +66,59 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       .single(),
     supabase
       .from('wholesale_order_items')
-      .select('*, product:products(id,name,images,stock_count)')
+      .select('*, product:products(id,name,images,stock_count,availability_type)')
       .eq('order_id', id),
+    supabase
+      .from('wholesale_order_import_history')
+      .select('*')
+      .eq('order_id', id)
+      .order('changed_at', { ascending: false }),
+    supabase
+      .from('wholesale_order_payment_history')
+      .select('*')
+      .eq('order_id', id)
+      .order('changed_at', { ascending: false }),
+    supabase
+      .from('order_proofs')
+      .select('*')
+      .eq('related_wholesale_order_id', id)
+      .order('uploaded_at', { ascending: false }),
   ])
 
   const order = orderRes.data as unknown as OrderDetail | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
+  const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
+  const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
+  const proofs = (proofsRes.data ?? []) as unknown as OrderProof[]
+
+  // Fetch linked quote if this order was created from a quote
+  let linkedQuote: LinkedQuote | null = null
+  if (order?.quote_request_id) {
+    const { data } = await supabase
+      .from('quote_requests')
+      .select('id')
+      .eq('id', order.quote_request_id)
+      .maybeSingle()
+    linkedQuote = data as LinkedQuote | null
+  }
 
   if (!order) notFound()
 
+  const isLocalStockOrder =
+    !linkedQuote &&
+    items.length > 0 &&
+    items.every((item) => item.product.availability_type === 'local_stock')
+
   const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
+  const importBadge = order.import_status
+    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus] ?? null
+    : null
+  const paymentStatus = (order.payment_status ?? 'no_deposit') as WholesalePaymentStatus
+  const paymentBadge = PAYMENT_STATUS_BADGE[paymentStatus] ?? PAYMENT_STATUS_BADGE.no_deposit
 
   const timeline = buildWholesaleTimeline(order)
+  const importTimeline = buildImportHistoryTimeline(importHistory)
+  const paymentTimeline = buildPaymentHistoryTimeline(paymentHistory)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,7 +147,20 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                    {importBadge && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
+                        {importBadge.label}
+                      </span>
+                    )}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
+                      {paymentBadge.label}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      {order.quote_request_id ? '📋 Via devis' : '🛒 Commande directe'}
+                    </span>
+                  </div>
                   <p className="mt-2 text-xs text-gray-400">
                     Créée le {new Date(order.created_at).toLocaleString('fr-MA')}
                   </p>
@@ -101,7 +180,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 <div><p className="text-xs text-gray-400">Téléphone</p><p className="font-medium">{order.buyer.phone ?? '—'}</p></div>
                 <div><p className="text-xs text-gray-400">Ville</p><p className="font-medium">{order.city ?? order.buyer.city ?? '—'}</p></div>
                 <div><p className="text-xs text-gray-400">Adresse</p><p className="font-medium">{order.address ?? '—'}</p></div>
-                {order.buyer_notes && <div className="col-span-2"><p className="text-xs text-gray-400">Note acheteur</p><p className="text-gray-700">{order.buyer_notes}</p></div>}
+                {order.buyer_notes && (
+                  <div className="col-span-2 mt-1 flex gap-2 items-start rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+                    <span className="text-amber-500 mt-0.5 shrink-0">⚠</span>
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700">Note acheteur</p>
+                      <p className="text-sm text-amber-900 mt-0.5">{order.buyer_notes}</p>
+                    </div>
+                  </div>
+                )}
                 {order.agent_notes && <div className="col-span-2"><p className="text-xs text-gray-400">Note agent</p><p className="text-gray-700">{order.agent_notes}</p></div>}
               </div>
             </div>
@@ -111,16 +198,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Articles commandés</h2>
               <div className="divide-y divide-gray-100">
                 {items.map((item) => {
-                  const thumb = item.product.media?.[0]?.url ?? item.product.images?.[0]
+                  const coverUrl = getProductCoverUrl(item.product)
                   const lowStock = item.product.stock_count < 5
                   return (
                     <div key={item.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                      <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden border shrink-0">
-                        {thumb
-                          ? <img src={thumb} alt={item.product.name} className="w-full h-full object-cover" /> // eslint-disable-line @next/next/no-img-element
-                          : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-300">{item.product.name.slice(0,2).toUpperCase()}</div>
-                        }
-                      </div>
+                      <ProductThumbnail
+                        src={coverUrl}
+                        name={item.product.name}
+                        className="w-10 h-10 rounded-lg border shrink-0 text-[10px]"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
                         <p className="text-xs text-gray-500">
@@ -144,9 +230,70 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de la commande</h2>
               <OrderTimeline steps={timeline} />
             </div>
+
+            {/* Import progress history */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">
+                {isLocalStockOrder ? 'Historique préparation / livraison' : 'Historique import'}
+              </h2>
+              {importTimeline.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">
+                  {isLocalStockOrder
+                    ? 'Aucun statut enregistré. Utilisez le panneau de droite pour commencer le suivi.'
+                    : 'Aucun statut import enregistré. Utilisez le panneau de droite pour commencer le suivi.'}
+                </p>
+              ) : (
+                <OrderTimeline steps={importTimeline} />
+              )}
+            </div>
+
+            {/* Payment history */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Historique paiement</h2>
+              {paymentTimeline.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">
+                  Aucun événement de paiement enregistré.
+                </p>
+              ) : (
+                <OrderTimeline steps={paymentTimeline} />
+              )}
+            </div>
+
+            {/* Justificatifs soumis par le grossiste */}
+            {proofs.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">
+                  Justificatifs de paiement
+                </h2>
+                <ul className="space-y-2">
+                  {proofs.map((p) => (
+                    <li key={p.id} className="flex items-center gap-3 text-xs">
+                      <a
+                        href={p.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {p.proof_type === 'bank_receipt'
+                          ? 'Reçu bancaire'
+                          : p.proof_type === 'transfer_proof'
+                          ? 'Preuve de virement'
+                          : 'Autre'}
+                      </a>
+                      <span className="text-gray-400 shrink-0">
+                        {new Date(p.uploaded_at).toLocaleDateString('fr-MA')}
+                      </span>
+                      {p.notes && (
+                        <span className="text-gray-500 italic truncate">{p.notes}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
-          {/* ── Right: status update ── */}
+          {/* ── Right: status update + cost breakdown ── */}
           <div className="space-y-4">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Mettre à jour</h2>
@@ -155,10 +302,83 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 currentStatus={order.status as WholesaleOrderStatus}
               />
             </div>
+
+            {/* Import status form */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">
+                {isLocalStockOrder ? 'Statut préparation / livraison locale' : 'Statut import'}
+              </h2>
+              <WholesaleImportStatusForm
+                orderId={order.id}
+                currentImportStatus={order.import_status as WholesaleImportStatus | null}
+                isLocalStock={isLocalStockOrder}
+              />
+            </div>
+
+            {/* Cost breakdown form */}
+            <WholesaleCostForm
+              orderId={order.id}
+              supplierCost={order.supplier_cost_mad ?? 0}
+              transportCost={order.transport_customs_cost_mad ?? 0}
+              additionalCost={order.additional_cost_mad ?? 0}
+              totalAmount={order.total_amount}
+              isLocalStock={isLocalStockOrder}
+            />
+
+            {/* Payment management */}
+            <WholesalePaymentForm
+              orderId={order.id}
+              totalAmount={order.total_amount}
+              currentStatus={(order.payment_status as WholesalePaymentStatus) ?? 'no_deposit'}
+              depositAmount={order.deposit_amount ?? null}
+              depositReceived={order.deposit_received_amount ?? 0}
+            />
+
+            {/* Linked quote */}
+            {linkedQuote && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-xs text-gray-400 mb-1">Créée depuis un devis</p>
+                <Link
+                  href={`/admin/quote-requests/${linkedQuote.id}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+                >
+                  Devis #{linkedQuote.id.slice(0, 8).toUpperCase()} →
+                </Link>
+              </div>
+            )}
+
             {order.agent && (
               <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <p className="text-xs text-gray-400">Agent assigné</p>
                 <p className="text-sm font-medium text-gray-900 mt-0.5">{order.agent.full_name}</p>
+              </div>
+            )}
+
+            {/* Invoice request */}
+            {order.invoice_requested && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold text-indigo-800">Demande de facture</p>
+                  {order.invoice_requested_at && (
+                    <p className="text-xs text-indigo-500">
+                      {new Date(order.invoice_requested_at).toLocaleDateString('fr-MA')}
+                    </p>
+                  )}
+                </div>
+                <dl className="space-y-1.5 text-sm">
+                  {order.invoice_company_name && (
+                    <div><dt className="text-xs text-indigo-500">Raison sociale</dt><dd className="font-medium text-indigo-900">{order.invoice_company_name}</dd></div>
+                  )}
+                  {order.invoice_ice && (
+                    <div><dt className="text-xs text-indigo-500">ICE</dt><dd className="font-medium text-indigo-900">{order.invoice_ice}</dd></div>
+                  )}
+                  {order.invoice_registre_commerce && (
+                    <div><dt className="text-xs text-indigo-500">RC</dt><dd className="font-medium text-indigo-900">{order.invoice_registre_commerce}</dd></div>
+                  )}
+                  {order.invoice_billing_address && (
+                    <div><dt className="text-xs text-indigo-500">Adresse de facturation</dt><dd className="font-medium text-indigo-900">{order.invoice_billing_address}</dd></div>
+                  )}
+                </dl>
               </div>
             )}
           </div>

@@ -1,12 +1,24 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
+import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
+import { MozounaLogo } from '@/components/shared/branding'
 import type { Product } from '@/types/database'
 
 export const metadata = {
   title: 'Catalogue produits — Espace Affilié',
+}
+
+interface ProductStats {
+  clicks: number
+  orders: number
+  delivered: number
+  commissionEarned: number
 }
 
 export default async function AffiliateProductsPage() {
@@ -16,22 +28,91 @@ export default async function AffiliateProductsPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) redirect('/login')
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single() as { data: { full_name: string } | null; error: unknown }
 
-  const { data: products } = await supabase
-    .from('products')
-    .select('*')
-    .eq('active', true)
-    .eq('approval_status', 'approved')
-    .eq('affiliate_enabled', true)       // only products enabled for affiliate promotion
-    .order('created_at', { ascending: false }) as { data: Product[] | null; error: unknown }
+  const [productsRes, customPricesRes, clicksRes, ordersRes, commissionsRes] = await Promise.all([
+    supabase
+      .from('products')
+      .select('*')
+      .eq('active', true)
+      .eq('approval_status', 'approved')
+      .eq('affiliate_enabled', true)
+      .order('created_at', { ascending: false }) as unknown as Promise<{ data: Product[] | null; error: unknown }>,
+    supabase
+      .from('affiliate_product_prices')
+      .select('product_id, custom_sell_price_mad')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { product_id: string; custom_sell_price_mad: number }[] | null
+        error: unknown
+      }>,
+    supabase
+      .from('affiliate_clicks')
+      .select('product_id')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { product_id: string }[] | null
+        error: unknown
+      }>,
+    supabase
+      .from('orders')
+      .select('product_id, status')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { product_id: string; status: string }[] | null
+        error: unknown
+      }>,
+    supabase
+      .from('commissions')
+      .select('amount, order:orders!order_id(product_id)')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { amount: number; order: { product_id: string } | null }[] | null
+        error: unknown
+      }>,
+  ])
 
-  const list = products ?? []
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://yourapp.com'
+  const list = productsRes.data ?? []
+  const customPriceMap = new Map(
+    (customPricesRes.data ?? []).map((r) => [r.product_id, Number(r.custom_sell_price_mad)])
+  )
+
+  // Build per-product stats maps
+  const clicksMap = new Map<string, number>()
+  for (const c of clicksRes.data ?? []) {
+    clicksMap.set(c.product_id, (clicksMap.get(c.product_id) ?? 0) + 1)
+  }
+
+  const ordersMap = new Map<string, { orders: number; delivered: number }>()
+  for (const o of ordersRes.data ?? []) {
+    const cur = ordersMap.get(o.product_id) ?? { orders: 0, delivered: 0 }
+    cur.orders += 1
+    if (o.status === 'delivered') cur.delivered += 1
+    ordersMap.set(o.product_id, cur)
+  }
+
+  const commissionMap = new Map<string, number>()
+  for (const c of commissionsRes.data ?? []) {
+    const pid = c.order?.product_id
+    if (!pid) continue
+    commissionMap.set(pid, (commissionMap.get(pid) ?? 0) + Number(c.amount))
+  }
+
+  const statsMap = new Map<string, ProductStats>()
+  for (const product of list) {
+    const pid = product.id
+    statsMap.set(pid, {
+      clicks: clicksMap.get(pid) ?? 0,
+      orders: ordersMap.get(pid)?.orders ?? 0,
+      delivered: ordersMap.get(pid)?.delivered ?? 0,
+      commissionEarned: commissionMap.get(pid) ?? 0,
+    })
+  }
+
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL
+    ?? (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -39,12 +120,7 @@ export default async function AffiliateProductsPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/affiliate/dashboard"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              ← Dashboard
-            </Link>
+            <Link href="/affiliate/dashboard"><MozounaLogo size="sm" /></Link>
             <span className="text-gray-300">/</span>
             <span className="font-semibold text-gray-900 text-sm">Catalogue</span>
           </div>
@@ -80,12 +156,16 @@ export default async function AffiliateProductsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {list.map((product) => {
-              const referralUrl = `${APP_URL}/products/${product.id}?ref=${user!.id}`
+              const referralUrl = `${APP_URL}/products/${product.id}?ref=${user.id}`
+              const customPrice = customPriceMap.get(product.id) ?? null
+              const stats = statsMap.get(product.id) ?? { clicks: 0, orders: 0, delivered: 0, commissionEarned: 0 }
               return (
                 <AffiliateProductCard
                   key={product.id}
                   product={product}
                   referralUrl={referralUrl}
+                  customPrice={customPrice}
+                  stats={stats}
                 />
               )
             })}
@@ -101,29 +181,26 @@ export default async function AffiliateProductsPage() {
 function AffiliateProductCard({
   product,
   referralUrl,
+  customPrice,
+  stats,
 }: {
   product: Product
   referralUrl: string
+  customPrice: number | null
+  stats: ProductStats
 }) {
-  const thumb = product.media?.[0]?.url ?? product.images?.[0] ?? null
+  const coverUrl = getProductCoverUrl(product)
+  const convRate =
+    stats.clicks > 0 ? `${((stats.orders / stats.clicks) * 100).toFixed(0)}%` : '—'
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
       {/* Thumbnail */}
-      <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
-        {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumb}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-300">
-            {product.name.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
+      <ProductThumbnail
+        src={coverUrl}
+        name={product.name}
+        className="aspect-[4/3] w-full text-2xl"
+      />
 
       {/* Info */}
       <div className="p-4 flex flex-col gap-3 flex-1">
@@ -150,16 +227,24 @@ function AffiliateProductCard({
         {/* Pricing */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-400">Prix de base</p>
+            <p className="text-xs text-gray-400">Prix catalogue</p>
             <p className="text-sm font-medium text-gray-700">{formatMAD(product.sell_price)}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-400">Votre commission</p>
+            <p className="text-xs text-gray-400">Commission de base</p>
             <p className="text-base font-bold text-green-600">
               {formatMAD(product.commission_amount)}
             </p>
           </div>
         </div>
+
+        {/* Custom price indicator */}
+        {customPrice !== null && (
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 text-xs">
+            <span className="text-blue-700">Prix personnalisé actif</span>
+            <span className="font-bold text-blue-800 tabular-nums">{formatMAD(customPrice)}</span>
+          </div>
+        )}
 
         {/* Operational fees */}
         <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-2.5 py-1.5 space-y-0.5">
@@ -187,8 +272,37 @@ function AffiliateProductCard({
           </span>
         </p>
 
+        {/* Custom price setter */}
+        <AffiliatePriceForm
+          productId={product.id}
+          platformPrice={product.sell_price}
+          currentCustomPrice={customPrice}
+        />
+
+        {/* Per-product performance stats */}
+        <div className="grid grid-cols-4 gap-1 bg-gray-50 rounded-lg px-2 py-2">
+          <div className="text-center">
+            <p className="text-xs font-bold text-gray-800 tabular-nums">{stats.clicks}</p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Clics</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-bold text-gray-800 tabular-nums">{stats.orders}</p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Cmdes</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-bold text-gray-800 tabular-nums">{convRate}</p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Conv.</p>
+          </div>
+          <div className="text-center">
+            <p className={`text-xs font-bold tabular-nums ${stats.commissionEarned > 0 ? 'text-green-600' : 'text-gray-800'}`}>
+              {stats.commissionEarned > 0 ? formatMAD(stats.commissionEarned) : '—'}
+            </p>
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Gagné</p>
+          </div>
+        </div>
+
         {/* Copy link — pushed to bottom */}
-        <div className="mt-auto">
+        <div className="mt-auto pt-3">
           <CopyLinkButton url={referralUrl} />
         </div>
       </div>
