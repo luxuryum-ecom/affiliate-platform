@@ -4,6 +4,7 @@ import { signOut } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/server'
 import { ProductForm } from '@/components/admin/product-form'
 import { getTariffs } from '@/app/actions/tariffs'
+import { getRatesMap } from '@/lib/fx'
 
 export const metadata = {
   title: 'Nouveau produit — Administration',
@@ -17,9 +18,10 @@ export default async function NewProductPage() {
 
   if (!user) redirect('/login')
 
-  const [profileResult, tariffs] = await Promise.all([
+  const [profileResult, tariffs, rates] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     getTariffs(),
+    getRatesMap(supabase),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
@@ -56,7 +58,7 @@ export default async function NewProductPage() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-lg font-semibold text-gray-900 mb-6">Créer un produit</h1>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <ProductForm tariffs={tariffs} />
+          <ProductForm tariffs={tariffs} rates={rates} />
         </div>
       </main>
     </div>

@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/utils'
 import type { QuoteRequest, QuoteRequestWithDetails } from '@/types/database'
 
 const LEGAL_NOTICE =
@@ -16,13 +17,11 @@ type QuoteDocumentData = Pick<
   | 'quote_prepared_at'
   | 'destination_country'
   | 'destination_city'
+  | 'display_currency'
+  | 'fx_rate_display_vs_mad'
 > & {
   buyer: Pick<QuoteRequestWithDetails['buyer'], 'full_name' | 'company_name'>
   product: Pick<QuoteRequestWithDetails['product'], 'name' | 'origin_country'>
-}
-
-function formatMAD(n: number) {
-  return n.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD', minimumFractionDigits: 2 })
 }
 
 function formatDate(iso: string) {
@@ -30,11 +29,20 @@ function formatDate(iso: string) {
 }
 
 export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
-  const unitPrice = data.quoted_unit_price_mad ?? 0
+  // Montants stockés en MAD (pivot = vérité contractuelle). Affichage dans la devise
+  // du client au taux FIGÉ du devis. IMP-B : on arrondit le prix unitaire affiché puis
+  // on dérive le sous-total/total de cette valeur, pour que unitaire × qté = sous-total
+  // à l'affichage (cohérence du document légal). Le MAD pivot reste la référence.
+  const displayCurrency = data.display_currency ?? 'MAD'
+  const displayRate = data.fx_rate_display_vs_mad ?? 1
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const fmt = (n: number) => formatCurrency(n, displayCurrency)
+
   const quantity = data.quoted_quantity ?? 0
-  const transportTotal = data.quoted_transport_total_mad ?? 0
-  const productSubtotal = unitPrice * quantity
-  const grandTotal = productSubtotal + transportTotal
+  const unitPrice = round2((data.quoted_unit_price_mad ?? 0) / displayRate)
+  const transportTotal = round2((data.quoted_transport_total_mad ?? 0) / displayRate)
+  const productSubtotal = round2(unitPrice * quantity)
+  const grandTotal = round2(productSubtotal + transportTotal)
 
   const refNo = `DV-${data.id.slice(0, 8).toUpperCase()}`
   const preparedAt = data.quote_prepared_at ? formatDate(data.quote_prepared_at) : '—'
@@ -109,14 +117,14 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
               <tr className="border-b border-gray-100">
                 <td className="py-3 px-3 text-gray-900 font-medium">{data.product.name}</td>
                 <td className="py-3 px-3 text-right text-gray-700">{quantity}</td>
-                <td className="py-3 px-3 text-right text-gray-700">{formatMAD(unitPrice)}</td>
-                <td className="py-3 px-3 text-right font-semibold text-gray-900">{formatMAD(productSubtotal)}</td>
+                <td className="py-3 px-3 text-right text-gray-700">{fmt(unitPrice)}</td>
+                <td className="py-3 px-3 text-right font-semibold text-gray-900">{fmt(productSubtotal)}</td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-3 px-3 text-gray-700">Transport &amp; Douane</td>
                 <td className="py-3 px-3 text-right text-gray-400">—</td>
                 <td className="py-3 px-3 text-right text-gray-400">—</td>
-                <td className="py-3 px-3 text-right font-semibold text-gray-900">{formatMAD(transportTotal)}</td>
+                <td className="py-3 px-3 text-right font-semibold text-gray-900">{fmt(transportTotal)}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -125,7 +133,7 @@ export function QuoteDocument({ data }: { data: QuoteDocumentData }) {
                   Total général
                 </td>
                 <td className="py-3 px-3 text-right text-base font-bold text-indigo-900">
-                  {formatMAD(grandTotal)}
+                  {fmt(grandTotal)}
                 </td>
               </tr>
             </tfoot>

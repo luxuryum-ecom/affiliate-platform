@@ -415,6 +415,14 @@ export interface WholesaleOrder {
   /** Set when this order was created from a quote request conversion. */
   quote_request_id: string | null
 
+  // ── Multi-devise snapshot propagé du devis (migration 051) ────────────────
+  /** Devise source figée recopiée du devis d'origine. */
+  source_currency: string | null
+  /** Taux source→MAD figé recopié du devis d'origine. */
+  fx_rate_source_to_mad: number | null
+  /** Montant marchandise en devise source (prix unit. source × quantité). */
+  merchandise_source_amount: number | null
+
   // ── Import progress tracking (migration 026) ─────────────────────────────
   /** Current import progress status. Null until admin first sets it. */
   import_status: WholesaleImportStatus | null
@@ -633,6 +641,12 @@ export interface QuoteRequest {
   quote_validity_date: string | null
   quote_public_note: string | null
   quote_prepared_at: string | null
+  /** Multi-devise (migration 051) — taux figés sur le devis (pivot interne = MAD) */
+  source_currency: string | null
+  quoted_unit_price_source: number | null
+  fx_rate_source_to_mad: number | null
+  display_currency: string | null
+  fx_rate_display_vs_mad: number | null
   /** Client decision — set by wholesaler after reviewing quote_prepared document */
   client_decision_at: string | null
   created_at: string

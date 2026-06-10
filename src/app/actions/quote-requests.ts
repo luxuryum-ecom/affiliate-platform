@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './_guards'
 import { getWholesaleTier } from '@/lib/utils'
+import { getRateToMad, getClientCurrency } from '@/lib/fx'
 import type { QuoteRequest, Product, QuoteRequestStatus } from '@/types/database'
 
 export type QuoteRequestFormState = { error: string | null; success?: boolean }
@@ -95,13 +96,50 @@ export async function prepareQuote(
   const requestId = (formData.get('request_id') as string)?.trim()
   if (!requestId) return { error: 'Identifiant manquant.' }
 
-  const unitPrice = parseFloat(formData.get('quoted_unit_price_mad') as string)
+  // ── Multi-devise : prix marchandise saisi en devise SOURCE → converti en MAD ──
+  // Pivot interne = MAD. Le taux (central ou override) est FIGÉ sur le devis.
+  const sourceCurrency = (formData.get('source_currency') as string)?.trim().toUpperCase() || 'MAD'
+  const sourceUnitPrice = parseFloat(formData.get('quoted_unit_price_source') as string)
   const quantity = parseInt(formData.get('quoted_quantity') as string, 10)
   const transportTotal = parseFloat(formData.get('quoted_transport_total_mad') as string)
 
-  if (isNaN(unitPrice) || unitPrice <= 0) return { error: 'Prix unitaire invalide.' }
+  const fxOverrideRaw = formData.get('fx_rate_override') as string | null
+  const fxOverride = fxOverrideRaw && fxOverrideRaw.trim() !== '' ? parseFloat(fxOverrideRaw) : null
+
+  if (isNaN(sourceUnitPrice) || sourceUnitPrice <= 0) return { error: 'Prix unitaire invalide.' }
   if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.' }
   if (isNaN(transportTotal) || transportTotal < 0) return { error: 'Frais de transport invalides.' }
+  if (fxOverride !== null && (isNaN(fxOverride) || fxOverride <= 0)) {
+    return { error: 'Taux de change override invalide (doit être > 0).' }
+  }
+
+  // Résolution du taux source→MAD : MAD=1, sinon override, sinon taux central.
+  let fxRate: number
+  if (sourceCurrency === 'MAD') {
+    fxRate = 1
+  } else if (fxOverride !== null) {
+    fxRate = fxOverride
+  } else {
+    const central = await getRateToMad(supabase, sourceCurrency)
+    if (central === null) {
+      return { error: `Aucun taux de change disponible pour ${sourceCurrency}. Renseignez le taux ou utilisez l'override.` }
+    }
+    fxRate = central
+  }
+
+  const unitPriceMad = parseFloat((sourceUnitPrice * fxRate).toFixed(2))
+
+  // Devise d'affichage = devise du pays destination (figée avec son taux).
+  const { data: q } = (await supabase
+    .from('quote_requests')
+    .select('destination_country')
+    .eq('id', requestId)
+    .single()) as { data: { destination_country: string | null } | null; error: unknown }
+
+  const { currency: displayCurrency, rate: displayRate } = await getClientCurrency(
+    supabase,
+    q?.destination_country,
+  )
 
   const shippingMode = (formData.get('quoted_shipping_mode') as string)?.trim() || null
   const deliveryDelay = (formData.get('quoted_delivery_delay') as string)?.trim() || null
@@ -111,15 +149,20 @@ export async function prepareQuote(
   const { error: dbError } = await supabase
     .from('quote_requests')
     .update({
-      status:                    'quote_prepared',
-      quoted_unit_price_mad:     unitPrice,
-      quoted_quantity:           quantity,
+      status:                     'quote_prepared',
+      quoted_unit_price_mad:      unitPriceMad,
+      quoted_unit_price_source:   sourceUnitPrice,
+      source_currency:            sourceCurrency,
+      fx_rate_source_to_mad:      fxRate,
+      display_currency:           displayCurrency,
+      fx_rate_display_vs_mad:     displayRate,
+      quoted_quantity:            quantity,
       quoted_transport_total_mad: transportTotal,
-      quoted_shipping_mode:      shippingMode,
-      quoted_delivery_delay:     deliveryDelay,
-      quote_validity_date:       validityDate || null,
-      quote_public_note:         publicNote,
-      quote_prepared_at:         new Date().toISOString(),
+      quoted_shipping_mode:       shippingMode,
+      quoted_delivery_delay:      deliveryDelay,
+      quote_validity_date:        validityDate || null,
+      quote_public_note:          publicNote,
+      quote_prepared_at:          new Date().toISOString(),
     })
     .eq('id', requestId)
 
@@ -210,6 +253,19 @@ export async function convertQuoteToOrder(
   const tierLabel = tier?.label ?? 'Prix à définir'
   const subtotal = parseFloat((unitPrice * quote.quantity_requested).toFixed(2))
 
+  // Propagation du snapshot de taux figé du devis vers la commande (traçabilité argent).
+  // NB : total_amount reste calculé sur les tiers MAD (comportement existant inchangé) ;
+  // ces champs sont une métadonnée d'origine, à réconcilier au branchement ledger multi-devise.
+  const fxQuote = quote as unknown as {
+    source_currency: string | null
+    fx_rate_source_to_mad: number | null
+    quoted_unit_price_source: number | null
+  }
+  const merchandiseSourceAmount =
+    fxQuote.quoted_unit_price_source != null
+      ? parseFloat((fxQuote.quoted_unit_price_source * quote.quantity_requested).toFixed(4))
+      : null
+
   const { data: newOrder, error: orderErr } = (await supabase
     .from('wholesale_orders')
     .insert({
@@ -222,6 +278,9 @@ export async function convertQuoteToOrder(
       total_amount:        subtotal,
       delivery_cost:       0,
       quote_request_id:    requestId,
+      source_currency:         fxQuote.source_currency ?? null,
+      fx_rate_source_to_mad:   fxQuote.fx_rate_source_to_mad ?? null,
+      merchandise_source_amount: merchandiseSourceAmount,
     })
     .select('id')
     .single()) as { data: { id: string } | null; error: unknown }

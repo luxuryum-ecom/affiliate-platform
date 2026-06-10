@@ -22,6 +22,7 @@ function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
   return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
 }
 import { calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
+import { getRateToMad } from '@/lib/fx'
 
 export type ProductFormState = { error: string | null }
 
@@ -76,7 +77,18 @@ export async function upsertProduct(
   const purchase_price = purchase_price_raw ? parseFloat(purchase_price_raw) : null
 
   const purchase_currency = (formData.get('purchase_currency') as string) || 'MAD'
-  const exchange_rate_to_mad = parseFloat(formData.get('exchange_rate_to_mad') as string) || 1
+  // Réconciliation Étape 2 : exchange_rate_to_mad devient un OVERRIDE manuel.
+  // S'il est fourni (> 0) on le respecte ; sinon, pour une devise ≠ MAD on prend le
+  // taux central (current_exchange_rates) ; MAD ⇒ 1. Le calcul aval est inchangé.
+  const exchange_rate_raw = formData.get('exchange_rate_to_mad') as string
+  const exchange_rate_explicit =
+    exchange_rate_raw && !isNaN(parseFloat(exchange_rate_raw)) ? parseFloat(exchange_rate_raw) : null
+  const exchange_rate_to_mad =
+    exchange_rate_explicit !== null && exchange_rate_explicit > 0
+      ? exchange_rate_explicit
+      : purchase_currency !== 'MAD'
+        ? (await getRateToMad(supabase, purchase_currency)) ?? 1
+        : 1
 
   // platform_margin_type: 'percentage' | 'fixed'
   // Accept both the new field name and legacy 'margin_percentage' form field.

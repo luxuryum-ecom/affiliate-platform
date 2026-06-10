@@ -4,6 +4,7 @@ import { signOut } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/server'
 import { ProductForm } from '@/components/admin/product-form'
 import { getTariffs } from '@/app/actions/tariffs'
+import { getRatesMap } from '@/lib/fx'
 import type { Product } from '@/types/database'
 
 interface EditProductPageProps {
@@ -25,10 +26,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
   if (!user) redirect('/login')
 
-  const [profileResult, productResult, tariffs] = await Promise.all([
+  const [profileResult, productResult, tariffs, rates] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('products').select('*').eq('id', id).single(),
     getTariffs(),
+    getRatesMap(supabase),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
@@ -80,7 +82,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <ProductForm product={product} tariffs={tariffs} />
+          <ProductForm product={product} tariffs={tariffs} rates={rates} />
         </div>
       </main>
     </div>

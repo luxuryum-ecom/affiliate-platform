@@ -49,6 +49,17 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
   const linkedOrder = linkedOrderRes.data as Pick<WholesaleOrder, 'id'> | null
   const badge = STATUS_BADGE[req.status] ?? STATUS_BADGE.new
 
+  // ── Taux centraux courants + devise d'affichage client (multi-devise devis) ──
+  const [ratesRes, clientCurrencyRes] = await Promise.all([
+    supabase.from('current_exchange_rates').select('quote_code, rate_vs_mad'),
+    supabase.rpc('client_currency_for', { p_label: req.destination_country }),
+  ])
+  const rates: Record<string, number> = { MAD: 1 }
+  for (const r of (ratesRes.data ?? []) as { quote_code: string; rate_vs_mad: number | string }[]) {
+    rates[r.quote_code] = typeof r.rate_vs_mad === 'string' ? parseFloat(r.rate_vs_mad) : r.rate_vs_mad
+  }
+  const displayCurrency = (clientCurrencyRes.data as string | null) ?? 'MAD'
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
@@ -184,8 +195,12 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
                 <PrepareQuoteForm
                   requestId={id}
                   quantityRequested={req.quantity_requested}
+                  rates={rates}
+                  displayCurrency={displayCurrency}
                   currentQuote={{
                     quoted_unit_price_mad:     req.quoted_unit_price_mad,
+                    quoted_unit_price_source:  req.quoted_unit_price_source,
+                    source_currency:           req.source_currency,
                     quoted_quantity:           req.quoted_quantity,
                     quoted_transport_total_mad: req.quoted_transport_total_mad,
                     quoted_shipping_mode:      req.quoted_shipping_mode,
