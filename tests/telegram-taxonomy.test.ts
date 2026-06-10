@@ -51,13 +51,13 @@ describe('buildCleanExtraction (intégration nettoyage)', () => {
       category: 'Maroquinerie', // inconnue
       subcategory: 'Sacs', // inconnue
       description: '  Beau sac.  ',
-      price_mad: '250 dh',
+      price: '250 dh',
     })
     expect(clean.product_name).toBe('Sac en cuir')
     expect(clean.category).toBe('Autres')
     expect(clean.subcategory).toBe('')
     expect(clean.description).toBe('Beau sac.')
-    expect(clean.suggested_wholesale_price_mad).toBe(250)
+    expect(clean.price_source).toBe(250)
   })
 
   it('met description à null si vide, prix à null si absent', () => {
@@ -66,10 +66,10 @@ describe('buildCleanExtraction (intégration nettoyage)', () => {
       category: 'Textile',
       subcategory: 'Homme',
       description: '   ',
-      price_mad: null,
+      price: null,
     })
     expect(clean.description).toBeNull()
-    expect(clean.suggested_wholesale_price_mad).toBeNull()
+    expect(clean.price_source).toBeNull()
     expect(clean.category).toBe('Textile')
     expect(clean.subcategory).toBe('Homme')
   })
@@ -82,7 +82,7 @@ describe('buildCleanExtraction (intégration nettoyage)', () => {
         category: 'Textile',
         subcategory: '',
         description: 'd',
-        price_mad: 10,
+        price: 10,
       }).success,
     ).toBe(true)
   })

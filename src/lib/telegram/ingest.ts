@@ -7,6 +7,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
 import { extractProductFromTelegram } from './extract'
 import { telegramDownloadPhoto, telegramSendMessage } from './client'
+import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
+import { getRateToMad } from '@/lib/fx'
 import {
   buildMessageKey,
   isValidLinkCodeFormat,
@@ -208,6 +210,19 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
     return
   }
 
+  // Devise de saisie = devise du PAYS du fournisseur. Pas de pays → soumission
+  // BLOQUÉE (avant l'IA, pour ne pas dépenser de tokens). Jamais de MAD supposé.
+  const db = admin as unknown as Parameters<typeof resolveSupplierCurrency>[0]
+  const currency = await resolveSupplierCurrency(db, supplierId)
+  if (!currency) {
+    await markInbound(admin, messageKey, { status: 'rejected', error: 'no_country' })
+    await telegramSendMessage(
+      chatId,
+      "Configurez d'abord votre PAYS dans votre profil fournisseur (il détermine votre devise) avant d'envoyer un produit.",
+    )
+    return
+  }
+
   try {
     // Durcissement anti-régression : le préfixe d'isolation Storage doit être un UUID.
     if (!UUID_RE.test(supplierId)) throw new Error('supplier_id invalide')
@@ -234,6 +249,11 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
       msg.caption?.trim().slice(0, 80) ||
       'Produit Telegram (à compléter)'
 
+    // Conversion devise source → MAD via le taux admin figé (snapshot).
+    // Taux absent → mad NULL + flag (jamais 1, jamais deviné).
+    const rate = await getRateToMad(db, currency)
+    const pricing = composePricing(currency, rate, clean.price_source)
+
     // Insert en pending_review — JAMAIS publié directement.
     const { data: inserted, error: prodErr } = await admin
       .from('supplier_products')
@@ -250,7 +270,10 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
         origin_country: 'Maroc',
         availability_type: 'local_stock',
         target_buyer_type: 'wholesaler',
-        suggested_wholesale_price_mad: clean.suggested_wholesale_price_mad,
+        suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
+        source_currency: pricing.source_currency,
+        price_source: pricing.price_source,
+        fx_rate_source_to_mad: pricing.fx_rate_source_to_mad,
         stock_quantity: clean.stock_quantity,
         lead_time_days: clean.lead_time_days,
         approval_status: 'pending_review',
@@ -280,7 +303,7 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
       min_quantity: 1,
       stock_quantity: clean.stock_quantity,
       lead_time_days: clean.lead_time_days,
-      suggested_wholesale_price_mad: clean.suggested_wholesale_price_mad,
+      suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
       supplier_unit_price_usd: null,
       moq_tier_count: 0,
     })
@@ -301,9 +324,11 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
     })
 
     const priceLine =
-      clean.suggested_wholesale_price_mad != null
-        ? `Prix indiqué : ${clean.suggested_wholesale_price_mad} DH`
-        : 'Prix : non détecté (à compléter)'
+      pricing.suggested_wholesale_price_mad != null
+        ? `Prix : ${pricing.price_source} ${pricing.source_currency} ≈ ${pricing.suggested_wholesale_price_mad} DH`
+        : pricing.reason === 'no_rate'
+          ? `Prix : ${pricing.price_source ?? '?'} ${pricing.source_currency} (taux non encore configuré — l'admin le fixera)`
+          : 'Prix : non détecté (à compléter)'
     await telegramSendMessage(
       chatId,
       `Produit reçu ✅\n• ${productName}\n• Catégorie : ${clean.category}${clean.subcategory ? ' / ' + clean.subcategory : ''}\n• ${priceLine}\nEn attente de validation par un administrateur avant publication.`,

@@ -65,8 +65,8 @@ export const aiExtractionRawSchema = z.object({
   category: z.string(),
   subcategory: z.string(),
   description: z.string(),
-  // L'IA peut renvoyer un nombre, une chaîne (« 120 dh ») ou null.
-  price_mad: z.union([z.number(), z.string(), z.null()]),
+  // Prix TEL QU'ÉCRIT (devise locale du fournisseur, pas MAD). Nombre, chaîne ou null.
+  price: z.union([z.number(), z.string(), z.null()]),
   // Stock et délai (jours). Optionnels/nullable côté schéma (défensif) — l'outil
   // les force en sortie, mais on tolère leur absence sans casser le parse.
   stock_quantity: z.union([z.number(), z.string(), z.null()]).optional(),
@@ -78,20 +78,17 @@ export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
 // ── 3. Sanitizers purs ───────────────────────────────────────────────────────
 
 /**
- * @finance — prix suggéré extrait d'un texte libre.
+ * @finance — montant SOURCE (devise du fournisseur) extrait d'un texte libre.
+ * NB : ce N'EST PAS du MAD — la conversion en MAD se fait à l'ingestion via le
+ * taux admin. Les bornes ci-dessous sont des garde-fous de plausibilité sur la
+ * valeur source (devises MAD/AED/USD d'ordres de grandeur proches).
  * Garanties : nombre fini, dans [MIN, MAX], arrondi à 2 décimales. Tout cas
  * AMBIGU (séparateurs incohérents, tiret intercalé) → null : on n'invente ni ne
- * tronque JAMAIS un prix. Ce prix n'est qu'une SUGGESTION en file pending_review ;
- * il ne touche aucune écriture du grand livre et la marge plateforme reste fixée
- * par l'admin avant publication.
- *
- * NB : la sortie est un `number` arrondi à 2 décimales, destiné à la colonne
- * numeric(10,2). Ce N'EST PAS un entier de centimes — ne pas réutiliser tel quel
- * pour une écriture comptable/ledger (cf. RÈGLE D'OR n°4).
+ * tronque JAMAIS un prix. Suggestion en pending_review, jamais le ledger.
  */
-const MAX_REASONABLE_PRICE_MAD = 1_000_000
-// Plancher anti-absurde (prix de gros marocain). Valeur par défaut, ajustable.
-const MIN_REASONABLE_PRICE_MAD = 1
+const MAX_REASONABLE_PRICE_SOURCE = 1_000_000
+// Plancher anti-absurde. Valeur par défaut, ajustable.
+const MIN_REASONABLE_PRICE_SOURCE = 1
 
 export function sanitizeExtractedPrice(raw: unknown): number | null {
   let n: number | null
@@ -103,8 +100,8 @@ export function sanitizeExtractedPrice(raw: unknown): number | null {
     return null
   }
   if (n === null || !Number.isFinite(n)) return null
-  if (n < MIN_REASONABLE_PRICE_MAD) return null // inclut négatif et zéro
-  if (n > MAX_REASONABLE_PRICE_MAD) return null
+  if (n < MIN_REASONABLE_PRICE_SOURCE) return null // inclut négatif et zéro
+  if (n > MAX_REASONABLE_PRICE_SOURCE) return null
   return Math.round(n * 100) / 100
 }
 
@@ -230,7 +227,8 @@ export type CleanExtraction = {
   category: string
   subcategory: string
   description: string | null
-  suggested_wholesale_price_mad: number | null
+  /** Prix dans la devise du fournisseur (PAS MAD) — converti plus tard à l'ingestion. */
+  price_source: number | null
   stock_quantity: number | null
   lead_time_days: number | null
 }
@@ -242,7 +240,7 @@ export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
     category,
     subcategory: normalizeSubcategory(category, raw.subcategory),
     description: raw.description?.trim() ? raw.description.trim().slice(0, 2000) : null,
-    suggested_wholesale_price_mad: sanitizeExtractedPrice(raw.price_mad),
+    price_source: sanitizeExtractedPrice(raw.price),
     stock_quantity: sanitizeNonNegativeInt(raw.stock_quantity, MAX_STOCK_QUANTITY),
     lead_time_days: sanitizeNonNegativeInt(raw.lead_time_days, MAX_LEAD_TIME_DAYS),
   }

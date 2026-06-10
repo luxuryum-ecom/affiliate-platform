@@ -45,7 +45,7 @@ describe('buildCleanExtraction — stock & délai', () => {
     category: 'Maison & packaging',
     subcategory: 'Articles ménagers',
     description: 'Table + chaises.',
-    price_mad: 2000,
+    price: 2000,
   }
 
   it('capture « stock 50, délai 20j »', () => {

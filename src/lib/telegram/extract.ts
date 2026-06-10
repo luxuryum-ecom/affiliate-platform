@@ -23,8 +23,8 @@ Extrait une fiche produit structurée en appelant l'outil "record_product".
 Règles STRICTES :
 - "category" DOIT être l'une des catégories listées ci-dessous, copiée à l'identique. Si incertain → "Autres".
 - "subcategory" DOIT appartenir à la catégorie choisie, copiée à l'identique. Si incertain → "".
-- "price_mad" : prix de gros en dirhams marocains (MAD) UNIQUEMENT s'il figure dans la légende, sinon null.
-  Nombre seul, sans devise ni texte. Ne JAMAIS inventer ni estimer un prix.
+- "price" : prix de gros TEL QU'ÉCRIT par le fournisseur (nombre seul, sans devise ni conversion) s'il figure, sinon null.
+  Le fournisseur saisit dans SA devise locale — ne convertis rien, ne suppose aucune devise. Ne JAMAIS inventer ni estimer un prix.
 - "product_name" : nom court et clair (max ~80 caractères), sans marque contrefaite.
 - "description" : 1 à 2 phrases neutres décrivant le produit.
 - "stock_quantity" : quantité en stock (entier ≥ 0) UNIQUEMENT si elle figure dans la légende, sinon null.
@@ -46,9 +46,9 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       category: { type: 'string', description: 'Catégorie parente (valeur exacte de la taxonomie).' },
       subcategory: { type: 'string', description: 'Sous-catégorie (valeur exacte) ou chaîne vide.' },
       description: { type: 'string', description: '1 à 2 phrases descriptives neutres.' },
-      price_mad: {
+      price: {
         type: ['number', 'null'],
-        description: 'Prix de gros en MAD si présent dans la légende, sinon null.',
+        description: "Prix de gros TEL QU'ÉCRIT (nombre seul, sans devise ni conversion) si présent, sinon null.",
       },
       stock_quantity: {
         type: ['integer', 'null'],
@@ -64,7 +64,7 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       'category',
       'subcategory',
       'description',
-      'price_mad',
+      'price',
       'stock_quantity',
       'lead_time_days',
     ],
@@ -109,7 +109,7 @@ export async function extractProductFromTelegram(input: ExtractInput): Promise<C
             type: 'text',
             text: captionText
               ? `Légende du fournisseur : « ${captionText} »`
-              : "Aucune légende fournie. Décris la fiche d'après la photo, price_mad = null.",
+              : "Aucune légende fournie. Décris la fiche d'après la photo, price = null.",
           },
         ],
       },
