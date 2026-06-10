@@ -132,8 +132,9 @@ export default async function AdminPayoutsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-5 sticky top-20">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Enregistrer un paiement</h2>
               <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Sélectionnez un affilié, entrez le montant versé et une référence de virement.
-                Toutes ses commissions <strong>approuvées</strong> seront automatiquement marquées comme payées.
+                Sélectionnez un affilié : le montant est <strong>calculé automatiquement</strong>{' '}
+                (somme de ses commissions approuvées). Vous validez le versement et ajoutez une
+                référence. Toutes ses commissions <strong>approuvées</strong> sont alors marquées payées.
               </p>
               <CreatePayoutForm affiliates={affiliatesForForm} />
             </div>
