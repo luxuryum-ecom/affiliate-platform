@@ -1,6 +1,10 @@
 // ─── Telegram Bot API — appels sortants (serveur uniquement) ─────────────────
 // Le bot token reste côté serveur. Téléchargement borné (anti-abus).
 
+import { validateImage, type ImageMediaType, type ImageExt } from '@/lib/image-validate'
+
+export type { ImageMediaType }
+
 const TELEGRAM_API = 'https://api.telegram.org'
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024 // 10 MB — aligné sur le bucket Storage
 
@@ -22,23 +26,18 @@ export async function telegramSendMessage(chatId: number, text: string): Promise
   }
 }
 
-export type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/webp'
-
 export type DownloadedPhoto = {
   bytes: Uint8Array
   base64: string
   mediaType: ImageMediaType
-  ext: 'jpg' | 'png' | 'webp'
+  ext: ImageExt
 }
 
-function mediaFromPath(filePath: string): { mediaType: ImageMediaType; ext: 'jpg' | 'png' | 'webp' } {
-  const ext = filePath.split('.').pop()?.toLowerCase()
-  if (ext === 'png') return { mediaType: 'image/png', ext: 'png' }
-  if (ext === 'webp') return { mediaType: 'image/webp', ext: 'webp' }
-  return { mediaType: 'image/jpeg', ext: 'jpg' }
-}
-
-/** getFile → télécharge l'image, borne la taille, renvoie bytes + base64. */
+/**
+ * getFile → télécharge l'image, borne la taille, VALIDE le vrai type (magic bytes)
+ * et les dimensions (anti décompression-bomb), renvoie bytes + base64.
+ * Le type/extension proviennent des octets, JAMAIS du file_path Telegram.
+ */
 export async function telegramDownloadPhoto(fileId: string): Promise<DownloadedPhoto> {
   const metaRes = await fetch(
     `${TELEGRAM_API}/bot${botToken()}/getFile?file_id=${encodeURIComponent(fileId)}`,
@@ -65,6 +64,9 @@ export async function telegramDownloadPhoto(fileId: string): Promise<DownloadedP
   const buf = new Uint8Array(await fileRes.arrayBuffer())
   if (buf.byteLength > MAX_PHOTO_BYTES) throw new Error('Photo trop volumineuse')
 
-  const { mediaType, ext } = mediaFromPath(filePath)
-  return { bytes: buf, base64: Buffer.from(buf).toString('base64'), mediaType, ext }
+  // Vrai type via magic bytes + bornes dimensions (rejette svg/gif/pdf/bombe).
+  const v = validateImage(buf, { maxBytes: MAX_PHOTO_BYTES })
+  if (!v.ok) throw new Error(`image rejetée (${v.reason})`)
+
+  return { bytes: buf, base64: Buffer.from(buf).toString('base64'), mediaType: v.mediaType, ext: v.ext }
 }
