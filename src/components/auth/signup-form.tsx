@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { signUp, type AuthState } from '@/app/actions/auth'
+import { SUPPLIER_COUNTRIES } from '@/lib/supplier-countries'
 
 const initialState: AuthState = { error: null }
 
@@ -47,6 +48,31 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
           placeholder={ts('fullNamePlaceholder')}
         />
       </div>
+
+      {defaultRole === 'supplier' && (
+        <div>
+          <label htmlFor="country_code" className="block text-sm font-medium text-muted mb-1">
+            Pays <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="country_code"
+            name="country_code"
+            required
+            disabled={isPending}
+            className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
+          >
+            <option value="" disabled>Sélectionnez votre pays</option>
+            {SUPPLIER_COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.label} ({c.currency})
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted">
+            Votre pays détermine la devise de saisie de vos prix. Il ne pourra plus être modifié ensuite.
+          </p>
+        </div>
+      )}
 
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-muted mb-1">

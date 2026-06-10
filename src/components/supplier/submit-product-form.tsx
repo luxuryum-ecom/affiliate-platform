@@ -13,7 +13,7 @@ const LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 const HELPER = 'mt-1 text-xs text-gray-400'
 const SECTION = 'text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-1 border-b border-gray-100'
 
-export function SubmitProductForm() {
+export function SubmitProductForm({ currency }: { currency?: string }) {
   const t = useTranslations('supplier.submitProductForm')
   const [state, action, isPending] = useActionState(submitSupplierProduct, initial)
   const [supplierType, setSupplierType] = useState<'morocco' | 'international'>('morocco')
@@ -262,9 +262,10 @@ export function SubmitProductForm() {
               {supplierType === 'morocco'
                 ? t('priceLabelMorocco')
                 : t('priceLabelInternational')}
+              {currency ? ` (${currency})` : ''}
             </label>
             <input
-              name="suggested_wholesale_price_mad"
+              name="price_source"
               type="number"
               min={0}
               step="0.01"

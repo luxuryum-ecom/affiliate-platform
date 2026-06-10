@@ -6,6 +6,7 @@ import { signOut } from '@/app/actions/auth'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { SubmitProductForm } from '@/components/supplier/submit-product-form'
 import { getProductLimitStatus } from '@/app/actions/premium'
+import { resolveSupplierCurrency } from '@/lib/supplier-pricing'
 import type { Profile } from '@/types/database'
 
 export async function generateMetadata() {
@@ -18,9 +19,10 @@ export default async function SupplierProductNewPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileResult, limitStatus] = await Promise.all([
+  const [profileResult, limitStatus, currency] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     getProductLimitStatus(user.id),
+    resolveSupplierCurrency(supabase, user.id),
   ])
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
@@ -96,7 +98,17 @@ export default async function SupplierProductNewPage() {
             )}
 
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <SubmitProductForm />
+              {currency === null ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-1">
+                  <p className="text-sm font-semibold text-amber-800">Pays non configuré</p>
+                  <p className="text-sm text-amber-700">
+                    Votre pays (qui détermine votre devise) n&apos;est pas encore défini.
+                    Contactez l&apos;administrateur avant de soumettre un produit.
+                  </p>
+                </div>
+              ) : (
+                <SubmitProductForm currency={currency} />
+              )}
             </div>
           </>
         )}

@@ -152,6 +152,10 @@ export interface Profile {
   status: UserStatus
   created_at: string
 
+  /** Pays du compte (FK countries). Pour role=supplier : devise de saisie des
+   *  prix via countries.operational_currency. Choisi au signup, figé (mig 054/055). */
+  country_code: string | null
+
   // ── Wholesaler billing fields (migration 017) ─────────────────────────────
   /** Optional company name for wholesale invoices. */
   company_name: string | null
