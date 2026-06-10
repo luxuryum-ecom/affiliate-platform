@@ -67,6 +67,10 @@ export const aiExtractionRawSchema = z.object({
   description: z.string(),
   // L'IA peut renvoyer un nombre, une chaîne (« 120 dh ») ou null.
   price_mad: z.union([z.number(), z.string(), z.null()]),
+  // Stock et délai (jours). Optionnels/nullable côté schéma (défensif) — l'outil
+  // les force en sortie, mais on tolère leur absence sans casser le parse.
+  stock_quantity: z.union([z.number(), z.string(), z.null()]).optional(),
+  lead_time_days: z.union([z.number(), z.string(), z.null()]).optional(),
 })
 
 export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
@@ -102,6 +106,37 @@ export function sanitizeExtractedPrice(raw: unknown): number | null {
   if (n < MIN_REASONABLE_PRICE_MAD) return null // inclut négatif et zéro
   if (n > MAX_REASONABLE_PRICE_MAD) return null
   return Math.round(n * 100) / 100
+}
+
+// Plafonds anti-absurde pour stock (unités) et délai (jours, ~10 ans).
+const MAX_STOCK_QUANTITY = 10_000_000
+const MAX_LEAD_TIME_DAYS = 3650
+
+/**
+ * Entier ≥ 0 extrait d'un texte libre (« stock 50 », « délai 20j », « مخزون 50 »).
+ * Garanties : entier, ≥ 0, plafonné. Tout cas douteux (négatif, décimal, NaN,
+ * non numérique) → null (on n'invente jamais). Sans impact argent/ledger.
+ *
+ * NB : contrairement au prix, on NE désambiguïse PAS les séparateurs de milliers
+ * (« 1.000 » → 1, pas 1000). Choix assumé : sous-estimation prudente, sans enjeu
+ * monétaire, et la fiche reste en pending_review (l'admin corrige si besoin).
+ */
+export function sanitizeNonNegativeInt(raw: unknown, max: number): number | null {
+  let n: number
+  if (typeof raw === 'number') {
+    n = raw
+  } else if (typeof raw === 'string') {
+    const cleaned = raw.replace(/\s/g, '').replace(/[^\d.-]/g, '')
+    if (cleaned === '' || cleaned === '-' || cleaned === '.') return null
+    n = Number(cleaned)
+  } else {
+    return null
+  }
+  if (!Number.isFinite(n)) return null
+  if (!Number.isInteger(n)) return null // décimal → douteux → null
+  if (n < 0) return null
+  if (n > max) return null
+  return n
 }
 
 /** Retire un séparateur de milliers : groupes de 3 chiffres obligatoires. */
@@ -196,6 +231,8 @@ export type CleanExtraction = {
   subcategory: string
   description: string | null
   suggested_wholesale_price_mad: number | null
+  stock_quantity: number | null
+  lead_time_days: number | null
 }
 
 export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
@@ -206,6 +243,8 @@ export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
     subcategory: normalizeSubcategory(category, raw.subcategory),
     description: raw.description?.trim() ? raw.description.trim().slice(0, 2000) : null,
     suggested_wholesale_price_mad: sanitizeExtractedPrice(raw.price_mad),
+    stock_quantity: sanitizeNonNegativeInt(raw.stock_quantity, MAX_STOCK_QUANTITY),
+    lead_time_days: sanitizeNonNegativeInt(raw.lead_time_days, MAX_LEAD_TIME_DAYS),
   }
 }
 

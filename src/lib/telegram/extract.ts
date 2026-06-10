@@ -27,6 +27,10 @@ Règles STRICTES :
   Nombre seul, sans devise ni texte. Ne JAMAIS inventer ni estimer un prix.
 - "product_name" : nom court et clair (max ~80 caractères), sans marque contrefaite.
 - "description" : 1 à 2 phrases neutres décrivant le produit.
+- "stock_quantity" : quantité en stock (entier ≥ 0) UNIQUEMENT si elle figure dans la légende, sinon null.
+  Exemples : « stock 50 », « 50 en stock », darija « كاين 50 فالستوك », arabe « مخزون 50 » → 50. Ne JAMAIS inventer.
+- "lead_time_days" : délai de livraison EN JOURS (entier ≥ 0) UNIQUEMENT s'il figure, sinon null.
+  Convertis en jours : « délai 20j » / « livraison 20 jours » / arabe « مدة 20 يوم » → 20 ; « 2 semaines » → 14 ; « 1 mois » → 30. Ne JAMAIS inventer.
 
 Catégories et sous-catégories autorisées :
 ${renderTaxonomy()}`
@@ -46,8 +50,24 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
         type: ['number', 'null'],
         description: 'Prix de gros en MAD si présent dans la légende, sinon null.',
       },
+      stock_quantity: {
+        type: ['integer', 'null'],
+        description: 'Quantité en stock (entier ≥ 0) si indiquée dans la légende, sinon null.',
+      },
+      lead_time_days: {
+        type: ['integer', 'null'],
+        description: 'Délai de livraison EN JOURS (entier ≥ 0) si indiqué, sinon null.',
+      },
     },
-    required: ['product_name', 'category', 'subcategory', 'description', 'price_mad'],
+    required: [
+      'product_name',
+      'category',
+      'subcategory',
+      'description',
+      'price_mad',
+      'stock_quantity',
+      'lead_time_days',
+    ],
   } as Anthropic.Tool['input_schema'],
 }
 
