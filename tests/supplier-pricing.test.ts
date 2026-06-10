@@ -1,0 +1,166 @@
+import { describe, it, expect } from 'vitest'
+import { convertToMad, composePricing, buildSupplierPricing } from '@/lib/supplier-pricing'
+
+// Faux client Supabase minimal pour tester l'orchestration sans DB réelle.
+// Chaîne .from(table).select().eq().maybeSingle() + .rpc('fx_rate_to_mad').
+function fakeDb({ countryCode, operationalCurrency, rate }: {
+  countryCode: string | null
+  operationalCurrency?: string
+  rate?: number | null
+}) {
+  return {
+    from(table: string) {
+      const chain: Record<string, unknown> = {}
+      chain.select = () => chain
+      chain.eq = () => chain
+      chain.maybeSingle = async () => ({
+        data: table === 'profiles'
+          ? { country_code: countryCode }
+          : { operational_currency: operationalCurrency },
+        error: null,
+      })
+      return chain
+    },
+    rpc: async (_fn: string, _args: unknown) => ({ data: rate ?? null, error: null }),
+  } as unknown as Parameters<typeof buildSupplierPricing>[0]
+}
+
+// @finance — conversion devise → MAD : numeric, arrondi centiers, jamais fabriqué.
+describe('convertToMad', () => {
+  it('convertit prix source × taux', () => {
+    expect(convertToMad(100, 2.72)).toBe(272)
+    expect(convertToMad(50, 10)).toBe(500)
+  })
+
+  it('MAD-identité : taux 1 → pivot = source', () => {
+    expect(convertToMad(250, 1)).toBe(250)
+    expect(convertToMad(99.99, 1)).toBe(99.99)
+  })
+
+  it('arrondit à 2 décimales via centiers (pas de float)', () => {
+    expect(convertToMad(100, 2.725)).toBe(272.5)
+    expect(convertToMad(33.333, 3)).toBe(100) // 33.333×3 = 99.999 → arrondi 100.00
+  })
+
+  it('entrée nulle / non finie → null (jamais fabriqué)', () => {
+    expect(convertToMad(null, 2.72)).toBeNull()
+    expect(convertToMad(100, null)).toBeNull()
+    expect(convertToMad(NaN, 2.72)).toBeNull()
+    expect(convertToMad(100, Infinity)).toBeNull()
+  })
+
+  it('prix ou taux ≤ 0 → null', () => {
+    expect(convertToMad(-100, 2.72)).toBeNull()
+    expect(convertToMad(0, 2.72)).toBeNull()
+    expect(convertToMad(100, 0)).toBeNull()
+    expect(convertToMad(100, -1)).toBeNull()
+  })
+
+  it('débordement / absurde (> plafond) → null, jamais tronqué', () => {
+    expect(convertToMad(999_999, 2)).toBeNull() // ~2M > 1M
+    expect(convertToMad(1_000_000, 5)).toBeNull()
+  })
+
+  it('frontière du plafond : exactement 1M passe, au-dessus → null', () => {
+    expect(convertToMad(1_000_000, 1)).toBe(1_000_000)
+    expect(convertToMad(1_000_000.01, 1)).toBeNull()
+    expect(convertToMad(500_000, 2)).toBe(1_000_000)
+  })
+
+  it('biais demi-centime figé (Math.round, incohérent) — acceptable hors ledger', () => {
+    // Le sens de l'arrondi dépend de la représentation float : ici l'un descend,
+    // l'autre monte. Comportement figé pour détecter toute régression silencieuse.
+    expect(convertToMad(1.005, 1)).toBe(1) // 1.005×100 = 100.4999… → 1.00 (descend)
+    expect(convertToMad(2.675, 1)).toBe(2.68) // 2.675×100 = 267.5 → 2.68 (monte)
+  })
+
+  it('produit fini débordant → Infinity attrapé → null', () => {
+    expect(convertToMad(1e308, 1e308)).toBeNull()
+  })
+})
+
+describe('buildSupplierPricing (orchestration, DB mockée)', () => {
+  it('pays absent → bloqué, AUCUN fallback MAD', async () => {
+    const p = await buildSupplierPricing(fakeDb({ countryCode: null }), 'sup-1', 100)
+    expect(p.canSubmit).toBe(false)
+    expect(p.reason).toBe('no_country')
+    expect(p.source_currency).toBeNull()
+    expect(p.suggested_wholesale_price_mad).toBeNull()
+  })
+
+  it('fournisseur Maroc → MAD, taux 1, identité', async () => {
+    const p = await buildSupplierPricing(
+      fakeDb({ countryCode: 'MA', operationalCurrency: 'MAD' }), 'sup-1', 250,
+    )
+    expect(p.source_currency).toBe('MAD')
+    expect(p.fx_rate_source_to_mad).toBe(1)
+    expect(p.suggested_wholesale_price_mad).toBe(250)
+  })
+
+  it('fournisseur Dubai (AED) → conversion via taux admin', async () => {
+    const p = await buildSupplierPricing(
+      fakeDb({ countryCode: 'AE', operationalCurrency: 'AED', rate: 2.72 }), 'sup-1', 100,
+    )
+    expect(p.source_currency).toBe('AED')
+    expect(p.fx_rate_source_to_mad).toBe(2.72)
+    expect(p.suggested_wholesale_price_mad).toBe(272)
+  })
+
+  it('devise sans taux admin → mad NULL + flag (jamais 1, jamais deviné)', async () => {
+    const p = await buildSupplierPricing(
+      fakeDb({ countryCode: 'XX', operationalCurrency: 'AED', rate: null }), 'sup-1', 100,
+    )
+    expect(p.reason).toBe('no_rate')
+    expect(p.fx_rate_source_to_mad).toBeNull()
+    expect(p.suggested_wholesale_price_mad).toBeNull()
+    expect(p.canSubmit).toBe(true)
+  })
+})
+
+describe('composePricing', () => {
+  it('pas de pays/devise → no_country + canSubmit=false + tout financier null', () => {
+    const p = composePricing(null, null, 100)
+    expect(p.reason).toBe('no_country')
+    expect(p.canSubmit).toBe(false)
+    expect(p.source_currency).toBeNull()
+    expect(p.fx_rate_source_to_mad).toBeNull()
+    expect(p.suggested_wholesale_price_mad).toBeNull()
+  })
+
+  it('devise connue sans taux → no_rate, créable mais mad NULL (jamais deviné)', () => {
+    const p = composePricing('AED', null, 100)
+    expect(p.reason).toBe('no_rate')
+    expect(p.canSubmit).toBe(true)
+    expect(p.source_currency).toBe('AED')
+    expect(p.fx_rate_source_to_mad).toBeNull()
+    expect(p.suggested_wholesale_price_mad).toBeNull()
+  })
+
+  it('conversion normale devise étrangère', () => {
+    const p = composePricing('AED', 2.72, 100)
+    expect(p.reason).toBe('ok')
+    expect(p.source_currency).toBe('AED')
+    expect(p.fx_rate_source_to_mad).toBe(2.72)
+    expect(p.suggested_wholesale_price_mad).toBe(272)
+  })
+
+  it('MAD-identité', () => {
+    const p = composePricing('MAD', 1, 250)
+    expect(p.reason).toBe('ok')
+    expect(p.suggested_wholesale_price_mad).toBe(250)
+    expect(p.price_source).toBe(250)
+  })
+
+  it('prix absent → no_price, mad NULL, canSubmit=true', () => {
+    const p = composePricing('AED', 2.72, null)
+    expect(p.reason).toBe('no_price')
+    expect(p.suggested_wholesale_price_mad).toBeNull()
+    expect(p.canSubmit).toBe(true)
+  })
+
+  it('débordement → mad NULL (jamais un nombre faux)', () => {
+    const p = composePricing('AED', 2.72, 999_999)
+    expect(p.suggested_wholesale_price_mad).toBeNull()
+    expect(p.reason).toBe('no_price')
+  })
+})
