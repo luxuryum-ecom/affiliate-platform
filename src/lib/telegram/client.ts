@@ -56,6 +56,12 @@ export async function telegramDownloadPhoto(fileId: string): Promise<DownloadedP
   const fileRes = await fetch(`${TELEGRAM_API}/file/bot${botToken()}/${filePath}`)
   if (!fileRes.ok) throw new Error('Téléchargement photo échoué')
 
+  // Borne AVANT de bufferiser : rejette sur Content-Length si annoncé.
+  const declared = fileRes.headers.get('content-length')
+  if (declared && Number(declared) > MAX_PHOTO_BYTES) {
+    throw new Error('Photo trop volumineuse')
+  }
+
   const buf = new Uint8Array(await fileRes.arrayBuffer())
   if (buf.byteLength > MAX_PHOTO_BYTES) throw new Error('Photo trop volumineuse')
 

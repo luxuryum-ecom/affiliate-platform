@@ -75,32 +75,89 @@ export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
 
 /**
  * @finance — prix suggéré extrait d'un texte libre.
- * Garanties : nombre fini, strictement positif, plafonné, arrondi à 2 décimales
- * via les centimes (pas d'artefact flottant). Tout cas douteux → null (on
- * n'invente JAMAIS un prix). Ce prix n'est qu'une SUGGESTION en file
- * pending_review ; il ne touche aucune écriture du grand livre.
+ * Garanties : nombre fini, dans [MIN, MAX], arrondi à 2 décimales. Tout cas
+ * AMBIGU (séparateurs incohérents, tiret intercalé) → null : on n'invente ni ne
+ * tronque JAMAIS un prix. Ce prix n'est qu'une SUGGESTION en file pending_review ;
+ * il ne touche aucune écriture du grand livre et la marge plateforme reste fixée
+ * par l'admin avant publication.
+ *
+ * NB : la sortie est un `number` arrondi à 2 décimales, destiné à la colonne
+ * numeric(10,2). Ce N'EST PAS un entier de centimes — ne pas réutiliser tel quel
+ * pour une écriture comptable/ledger (cf. RÈGLE D'OR n°4).
  */
 const MAX_REASONABLE_PRICE_MAD = 1_000_000
+// Plancher anti-absurde (prix de gros marocain). Valeur par défaut, ajustable.
+const MIN_REASONABLE_PRICE_MAD = 1
 
 export function sanitizeExtractedPrice(raw: unknown): number | null {
-  let n: number
+  let n: number | null
   if (typeof raw === 'number') {
     n = raw
   } else if (typeof raw === 'string') {
-    // Virgule décimale → point. On CONSERVE le signe « - » pour que « -5 »
-    // parte bien à parseFloat = -5 et tombe ensuite sur le rejet n <= 0
-    // (sinon strip du signe ferait passer un prix négatif pour positif).
-    const cleaned = raw.replace(/\s/g, '').replace(',', '.').replace(/[^\d.-]/g, '')
-    if (cleaned === '' || cleaned === '.' || cleaned === '-') return null
-    n = parseFloat(cleaned)
+    n = parsePriceString(raw)
   } else {
     return null
   }
-  if (!Number.isFinite(n)) return null
-  if (n <= 0) return null
+  if (n === null || !Number.isFinite(n)) return null
+  if (n < MIN_REASONABLE_PRICE_MAD) return null // inclut négatif et zéro
   if (n > MAX_REASONABLE_PRICE_MAD) return null
-  // Arrondi monétaire via centimes entiers → numeric(10,2) exact.
   return Math.round(n * 100) / 100
+}
+
+/** Retire un séparateur de milliers : groupes de 3 chiffres obligatoires. */
+function stripThousands(s: string, sep: string): string | null {
+  const parts = s.split(sep)
+  if (!/^\d{1,3}$/.test(parts[0])) return null
+  for (let i = 1; i < parts.length; i++) {
+    if (!/^\d{3}$/.test(parts[i])) return null
+  }
+  return parts.join('')
+}
+
+/**
+ * Parse une chaîne libre (« 120 dh », « 1.234,56 », « 120,50 ») en nombre.
+ * Stratégie : retirer le bruit, isoler un éventuel signe en tête (un seul),
+ * désambiguïser séparateur décimal vs milliers. En cas de doute → null.
+ */
+function parsePriceString(raw: string): number | null {
+  let s = raw.replace(/\s/g, '').replace(/[^\d.,-]/g, '')
+  if (s === '') return null
+
+  let sign = 1
+  if (s.startsWith('-')) {
+    sign = -1
+    s = s.slice(1)
+  }
+  if (s.includes('-')) return null // tiret intercalé → ambigu
+  if (s === '') return null
+
+  const hasDot = s.includes('.')
+  const hasComma = s.includes(',')
+  let normalized: string | null
+
+  if (hasDot && hasComma) {
+    // Les deux présents : le DERNIER rencontré est le décimal, l'autre = milliers.
+    const decimalSep = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ','
+    const thousandSep = decimalSep === '.' ? ',' : '.'
+    normalized = s.split(thousandSep).join('').replace(decimalSep, '.')
+  } else if (hasDot || hasComma) {
+    const sep = hasDot ? '.' : ','
+    const parts = s.split(sep)
+    if (parts.length === 2) {
+      // Un seul séparateur : 3 chiffres après ⇒ milliers ; 1-2 ⇒ décimale.
+      normalized = parts[1].length === 3 ? parts[0] + parts[1] : parts[0] + '.' + parts[1]
+    } else {
+      // Plusieurs occurrences ⇒ milliers, groupes de 3 stricts (sinon null).
+      normalized = stripThousands(s, sep)
+    }
+  } else {
+    normalized = s
+  }
+
+  if (normalized === null) return null
+  if (!/^\d+(\.\d+)?$/.test(normalized)) return null
+  const val = parseFloat(normalized)
+  return Number.isFinite(val) ? sign * val : null
 }
 
 /**

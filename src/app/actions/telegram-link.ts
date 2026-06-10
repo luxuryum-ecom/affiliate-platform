@@ -85,13 +85,32 @@ export async function generateTelegramLinkCode(
 
   const { data: existing } = await supabase
     .from('telegram_supplier_links')
-    .select('id, telegram_user_id')
+    .select('id, telegram_user_id, link_code, link_code_expires_at')
     .eq('supplier_id', user.id)
     .maybeSingle()
-  const row = existing as { id: string; telegram_user_id: number | null } | null
+  const row = existing as {
+    id: string
+    telegram_user_id: number | null
+    link_code: string | null
+    link_code_expires_at: string | null
+  } | null
 
   if (row?.telegram_user_id) {
     return { error: null, linked: true, botUsername }
+  }
+
+  // Anti-churn : si un code valide existe déjà, le réutiliser au lieu d'en créer un.
+  if (row?.link_code && row.link_code_expires_at) {
+    const remainingMs = new Date(row.link_code_expires_at).getTime() - Date.now()
+    if (remainingMs > 0) {
+      return {
+        error: null,
+        linked: false,
+        code: row.link_code,
+        expiresInMinutes: Math.ceil(remainingMs / 60000),
+        botUsername,
+      }
+    }
   }
 
   const code = generateCode()

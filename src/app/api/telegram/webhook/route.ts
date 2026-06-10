@@ -27,6 +27,8 @@ export async function POST(req: Request): Promise<Response> {
 
   const provided = req.headers.get('x-telegram-bot-api-secret-token') ?? ''
   if (!safeEqual(provided, secret)) {
+    // Trace pour détecter un bruteforce du secret (sans révéler de détail au client).
+    console.warn('[telegram webhook] secret invalide rejeté (401)')
     return NextResponse.json({ ok: false }, { status: 401 })
   }
 
