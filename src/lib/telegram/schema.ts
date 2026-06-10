@@ -139,7 +139,13 @@ function parsePriceString(raw: string): number | null {
     // Les deux présents : le DERNIER rencontré est le décimal, l'autre = milliers.
     const decimalSep = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ','
     const thousandSep = decimalSep === '.' ? ',' : '.'
-    normalized = s.split(thousandSep).join('').replace(decimalSep, '.')
+    const lastDec = s.lastIndexOf(decimalSep)
+    const intPart = s.slice(0, lastDec)
+    const fracPart = s.slice(lastDec + 1)
+    // La partie entière ne doit porter QUE des groupes de milliers valides ;
+    // la décimale, que des chiffres. Tout reste ambigu → null (jamais tronquer).
+    const intGroups = stripThousands(intPart, thousandSep)
+    normalized = intGroups !== null && /^\d+$/.test(fracPart) ? `${intGroups}.${fracPart}` : null
   } else if (hasDot || hasComma) {
     const sep = hasDot ? '.' : ','
     const parts = s.split(sep)

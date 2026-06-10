@@ -60,6 +60,8 @@ describe('sanitizeExtractedPrice — parsing chaîne', () => {
     expect(sanitizeExtractedPrice('12.34.56')).toBeNull() // groupes ≠ 3
     expect(sanitizeExtractedPrice('12,5,5')).toBeNull()
     expect(sanitizeExtractedPrice('100-50')).toBeNull() // tiret intercalé
+    expect(sanitizeExtractedPrice('1.2345,67')).toBeNull() // double-sép, groupe milliers ≠ 3
+    expect(sanitizeExtractedPrice('1,23.456')).toBeNull() // double-sép incohérent
   })
 
   it('un montant au-dessus du plafond après parsing → null', () => {
