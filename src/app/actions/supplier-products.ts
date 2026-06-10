@@ -78,8 +78,11 @@ export async function submitSupplierProduct(
   const availability_type = (formData.get('availability_type') as string) || 'local_stock'
   const target_buyer_type = (formData.get('target_buyer_type') as string) || 'wholesaler'
   // Prix saisi = montant dans la DEVISE du fournisseur (pas MAD). Converti serveur.
+  // @finance : arrondi 2 décimales À LA SOURCE (comme CSV/Telegram) — sinon un prix
+  // MAD à >2 déc. violerait l'invariant DB sp_mad_identity (mad === price_source)
+  // et l'insert échouerait silencieusement (perte de produit).
   const priceSourceRaw = parseFloat(formData.get('price_source') as string)
-  const priceSource = isNaN(priceSourceRaw) ? null : priceSourceRaw
+  const priceSource = Number.isFinite(priceSourceRaw) ? Math.round(priceSourceRaw * 100) / 100 : null
   const supplier_private_notes = (formData.get('supplier_private_notes') as string)?.trim() || null
   const stockRaw = parseInt(formData.get('stock_quantity') as string, 10)
   const leadRaw = parseInt(formData.get('lead_time_days') as string, 10)
