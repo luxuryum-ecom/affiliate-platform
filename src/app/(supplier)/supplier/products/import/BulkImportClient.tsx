@@ -19,9 +19,10 @@ type PublishState = { error: string | null; success: boolean }
 const initialValidate: ValidateState = { error: null, success: false }
 const initialPublish: PublishState = { error: null, success: false }
 
+// Colonne « price » = prix dans VOTRE devise (déterminée par votre pays), converti en MAD.
 const CSV_TEMPLATE = [
-  'product_name,category,description,moq,unit,supplier_unit_price_usd,stock_quantity,export_country,lead_time,images_urls,moq_tiers,color,size,model',
-  'T-shirt Homme Coton,Textile Homme,T-shirt 100% coton,100,pcs,2.50,5000,Turquie,21,https://img.example.com/1.jpg,100:2.5|500:2.2|1000:1.9,Blanc|Noir,S|M|L,',
+  'product_name,category,description,moq,unit,price,stock_quantity,export_country,lead_time,images_urls,moq_tiers,color,size,model',
+  'T-shirt Homme Coton,Textile,T-shirt 100% coton,100,pcs,25,5000,Turquie,21,https://cdn.exemple.com/1.jpg,100:2.5|500:2.2|1000:1.9,Blanc|Noir,S|M|L,',
 ].join('\n')
 
 export default function BulkImportClient() {
@@ -64,7 +65,7 @@ export default function BulkImportClient() {
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <p className="text-xs font-semibold text-blue-800 mb-1">{t('csvFormatTitle')}</p>
         <p className="text-xs text-blue-600 mb-3">
-          {t('csvFormatBody')} <code className="bg-blue-100 px-1 rounded">product_name</code>, <code className="bg-blue-100 px-1 rounded">category</code>, <code className="bg-blue-100 px-1 rounded">moq</code>, <code className="bg-blue-100 px-1 rounded">unit</code>, <code className="bg-blue-100 px-1 rounded">supplier_unit_price_usd</code>, <code className="bg-blue-100 px-1 rounded">export_country</code>
+          {t('csvFormatBody')} <code className="bg-blue-100 px-1 rounded">product_name</code>, <code className="bg-blue-100 px-1 rounded">category</code>, <code className="bg-blue-100 px-1 rounded">moq</code>, <code className="bg-blue-100 px-1 rounded">unit</code>, <code className="bg-blue-100 px-1 rounded">price</code> (votre devise), <code className="bg-blue-100 px-1 rounded">export_country</code>
         </p>
         <p className="text-xs text-blue-500 mb-3">
           {t('csvVariantsNote')} <code className="bg-blue-100 px-1 rounded">100:2.5,500:2.2,1000:1.9</code>
