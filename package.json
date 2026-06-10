@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "check": "tsc --noEmit && next lint",
     "safe-check": "bash scripts/safe-check.sh",
@@ -16,15 +17,18 @@
     "reset-cache": "rm -rf .next"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.102.0",
     "@supabase/ssr": "^0.6.0",
     "@supabase/supabase-js": "^2.49.0",
     "@types/papaparse": "^5.5.2",
     "clsx": "^2.1.0",
     "next": "^15.3.0",
+    "next-intl": "^4.13.0",
     "papaparse": "^5.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
@@ -36,6 +40,7 @@
     "postcss": "^8.5.0",
     "prettier": "^3.5.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.9"
   }
 }

@@ -6,28 +6,41 @@ import { submitSampleRequest } from '@/app/actions/sample-requests'
 
 const initial = { error: null, success: false }
 
-const REQUEST_TYPES = [
-  { value: 'photos',          label: 'Photos produit' },
-  { value: 'video',           label: 'Vidéo produit' },
-  { value: 'technical_sheet', label: 'Fiche technique' },
-  { value: 'sample',          label: 'Échantillon physique' },
-]
+interface TSample {
+  typeLabel: string
+  typePlaceholder: string
+  typePhotos: string
+  typeVideo: string
+  typeTechnicalSheet: string
+  typeSample: string
+  messageLabel: string
+  messagePlaceholder: string
+  submit: string
+  submitting: string
+  success: string
+  successSubtitle: string
+  trackLink: string
+}
 
-export default function SampleRequestClient({ supplierProductId }: { supplierProductId: string }) {
+export default function SampleRequestClient({
+  supplierProductId,
+  tSample,
+}: {
+  supplierProductId: string
+  tSample: TSample
+}) {
   const [state, action, isPending] = useActionState(submitSampleRequest, initial)
 
   if (state.success) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-        <p className="text-sm font-semibold text-green-800">Demande envoyée</p>
-        <p className="text-xs text-green-600 mt-1">
-          Notre équipe traitera votre demande et vous contactera sous 24–48h.
-        </p>
+        <p className="text-sm font-semibold text-green-800">{tSample.success}</p>
+        <p className="text-xs text-green-600 mt-1">{tSample.successSubtitle}</p>
         <Link
           href="/wholesale/samples"
           className="inline-block mt-3 text-xs text-green-700 underline underline-offset-2 hover:no-underline"
         >
-          Suivre ma demande →
+          {tSample.trackLink}
         </Link>
       </div>
     )
@@ -42,25 +55,26 @@ export default function SampleRequestClient({ supplierProductId }: { supplierPro
       )}
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1.5">Type de demande</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">{tSample.typeLabel}</label>
         <select
           name="request_type"
           required
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
         >
-          <option value="">Sélectionner...</option>
-          {REQUEST_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
-          ))}
+          <option value="">{tSample.typePlaceholder}</option>
+          <option value="photos">{tSample.typePhotos}</option>
+          <option value="video">{tSample.typeVideo}</option>
+          <option value="technical_sheet">{tSample.typeTechnicalSheet}</option>
+          <option value="sample">{tSample.typeSample}</option>
         </select>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1.5">Message (optionnel)</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">{tSample.messageLabel}</label>
         <textarea
           name="message"
           rows={3}
-          placeholder="Précisions sur votre demande (coloris, dimensions, format...)..."
+          placeholder={tSample.messagePlaceholder}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
         />
       </div>
@@ -70,7 +84,7 @@ export default function SampleRequestClient({ supplierProductId }: { supplierPro
         disabled={isPending}
         className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
       >
-        {isPending ? 'Envoi en cours...' : 'Envoyer la demande'}
+        {isPending ? tSample.submitting : tSample.submit}
       </button>
     </form>
   )

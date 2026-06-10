@@ -1,0 +1,126 @@
+// ─── Tarification fournisseur : devise du pays → conversion MAD ──────────────
+// Réutilise l'infra FX (getRateToMad / exchange_rates, migrations 050-051).
+// RÈGLE ABSOLUE : jamais de MAD fabriqué. Pas de pays → soumission BLOQUÉE.
+// Devise sans taux / prix absent / conversion absurde → suggested_*_mad = NULL.
+
+import type { createClient } from '@/lib/supabase/server'
+import { getRateToMad } from '@/lib/fx'
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>
+
+// Garde-fou anti-débordement : le pivot doit tenir dans numeric(10,2) et rester
+// plausible. Cohérent avec le plafond prix de l'extraction Telegram.
+const MAX_PRICE_MAD = 1_000_000
+
+export type PricingReason = 'ok' | 'no_country' | 'no_rate' | 'no_price'
+
+export type SupplierPricing = {
+  source_currency: string | null
+  price_source: number | null
+  fx_rate_source_to_mad: number | null
+  suggested_wholesale_price_mad: number | null
+  reason: PricingReason
+  /** false = pays fournisseur manquant → la soumission DOIT être bloquée. */
+  canSubmit: boolean
+}
+
+/**
+ * Conversion PURE devise source → MAD. Jamais de MAD fabriqué : toute entrée
+ * douteuse (null, ≤ 0, non finie, débordement) → null. Arrondi 2 décimales via
+ * centiers entiers. Le taux NULL ne devient JAMAIS 1.
+ *
+ * ⚠️ @finance : Math.round a un biais au demi-centime (1.005 → 1.00). ACCEPTABLE
+ * ici car c'est une SUGGESTION en pending_review, hors ledger, revue par l'admin.
+ * NE PAS réutiliser pour le moteur commissions/ledger (y arrondir côté numeric
+ * Postgres ou avec epsilon).
+ */
+export function convertToMad(priceSource: number | null, rate: number | null): number | null {
+  if (priceSource == null || rate == null) return null
+  if (!Number.isFinite(priceSource) || !Number.isFinite(rate)) return null
+  if (priceSource <= 0 || rate <= 0) return null
+  const mad = Math.round(priceSource * rate * 100) / 100
+  if (!Number.isFinite(mad) || mad <= 0) return null
+  if (mad > MAX_PRICE_MAD) return null // débordement / absurde → null + flag, jamais tronquer
+  return mad
+}
+
+/**
+ * Compose les champs de prix (PUR, sans DB) à partir de la devise + taux résolus.
+ * - currency null      → no_country, canSubmit=false (BLOQUER la soumission).
+ * - currency, rate null→ no_rate, produit créé mais mad NULL + flag (admin pose le taux).
+ * - sinon              → conversion ; mad null si prix absent ou hors borne.
+ */
+export function composePricing(
+  currency: string | null,
+  rate: number | null,
+  priceSource: number | null,
+): SupplierPricing {
+  if (!currency) {
+    return {
+      source_currency: null,
+      price_source: priceSource,
+      fx_rate_source_to_mad: null,
+      suggested_wholesale_price_mad: null,
+      reason: 'no_country',
+      canSubmit: false,
+    }
+  }
+  if (rate == null) {
+    return {
+      source_currency: currency,
+      price_source: priceSource,
+      fx_rate_source_to_mad: null,
+      suggested_wholesale_price_mad: null,
+      reason: 'no_rate',
+      canSubmit: true,
+    }
+  }
+  const mad = convertToMad(priceSource, rate)
+  return {
+    source_currency: currency,
+    price_source: priceSource,
+    fx_rate_source_to_mad: rate,
+    suggested_wholesale_price_mad: mad,
+    reason: mad == null ? 'no_price' : 'ok',
+    canSubmit: true,
+  }
+}
+
+/**
+ * Devise de saisie du fournisseur = operational_currency de son PAYS de compte
+ * (profiles.country_code → countries). NULL si pas de pays (jamais de fallback MAD).
+ */
+export async function resolveSupplierCurrency(
+  supabase: ServerClient,
+  supplierId: string,
+): Promise<string | null> {
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('country_code')
+    .eq('id', supplierId)
+    .maybeSingle()
+  const code = (prof as { country_code: string | null } | null)?.country_code
+  if (!code) return null
+
+  const { data: country } = await supabase
+    .from('countries')
+    .select('operational_currency')
+    .eq('code', code)
+    .maybeSingle()
+  return (country as { operational_currency: string } | null)?.operational_currency ?? null
+}
+
+/**
+ * Orchestration : résout la devise du fournisseur, fige le taux admin (snapshot),
+ * convertit. Réutilise getRateToMad (fx.ts) — MAD → 1, devise sans taux → null.
+ */
+export async function buildSupplierPricing(
+  supabase: ServerClient,
+  supplierId: string,
+  priceSource: number | null,
+): Promise<SupplierPricing> {
+  const currency = await resolveSupplierCurrency(supabase, supplierId)
+  if (!currency) return composePricing(null, null, priceSource)
+  const rate = await getRateToMad(supabase, currency)
+  return composePricing(currency, rate, priceSource)
+}

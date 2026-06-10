@@ -1,29 +1,13 @@
 import Link from 'next/link'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { QuoteRequest, QuoteRequestStatus, SupplierQuoteRequestStatus, Profile, Product } from '@/types/database'
 
-export const metadata = { title: 'Mes demandes de devis — Espace Grossiste' }
-
-const CATALOG_STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> = {
-  new:                 { label: 'Nouveau',              cls: 'bg-blue-100 text-blue-700' },
-  studying:            { label: 'En étude',             cls: 'bg-amber-100 text-amber-700' },
-  quoted:              { label: 'Devisé',               cls: 'bg-purple-100 text-purple-700' },
-  quote_prepared:      { label: 'Devis prêt',           cls: 'bg-indigo-100 text-indigo-700' },
-  accepted_by_client:  { label: 'Accepté',              cls: 'bg-green-100 text-green-700' },
-  rejected_by_client:  { label: 'Refusé',               cls: 'bg-red-100 text-red-600' },
-  negotiating:         { label: 'En négociation',       cls: 'bg-orange-100 text-orange-700' },
-  approved:            { label: 'Approuvé',             cls: 'bg-green-100 text-green-700' },
-  rejected:            { label: 'Refusé (admin)',       cls: 'bg-red-100 text-red-600' },
-  converted_to_order:  { label: 'Converti en commande', cls: 'bg-gray-100 text-gray-500' },
-}
-
-const MARKETPLACE_STATUS_BADGE: Record<SupplierQuoteRequestStatus, { label: string; cls: string }> = {
-  new:      { label: 'Nouveau',     cls: 'bg-blue-100 text-blue-700' },
-  studying: { label: 'En étude',    cls: 'bg-amber-100 text-amber-700' },
-  quoted:   { label: 'Devis émis',  cls: 'bg-purple-100 text-purple-700' },
-  approved: { label: 'Approuvé',    cls: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Refusé',      cls: 'bg-red-100 text-red-600' },
+export async function generateMetadata() {
+  const t = await getTranslations('wholesale.quoteRequests')
+  return { title: t('metaTitle') }
 }
 
 type CatalogRow = QuoteRequest & { product: Pick<Product, 'id' | 'name'> }
@@ -44,6 +28,12 @@ type UnifiedRow =
   | { kind: 'marketplace'; data: MarketplaceRow }
 
 export default async function WholesaleQuoteRequestsPage() {
+  const [t, tc, locale] = await Promise.all([
+    getTranslations('wholesale.quoteRequests'),
+    getTranslations('wholesale.common'),
+    getLocale(),
+  ])
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -74,22 +64,47 @@ export default async function WholesaleQuoteRequestsPage() {
     ...marketplaceRows.map((d): UnifiedRow => ({ kind: 'marketplace', data: d })),
   ].sort((a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime())
 
+  // Status badge maps using translations
+  const CATALOG_STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> = {
+    new:                { label: t('statusNew'),              cls: 'bg-blue-100 text-blue-700' },
+    studying:           { label: t('statusStudying'),         cls: 'bg-amber-100 text-amber-700' },
+    quoted:             { label: t('statusQuoted'),           cls: 'bg-purple-100 text-purple-700' },
+    quote_prepared:     { label: t('statusQuotePrepared'),    cls: 'bg-indigo-100 text-indigo-700' },
+    accepted_by_client: { label: t('statusAcceptedByClient'), cls: 'bg-green-100 text-green-700' },
+    rejected_by_client: { label: t('statusRejectedByClient'), cls: 'bg-red-100 text-red-600' },
+    negotiating:        { label: t('statusNegotiating'),      cls: 'bg-orange-100 text-orange-700' },
+    approved:           { label: t('statusApproved'),         cls: 'bg-green-100 text-green-700' },
+    rejected:           { label: t('statusRejected'),         cls: 'bg-red-100 text-red-600' },
+    converted_to_order: { label: t('statusConvertedToOrder'), cls: 'bg-gray-100 text-gray-500' },
+  }
+
+  const MARKETPLACE_STATUS_BADGE: Record<SupplierQuoteRequestStatus, { label: string; cls: string }> = {
+    new:      { label: t('statusNew'),      cls: 'bg-blue-100 text-blue-700' },
+    studying: { label: t('statusStudying'), cls: 'bg-amber-100 text-amber-700' },
+    quoted:   { label: t('statusQuoted'),   cls: 'bg-purple-100 text-purple-700' },
+    approved: { label: t('statusApproved'), cls: 'bg-green-100 text-green-700' },
+    rejected: { label: t('statusRejected'), cls: 'bg-red-100 text-red-600' },
+  }
+
+  const isRtl = locale === 'ar'
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" dir={isRtl ? 'rtl' : 'ltr'}>
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/wholesale/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Dashboard
+              {t('breadcrumbParent')}
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Mes demandes de devis</span>
+            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
+            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher variant="light" />
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                Déconnexion
+                {t('signOut')}
               </button>
             </form>
           </div>
@@ -98,7 +113,7 @@ export default async function WholesaleQuoteRequestsPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-sm font-semibold text-gray-900">Mes demandes de devis</h1>
+          <h1 className="text-sm font-semibold text-gray-900">{t('pageTitle')}</h1>
           <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
             {unified.length}
           </span>
@@ -107,20 +122,20 @@ export default async function WholesaleQuoteRequestsPage() {
         {unified.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <p className="text-sm text-gray-400 mb-4">
-              Aucune demande de devis pour le moment.
+              {t('emptyState')}
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               <Link
                 href="/wholesale/products"
                 className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
-                Voir le catalogue →
+                {t('emptyCatalogCta')}
               </Link>
               <Link
                 href="/wholesale/marketplace"
                 className="text-xs px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Voir la marketplace →
+                {t('emptyMarketplaceCta')}
               </Link>
             </div>
           </div>
@@ -135,7 +150,7 @@ export default async function WholesaleQuoteRequestsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                         <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">
-                          Catalogue
+                          {t('badgeCatalog')}
                         </span>
                         <span className="text-xs font-mono text-gray-400">
                           #{req.id.slice(0, 8).toUpperCase()}
@@ -146,20 +161,21 @@ export default async function WholesaleQuoteRequestsPage() {
                       </div>
                       <p className="text-sm font-medium text-gray-900">{req.product?.name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {req.quantity_requested} unité{req.quantity_requested > 1 ? 's' : ''} · {req.destination_country}
+                        {t('units', { count: req.quantity_requested })} · {req.destination_country}
                         {req.destination_city ? `, ${req.destination_city}` : ''}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {new Date(req.created_at).toLocaleDateString('fr-MA', {
-                          day: '2-digit', month: 'short', year: 'numeric',
-                        })}
+                        {new Date(req.created_at).toLocaleDateString(
+                          locale === 'ar' ? 'ar-MA-u-nu-latn' : locale === 'en' ? 'en-GB' : 'fr-MA',
+                          { day: '2-digit', month: 'short', year: 'numeric' },
+                        )}
                       </p>
                     </div>
                     <Link
                       href={`/wholesale/quote-requests/${req.id}`}
                       className="shrink-0 text-xs text-blue-600 hover:underline"
                     >
-                      Voir →
+                      {t('viewLink')}
                     </Link>
                   </div>
                 )
@@ -168,13 +184,13 @@ export default async function WholesaleQuoteRequestsPage() {
               // marketplace row
               const req = row.data
               const badge = MARKETPLACE_STATUS_BADGE[req.status] ?? MARKETPLACE_STATUS_BADGE.new
-              const productName = req.supplier_product?.product_name ?? 'Produit inconnu'
+              const productName = req.supplier_product?.product_name ?? t('unknownProduct')
               return (
                 <div key={`mkt-${req.id}`} className="flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                       <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
-                        Marketplace
+                        {t('badgeMarketplace')}
                       </span>
                       <span className="text-xs font-mono text-gray-400">
                         #{req.id.slice(0, 8).toUpperCase()}
@@ -185,20 +201,21 @@ export default async function WholesaleQuoteRequestsPage() {
                     </div>
                     <p className="text-sm font-medium text-gray-900">{productName}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {req.quantity_requested} unité{req.quantity_requested > 1 ? 's' : ''} · {req.destination_country}
+                      {t('units', { count: req.quantity_requested })} · {req.destination_country}
                       {req.destination_city ? `, ${req.destination_city}` : ''}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(req.created_at).toLocaleDateString('fr-MA', {
-                        day: '2-digit', month: 'short', year: 'numeric',
-                      })}
+                      {new Date(req.created_at).toLocaleDateString(
+                        locale === 'ar' ? 'ar-MA-u-nu-latn' : locale === 'en' ? 'en-GB' : 'fr-MA',
+                        { day: '2-digit', month: 'short', year: 'numeric' },
+                      )}
                     </p>
                   </div>
                   <Link
                     href={`/wholesale/marketplace/${req.supplier_product_id}`}
                     className="shrink-0 text-xs text-blue-600 hover:underline"
                   >
-                    Produit →
+                    {t('productLink')}
                   </Link>
                 </div>
               )

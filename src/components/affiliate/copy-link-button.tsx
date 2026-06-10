@@ -4,12 +4,13 @@ import { useState } from 'react'
 
 interface CopyLinkButtonProps {
   url: string
+  strings: { copy: string; copied: string }
 }
 
 /**
  * Copies the affiliate referral URL to clipboard and shows brief feedback.
  */
-export function CopyLinkButton({ url }: CopyLinkButtonProps) {
+export function CopyLinkButton({ url, strings }: CopyLinkButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -40,7 +41,7 @@ export function CopyLinkButton({ url }: CopyLinkButtonProps) {
           : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
       }`}
     >
-      {copied ? '✓ Lien copié !' : 'Copier le lien affilié'}
+      {copied ? `✓ ${strings.copied}` : strings.copy}
     </button>
   )
 }

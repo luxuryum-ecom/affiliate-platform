@@ -11,19 +11,46 @@ import {
 
 const initial: SupplierProductState = { error: null }
 
+interface TQuote {
+  qtyLabel: string
+  qtyMin: string
+  activityLabel: string
+  activityPlaceholder: string
+  volumeLabel: string
+  volumePlaceholder: string
+  volumeHint: string
+  tier1: string
+  tier2: string
+  tier3: string
+  tier4: string
+  countryLabel: string
+  cityLabel: string
+  cityPlaceholder: string
+  whatsappLabel: string
+  whatsappPlaceholder: string
+  notesLabel: string
+  notesPlaceholder: string
+  cancel: string
+  submit: string
+  submitting: string
+  cta: string
+  success: string
+}
+
 interface Props {
   supplierProductId: string
   minQuantity: number
+  tQuote: TQuote
 }
 
-export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) {
+export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }: Props) {
   const [state, action, isPending] = useActionState(requestSupplierProductQuote, initial)
   const [open, setOpen] = useState(false)
 
   if (state?.success) {
     return (
       <div className="text-sm text-green-700 bg-green-50 border border-green-100 px-4 py-3 rounded-lg">
-        Demande envoyée. Notre équipe vous contactera via WhatsApp.
+        {tQuote.success}
       </div>
     )
   }
@@ -34,7 +61,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
         onClick={() => setOpen(true)}
         className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
       >
-        Demander un devis
+        {tQuote.cta}
       </button>
     )
   }
@@ -45,7 +72,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">
-          Quantité souhaitée
+          {tQuote.qtyLabel}
         </label>
         <input
           name="quantity_requested"
@@ -56,18 +83,18 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
           disabled={isPending}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
         />
-        <p className="text-xs text-gray-400 mt-0.5">Min. {minQuantity} u.</p>
+        <p className="text-xs text-gray-400 mt-0.5">{tQuote.qtyMin}</p>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Type d&apos;activité</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.activityLabel}</label>
         <select
           name="buyer_purchase_profile"
           required
           disabled={isPending}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
         >
-          <option value="">Sélectionner...</option>
+          <option value="">{tQuote.activityPlaceholder}</option>
           {BUYER_PURCHASE_PROFILES.map((value) => (
             <option key={value} value={value}>
               {PURCHASE_PROFILE_LABELS[value]}
@@ -77,34 +104,32 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Volume estimé</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.volumeLabel}</label>
         <select
           name="buyer_volume_tier"
           required
           disabled={isPending}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
         >
-          <option value="">Sélectionner...</option>
+          <option value="">{tQuote.volumePlaceholder}</option>
           {BUYER_VOLUME_TIERS.map((value) => (
             <option key={value} value={value}>
               {VOLUME_TIER_LABELS[value]}
             </option>
           ))}
         </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Plus le volume est élevé, plus les conditions tarifaires peuvent être avantageuses.
-        </p>
+        <p className="text-xs text-gray-500 mt-1">{tQuote.volumeHint}</p>
       </div>
 
       <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800 space-y-0.5">
-        <p>20 pcs → Prix standard</p>
-        <p>100 pcs → Remise grossiste</p>
-        <p>500 pcs → Prix usine privilégié</p>
-        <p>1000+ pcs → Négociation directe plateforme</p>
+        <p>{tQuote.tier1}</p>
+        <p>{tQuote.tier2}</p>
+        <p>{tQuote.tier3}</p>
+        <p>{tQuote.tier4}</p>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Pays de destination</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.countryLabel}</label>
         <input
           name="destination_country"
           type="text"
@@ -116,19 +141,19 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Ville (optionnel)</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.cityLabel}</label>
         <input
           name="destination_city"
           type="text"
           disabled={isPending}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
-          placeholder="ex: Casablanca"
+          placeholder={tQuote.cityPlaceholder}
         />
       </div>
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">
-          WhatsApp <span className="text-red-500">*</span>
+          {tQuote.whatsappLabel} <span className="text-red-500">*</span>
         </label>
         <input
           name="whatsapp_number"
@@ -136,18 +161,18 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
           required
           disabled={isPending}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
-          placeholder="+212 6XXXXXXXX"
+          placeholder={tQuote.whatsappPlaceholder}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optionnel)</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.notesLabel}</label>
         <textarea
           name="buyer_notes"
           rows={2}
           disabled={isPending}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50 resize-none"
-          placeholder="Couleurs, tailles, variantes..."
+          placeholder={tQuote.notesPlaceholder}
         />
       </div>
 
@@ -164,14 +189,14 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity }: Props) 
           disabled={isPending}
           className="flex-1 py-2 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
         >
-          Annuler
+          {tQuote.cancel}
         </button>
         <button
           type="submit"
           disabled={isPending}
           className="flex-1 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
         >
-          {isPending ? 'Envoi…' : 'Envoyer'}
+          {isPending ? tQuote.submitting : tQuote.submit}
         </button>
       </div>
     </form>

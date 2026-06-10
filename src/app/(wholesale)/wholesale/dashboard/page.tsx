@@ -1,19 +1,24 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { Profile, WholesaleOrder } from '@/types/database'
 
 type QuoteCountRow = { status: string }
 type SupplierQuoteCountRow = { status: string }
 
-export const metadata = {
-  title: 'Tableau de bord — Espace Grossiste',
+export async function generateMetadata() {
+  const t = await getTranslations('wholesaleDashboard')
+  return { title: t('metaTitle') }
 }
 
 export default async function WholesaleDashboardPage() {
   const supabase = await createClient()
+  const t = await getTranslations('wholesaleDashboard')
+  const tc = await getTranslations('common')
 
   const {
     data: { user },
@@ -78,16 +83,16 @@ export default async function WholesaleDashboardPage() {
                         + sqRows.filter((q) => q.status === 'rejected').length
 
   const stats = [
-    { label: 'Commandes passées', value: String(totalOrders ?? 0) },
-    { label: 'En cours', value: String(pendingOrders) },
-    { label: 'Articles dans le panier', value: String(cartItemCount ?? 0) },
-    { label: 'Total dépensé', value: formatMAD(totalSpend) },
+    { label: t('statTotalOrders'), value: String(totalOrders ?? 0) },
+    { label: t('statPending'), value: String(pendingOrders) },
+    { label: t('statCartItems'), value: String(cartItemCount ?? 0) },
+    { label: t('statTotalSpent'), value: formatMAD(totalSpend) },
   ]
 
   const quoteStats = [
-    { label: 'Devis prêts', value: String(preparedQuotes), cls: preparedQuotes > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200', textCls: preparedQuotes > 0 ? 'text-indigo-700' : 'text-gray-900' },
-    { label: 'Devis acceptés', value: String(acceptedQuotes), cls: 'bg-white border-gray-200', textCls: 'text-green-700' },
-    { label: 'Devis refusés', value: String(rejectedQuotes), cls: 'bg-white border-gray-200', textCls: 'text-red-600' },
+    { label: t('quotePrepared'), value: String(preparedQuotes), cls: preparedQuotes > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200', textCls: preparedQuotes > 0 ? 'text-indigo-700' : 'text-gray-900' },
+    { label: t('quoteAccepted'), value: String(acceptedQuotes), cls: 'bg-white border-gray-200', textCls: 'text-green-700' },
+    { label: t('quoteRejected'), value: String(rejectedQuotes), cls: 'bg-white border-gray-200', textCls: 'text-red-600' },
   ]
 
   return (
@@ -98,16 +103,17 @@ export default async function WholesaleDashboardPage() {
           <div className="flex items-center gap-3">
             <MozounaLogo size="md" />
             <span className="hidden sm:block text-gray-300">|</span>
-            <span className="hidden sm:block text-sm font-medium text-gray-600">Espace Grossiste</span>
+            <span className="hidden sm:block text-sm font-medium text-gray-600">{t('spaceLabel')}</span>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher variant="light" />
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button
                 type="submit"
                 className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
               >
-                Déconnexion
+                {tc('signOut')}
               </button>
             </form>
           </div>
@@ -118,10 +124,10 @@ export default async function WholesaleDashboardPage() {
         {/* Welcome */}
         <div className="mb-6">
           <h1 className="text-lg font-semibold text-gray-900">
-            Bonjour, {profile?.full_name}
+            {t('greeting', { name: profile?.full_name ?? '' })}
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Commandez en gros et suivez vos livraisons.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -142,33 +148,33 @@ export default async function WholesaleDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Catalogue produits</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{t('cardCatalogTitle')}</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Stock interne Mozouna — commande directe, livraison rapide. Paliers de prix grossiste.
+                {t('cardCatalogDesc')}
               </p>
             </div>
             <Link
               href="/wholesale/products"
               className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
             >
-              Voir le catalogue
+              {t('cardCatalogCta')}
             </Link>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Mon panier</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{t('cardCartTitle')}</h2>
               <p className="text-xs text-gray-500 mt-0.5">
                 {cartItemCount
-                  ? `${cartItemCount} article${(cartItemCount as number) > 1 ? 's' : ''} en attente.`
-                  : 'Votre panier est vide.'}
+                  ? t('cartItems', { count: cartItemCount })
+                  : t('cartEmpty')}
               </p>
             </div>
             <Link
               href="/wholesale/cart"
               className="text-xs px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
-              Voir le panier
+              {t('cardCartCta')}
             </Link>
           </div>
         </div>
@@ -176,34 +182,34 @@ export default async function WholesaleDashboardPage() {
         {/* Orders CTA */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Mes commandes</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{t('cardOrdersTitle')}</h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {pendingOrders > 0
-                ? `${pendingOrders} commande${pendingOrders > 1 ? 's' : ''} en cours.`
-                : 'Suivez l\'état de vos commandes grossiste.'}
+                ? t('ordersPending', { count: pendingOrders })
+                : t('ordersDesc')}
             </p>
           </div>
           <Link
             href="/wholesale/orders"
             className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
           >
-            Voir mes commandes →
+            {t('cardOrdersCta')}
           </Link>
         </div>
 
         {/* Supplier marketplace */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Marketplace fournisseurs</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{t('cardMarketplaceTitle')}</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Fournisseurs vérifiés — stock local (commande directe) ou import sur mesure (devis).
+              {t('cardMarketplaceDesc')}
             </p>
           </div>
           <Link
             href="/wholesale/marketplace"
             className="text-xs px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
           >
-            Explorer →
+            {t('cardMarketplaceCta')}
           </Link>
         </div>
 
@@ -211,16 +217,16 @@ export default async function WholesaleDashboardPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Demandes de devis</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{t('cardQuotesTitle')}</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Consultez vos demandes de devis pour les produits import.
+                {t('cardQuotesDesc')}
               </p>
             </div>
             <Link
               href="/wholesale/quote-requests"
               className="text-xs px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors whitespace-nowrap"
             >
-              Mes devis →
+              {t('cardQuotesCta')}
             </Link>
           </div>
           {/* Quote decision counters */}
@@ -238,7 +244,7 @@ export default async function WholesaleDashboardPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-gray-900">Demandes d&apos;échantillons</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{t('cardSamplesTitle')}</h2>
               {(pendingSampleCount ?? 0) > 0 && (
                 <span className="text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
                   {pendingSampleCount}
@@ -247,15 +253,15 @@ export default async function WholesaleDashboardPage() {
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
               {(pendingSampleCount ?? 0) > 0
-                ? `${pendingSampleCount} demande${(pendingSampleCount as number) > 1 ? 's' : ''} en attente de traitement.`
-                : 'Demandez des photos, vidéos ou échantillons physiques depuis la marketplace.'}
+                ? t('samplesPending', { count: pendingSampleCount ?? 0 })
+                : t('samplesDesc')}
             </p>
           </div>
           <Link
             href="/wholesale/samples"
             className="text-xs px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors whitespace-nowrap"
           >
-            Mes demandes →
+            {t('cardSamplesCta')}
           </Link>
         </div>
 
@@ -263,34 +269,34 @@ export default async function WholesaleDashboardPage() {
         <div className="bg-white rounded-xl border border-indigo-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-sm font-semibold text-gray-900">Sourcing intelligent</h2>
-              <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-medium">Nouveau</span>
+              <h2 className="text-sm font-semibold text-gray-900">{t('cardSourcingTitle')}</h2>
+              <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-medium">{t('sourcingBadge')}</span>
             </div>
             <p className="text-xs text-gray-500">
-              Décrivez votre besoin — notre équipe identifie les meilleurs fournisseurs et vous prépare un devis confidentiel.
+              {t('cardSourcingDesc')}
             </p>
           </div>
           <Link
             href="/wholesale/sourcing"
             className="text-xs px-4 py-2 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors whitespace-nowrap"
           >
-            Faire une demande →
+            {t('cardSourcingCta')}
           </Link>
         </div>
 
         {/* Account / billing */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Mon compte &amp; facturation</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{t('cardAccountTitle')}</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Gérez vos informations de facturation (ICE, RC, adresse).
+              {t('cardAccountDesc')}
             </p>
           </div>
           <Link
             href="/wholesale/account"
             className="text-xs px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
           >
-            Modifier →
+            {t('cardAccountCta')}
           </Link>
         </div>
       </main>

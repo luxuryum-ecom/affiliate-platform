@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
@@ -10,6 +11,7 @@ import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getActiveTariff } from '@/app/actions/tariffs'
 import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
 import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { Product, ImportTariff } from '@/types/database'
 
 interface Params {
@@ -19,12 +21,13 @@ interface Params {
 export async function generateMetadata({ params }: Params) {
   const { id } = await params
   const supabase = await createClient()
+  const t = await getTranslations('wholesale.productDetail')
   const { data } = await supabase
     .from('products')
     .select('name')
     .eq('id', id)
     .single() as { data: { name: string } | null; error: unknown }
-  return { title: data ? `${data.name} — Grossiste` : 'Produit' }
+  return { title: data ? t('metaTitle', { name: data.name }) : t('metaFallback') }
 }
 
 export default async function WholesaleProductDetailPage({ params }: Params) {
@@ -46,6 +49,10 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const product = productResult.data as Product | null
 
   if (!product) notFound()
+
+  const t = await getTranslations('wholesale.productDetail')
+  const tc = await getTranslations('wholesale.common')
+  const locale = await getLocale()
 
   // Fetch global tariff when product uses global tariff mode
   let globalTariff: ImportTariff | null = null
@@ -72,9 +79,9 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               href="/wholesale/products"
               className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
             >
-              ← Catalogue
+              {t('backToCatalog')}
             </Link>
-            <span className="text-gray-300">/</span>
+            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
             <span className="font-semibold text-gray-900 text-sm truncate max-w-[160px]">
               {product.name}
             </span>
@@ -84,15 +91,16 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               href="/wholesale/cart"
               className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
             >
-              Mon panier
+              {t('myCart')}
             </Link>
             <span className="text-gray-400 hidden sm:inline">{profile?.full_name}</span>
+            <LanguageSwitcher variant="light" />
             <form action={signOut}>
               <button
                 type="submit"
                 className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
               >
-                Déconnexion
+                {tc('signOut')}
               </button>
             </form>
           </div>
@@ -134,21 +142,21 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                     : 'bg-green-100 text-green-700'
                 }`}
               >
-                {product.availability_type === 'import_on_demand' ? 'Import / Demande' : 'Stock Maroc'}
+                {product.availability_type === 'import_on_demand' ? t('badgeImport') : t('badgeStock')}
               </span>
               {product.wholesale_tiers.length > 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                  Paliers de prix
+                  {t('badgeTiers')}
                 </span>
               )}
               {product.stock_count === 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-                  Indisponible
+                  {t('badgeUnavailable')}
                 </span>
               )}
               {product.stock_count > 0 && product.stock_count < product.wholesale_min_qty && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                  Stock partiel
+                  {t('badgePartialStock')}
                 </span>
               )}
             </div>
@@ -161,16 +169,17 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               )}
             </div>
 
-            {/* Stock location + origin — local_stock only (import block covers import products) */}
+            {/* Stock location + origin — local_stock only */}
             {product.availability_type === 'local_stock' && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 space-y-1.5 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Localisation stock</span>
-                  <span className="font-medium text-green-700">🇲🇦 Stock au Maroc</span>
+                  <span className="text-gray-500">{t('stockLocation')}</span>
+                  <span className="font-medium text-green-700">🇲🇦 {t('stockMorocco')}</span>
                 </div>
                 {product.origin_country && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500">Pays d&apos;origine</span>
+                    {/* origin_country is DB data — not translatable */}
+                    <span className="text-gray-500">{t('originCountry')}</span>
                     <span className="font-medium text-gray-700">{product.origin_country}</span>
                   </div>
                 )}
@@ -179,26 +188,31 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
             {/* Import-on-demand sourcing details */}
             {product.availability_type === 'import_on_demand' && (
-              <ImportInfoBlock product={product} globalTariff={globalTariff} />
+              <ImportInfoBlock
+                product={product}
+                globalTariff={globalTariff}
+                locale={locale}
+                t={t}
+              />
             )}
 
             {/* Public price reference */}
             <div className="flex items-center gap-3 text-sm">
-              <span className="text-gray-400">Prix public :</span>
+              <span className="text-gray-400">{t('publicPrice')}</span>
               <span className="font-medium text-gray-700">{formatMAD(product.sell_price)}</span>
             </div>
 
             {ctaMode === 'rfq' ? (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                  Produit import / sur demande
+                  {t('labelImportSection')}
                 </p>
                 <QuoteRequestForm productId={product.id} productName={product.name} />
               </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
-                  Commande directe — stock Maroc
+                  {t('labelStockSection')}
                 </p>
                 <AddToCartForm
                   productId={product.id}
@@ -217,24 +231,23 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 }
 
 // ─── Import info block ────────────────────────────────────────────────────────
-// Displays transport & customs info — from the global tariff table (tariff_mode='global')
-// or from the product's own custom fields (tariff_mode='custom').
-// Clearly labelled as transport/customs costs, separate from product purchase price.
 
 function ImportInfoBlock({
   product,
   globalTariff,
+  locale,
+  t,
 }: {
   product: Product
   globalTariff: ImportTariff | null
+  locale: string
+  t: Awaited<ReturnType<typeof getTranslations<'wholesale.productDetail'>>>
 }) {
   const tariff = product.tariff_mode === 'global' ? globalTariff : null
 
-  // Shipping mode label — prefer new shipping_mode, fall back to legacy
   const shippingMode = tariff?.shipping_mode ?? product.import_shipping_mode
   const shippingModeLabel = shippingMode ? (SHIPPING_MODE_LABELS[shippingMode] ?? null) : null
 
-  // Transport cost — prefer new transport_customs_price_mad, fall back to legacy
   const transportCostMad =
     tariff != null
       ? Number(tariff.transport_customs_price_mad)
@@ -249,41 +262,42 @@ function ImportInfoBlock({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-            Frais transport &amp; douane
+            {t('importTitle')}
           </p>
           <p className="text-xs text-purple-500 mt-0.5">
-            Non inclus dans le prix produit
+            {t('importSubtitle')}
           </p>
         </div>
         {product.tariff_mode === 'global' && globalTariff && (
           <span className="text-xs text-purple-500 bg-purple-100 px-2 py-0.5 rounded-full shrink-0">
-            Tarif global
+            {t('importBadgeGlobal')}
           </span>
         )}
       </div>
 
       {product.origin_country && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Pays d&apos;origine</span>
+          {/* origin_country is DB data */}
+          <span className="text-gray-500">{t('importOrigin')}</span>
           <span className="font-medium text-gray-900">{product.origin_country}</span>
         </div>
       )}
 
       {shippingModeLabel && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Mode de transport</span>
+          <span className="text-gray-500">{t('importShippingMode')}</span>
           <span className="font-medium text-gray-900">{shippingModeLabel}</span>
         </div>
       )}
 
       {transportCostMad != null && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Frais transport &amp; douane estimés</span>
+          <span className="text-gray-500">{t('importCost')}</span>
           <span className="font-medium text-gray-900">
             {formatMAD(transportCostMad)}{' '}
             {unit && (
               <span className="text-gray-500 font-normal">
-                / {unit === 'cbm' ? 'CBM' : 'kg'}
+                / {unit === 'cbm' ? t('importUnitCbm') : t('importUnitKg')}
               </span>
             )}
           </span>
@@ -292,16 +306,17 @@ function ImportInfoBlock({
 
       {deliveryDays != null && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Délai estimé</span>
+          <span className="text-gray-500">{t('importDelivery')}</span>
           <span className="font-medium text-gray-900">
-            {deliveryDays} jour{deliveryDays > 1 ? 's' : ''}
+            {t('importDays', { count: deliveryDays })}
           </span>
         </div>
       )}
 
       {notes && (
         <div className="pt-2 border-t border-purple-200">
-          <p className="text-xs text-purple-700 font-medium mb-1">Notes</p>
+          <p className="text-xs text-purple-700 font-medium mb-1">{t('importNotes')}</p>
+          {/* notes is DB data */}
           <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line">{notes}</p>
         </div>
       )}

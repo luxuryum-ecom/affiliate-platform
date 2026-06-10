@@ -1,17 +1,22 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { SignupForm } from '@/components/auth/signup-form'
+import { MozounaLogo } from '@/components/shared/branding'
 import { cn } from '@/lib/utils'
 
 interface SignupPageProps {
   searchParams: Promise<{ type?: string }>
 }
 
-export const metadata = {
-  title: 'Inscription — Mozouna Group',
+export async function generateMetadata() {
+  const t = await getTranslations('auth.signup')
+  return { title: t('metaTitle') }
 }
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const params = await searchParams
+  const t = await getTranslations('auth.signup')
+  const ta = await getTranslations('auth')
   const role: 'affiliate' | 'wholesaler' | 'supplier' =
     params.type === 'wholesale'
       ? 'wholesaler'
@@ -24,40 +29,39 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
       type: 'affiliate',
       href: '/signup?type=affiliate',
       icon: '🔗',
-      label: "Je fais de l'affiliation",
-      sub: 'Partagez des liens, encaissez des commissions COD',
+      label: ta('roleAffiliate'),
+      sub: t('subAffiliate'),
     },
     {
       type: 'wholesale',
       href: '/signup?type=wholesale',
       icon: '📦',
-      label: "J'achète en gros",
-      sub: 'Catalogue B2B, paliers de prix, commandes groupées',
+      label: ta('roleWholesaler'),
+      sub: t('subWholesaler'),
     },
     {
       type: 'supplier',
       href: '/signup?type=supplier',
       icon: '🏭',
-      label: 'Je vends mes produits',
-      sub: 'Référencez vos produits sur la marketplace',
+      label: ta('roleSupplier'),
+      sub: t('subSupplier'),
     },
   ] as const
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+    <div className="theme-dark bg-bg text-foreground min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white font-bold text-sm">M</span>
-            <span className="text-lg font-bold text-gray-900 tracking-tight">Mozouna Group</span>
+        <div className="flex justify-center mb-8">
+          <Link href="/" aria-label="Mozouna Group — accueil">
+            <MozounaLogo size="lg" />
           </Link>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-surface rounded-2xl border border-line shadow-premium p-6">
           <div className="mb-5">
-            <h1 className="text-xl font-semibold text-gray-900">Créer un compte</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Comment comptez-vous utiliser la plateforme ?
+            <h1 className="text-xl font-semibold text-foreground">{t('title')}</h1>
+            <p className="mt-1 text-sm text-muted">
+              {t('subtitle')}
             </p>
           </div>
 
@@ -70,27 +74,27 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                 className={cn(
                   'flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-left transition-all',
                   (role === type || (type === 'wholesale' && role === 'wholesaler'))
-                    ? 'border-gray-900 bg-gray-900 text-white ring-2 ring-gray-900 ring-offset-1'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                    ? 'border-gold-400 bg-primary text-primary-foreground ring-2 ring-gold-400 ring-offset-1 ring-offset-surface'
+                    : 'border-line bg-surface text-muted hover:border-gold-300 hover:bg-surface-2'
                 )}
               >
                 <span className="text-xl flex-shrink-0">{icon}</span>
                 <div className="min-w-0">
                   <p className={cn(
                     'text-sm font-semibold leading-tight',
-                    (role === type || (type === 'wholesale' && role === 'wholesaler')) ? 'text-white' : 'text-gray-900'
+                    (role === type || (type === 'wholesale' && role === 'wholesaler')) ? 'text-primary-foreground' : 'text-foreground'
                   )}>
                     {label}
                   </p>
                   <p className={cn(
                     'text-xs mt-0.5 leading-tight',
-                    (role === type || (type === 'wholesale' && role === 'wholesaler')) ? 'text-gray-300' : 'text-gray-400'
+                    (role === type || (type === 'wholesale' && role === 'wholesaler')) ? 'text-primary-foreground/80' : 'text-faint'
                   )}>
                     {sub}
                   </p>
                 </div>
                 {(role === type || (type === 'wholesale' && role === 'wholesaler')) && (
-                  <span className="ml-auto flex-shrink-0 text-white">✓</span>
+                  <span className="ml-auto flex-shrink-0 text-primary-foreground">✓</span>
                 )}
               </Link>
             ))}
@@ -99,10 +103,10 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <SignupForm defaultRole={role} />
         </div>
 
-        <p className="mt-4 text-center text-xs text-gray-400">
-          Vous êtes admin ?{' '}
-          <Link href="/login" className="underline underline-offset-2">
-            Connexion directe
+        <p className="mt-4 text-center text-xs text-faint">
+          {t('adminQuestion')}{' '}
+          <Link href="/login" className="text-gold-400 underline underline-offset-2">
+            {t('directLogin')}
           </Link>
         </p>
       </div>

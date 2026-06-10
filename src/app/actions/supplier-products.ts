@@ -1,9 +1,11 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
+import { buildSupplierPricing } from '@/lib/supplier-pricing'
 import type {
   SupplierProduct,
   SupplierProductStatus,
@@ -55,6 +57,15 @@ export async function submitSupplierProduct(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié.' }
 
+  // Rôle vérifié côté serveur : l'écriture passe par service_role (le verrou DB
+  // 055 et la RLS sont contournés), ce contrôle est donc à notre charge.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single() as { data: { role: string } | null; error: unknown }
+  if (profile?.role !== 'supplier') return { error: 'Réservé aux comptes fournisseur.' }
+
   const product_name = (formData.get('product_name') as string)?.trim()
   const category = (formData.get('category') as string)?.trim() ?? ''
   const niche = (formData.get('niche') as string)?.trim() ?? ''
@@ -66,7 +77,12 @@ export async function submitSupplierProduct(
   const supplier_type = (formData.get('supplier_type') as string) || 'morocco'
   const availability_type = (formData.get('availability_type') as string) || 'local_stock'
   const target_buyer_type = (formData.get('target_buyer_type') as string) || 'wholesaler'
-  const suggested_price = parseFloat(formData.get('suggested_wholesale_price_mad') as string)
+  // Prix saisi = montant dans la DEVISE du fournisseur (pas MAD). Converti serveur.
+  // @finance : arrondi 2 décimales À LA SOURCE (comme CSV/Telegram) — sinon un prix
+  // MAD à >2 déc. violerait l'invariant DB sp_mad_identity (mad === price_source)
+  // et l'insert échouerait silencieusement (perte de produit).
+  const priceSourceRaw = parseFloat(formData.get('price_source') as string)
+  const priceSource = Number.isFinite(priceSourceRaw) ? Math.round(priceSourceRaw * 100) / 100 : null
   const supplier_private_notes = (formData.get('supplier_private_notes') as string)?.trim() || null
   const stockRaw = parseInt(formData.get('stock_quantity') as string, 10)
   const leadRaw = parseInt(formData.get('lead_time_days') as string, 10)
@@ -75,7 +91,20 @@ export async function submitSupplierProduct(
   if (!product_name) return { error: 'Le nom du produit est requis.' }
   if (!origin_country) return { error: "Le pays d'origine est requis." }
 
-  const { data: product, error } = await supabase
+  // Écriture serveur-autoritaire : service_role (le fournisseur ne pose jamais
+  // price_source/fx_rate/mad lui-même — verrou DB 055).
+  const admin = createAdminClient()
+  const db = admin as unknown as Parameters<typeof buildSupplierPricing>[0]
+
+  // Conversion devise → MAD via taux admin figé. Pas de pays → soumission BLOQUÉE.
+  const pricing = await buildSupplierPricing(db, user.id, priceSource)
+  if (!pricing.canSubmit) {
+    return {
+      error: "Votre pays n'est pas configuré (il détermine votre devise). Contactez l'administrateur avant de soumettre un produit.",
+    }
+  }
+
+  const { data: product, error } = await admin
     .from('supplier_products')
     .insert({
       supplier_id: user.id,
@@ -89,9 +118,13 @@ export async function submitSupplierProduct(
       origin_country,
       availability_type: availability_type as SupplierProduct['availability_type'],
       target_buyer_type: target_buyer_type as SupplierProduct['target_buyer_type'],
-      suggested_wholesale_price_mad: isNaN(suggested_price) ? null : suggested_price,
+      suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
+      source_currency: pricing.source_currency,
+      price_source: pricing.price_source,
+      fx_rate_source_to_mad: pricing.fx_rate_source_to_mad,
       supplier_private_notes,
       approval_status: 'pending_review' as SupplierProductStatus,
+      source: 'web',
       stock_quantity: isNaN(stockRaw) ? null : stockRaw,
       lead_time_days: isNaN(leadRaw) ? null : leadRaw,
     })
@@ -108,11 +141,11 @@ export async function submitSupplierProduct(
       min_quantity: t.min_quantity,
       unit_price_usd: t.unit_price_usd,
     }))
-    const { error: tierErr } = await supabase.from('supplier_product_moq_tiers').insert(tierRows)
+    const { error: tierErr } = await admin.from('supplier_product_moq_tiers').insert(tierRows)
     if (tierErr) return { error: tierErr.message }
   }
 
-  await runAndStoreModeration(supabase, productId, {
+  await runAndStoreModeration(admin as unknown as Awaited<ReturnType<typeof createClient>>, productId, {
     product_name,
     description,
     photos,
@@ -120,7 +153,7 @@ export async function submitSupplierProduct(
     min_quantity,
     stock_quantity: isNaN(stockRaw) ? null : stockRaw,
     lead_time_days: isNaN(leadRaw) ? null : leadRaw,
-    suggested_wholesale_price_mad: isNaN(suggested_price) ? null : suggested_price,
+    suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
     supplier_unit_price_usd: null,
     moq_tier_count: moqTiers.length,
   })

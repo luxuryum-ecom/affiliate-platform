@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 const INPUT =
   'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
 const LABEL = 'block text-xs font-medium text-gray-500 mb-1'
 
 export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string }) {
+  const t = useTranslations('wholesale.sourcingCta')
+
   const [open, setOpen] = useState(false)
   const [productDesc, setProductDesc] = useState('')
   const [productLink, setProductLink] = useState('')
@@ -16,14 +19,14 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
 
   function buildMessage(): string {
     const lines = [
-      'Bonjour, je souhaite un sourcing personnalisé.',
+      t('waGreeting'),
       '',
-      `Produit : ${productDesc.trim() || '—'}`,
+      t('waProduct', { value: productDesc.trim() || '—' }),
     ]
-    if (productLink.trim()) lines.push(`Lien produit : ${productLink.trim()}`)
-    if (imageUrl.trim()) lines.push(`Image : ${imageUrl.trim()}`)
-    if (quantity.trim()) lines.push(`Quantité : ${quantity.trim()}`)
-    if (whatsapp.trim()) lines.push(`WhatsApp : ${whatsapp.trim()}`)
+    if (productLink.trim()) lines.push(t('waLink', { value: productLink.trim() }))
+    if (imageUrl.trim()) lines.push(t('waImage', { value: imageUrl.trim() }))
+    if (quantity.trim()) lines.push(t('waQty', { value: quantity.trim() }))
+    if (whatsapp.trim()) lines.push(t('waWhatsapp', { value: whatsapp.trim() }))
     return encodeURIComponent(lines.join('\n'))
   }
 
@@ -36,16 +39,14 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
   return (
     <>
       <div className="mt-3 w-full rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-        <p className="text-sm font-semibold text-gray-900">Vous ne trouvez pas votre produit ?</p>
-        <p className="text-xs text-gray-600 mt-1">
-          Notre équipe se charge de le rechercher pour vous en Turquie, Chine, Égypte ou Dubaï.
-        </p>
+        <p className="text-sm font-semibold text-gray-900">{t('ctaTitle')}</p>
+        <p className="text-xs text-gray-600 mt-1">{t('ctaBody')}</p>
         <button
           type="button"
           onClick={() => setOpen(true)}
           className="mt-3 w-full text-center text-sm font-semibold px-4 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
         >
-          Demander un sourcing personnalisé
+          {t('ctaBtn')}
         </button>
       </div>
 
@@ -62,59 +63,59 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="sourcing-modal-title" className="text-base font-bold text-gray-900 mb-3">
-              Demande de sourcing personnalisé
+              {t('modalTitle')}
             </h2>
 
             <div className="space-y-3">
               <div>
-                <label className={LABEL}>Nom / description du produit *</label>
+                <label className={LABEL}>{t('fieldProduct')}</label>
                 <textarea
                   value={productDesc}
                   onChange={(e) => setProductDesc(e.target.value)}
                   rows={3}
                   className={`${INPUT} resize-none`}
-                  placeholder="Décrivez le produit recherché..."
+                  placeholder={t('fieldProductPlaceholder')}
                   required
                 />
               </div>
               <div>
-                <label className={LABEL}>Lien produit (optionnel)</label>
+                <label className={LABEL}>{t('fieldLink')}</label>
                 <input
                   type="url"
                   value={productLink}
                   onChange={(e) => setProductLink(e.target.value)}
                   className={INPUT}
-                  placeholder="https://..."
+                  placeholder={t('fieldLinkPlaceholder')}
                 />
               </div>
               <div>
-                <label className={LABEL}>URL image (optionnel)</label>
+                <label className={LABEL}>{t('fieldImage')}</label>
                 <input
                   type="url"
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   className={INPUT}
-                  placeholder="https://..."
+                  placeholder={t('fieldImagePlaceholder')}
                 />
               </div>
               <div>
-                <label className={LABEL}>Quantité souhaitée</label>
+                <label className={LABEL}>{t('fieldQty')}</label>
                 <input
                   type="text"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   className={INPUT}
-                  placeholder="ex: 500 unités"
+                  placeholder={t('fieldQtyPlaceholder')}
                 />
               </div>
               <div>
-                <label className={LABEL}>Numéro WhatsApp</label>
+                <label className={LABEL}>{t('fieldWhatsapp')}</label>
                 <input
                   type="tel"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   className={INPUT}
-                  placeholder="ex: 06XXXXXXXX"
+                  placeholder={t('fieldWhatsappPlaceholder')}
                 />
               </div>
             </div>
@@ -125,7 +126,7 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
                 onClick={() => setOpen(false)}
                 className="flex-1 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Annuler
+                {t('cancelBtn')}
               </button>
               <button
                 type="button"
@@ -133,7 +134,7 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
                 disabled={!productDesc.trim()}
                 className="flex-1 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Envoyer sur WhatsApp
+                {t('sendBtn')}
               </button>
             </div>
           </div>

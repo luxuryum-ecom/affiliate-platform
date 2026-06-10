@@ -1,6 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { QuoteDocument } from '@/components/shared/quote-document'
 import { PrintButton } from '@/components/shared/print-button'
 import { QuoteDecisionButtons } from '@/components/wholesale/quote-decision-buttons'
@@ -10,7 +12,8 @@ interface Params { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Params) {
   const { id } = await params
-  return { title: `Devis #${id.slice(0, 8).toUpperCase()} — Espace Grossiste` }
+  const t = await getTranslations('wholesale.quoteSubmit')
+  return { title: t('metaTitle', { ref: id.slice(0, 8).toUpperCase() }) }
 }
 
 type QuoteRow = QuoteRequest & {
@@ -26,6 +29,13 @@ const VISIBLE_STATUSES = new Set([
 
 export default async function WholesaleQuotePage({ params }: Params) {
   const { id } = await params
+
+  const [t, tc, locale] = await Promise.all([
+    getTranslations('wholesale.quoteSubmit'),
+    getTranslations('wholesale.common'),
+    getLocale(),
+  ])
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -57,8 +67,18 @@ export default async function WholesaleQuotePage({ params }: Params) {
   const isRejected = req.status === 'rejected_by_client'
   const isPending  = req.status === 'quote_prepared'
 
+  const dateLocale =
+    locale === 'ar' ? 'ar-MA-u-nu-latn' : locale === 'en' ? 'en-GB' : 'fr-MA'
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(dateLocale, {
+      day: '2-digit', month: 'long', year: 'numeric',
+    })
+
+  const isRtl = locale === 'ar'
+
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
+    <div className="min-h-screen bg-gray-100 print:bg-white" dir={isRtl ? 'rtl' : 'ltr'}>
 
       {/* ── Toolbar (hidden on print) ── */}
       <div className="print:hidden bg-white border-b border-gray-200">
@@ -68,12 +88,15 @@ export default async function WholesaleQuotePage({ params }: Params) {
               href={`/wholesale/quote-requests/${id}`}
               className="text-gray-400 hover:text-gray-600 text-sm"
             >
-              ← Ma demande
+              {t('breadcrumbParent')}
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-sm text-gray-700 font-medium">Mon devis</span>
+            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
+            <span className="text-sm text-gray-700 font-medium">{t('breadcrumbCurrent')}</span>
           </div>
-          <PrintButton />
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="light" />
+            <PrintButton label={t('printBtn')} />
+          </div>
         </div>
       </div>
 
@@ -85,14 +108,11 @@ export default async function WholesaleQuotePage({ params }: Params) {
             <span className="text-green-500 text-lg leading-none mt-0.5">✓</span>
             <div>
               <p className="text-sm font-semibold text-green-800">
-                Devis accepté — en attente de confirmation de commande
+                {t('bannerAcceptedTitle')}
               </p>
               {req.client_decision_at && (
                 <p className="text-xs text-green-600 mt-0.5">
-                  Accepté le{' '}
-                  {new Date(req.client_decision_at).toLocaleDateString('fr-MA', {
-                    day: '2-digit', month: 'long', year: 'numeric',
-                  })}
+                  {t('bannerAcceptedOn', { date: formatDate(req.client_decision_at) })}
                 </p>
               )}
             </div>
@@ -104,13 +124,10 @@ export default async function WholesaleQuotePage({ params }: Params) {
           <div className="print:hidden mb-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
             <span className="text-red-400 text-lg leading-none mt-0.5">✕</span>
             <div>
-              <p className="text-sm font-semibold text-red-800">Devis refusé</p>
+              <p className="text-sm font-semibold text-red-800">{t('bannerRejectedTitle')}</p>
               {req.client_decision_at && (
                 <p className="text-xs text-red-600 mt-0.5">
-                  Refusé le{' '}
-                  {new Date(req.client_decision_at).toLocaleDateString('fr-MA', {
-                    day: '2-digit', month: 'long', year: 'numeric',
-                  })}
+                  {t('bannerRejectedOn', { date: formatDate(req.client_decision_at) })}
                 </p>
               )}
             </div>
@@ -135,18 +152,52 @@ export default async function WholesaleQuotePage({ params }: Params) {
             buyer:                      req.buyer,
             product:                    req.product,
           }}
+          labels={{
+            docIssueDate:    t('docIssueDate'),
+            docValidUntil:   t('docValidUntil'),
+            docAddressedTo:  t('docAddressedTo'),
+            docProduct:      t('docProduct'),
+            docOriginPrefix: locale === 'ar' ? 'المنشأ: ' : locale === 'en' ? 'Origin: ' : 'Origine : ',
+            docDescCol:      t('docDescCol'),
+            docQtyCol:       t('docQtyCol'),
+            docUnitPriceCol: t('docUnitPriceCol'),
+            docSubtotalCol:  t('docSubtotalCol'),
+            docTransportRow: t('docTransportRow'),
+            docGrandTotal:   t('docGrandTotal'),
+            docShippingMode: t('docShippingMode'),
+            docDelivery:     t('docDelivery'),
+            docNote:         t('docNote'),
+            docLegal:        t('docLegal'),
+            docLegalText:    t('docLegalText'),
+            docLabel:        t('docLabel'),
+          }}
+          dateLocale={dateLocale}
         />
 
         {/* ── Accept / Reject buttons — only when pending decision ── */}
         {isPending && (
           <div className="print:hidden mt-8 bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-semibold text-gray-900 mb-1">
-              Votre décision
+              {t('decisionTitle')}
             </h2>
             <p className="text-xs text-gray-500 mb-4">
-              Acceptez ou refusez ce devis. Votre réponse sera transmise à notre équipe.
+              {t('decisionSubtitle')}
             </p>
-            <QuoteDecisionButtons requestId={id} />
+            <QuoteDecisionButtons
+              requestId={id}
+              labels={{
+                acceptBtn:          t('acceptBtn'),
+                rejectBtn:          t('rejectBtn'),
+                confirmAcceptTitle: t('confirmAcceptTitle'),
+                confirmAcceptBody:  t('confirmAcceptBody'),
+                confirmRejectTitle: t('confirmRejectTitle'),
+                confirmRejectBody:  t('confirmRejectBody'),
+                cancelBtn:          t('cancelBtn'),
+                confirmBtn:         t('confirmBtn'),
+                pendingBtn:         t('pendingBtn'),
+                decisionSaved:      t('decisionSaved'),
+              }}
+            />
           </div>
         )}
 
@@ -155,7 +206,7 @@ export default async function WholesaleQuotePage({ params }: Params) {
             href="/wholesale/quote-requests"
             className="text-xs text-gray-500 hover:text-gray-800 transition-colors"
           >
-            ← Retour à mes demandes
+            {t('backToList')}
           </Link>
         </div>
       </div>

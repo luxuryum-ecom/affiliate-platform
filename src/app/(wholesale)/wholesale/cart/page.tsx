@@ -1,14 +1,17 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { CartItemRow } from '@/components/wholesale/cart-item-row'
 import { SubmitWholesaleOrderForm } from '@/components/wholesale/submit-order-form'
 import { WhatsAppButton } from '@/components/wholesale/whatsapp-button'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { WholesaleCartItemWithProduct } from '@/types/database'
 
-export const metadata = {
-  title: 'Mon panier — Espace Grossiste',
+export async function generateMetadata() {
+  const t = await getTranslations('wholesale.cart')
+  return { title: t('metaTitle') }
 }
 
 export default async function WholesaleCartPage() {
@@ -30,6 +33,9 @@ export default async function WholesaleCartPage() {
   const profile = profileResult.data as { full_name: string } | null
   const items = (cartResult.data ?? []) as unknown as WholesaleCartItemWithProduct[]
 
+  const t = await getTranslations('wholesale.cart')
+  const tc = await getTranslations('wholesale.common')
+
   // Server-side total — accurate snapshot used for WhatsApp message
   const total = items.reduce((sum, item) => {
     const tier = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
@@ -50,19 +56,20 @@ export default async function WholesaleCartPage() {
               href="/wholesale/products"
               className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
             >
-              ← Catalogue
+              {tc('backToCatalog')}
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Mon panier</span>
+            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
+            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
+            <LanguageSwitcher variant="light" />
             <form action={signOut}>
               <button
                 type="submit"
                 className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
               >
-                Déconnexion
+                {tc('signOut')}
               </button>
             </form>
           </div>
@@ -71,10 +78,10 @@ export default async function WholesaleCartPage() {
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="text-lg font-semibold text-gray-900 mb-6">
-          Mon panier
+          {t('pageTitle')}
           {items.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-gray-400">
-              ({items.length} article{items.length !== 1 ? 's' : ''})
+            <span className="ms-2 text-sm font-normal text-gray-400">
+              {t('itemCount', { count: items.length })}
             </span>
           )}
         </h1>
@@ -83,12 +90,12 @@ export default async function WholesaleCartPage() {
           /* Empty cart */
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-4">
             <p className="text-3xl">🛒</p>
-            <p className="text-sm text-gray-500">Votre panier est vide.</p>
+            <p className="text-sm text-gray-500">{t('emptyTitle')}</p>
             <Link
               href="/wholesale/products"
               className="inline-block px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
             >
-              Parcourir le catalogue
+              {t('browseCatalog')}
             </Link>
           </div>
         ) : (
@@ -102,7 +109,7 @@ export default async function WholesaleCartPage() {
 
             {/* Order summary */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="font-semibold text-gray-900">Récapitulatif</h2>
+              <h2 className="font-semibold text-gray-900">{t('summary')}</h2>
 
               {/* Line items */}
               <ul className="space-y-2">
@@ -113,6 +120,7 @@ export default async function WholesaleCartPage() {
                   return (
                     <li key={item.id} className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 truncate max-w-[60%]">
+                        {/* product.name is DB data */}
                         {item.product.name}{' '}
                         <span className="text-gray-400">× {item.quantity}</span>
                       </span>
@@ -124,27 +132,39 @@ export default async function WholesaleCartPage() {
 
               {/* Total */}
               <div className="border-t border-gray-200 pt-3 flex items-center justify-between">
-                <span className="font-semibold text-gray-900">Total estimé</span>
+                <span className="font-semibold text-gray-900">{t('estimatedTotal')}</span>
                 <span className="text-xl font-bold text-gray-900">{formatMAD(total)}</span>
               </div>
 
               <p className="text-xs text-gray-400">
-                Les prix sont calculés selon les paliers actifs. Le total se met à jour après
-                chaque modification de quantité.
+                {t('priceNote')}
               </p>
 
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                Ce total est estimatif — hors frais de livraison, emballage, assurance et service. Notre équipe vous communique un devis définitif avant toute validation de commande.
+                {t('estimateWarning')}
               </p>
 
-              <SubmitWholesaleOrderForm />
+              <SubmitWholesaleOrderForm
+                labels={{
+                  deliverySection: t('deliverySection'),
+                  deliveryOptional: t('deliveryOptional'),
+                  fieldCity: t('fieldCity'),
+                  fieldCityPlaceholder: t('fieldCityPlaceholder'),
+                  fieldAddress: t('fieldAddress'),
+                  fieldAddressPlaceholder: t('fieldAddressPlaceholder'),
+                  fieldNotes: t('fieldNotes'),
+                  fieldNotesPlaceholder: t('fieldNotesPlaceholder'),
+                  submitOrder: t('submitOrder'),
+                  submittingOrder: t('submittingOrder'),
+                }}
+              />
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-2 text-gray-400">ou contacter par WhatsApp</span>
+                  <span className="bg-white px-2 text-gray-400">{t('orWhatsapp')}</span>
                 </div>
               </div>
 
@@ -159,7 +179,7 @@ export default async function WholesaleCartPage() {
                 href="/wholesale/products"
                 className="block text-center text-sm text-gray-500 hover:text-gray-800 transition-colors"
               >
-                ← Continuer mes achats
+                {t('continueShopping')}
               </Link>
             </div>
           </div>

@@ -4,11 +4,40 @@ import { useActionState } from 'react'
 import { updateWholesalerBilling } from '@/app/actions/profile'
 import type { Profile } from '@/types/database'
 
-interface Props {
-  profile: Profile | null
+interface BillingFormLabels {
+  fieldCompany: string
+  fieldIce: string
+  fieldRc: string
+  fieldBillingAddress: string
+  companyPlaceholder: string
+  icePlaceholder: string
+  rcPlaceholder: string
+  billingAddressPlaceholder: string
+  saveBilling: string
+  savingBilling: string
+  billingUpdated: string
 }
 
-export function WholesalerBillingForm({ profile }: Props) {
+interface Props {
+  profile: Profile | null
+  labels?: BillingFormLabels
+}
+
+const defaultLabels: BillingFormLabels = {
+  fieldCompany: 'Raison sociale / Nom de la société',
+  fieldIce: "ICE (Identifiant Commun de l'Entreprise)",
+  fieldRc: 'Registre de commerce (RC)',
+  fieldBillingAddress: 'Adresse de facturation',
+  companyPlaceholder: 'Ex : Sté Benali & Fils SARL',
+  icePlaceholder: '000000000000000',
+  rcPlaceholder: 'Ex : 123456',
+  billingAddressPlaceholder: 'Ex : 12 Rue de la Liberté, Casablanca 20000',
+  saveBilling: 'Enregistrer',
+  savingBilling: 'Enregistrement…',
+  billingUpdated: 'Informations de facturation mises à jour.',
+}
+
+export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props) {
   const [state, action, isPending] = useActionState(updateWholesalerBilling, {
     error: null,
     success: false,
@@ -23,35 +52,35 @@ export function WholesalerBillingForm({ profile }: Props) {
       )}
       {state.success && (
         <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">
-          Informations de facturation mises à jour.
+          {labels.billingUpdated}
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <label className="block text-xs text-gray-500 mb-1" htmlFor="company_name">
-            Raison sociale / Nom de la société
+            {labels.fieldCompany}
           </label>
           <input
             id="company_name"
             name="company_name"
             type="text"
             defaultValue={profile?.company_name ?? ''}
-            placeholder="Ex : Sté Benali & Fils SARL"
+            placeholder={labels.companyPlaceholder}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
           />
         </div>
 
         <div>
           <label className="block text-xs text-gray-500 mb-1" htmlFor="ice">
-            ICE (Identifiant Commun de l&apos;Entreprise)
+            {labels.fieldIce}
           </label>
           <input
             id="ice"
             name="ice"
             type="text"
             defaultValue={profile?.ice ?? ''}
-            placeholder="000000000000000"
+            placeholder={labels.icePlaceholder}
             maxLength={20}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
           />
@@ -59,28 +88,28 @@ export function WholesalerBillingForm({ profile }: Props) {
 
         <div>
           <label className="block text-xs text-gray-500 mb-1" htmlFor="registre_commerce">
-            Registre de commerce (RC)
+            {labels.fieldRc}
           </label>
           <input
             id="registre_commerce"
             name="registre_commerce"
             type="text"
             defaultValue={profile?.registre_commerce ?? ''}
-            placeholder="Ex : 123456"
+            placeholder={labels.rcPlaceholder}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
           />
         </div>
 
         <div className="sm:col-span-2">
           <label className="block text-xs text-gray-500 mb-1" htmlFor="billing_address">
-            Adresse de facturation
+            {labels.fieldBillingAddress}
           </label>
           <textarea
             id="billing_address"
             name="billing_address"
             rows={2}
             defaultValue={profile?.billing_address ?? ''}
-            placeholder="Ex : 12 Rue de la Liberté, Casablanca 20000"
+            placeholder={labels.billingAddressPlaceholder}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
           />
         </div>
@@ -92,7 +121,7 @@ export function WholesalerBillingForm({ profile }: Props) {
           disabled={isPending}
           className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50"
         >
-          {isPending ? 'Enregistrement…' : 'Enregistrer'}
+          {isPending ? labels.savingBilling : labels.saveBilling}
         </button>
       </div>
     </form>

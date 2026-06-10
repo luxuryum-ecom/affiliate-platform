@@ -1,3 +1,6 @@
+'use client'
+
+import { useTranslations } from 'next-intl'
 import { formatMAD } from '@/lib/utils'
 
 interface WhatsAppCodButtonProps {
@@ -11,6 +14,8 @@ export function WhatsAppCodButton({
   sellPrice,
   phone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000',
 }: WhatsAppCodButtonProps) {
+  const t = useTranslations('publicProduct')
+
   const message = encodeURIComponent(
     `Bonjour, je souhaite commander "${productName}" (${formatMAD(sellPrice)}/unité) en paiement à la livraison.`
   )
@@ -24,7 +29,7 @@ export function WhatsAppCodButton({
       className="flex items-center justify-center gap-2 w-full py-3 border border-green-200 bg-green-50 text-green-800 font-medium rounded-xl hover:bg-green-100 transition-colors text-sm"
     >
       <span aria-hidden>💬</span>
-      Commander via WhatsApp
+      {t('form.whatsappCta')}
     </a>
   )
 }

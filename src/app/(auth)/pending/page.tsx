@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import type { Profile } from '@/types/database'
 
-export const metadata = {
-  title: 'Compte en attente — AffiPartner',
+export async function generateMetadata() {
+  const t = await getTranslations('auth.pending')
+  return { title: t('metaTitle') }
 }
 
 const ROLE_REDIRECTS: Record<string, string> = {
@@ -14,44 +16,9 @@ const ROLE_REDIRECTS: Record<string, string> = {
   agent: '/admin/dashboard',
 }
 
-const PENDING_COPY: Record<
-  string,
-  { title: string; intro: string; steps: string[] }
-> = {
-  affiliate: {
-    title: 'Votre compte affiliation est en cours de validation',
-    intro:
-      "Votre demande pour faire de l'affiliation (dropshipping COD) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.",
-    steps: [
-      'Vérification de votre profil',
-      'Notification par email une fois approuvé',
-      'Accès au catalogue, liens de parrainage et suivi des commissions',
-    ],
-  },
-  wholesaler: {
-    title: 'Votre compte achat en gros est en cours de validation',
-    intro:
-      "Votre demande pour acheter en gros (B2B) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.",
-    steps: [
-      'Vérification de votre profil',
-      'Notification par email une fois approuvé',
-      'Accès au catalogue gros, paliers de prix et commandes B2B',
-    ],
-  },
-  supplier: {
-    title: 'Votre compte fournisseur est en cours de validation',
-    intro:
-      "Votre demande pour vendre vos produits sur la marketplace a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.",
-    steps: [
-      'Vérification de votre profil fournisseur',
-      'Notification par email une fois approuvé',
-      'Accès à la gestion de vos produits et aux demandes de devis',
-    ],
-  },
-}
-
 export default async function PendingPage() {
   const supabase = await createClient()
+  const t = await getTranslations('auth.pending')
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -75,16 +42,21 @@ export default async function PendingPage() {
     redirect('/login?rejected=1')
   }
 
-  const copy =
-    PENDING_COPY[profile.role] ??
-    PENDING_COPY.affiliate
+  const roleKey = ['affiliate', 'wholesaler', 'supplier'].includes(profile.role)
+    ? profile.role
+    : 'affiliate'
+  const copy = {
+    title: t(`${roleKey}.title`),
+    intro: t(`${roleKey}.intro`),
+    steps: t.raw(`${roleKey}.steps`) as string[],
+  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+    <div className="theme-dark bg-bg text-foreground min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-5">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 mb-5">
           <svg
-            className="w-8 h-8 text-amber-600"
+            className="w-8 h-8 text-amber-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -98,21 +70,20 @@ export default async function PendingPage() {
           </svg>
         </div>
 
-        <h1 className="text-xl font-semibold text-gray-900">{copy.title}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{copy.title}</h1>
 
-        <p className="mt-2 text-sm text-gray-500 max-w-xs mx-auto">
-          Bonjour <span className="font-medium text-gray-700">{profile.full_name}</span>,{' '}
-          {copy.intro}
+        <p className="mt-2 text-sm text-muted max-w-xs mx-auto">
+          {t('hello', { name: profile.full_name ?? '' })} {copy.intro}
         </p>
 
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5 text-left">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Prochaines étapes
+        <div className="mt-6 bg-surface rounded-xl border border-line p-5 text-left">
+          <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
+            {t('nextSteps')}
           </p>
-          <ol className="space-y-2 text-sm text-gray-600">
+          <ol className="space-y-2 text-sm text-muted">
             {copy.steps.map((step, i) => (
               <li key={step} className="flex gap-3">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-medium">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-surface-2 text-muted text-xs flex items-center justify-center font-medium">
                   {i + 1}
                 </span>
                 {step}
@@ -124,9 +95,9 @@ export default async function PendingPage() {
         <form action={signOut} className="mt-6">
           <button
             type="submit"
-            className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+            className="text-sm text-faint hover:text-foreground underline underline-offset-2 transition-colors"
           >
-            Se déconnecter
+            {t('signOut')}
           </button>
         </form>
       </div>

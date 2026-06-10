@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
+import { MIN_DELIVERY_FEE_MAD, MIN_DELIVERY_FEE_CASABLANCA_MAD } from '@/lib/utils'
 import type { ActionState } from '@/types/orders'
 import type { LogisticsSettings } from '@/types/database'
 
@@ -33,17 +34,24 @@ export async function getLogisticsSettings(): Promise<LogisticsSettings | null> 
 export async function resolveDeliveryFee(customerCity: string): Promise<number> {
   const settings = await getLogisticsSettings()
   const isCasablanca = customerCity.trim().toLowerCase() === 'casablanca'
+  // Plancher différencié : Casablanca (hub) = 25 MAD, reste du Maroc = 35 MAD.
+  const floor = isCasablanca ? MIN_DELIVERY_FEE_CASABLANCA_MAD : MIN_DELIVERY_FEE_MAD
   if (!settings) {
-    return isCasablanca ? 25 : 40
+    return Math.max(floor, isCasablanca ? 25 : 35)
   }
-  return isCasablanca
-    ? Number(settings.casablanca_delivery_fee_mad)
-    : Number(settings.default_delivery_fee_mad)
+  return Math.max(
+    floor,
+    isCasablanca
+      ? Number(settings.casablanca_delivery_fee_mad)
+      : Number(settings.default_delivery_fee_mad)
+  )
 }
 
 /**
  * Admin-only: update the singleton logistics settings row.
- * All three fees are required and must be non-negative numbers.
+ * Delivery fees (Casablanca + default) must be strictly > 0 — the affiliate
+ * always pays delivery, never 0. The return fee may be 0 (it is not a delivery
+ * fee, D3).
  */
 export async function updateLogisticsSettings(
   _prevState: ActionState,
@@ -56,10 +64,10 @@ export async function updateLogisticsSettings(
   const defaultFee    = parseFloat(formData.get('default_delivery_fee_mad') as string)
   const returnFee     = parseFloat(formData.get('return_fee_mad') as string)
 
-  if (isNaN(casablancaFee) || casablancaFee < 0)
-    return fail('Frais Casablanca invalide.')
-  if (isNaN(defaultFee) || defaultFee < 0)
-    return fail('Frais livraison par défaut invalide.')
+  if (isNaN(casablancaFee) || casablancaFee <= 0)
+    return fail('Frais Casablanca invalide — la livraison doit être supérieure à 0 MAD.')
+  if (isNaN(defaultFee) || defaultFee <= 0)
+    return fail('Frais livraison par défaut invalide — la livraison doit être supérieure à 0 MAD.')
   if (isNaN(returnFee) || returnFee < 0)
     return fail('Frais de retour invalide.')
 

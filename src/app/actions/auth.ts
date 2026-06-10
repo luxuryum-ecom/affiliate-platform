@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isSupplierCountryCode } from '@/lib/supplier-countries'
 import type { Profile } from '@/types/database'
 
 export type AuthState = { error: string | null }
@@ -22,6 +23,7 @@ export async function signUp(
   const password = formData.get('password') as string
   const full_name = (formData.get('full_name') as string)?.trim()
   const role = formData.get('role') as string
+  const country_code = (formData.get('country_code') as string)?.trim() || ''
 
   if (!email || !password || !full_name) {
     return { error: 'Tous les champs sont requis.' }
@@ -35,13 +37,23 @@ export async function signUp(
     return { error: 'Type de compte invalide.' }
   }
 
+  // Pays OBLIGATOIRE pour un fournisseur (détermine sa devise de saisie) — figé ensuite.
+  if (role === 'supplier') {
+    if (!country_code) return { error: 'Sélectionnez votre pays (il détermine votre devise).' }
+    if (!isSupplierCountryCode(country_code)) return { error: 'Pays invalide.' }
+  }
+
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name, role },
+      data: {
+        full_name,
+        role,
+        ...(role === 'supplier' ? { country_code } : {}),
+      },
     },
   })
 

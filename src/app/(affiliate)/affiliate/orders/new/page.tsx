@@ -3,10 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { getCities } from '@/app/actions/cities'
 import { CreateOrderForm } from '@/components/affiliate/create-order-form'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { getTranslations } from 'next-intl/server'
 import type { Product, City } from '@/types/database'
 
-export const metadata = {
-  title: 'Nouvelle commande — Espace Affilié',
+export async function generateMetadata() {
+  const t = await getTranslations('affiliate.ordersNew')
+  return { title: t('metaTitle') }
 }
 
 type ProductOption = Pick<
@@ -22,6 +25,9 @@ type ProductOption = Pick<
 
 export default async function NewAffiliateOrderPage() {
   const supabase = await createClient()
+  const t = await getTranslations('affiliate.ordersNew')
+  const tCommon = await getTranslations('affiliate.common')
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -49,22 +55,58 @@ export default async function NewAffiliateOrderPage() {
       delivery_fee_mad: c.delivery_fee_mad,
     }))
 
+  const formStrings = {
+    sectionProduct: t('sectionProduct'),
+    fieldProduct: t('fieldProduct'),
+    productOption: t.raw('productOption') as string,
+    fieldQuantity: t('fieldQuantity'),
+    fieldSellPrice: t('fieldSellPrice'),
+    priceMinError: t.raw('priceMinError') as string,
+    summaryOrderTotal: t('summaryOrderTotal'),
+    summaryDelivery: t('summaryDelivery'),
+    summaryOps: t('summaryOps'),
+    summaryMargin: t('summaryMargin'),
+    summaryNote: t('summaryNote'),
+    sectionCustomer: t('sectionCustomer'),
+    fieldName: t('fieldName'),
+    namePlaceholder: t('namePlaceholder'),
+    fieldPhone: t('fieldPhone'),
+    phonePlaceholder: t('phonePlaceholder'),
+    fieldCity: t('fieldCity'),
+    cityPlaceholder: t('cityPlaceholder'),
+    cityOption: t.raw('cityOption') as string,
+    cityFreeInput: t('cityFreeInput'),
+    fieldAddress: t('fieldAddress'),
+    addressPlaceholder: t('addressPlaceholder'),
+    sectionSource: t('sectionSource'),
+    fieldSource: t('fieldSource'),
+    sourceWhatsapp: t('sourceWhatsapp'),
+    sourcePhone: t('sourcePhone'),
+    sourceManual: t('sourceManual'),
+    fieldNotes: t('fieldNotes'),
+    notesPlaceholder: t('notesPlaceholder'),
+    backButton: t('backButton'),
+    submitButton: t('submitButton'),
+    submitting: t('submitting'),
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/affiliate/orders" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Mes commandes
+              {t('backLink')}
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Nouvelle commande</span>
+            <span className="text-gray-300">{tCommon('breadcrumbSep')}</span>
+            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="light" />
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                Déconnexion
+                {tCommon('signOut')}
               </button>
             </form>
           </div>
@@ -74,18 +116,16 @@ export default async function NewAffiliateOrderPage() {
       <main className="max-w-3xl mx-auto px-4 py-8">
         {products.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">
-              Aucun produit disponible pour la vente COD pour l&apos;instant.
-            </p>
+            <p className="text-sm text-gray-400">{t('emptyProducts')}</p>
             <Link
               href="/affiliate/products"
               className="mt-3 inline-block text-sm text-blue-600 hover:underline"
             >
-              Voir le catalogue →
+              {t('viewCatalog')}
             </Link>
           </div>
         ) : (
-          <CreateOrderForm products={products} cities={cities} />
+          <CreateOrderForm products={products} cities={cities} strings={formStrings} />
         )}
       </main>
     </div>

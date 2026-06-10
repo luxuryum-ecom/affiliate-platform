@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
+import { MIN_DELIVERY_FEE_MAD, MIN_DELIVERY_FEE_CASABLANCA_MAD } from '@/lib/utils'
 import type { ActionState } from '@/types/orders'
 import type { City } from '@/types/database'
 
@@ -26,12 +27,22 @@ export async function getCities(): Promise<City[]> {
  * Lookup order:
  *   1. Active city row in `cities` table (case-insensitive match)
  *   2. Fallback: `logistics_settings.default_delivery_fee_mad`
- *   3. Hard fallback: 40 MAD
+ *   3. Hard fallback: 35 MAD (national default)
+ *
+ * In all cases the result is floored — the affiliate always pays delivery,
+ * never 0, even on legacy rows stored at 0 (D5: runtime floor only, no data
+ * migration). The floor is differentiated (D1): Casablanca (hub) = 25 MAD,
+ * rest of Morocco / default = 35 MAD. This is the single chokepoint feeding the
+ * commission calculation in `orders.ts`.
  *
  * Called from `placeOrder` — runs without an authenticated session.
  */
 export async function resolveDeliveryFeeByCity(customerCity: string): Promise<number> {
   const supabase = await createClient()
+
+  // Plancher différencié : Casablanca (hub) = 25 MAD, reste du Maroc = 35 MAD.
+  const isCasablanca = customerCity.trim().toLowerCase() === 'casablanca'
+  const floor = isCasablanca ? MIN_DELIVERY_FEE_CASABLANCA_MAD : MIN_DELIVERY_FEE_MAD
 
   const { data: cityRow } = (await supabase
     .from('cities')
@@ -40,7 +51,7 @@ export async function resolveDeliveryFeeByCity(customerCity: string): Promise<nu
     .eq('is_active', true)
     .maybeSingle()) as { data: { delivery_fee_mad: number } | null; error: unknown }
 
-  if (cityRow) return Number(cityRow.delivery_fee_mad)
+  if (cityRow) return Math.max(floor, Number(cityRow.delivery_fee_mad))
 
   // Fallback to logistics_settings default fee for unlisted cities
   const { data: settings } = (await supabase
@@ -49,7 +60,7 @@ export async function resolveDeliveryFeeByCity(customerCity: string): Promise<nu
     .eq('id', 'default')
     .single()) as { data: { default_delivery_fee_mad: number } | null; error: unknown }
 
-  return settings ? Number(settings.default_delivery_fee_mad) : 40
+  return Math.max(floor, settings ? Number(settings.default_delivery_fee_mad) : 35)
 }
 
 // ─── CREATE ───────────────────────────────────────────────────────────────────
@@ -65,7 +76,8 @@ export async function addCity(
   const fee  = parseFloat(formData.get('delivery_fee_mad') as string)
 
   if (!name)               return fail('Nom de la ville requis.')
-  if (isNaN(fee) || fee < 0) return fail('Frais de livraison invalide.')
+  if (isNaN(fee) || fee <= 0)
+    return fail('Frais de livraison invalide — la livraison doit être supérieure à 0 MAD.')
 
   const { error } = await supabase
     .from('cities')
@@ -96,7 +108,8 @@ export async function updateCity(
 
   if (!id)                   return fail('ID ville manquant.')
   if (!name)                 return fail('Nom de la ville requis.')
-  if (isNaN(fee) || fee < 0) return fail('Frais de livraison invalide.')
+  if (isNaN(fee) || fee <= 0)
+    return fail('Frais de livraison invalide — la livraison doit être supérieure à 0 MAD.')
 
   const { error } = await supabase
     .from('cities')

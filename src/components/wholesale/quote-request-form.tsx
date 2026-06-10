@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { submitQuoteRequest } from '@/app/actions/quote-requests'
 import type { QuoteRequestFormState } from '@/app/actions/quote-requests'
 
@@ -13,13 +14,14 @@ export function QuoteRequestForm({
   productId: string
   productName: string
 }) {
+  const t = useTranslations('wholesale.productDetail')
   const [open, setOpen] = useState(false)
   const [state, action, isPending] = useActionState(submitQuoteRequest, initial)
 
   if (state.success) {
     return (
       <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-        Votre demande de devis a bien été envoyée. Nous vous contacterons via WhatsApp.
+        {t('quoteSuccess')}
       </div>
     )
   }
@@ -30,7 +32,7 @@ export function QuoteRequestForm({
         onClick={() => setOpen(true)}
         className="w-full py-3 bg-purple-700 hover:bg-purple-800 text-white text-sm font-semibold rounded-xl transition-colors"
       >
-        Demander un devis
+        {t('quoteRequestButton')}
       </button>
     )
   }
@@ -38,13 +40,14 @@ export function QuoteRequestForm({
   return (
     <div className="rounded-xl border border-purple-200 bg-white p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Demande de devis — {productName}</h3>
+        {/* productName is DB data */}
+        <h3 className="text-sm font-semibold text-gray-900">{t('quoteRequestTitle', { name: productName })}</h3>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="text-gray-400 hover:text-gray-600 text-xs"
         >
-          Annuler
+          {t('quoteRequestCancel')}
         </button>
       </div>
 
@@ -54,27 +57,27 @@ export function QuoteRequestForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Quantité <span className="text-red-500">*</span>
+              {t('quoteFieldQty')} <span className="text-red-500">*</span>
             </label>
             <input
               name="quantity_requested"
               type="number"
               min={1}
               required
-              placeholder="Ex : 500"
+              placeholder={t('quoteQtyPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
             />
           </div>
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              WhatsApp <span className="text-red-500">*</span>
+              {t('quoteFieldWhatsapp')} <span className="text-red-500">*</span>
             </label>
             <input
               name="whatsapp_number"
               type="tel"
               required
-              placeholder="+212 6XXXXXXXX"
+              placeholder={t('quoteWhatsappPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
             />
           </div>
@@ -83,67 +86,67 @@ export function QuoteRequestForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Pays de destination <span className="text-red-500">*</span>
+              {t('quoteFieldDestCountry')} <span className="text-red-500">*</span>
             </label>
             <input
               name="destination_country"
               type="text"
               required
-              placeholder="Ex : Maroc"
+              placeholder={t('quoteDestCountryPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Ville</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('quoteFieldDestCity')}</label>
             <input
               name="destination_city"
               type="text"
-              placeholder="Ex : Casablanca"
+              placeholder={t('quoteDestCityPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Mode de transport préféré</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t('quoteFieldShipping')}</label>
           <select
             name="preferred_shipping_mode"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
           >
-            <option value="">Pas de préférence</option>
-            <option value="air_door_to_door_kg">Aérien door-to-door</option>
-            <option value="sea_textile_kg">Maritime textile</option>
-            <option value="sea_volume_cbm">Maritime volume (CBM)</option>
+            <option value="">{t('quoteShippingNone')}</option>
+            <option value="air_door_to_door_kg">{t('quoteShippingAir')}</option>
+            <option value="sea_textile_kg">{t('quoteShippingSeaTextile')}</option>
+            <option value="sea_volume_cbm">{t('quoteShippingSeaVolume')}</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Couleurs / variantes</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t('quoteFieldColors')}</label>
           <input
             name="colors_or_variants"
             type="text"
-            placeholder="Ex : Rouge, Bleu, Noir"
+            placeholder={t('quoteColorsPlaceholder')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Tailles</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t('quoteFieldSizes')}</label>
           <input
             name="sizes"
             type="text"
-            placeholder="Ex : S, M, L, XL"
+            placeholder={t('quoteSizesPlaceholder')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Notes / précisions</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t('quoteFieldNotes')}</label>
           <textarea
             name="buyer_notes"
             rows={3}
-            placeholder="Exigences particulières, délai souhaité, conditionnement…"
+            placeholder={t('quoteNotesPlaceholder')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none resize-none"
           />
         </div>
@@ -157,7 +160,7 @@ export function QuoteRequestForm({
           disabled={isPending}
           className="w-full py-2.5 bg-purple-700 hover:bg-purple-800 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition-colors"
         >
-          {isPending ? 'Envoi en cours…' : 'Envoyer la demande'}
+          {isPending ? t('quoteSubmitting') : t('quoteSubmit')}
         </button>
       </form>
     </div>

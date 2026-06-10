@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatMAD } from '@/lib/utils'
@@ -7,6 +8,8 @@ import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getDeliveryEstimate } from '@/lib/order-analytics'
 import { CodOrderForm } from '@/components/customer/cod-order-form'
 import { ProductGallery } from '@/components/customer/product-gallery'
+import { MozounaLogo } from '@/components/shared/branding'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { Product } from '@/types/database'
 
 interface Params {
@@ -16,6 +19,7 @@ interface Params {
 
 export async function generateMetadata({ params }: Params) {
   const { id } = await params
+  const t = await getTranslations('publicProduct')
   const supabase = await createClient()
   const { data } = (await supabase
     .from('products')
@@ -23,9 +27,9 @@ export async function generateMetadata({ params }: Params) {
     .eq('id', id)
     .eq('active', true)
     .single()) as { data: { name: string; description: string | null } | null; error: unknown }
-  if (!data) return { title: 'Produit non disponible' }
+  if (!data) return { title: t('metaUnavailable') }
   return {
-    title: `${data.name} — AffiPartner`,
+    title: `${data.name} ${t('metaTitleSuffix')}`,
     description: data.description ?? undefined,
   }
 }
@@ -33,6 +37,8 @@ export async function generateMetadata({ params }: Params) {
 export default async function PublicProductPage({ params, searchParams }: Params) {
   const { id } = await params
   const { ref } = await searchParams
+
+  const t = await getTranslations('publicProduct')
 
   const supabase = await createClient()
 
@@ -77,13 +83,16 @@ export default async function PublicProductPage({ params, searchParams }: Params
   const lowStock = product.stock_count > 0 && product.stock_count <= 5
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
+      <header className="bg-surface border-b border-line sticky top-0 z-10">
         <div className="max-w-lg md:max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
-          <Link href="/" className="text-sm font-semibold text-gray-900">
-            AffiPartner
+          <Link href="/" aria-label={t('ariaHomeLogo')}>
+            <MozounaLogo size="sm" />
           </Link>
-          <span className="text-xs text-gray-400">COD · Maroc 🇲🇦</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-gold-400">{t('badgeCod')}</span>
+            <LanguageSwitcher variant="dark" />
+          </div>
         </div>
       </header>
 
@@ -103,54 +112,58 @@ export default async function PublicProductPage({ params, searchParams }: Params
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                  Stock Maroc
+                  {t('badgeStockMorocco')}
                 </span>
                 {inStock ? (
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
-                      lowStock ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
+                      lowStock ? 'bg-amber-100 text-amber-700' : 'bg-surface-2 text-muted'
                     }`}
                   >
                     {lowStock
-                      ? `Plus que ${product.stock_count} en stock`
-                      : `${product.stock_count} en stock`}
+                      ? t('badgeLowStock', { count: product.stock_count })
+                      : t('badgeInStock', { count: product.stock_count })}
                   </span>
                 ) : (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                    Rupture de stock
+                    {t('badgeOutOfStock')}
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl font-bold text-gray-900 leading-tight">{product.name}</h1>
+              <div className="h-0.5 w-10 bg-gold-400 rounded-full mb-2" aria-hidden />
+              {/* product.name is DB content — not translatable */}
+              <h1 className="text-2xl font-bold text-foreground leading-tight">{product.name}</h1>
 
               {product.description && (
-                <p className="text-sm text-gray-600 mt-3 leading-relaxed whitespace-pre-line">
+                <p className="text-sm text-muted mt-3 leading-relaxed whitespace-pre-line">
+                  {/* product.description is DB content — not translatable */}
                   {product.description}
                 </p>
               )}
             </div>
 
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-gray-900">
+              <span className="text-3xl font-bold text-foreground">
                 {formatMAD(displayPrice)}
               </span>
-              <span className="text-sm text-gray-400">/ unité</span>
+              <span className="text-sm font-medium text-gold-400">{t('priceUnit')}</span>
             </div>
 
-            <div className="flex items-start gap-3 bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex items-start gap-3 bg-surface border border-line rounded-xl p-4 shadow-premium">
               <span className="text-lg" aria-hidden>
                 🚚
               </span>
               <div>
-                <p className="text-sm font-medium text-gray-900">Livraison estimée</p>
-                <p className="text-xs text-gray-500 mt-0.5">{delivery.label}</p>
-                <p className="text-xs text-gray-400 mt-1">Partout au Maroc · paiement à la réception</p>
+                <p className="text-sm font-medium text-foreground">{t('deliveryTitle')}</p>
+                {/* libellé localisé via daysMin/daysMax (la lib renvoie une chaîne FR fixe) */}
+                <p className="text-xs text-muted mt-0.5">{t('deliveryDays', { min: delivery.daysMin, max: delivery.daysMax })}</p>
+                <p className="text-xs text-faint mt-1">{t('deliveryFootnote')}</p>
               </div>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Commander en COD</h2>
+            <div className="bg-surface border border-line rounded-2xl p-5 shadow-premium">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{t('orderSectionTitle')}</h2>
               <CodOrderForm
                 productId={product.id}
                 affiliateIdFromUrl={affiliateId}
@@ -163,9 +176,9 @@ export default async function PublicProductPage({ params, searchParams }: Params
         </div>
       </main>
 
-      <footer className="border-t border-gray-100 bg-white mt-8">
-        <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 text-center text-xs text-gray-400">
-          Livraison partout au Maroc · Paiement sécurisé à la livraison
+      <footer className="border-t border-line bg-surface mt-8">
+        <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 text-center text-xs text-muted">
+          {t('footerTrust')}
         </div>
       </footer>
     </div>

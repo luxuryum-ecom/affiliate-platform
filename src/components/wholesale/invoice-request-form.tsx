@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { requestInvoice } from '@/app/actions/invoice'
 import type { ActionState } from '@/types/orders'
 import type { Profile } from '@/types/database'
@@ -13,13 +14,14 @@ interface Props {
 }
 
 export function InvoiceRequestForm({ orderId, profile }: Props) {
+  const t = useTranslations('wholesale.orderDetail')
   const [state, action, isPending] = useActionState(requestInvoice, initial)
   const [open, setOpen] = useState(false)
 
   if (state.success) {
     return (
       <div className="mt-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
-        ✓ Demande de facture envoyée. Notre équipe la préparera sous peu.
+        {t('invoiceFormSuccess')}
       </div>
     )
   }
@@ -32,7 +34,7 @@ export function InvoiceRequestForm({ orderId, profile }: Props) {
           onClick={() => setOpen(true)}
           className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
         >
-          Demander une facture
+          {t('invoiceFormCta')}
         </button>
       </div>
     )
@@ -41,19 +43,17 @@ export function InvoiceRequestForm({ orderId, profile }: Props) {
   return (
     <div className="mt-4 border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Demande de facture</h3>
+        <h3 className="text-sm font-semibold text-gray-900">{t('invoiceFormTitle')}</h3>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="text-xs text-gray-400 hover:text-gray-600"
         >
-          Annuler
+          {t('invoiceFormCancel')}
         </button>
       </div>
 
-      <p className="text-xs text-gray-500">
-        Renseignez vos informations de facturation. Ces champs sont optionnels.
-      </p>
+      <p className="text-xs text-gray-500">{t('invoiceFormHint')}</p>
 
       <form action={action} className="space-y-3">
         <input type="hidden" name="orderId" value={orderId} />
@@ -61,48 +61,48 @@ export function InvoiceRequestForm({ orderId, profile }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              Raison sociale
+              {t('invoiceFormCompany')}
             </label>
             <input
               name="company_name"
               defaultValue={profile.company_name ?? ''}
-              placeholder="Ex: SARL MonEntreprise"
+              placeholder={t('invoiceFormCompanyPlaceholder')}
               className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
 
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              ICE
+              {t('invoiceFormIce')}
             </label>
             <input
               name="ice"
               defaultValue={profile.ice ?? ''}
-              placeholder="000000000000000"
+              placeholder={t('invoiceFormIcePlaceholder')}
               className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
 
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              Registre de commerce
+              {t('invoiceFormRc')}
             </label>
             <input
               name="registre_commerce"
               defaultValue={profile.registre_commerce ?? ''}
-              placeholder="RC n°..."
+              placeholder={t('invoiceFormRcPlaceholder')}
               className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
 
           <div>
             <label className="block text-xs text-gray-500 mb-1">
-              Adresse de facturation
+              {t('invoiceFormAddress')}
             </label>
             <input
               name="billing_address"
               defaultValue={profile.billing_address ?? ''}
-              placeholder="123 Rue Mohammed V, Casablanca"
+              placeholder={t('invoiceFormAddressPlaceholder')}
               className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
@@ -119,7 +119,7 @@ export function InvoiceRequestForm({ orderId, profile }: Props) {
           disabled={isPending}
           className="w-full py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isPending ? 'Envoi…' : 'Confirmer la demande de facture'}
+          {isPending ? t('invoiceFormSubmitting') : t('invoiceFormSubmit')}
         </button>
       </form>
     </div>

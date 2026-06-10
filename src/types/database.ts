@@ -152,6 +152,10 @@ export interface Profile {
   status: UserStatus
   created_at: string
 
+  /** Pays du compte (FK countries). Pour role=supplier : devise de saisie des
+   *  prix via countries.operational_currency. Choisi au signup, figé (mig 054/055). */
+  country_code: string | null
+
   // ── Wholesaler billing fields (migration 017) ─────────────────────────────
   /** Optional company name for wholesale invoices. */
   company_name: string | null
@@ -702,6 +706,10 @@ export interface SupplierProduct {
   rejected_at: string | null
   /** Set when admin archives a product. */
   archived_at: string | null
+
+  // Ingestion source + Telegram traceability (migration 053)
+  source: 'web' | 'telegram' | 'bulk_csv'
+  telegram_message_id: string | null
 
   // Admin-editable public fields
   public_name: string | null

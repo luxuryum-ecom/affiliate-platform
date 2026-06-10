@@ -1,1 +1,73 @@
 @import "tailwindcss";
+
+/* ─── Design tokens — identité premium Noir + Or (Mozouna Group) ───────────────
+   Mécanisme natif Tailwind v4 : ces tokens génèrent automatiquement les
+   utilitaires (bg-gold-500, text-gold-600, border-gold-300, ring-gold-400,
+   shadow-premium, shadow-gold). 100 % additif — n'altère aucun style existant. */
+@theme {
+  /* Or métallique — accent, jamais envahissant */
+  --color-gold-50:  #fbf8ef;
+  --color-gold-100: #f4ecd2;
+  --color-gold-200: #e7d7a6;   /* bordures subtiles */
+  --color-gold-300: #d8be73;   /* bordures / anneaux */
+  --color-gold-400: #cdae4d;
+  --color-gold-500: #c9a227;   /* OR principal (accents, filets, liens clés) */
+  --color-gold-600: #a8851c;   /* survol / texte or sur fond clair */
+  --color-gold-700: #856914;
+
+  /* Encre — boutons principaux, titres */
+  --color-ink-900: #0a0a0a;
+  --color-ink-800: #1a1a1a;    /* survol bouton */
+  --color-ink-700: #2a2a2a;
+
+  /* Surface claire chaude (fond premium) */
+  --color-cream: #fafaf7;
+
+  /* Ombres premium */
+  --shadow-premium: 0 1px 2px rgba(10, 10, 10, .04), 0 12px 32px -16px rgba(10, 10, 10, .18);
+  --shadow-gold:    0 8px 24px -12px rgba(201, 162, 39, .35);
+
+  /* Typo premium */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── Layer sémantique bi-contexte (clair ⇄ sombre) ───────────────────────────
+   Les utilitaires (bg-bg, bg-surface, text-foreground, text-muted, border-line,
+   bg-primary…) pointent vers des variables vivantes, surchargées par .theme-dark.
+   Défaut = CLAIR (pages hors-scope inchangées). .theme-dark = thème premium sombre,
+   posé uniquement sur les pages ciblées. */
+@theme inline {
+  --color-bg:                 var(--bg);
+  --color-surface:            var(--surface);
+  --color-surface-2:          var(--surface-2);
+  --color-foreground:         var(--foreground);
+  --color-muted:              var(--muted);
+  --color-faint:              var(--faint);
+  --color-line:               var(--line);
+  --color-primary:            var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+}
+
+:root {
+  --bg:        #ffffff;
+  --surface:   #ffffff;
+  --surface-2: #f9fafb;
+  --foreground:#0a0a0a;
+  --muted:     #6b7280;
+  --faint:     #9ca3af;
+  --line:      #e5e7eb;
+  --primary:            #0a0a0a;   /* clair : CTA encre */
+  --primary-foreground: #ffffff;
+}
+
+.theme-dark {
+  --bg:        #0b0b0c;   /* noir profond (hexagone du logo) */
+  --surface:   #161619;   /* carte / surface élevée */
+  --surface-2: #1c1c20;   /* inset / hover */
+  --foreground:#f5f5f4;   /* blanc cassé ~17:1 */
+  --muted:     #a1a1aa;   /* gris clair lisible ~7:1 */
+  --faint:     #71717a;   /* hints non essentiels */
+  --line:      #2a2a2e;
+  --primary:            #c9a227;   /* sombre : CTA OR plein */
+  --primary-foreground: #0a0a0a;
+}

@@ -45,7 +45,7 @@ function EditForm({ city, onCancel }: EditFormProps) {
         <input
           name="delivery_fee_mad"
           type="number"
-          min="0"
+          min="1"
           step="0.01"
           defaultValue={city.delivery_fee_mad}
           required
@@ -172,9 +172,9 @@ export function AddCityForm() {
           <input
             name="delivery_fee_mad"
             type="number"
-            min="0"
+            min="1"
             step="0.01"
-            defaultValue={40}
+            defaultValue={35}
             required
             className="w-28 rounded-lg border border-gray-300 py-2 pl-3 pr-12 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
           />

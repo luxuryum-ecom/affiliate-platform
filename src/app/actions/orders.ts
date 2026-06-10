@@ -155,6 +155,11 @@ export async function placeOrder(
       })
     : 0
 
+  // D4 / flux PUBLIC (audit @finance + @security) : on NE bloque PAS le client.
+  // Si la commission serait négative, elle est ramenée à 0 plus bas (Math.max),
+  // la vente passe et la plateforme encaisse ; l'affilié touche simplement 0.
+  // Le blocage strict n'a lieu que côté affilié (createAffiliateOrder).
+
   const deliveryFeeSnapshot = deliveryFeeResolved
   const packagingFeeSnapshot = product.packaging_fee_mad ?? 10
   const confirmationFeeSnapshot = product.confirmation_fee_mad ?? 10
@@ -337,6 +342,16 @@ export async function createAffiliateOrder(
     packagingFee: product.packaging_fee_mad ?? 10,
     quantity,
   })
+
+  // D4 — l'affilié maîtrise son prix : refuser une commande à commission négative
+  // (coûts + livraison supérieurs au prix de vente). Il doit augmenter son prix.
+  if (commissionAmount < 0) {
+    return {
+      error: 'Prix de vente trop bas : la commission serait négative (coûts et livraison supérieurs au prix). Augmentez votre prix de vente.',
+      success: false,
+      orderId: null,
+    }
+  }
 
   const { data: order, error: insertError } = (await supabase
     .from('orders')

@@ -1,13 +1,50 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { randomUUID } from 'node:crypto'
 import { parseCsvText } from '@/lib/bulk-import'
+import { MAX_CSV_BYTES, looksLikeBinary } from '@/lib/csv-sanitize'
+import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
+import { getRateToMad } from '@/lib/fx'
+import { fetchImageFromUrl } from '@/lib/image-fetch'
 import {
   moderateSupplierProduct,
   validateSupplierProductReadyForApproval,
 } from '@/lib/supplier-product-moderation'
 import { requireAdmin } from './_guards'
+
+const BUCKET = 'supplier-product-images'
+const MAX_PHOTOS_PER_ROW = 5
+
+/** Domaines d'images autorisés pour le re-hébergement CSV (allowlist). Vide → aucune URL externe. */
+function allowedImageHosts(): string[] {
+  return (process.env.CSV_IMAGE_ALLOWED_HOSTS ?? '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean)
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>
+
+/** Re-héberge des URLs d'images (anti-SSRF + magic bytes) dans notre bucket. URLs invalides ignorées. */
+async function rehostPhotos(admin: AdminClient, supplierId: string, urls: string[]): Promise<string[]> {
+  const hosts = allowedImageHosts()
+  const out: string[] = []
+  for (const url of urls.slice(0, MAX_PHOTOS_PER_ROW)) {
+    const r = await fetchImageFromUrl(url, { allowedHosts: hosts })
+    if (!r.ok) continue
+    const path = `${supplierId}/csv_${randomUUID()}.${r.ext}`
+    const { error } = await admin.storage.from(BUCKET).upload(path, r.bytes, {
+      contentType: r.mediaType,
+      upsert: false,
+    })
+    if (error && !/exist|duplicate/i.test(error.message)) continue
+    out.push(admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl)
+  }
+  return out
+}
 import type {
   SupplierProductStatus,
   BulkImportReportRow,
@@ -41,8 +78,15 @@ export async function validateBulkImport(
   const ext = filename.split('.').pop()?.toLowerCase()
   if (ext !== 'csv') return fail('Seuls les fichiers CSV sont supportés. Convertissez votre XLSX en CSV avant import.')
 
+  // Borne taille AVANT lecture (anti-DoS mémoire).
+  if (file.size > MAX_CSV_BYTES) return fail(`Fichier trop volumineux (max ${MAX_CSV_BYTES / 1024 / 1024} MB).`)
+
   const text = await file.text()
-  const { report, rowsValid, rowsInvalid, rowsTotal } = parseCsvText(text, filename)
+  // Vrai type : un .csv contenant du binaire (PNG/ZIP/PDF) est rejeté.
+  if (looksLikeBinary(text)) return fail('Fichier invalide (contenu binaire détecté, pas un CSV texte).')
+
+  const { report, rowsValid, rowsInvalid, rowsTotal, fatalError } = parseCsvText(text, filename)
+  if (fatalError) return fail(fatalError)
 
   const { data: importRow, error: insErr } = await supabase
     .from('supplier_bulk_imports')
@@ -94,12 +138,33 @@ export async function publishBulkImport(
 
   if (!importId || !csvText) return fail('Données manquantes.')
 
-  const { rows } = parseCsvText(csvText, filename ?? 'import.csv')
+  // Re-validation sécurité (le csv_text vient du client).
+  if (Buffer.byteLength(csvText, 'utf8') > MAX_CSV_BYTES) return fail('Fichier trop volumineux.')
+  if (looksLikeBinary(csvText)) return fail('Contenu binaire détecté.')
+
+  const { rows, fatalError } = parseCsvText(csvText, filename ?? 'import.csv')
+  if (fatalError) return fail(fatalError)
+
+  // Écriture serveur-autoritaire (verrou 055) + conversion devise (comme web/Telegram).
+  const admin = createAdminClient()
+  const db = admin as unknown as Parameters<typeof resolveSupplierCurrency>[0]
+
+  // Devise du fournisseur (1 résolution pour tout l'import). Pas de pays → BLOQUÉ.
+  const currency = await resolveSupplierCurrency(db, user.id)
+  if (!currency) {
+    return fail("Votre pays n'est pas configuré (il détermine votre devise). Contactez l'administrateur avant d'importer.")
+  }
+  const rate = await getRateToMad(db, currency)
+  const supplier_type = currency === 'MAD' ? 'morocco' : 'international'
+  const availability_type = currency === 'MAD' ? 'local_stock' : 'import_on_demand'
 
   let imported = 0
 
   for (const row of rows) {
-    const { data: product, error: pErr } = await supabase
+    const pricing = composePricing(currency, rate, row.price_source)
+    const photos = await rehostPhotos(admin, user.id, row.photos)
+
+    const { data: product, error: pErr } = await admin
       .from('supplier_products')
       .insert({
         supplier_id:              user.id,
@@ -108,17 +173,21 @@ export async function publishBulkImport(
         description:              row.description || null,
         min_quantity:             row.moq,
         unit:                     row.unit,
-        supplier_unit_price_usd:  row.supplier_unit_price_usd,
+        suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
+        source_currency:          pricing.source_currency,
+        price_source:             pricing.price_source,
+        fx_rate_source_to_mad:    pricing.fx_rate_source_to_mad,
         stock_quantity:           row.stock_quantity,
         origin_country:           row.export_country,
         export_countries:         [row.export_country],
         lead_time_days:           row.lead_time_days,
-        photos:                   row.photos,
+        photos,
         niche:                    '',
-        supplier_type:            'international',
-        availability_type:        'import_on_demand',
+        supplier_type,
+        availability_type,
         target_buyer_type:        'wholesaler',
         approval_status:          'pending_review',
+        source:                   'bulk_csv',
       })
       .select('id')
       .single()
@@ -130,16 +199,16 @@ export async function publishBulkImport(
     const mod = moderateSupplierProduct({
       product_name: row.product_name,
       description: row.description,
-      photos: row.photos,
+      photos,
       category: row.category,
       min_quantity: row.moq,
       stock_quantity: row.stock_quantity,
       lead_time_days: row.lead_time_days,
-      suggested_wholesale_price_mad: null,
-      supplier_unit_price_usd: row.supplier_unit_price_usd,
+      suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
+      supplier_unit_price_usd: null,
       moq_tier_count: row.moq_tiers.length,
     })
-    await supabase
+    await admin
       .from('supplier_products')
       .update({
         moderation_flag: mod.moderation_flag,
@@ -158,7 +227,7 @@ export async function publishBulkImport(
         stock_quantity:      null,
         price_adjustment_usd: 0,
       }))
-      await supabase.from('supplier_product_variants').insert(variantRows)
+      await admin.from('supplier_product_variants').insert(variantRows)
     }
 
     if (row.moq_tiers.length > 0) {
@@ -167,13 +236,13 @@ export async function publishBulkImport(
         min_quantity:        t.min_quantity,
         unit_price_usd:      t.unit_price_usd,
       }))
-      await supabase.from('supplier_product_moq_tiers').insert(tierRows)
+      await admin.from('supplier_product_moq_tiers').insert(tierRows)
     }
 
     imported++
   }
 
-  await supabase
+  await admin
     .from('supplier_bulk_imports')
     .update({ status: 'imported', rows_imported: imported })
     .eq('id', importId)

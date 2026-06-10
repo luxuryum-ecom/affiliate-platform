@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
@@ -9,6 +10,7 @@ import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buil
 import { InvoiceRequestForm } from '@/components/wholesale/invoice-request-form'
 import { WholesaleProofForm } from '@/components/wholesale/wholesale-proof-form'
 import { WholesalePendingActions } from '@/components/wholesale/wholesale-pending-actions'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type {
   WholesaleOrder,
   WholesaleOrderItem,
@@ -35,41 +37,50 @@ type BillingProfile = Pick<
   'full_name' | 'company_name' | 'ice' | 'registre_commerce' | 'billing_address'
 >
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
-  confirmed: { label: 'Confirmée',   cls: 'bg-blue-100 text-blue-700' },
-  sourcing:  { label: 'En sourcing', cls: 'bg-purple-100 text-purple-700' },
-  shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
-  delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
+// ── Status maps (DB enum value → i18n key suffix) ────────────────────────────
+
+const STATUS_KEY: Record<string, { key: string; cls: string }> = {
+  pending:   { key: 'statusPending',   cls: 'bg-amber-100 text-amber-700' },
+  confirmed: { key: 'statusConfirmed', cls: 'bg-blue-100 text-blue-700' },
+  sourcing:  { key: 'statusSourcing',  cls: 'bg-purple-100 text-purple-700' },
+  shipped:   { key: 'statusShipped',   cls: 'bg-indigo-100 text-indigo-700' },
+  delivered: { key: 'statusDelivered', cls: 'bg-green-100 text-green-700' },
+  cancelled: { key: 'statusCancelled', cls: 'bg-gray-100 text-gray-400' },
 }
 
-const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
-  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-600' },
-  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
-  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
-  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
-  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
-  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
-  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+const IMPORT_STATUS_KEY: Record<WholesaleImportStatus, { key: string; cls: string }> = {
+  awaiting_supplier: { key: 'importAwaitingSupplier', cls: 'bg-gray-100 text-gray-600' },
+  purchased:         { key: 'importPurchased',        cls: 'bg-amber-100 text-amber-700' },
+  in_production:     { key: 'importInProduction',     cls: 'bg-orange-100 text-orange-700' },
+  ready_to_ship:     { key: 'importReadyToShip',      cls: 'bg-yellow-100 text-yellow-700' },
+  shipped:           { key: 'importShipped',          cls: 'bg-blue-100 text-blue-700' },
+  customs_clearance: { key: 'importCustomsClearance', cls: 'bg-purple-100 text-purple-700' },
+  delivered:         { key: 'importDelivered',        cls: 'bg-green-100 text-green-700' },
 }
 
-const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
-  no_deposit:        { label: 'Aucun acompte',     cls: 'bg-gray-100 text-gray-500' },
-  deposit_requested: { label: 'Acompte demandé',   cls: 'bg-amber-100 text-amber-700' },
-  deposit_received:  { label: 'Acompte reçu',      cls: 'bg-blue-100 text-blue-700' },
-  fully_paid:        { label: 'Entièrement réglé', cls: 'bg-green-100 text-green-700' },
+const PAYMENT_STATUS_KEY: Record<WholesalePaymentStatus, { key: string; cls: string }> = {
+  no_deposit:        { key: 'paymentNoDeposit',        cls: 'bg-gray-100 text-gray-500' },
+  deposit_requested: { key: 'paymentDepositRequested', cls: 'bg-amber-100 text-amber-700' },
+  deposit_received:  { key: 'paymentDepositReceived',  cls: 'bg-blue-100 text-blue-700' },
+  fully_paid:        { key: 'paymentFullyPaid',        cls: 'bg-green-100 text-green-700' },
 }
 
 export async function generateMetadata({ params }: Params) {
   const { id } = await params
-  return { title: `Commande #${id.slice(0, 8).toUpperCase()} — Espace Grossiste` }
+  const t = await getTranslations('wholesale.orderDetail')
+  return { title: t('metaTitle', { ref: id.slice(0, 8).toUpperCase() }) }
 }
 
 export default async function WholesaleOrderDetailPage({ params, searchParams }: Params) {
   const { id } = await params
   const { submitted } = await searchParams
   const showSubmittedBanner = submitted === '1'
+
+  const [t, tc, locale] = await Promise.all([
+    getTranslations('wholesale.orderDetail'),
+    getTranslations('wholesale.common'),
+    getLocale(),
+  ])
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -116,16 +127,22 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
   if (!order) notFound()
 
-  const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
-  const importBadge = order.import_status
-    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus]
+  const statusEntry = STATUS_KEY[order.status] ?? STATUS_KEY.pending
+  const importEntry = order.import_status
+    ? IMPORT_STATUS_KEY[order.import_status as WholesaleImportStatus]
     : null
-  const paymentBadge = PAYMENT_STATUS_BADGE[order.payment_status as WholesalePaymentStatus] ?? PAYMENT_STATUS_BADGE.no_deposit
+  const paymentEntry = PAYMENT_STATUS_KEY[order.payment_status as WholesalePaymentStatus] ?? PAYMENT_STATUS_KEY.no_deposit
+
   const timeline = buildWholesaleTimeline(order)
   const importTimeline = buildImportHistoryTimeline(importHistory)
   const paymentTimeline = buildPaymentHistoryTimeline(paymentHistory)
   const isDelivered = order.status === 'delivered'
   const remainingBalance = order.total_amount - (order.deposit_received_amount ?? 0)
+
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' })
+
+  type TKey = Parameters<typeof t>[0]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -133,18 +150,19 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/wholesale/orders" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Mes commandes
+              {tc('backToOrders')}
             </Link>
-            <span className="text-gray-300">/</span>
+            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
             <span className="font-mono text-sm text-gray-700">
               #{id.slice(0, 8).toUpperCase()}
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher variant="light" />
             <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                Déconnexion
+                {tc('signOut')}
               </button>
             </form>
           </div>
@@ -155,7 +173,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
         {showSubmittedBanner && (
           <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
-            ✓ Votre commande grossiste a été soumise. Notre équipe la traitera sous peu.
+            {t('submittedBanner')}
           </div>
         )}
 
@@ -164,35 +182,32 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                  {badge.label}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${statusEntry.cls}`}>
+                  {t(statusEntry.key as TKey)}
                 </span>
-                {importBadge && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
-                    {importBadge.label}
+                {importEntry && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importEntry.cls}`}>
+                    {t(importEntry.key as TKey)}
                   </span>
                 )}
                 {isDelivered && order.invoice_requested && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
-                    Facture demandée
+                    {t('badgeInvoiceRequested')}
                   </span>
                 )}
-                <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
-                  {paymentBadge.label}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${paymentEntry.cls}`}>
+                  {t(paymentEntry.key as TKey)}
                 </span>
               </div>
               <p className="text-xs text-gray-400 mt-1.5">
-                Commande du{' '}
-                {new Date(order.created_at).toLocaleDateString('fr-MA', {
-                  day: '2-digit',
-                  month: 'long',
-                  year: 'numeric',
-                })}
+                {t('orderedOn', { date: fmt(order.created_at) })}
               </p>
             </div>
             <div className="text-right">
               <p className="text-xl font-bold text-gray-900">{formatMAD(order.total_amount)}</p>
-              <p className="text-xs text-gray-400">{items.length} article{items.length !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-gray-400">
+                {t('itemCount', { count: items.length })}
+              </p>
             </div>
           </div>
         </div>
@@ -204,7 +219,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
             {/* Order items */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Articles commandés</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionItems')}</h2>
               <div className="divide-y divide-gray-100">
                 {items.map((item) => {
                   const coverUrl = getProductCoverUrl(item.product)
@@ -231,7 +246,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                 })}
               </div>
               <div className="pt-3 border-t border-gray-100 mt-3 flex justify-between">
-                <span className="text-sm font-semibold text-gray-700">Total</span>
+                <span className="text-sm font-semibold text-gray-700">{t('itemTotal')}</span>
                 <span className="text-sm font-bold text-gray-900">{formatMAD(order.total_amount)}</span>
               </div>
             </div>
@@ -239,23 +254,23 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
             {/* Delivery info */}
             {(order.city || order.address || order.buyer_notes) && (
               <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-3">Informations de livraison</h2>
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">{t('sectionDelivery')}</h2>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                   {order.city && (
                     <div>
-                      <dt className="text-xs text-gray-400">Ville</dt>
+                      <dt className="text-xs text-gray-400">{t('deliveryCity')}</dt>
                       <dd className="text-gray-800 font-medium">{order.city}</dd>
                     </div>
                   )}
                   {order.address && (
                     <div className={order.city ? '' : 'col-span-2'}>
-                      <dt className="text-xs text-gray-400">Adresse</dt>
+                      <dt className="text-xs text-gray-400">{t('deliveryAddress')}</dt>
                       <dd className="text-gray-800 font-medium">{order.address}</dd>
                     </div>
                   )}
                   {order.buyer_notes && (
                     <div className="col-span-2">
-                      <dt className="text-xs text-gray-400">Note</dt>
+                      <dt className="text-xs text-gray-400">{t('deliveryNote')}</dt>
                       <dd className="text-gray-800">{order.buyer_notes}</dd>
                     </div>
                   )}
@@ -266,35 +281,42 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
             {/* Invoice request section */}
             {isDelivered && (
               <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-1">Facture</h2>
+                <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('sectionInvoice')}</h2>
                 {order.invoice_requested ? (
                   <div className="space-y-2 mt-3">
                     <p className="text-sm text-green-700 font-medium">
-                      ✓ Demande de facture envoyée
+                      {t('invoiceSent')}
                     </p>
                     {order.invoice_requested_at && (
                       <p className="text-xs text-gray-400">
-                        Le{' '}
-                        {new Date(order.invoice_requested_at).toLocaleDateString('fr-MA', {
-                          day: '2-digit',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
+                        {t('invoiceSentOn', { date: fmt(order.invoice_requested_at) })}
                       </p>
                     )}
                     {(order.invoice_company_name || order.invoice_ice || order.invoice_registre_commerce || order.invoice_billing_address) && (
                       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm border-t border-gray-100 pt-3">
                         {order.invoice_company_name && (
-                          <div><dt className="text-xs text-gray-400">Raison sociale</dt><dd className="font-medium">{order.invoice_company_name}</dd></div>
+                          <div>
+                            <dt className="text-xs text-gray-400">{t('invoiceCompanyName')}</dt>
+                            <dd className="font-medium">{order.invoice_company_name}</dd>
+                          </div>
                         )}
                         {order.invoice_ice && (
-                          <div><dt className="text-xs text-gray-400">ICE</dt><dd className="font-medium">{order.invoice_ice}</dd></div>
+                          <div>
+                            <dt className="text-xs text-gray-400">{t('invoiceIce')}</dt>
+                            <dd className="font-medium">{order.invoice_ice}</dd>
+                          </div>
                         )}
                         {order.invoice_registre_commerce && (
-                          <div><dt className="text-xs text-gray-400">RC</dt><dd className="font-medium">{order.invoice_registre_commerce}</dd></div>
+                          <div>
+                            <dt className="text-xs text-gray-400">{t('invoiceRc')}</dt>
+                            <dd className="font-medium">{order.invoice_registre_commerce}</dd>
+                          </div>
                         )}
                         {order.invoice_billing_address && (
-                          <div className="col-span-2"><dt className="text-xs text-gray-400">Adresse de facturation</dt><dd className="font-medium">{order.invoice_billing_address}</dd></div>
+                          <div className="col-span-2">
+                            <dt className="text-xs text-gray-400">{t('invoiceBillingAddress')}</dt>
+                            <dd className="font-medium">{order.invoice_billing_address}</dd>
+                          </div>
                         )}
                       </dl>
                     )}
@@ -302,7 +324,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                 ) : (
                   <>
                     <p className="text-xs text-gray-400 mb-2">
-                      Disponible après livraison et règlement.
+                      {t('invoiceAvailableAfter')}
                     </p>
                     {profile && <InvoiceRequestForm orderId={order.id} profile={profile} />}
                   </>
@@ -322,14 +344,14 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
             )}
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de commande</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionTracking')}</h2>
               <OrderTimeline steps={timeline} />
             </div>
 
             {/* Import progress history */}
             {importTimeline.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi import</h2>
+                <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionImportHistory')}</h2>
                 <OrderTimeline steps={importTimeline} />
               </div>
             )}
@@ -337,12 +359,12 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
             {/* Link back to source quote */}
             {order.quote_request_id && (
               <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-400 mb-1">Créée depuis un devis</p>
+                <p className="text-xs text-gray-400 mb-1">{t('quoteSource')}</p>
                 <Link
                   href={`/wholesale/quote-requests/${order.quote_request_id}`}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
                 >
-                  Devis #{order.quote_request_id.slice(0, 8).toUpperCase()} →
+                  {t('quoteLinkLabel', { ref: order.quote_request_id.slice(0, 8).toUpperCase() })}
                 </Link>
               </div>
             )}
@@ -351,27 +373,27 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
             {!['cancelled'].includes(order.status) && (
               <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-700">Paiement</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentBadge.cls}`}>
-                    {paymentBadge.label}
+                  <p className="text-xs font-semibold text-gray-700">{t('sectionPayment')}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentEntry.cls}`}>
+                    {t(paymentEntry.key as TKey)}
                   </span>
                 </div>
                 {(order.deposit_amount != null || order.deposit_received_amount > 0) && (
                   <div className="space-y-1.5 text-sm">
                     {order.deposit_amount != null && (
                       <div className="flex justify-between">
-                        <span className="text-xs text-gray-400">Acompte demandé</span>
+                        <span className="text-xs text-gray-400">{t('paymentDepositAsked')}</span>
                         <span className="text-xs font-medium text-gray-700">{formatMAD(order.deposit_amount)}</span>
                       </div>
                     )}
                     {order.deposit_received_amount > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-xs text-gray-400">Acompte reçu</span>
+                        <span className="text-xs text-gray-400">{t('paymentDepositReceivedLabel')}</span>
                         <span className="text-xs font-medium text-blue-700">{formatMAD(order.deposit_received_amount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t border-gray-100 pt-1.5">
-                      <span className="text-xs font-semibold text-gray-600">Solde restant</span>
+                      <span className="text-xs font-semibold text-gray-600">{t('paymentRemainingBalance')}</span>
                       <span className={`text-xs font-bold ${remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {formatMAD(remainingBalance)}
                       </span>
@@ -380,7 +402,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                 )}
                 {order.payment_status === 'no_deposit' && (
                   <p className="text-xs text-gray-400">
-                    Notre équipe vous contactera pour les modalités de paiement.
+                    {t('paymentContactTeam')}
                   </p>
                 )}
               </div>
@@ -390,7 +412,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
             {!['cancelled'].includes(order.status) && (
               <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <h2 className="text-sm font-semibold text-gray-900 mb-3">
-                  Justificatif de paiement
+                  {t('sectionProof')}
                 </h2>
                 <WholesaleProofForm orderId={order.id} existingProofs={proofs} />
               </div>
@@ -399,7 +421,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
             {/* Payment timeline */}
             {paymentTimeline.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-4">Historique paiement</h2>
+                <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionPaymentHistory')}</h2>
                 <OrderTimeline steps={paymentTimeline} />
               </div>
             )}

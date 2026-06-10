@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { placeOrder } from '@/app/actions/orders'
 import type { OrderFormState } from '@/types/orders'
 import { recordAffiliateClick } from '@/app/actions/affiliate-clicks'
@@ -23,7 +24,7 @@ interface CodOrderFormProps {
 const initialState: OrderFormState = { error: null, success: false, orderId: null }
 
 const INPUT =
-  'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50'
+  'w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2'
 
 export function CodOrderForm({
   productId,
@@ -32,6 +33,7 @@ export function CodOrderForm({
   sellPrice,
   maxQty,
 }: CodOrderFormProps) {
+  const t = useTranslations('publicProduct')
   const [state, action, isPending] = useActionState(placeOrder, initialState)
   const [qty, setQty] = useState(1)
   const [attribution, setAttribution] = useState<{
@@ -64,14 +66,13 @@ export function CodOrderForm({
   if (state.success && state.orderId) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-2">
-        <p className="text-2xl">✓</p>
-        <p className="font-semibold text-green-800">Commande enregistrée !</p>
+        <p className="text-2xl">{t('form.successIcon')}</p>
+        <p className="font-semibold text-green-800">{t('form.successTitle')}</p>
         <p className="text-sm text-green-700">
-          Référence&nbsp;:{' '}
-          <span className="font-mono font-bold">{state.orderId.slice(0, 8).toUpperCase()}</span>
+          {t('form.successRef', { ref: state.orderId.slice(0, 8).toUpperCase() })}
         </p>
         <p className="text-xs text-green-600 pt-1">
-          Notre équipe vous contactera sous 24&nbsp;h pour confirmer votre commande COD.
+          {t('form.successNote')}
         </p>
       </div>
     )
@@ -90,104 +91,106 @@ export function CodOrderForm({
         <input type="hidden" name="quantity" value={qty} />
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-2">Quantité</label>
+          <label className="block text-xs font-medium text-muted mb-2">{t('form.labelQty')}</label>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setQty((q) => Math.max(1, q - 1))}
               disabled={qty <= 1}
-              className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 text-lg"
+              aria-label={t('form.ariaDecrease')}
+              className="w-10 h-10 flex items-center justify-center border border-line rounded-lg text-foreground hover:bg-surface-2 disabled:opacity-40 text-lg"
             >
               −
             </button>
-            <span className="w-12 text-center font-semibold text-gray-900 text-lg">{qty}</span>
+            <span className="w-12 text-center font-semibold text-foreground text-lg">{qty}</span>
             <button
               type="button"
               onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
               disabled={qty >= maxQty}
-              className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 text-lg"
+              aria-label={t('form.ariaIncrease')}
+              className="w-10 h-10 flex items-center justify-center border border-line rounded-lg text-foreground hover:bg-surface-2 disabled:opacity-40 text-lg"
             >
               +
             </button>
-            <span className="text-sm text-gray-500 ml-auto">
-              Total&nbsp;: <strong className="text-gray-900">{formatMAD(total)}</strong>
+            <span className="text-sm text-muted ms-auto">
+              {t('form.totalLabel', { amount: formatMAD(total) })}
             </span>
           </div>
         </div>
 
-        <hr className="border-gray-100" />
+        <hr className="border-line" />
 
         <div className="grid grid-cols-1 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Nom complet <span className="text-red-500">*</span>
+            <label className="block text-xs font-medium text-muted mb-1">
+              {t('form.labelName')} <span className="text-red-500">{t('form.required')}</span>
             </label>
             <input
               name="customer_name"
               type="text"
               required
               disabled={isPending}
-              placeholder="Votre nom et prénom"
+              placeholder={t('form.placeholderName')}
               className={INPUT}
               autoComplete="name"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Téléphone <span className="text-red-500">*</span>
+            <label className="block text-xs font-medium text-muted mb-1">
+              {t('form.labelPhone')} <span className="text-red-500">{t('form.required')}</span>
             </label>
             <input
               name="customer_phone"
               type="tel"
               required
               disabled={isPending}
-              placeholder="06 00 00 00 00"
+              placeholder={t('form.placeholderPhone')}
               className={INPUT}
               autoComplete="tel"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Ville <span className="text-red-500">*</span>
+            <label className="block text-xs font-medium text-muted mb-1">
+              {t('form.labelCity')} <span className="text-red-500">{t('form.required')}</span>
             </label>
             <input
               name="customer_city"
               type="text"
               required
               disabled={isPending}
-              placeholder="Casablanca, Rabat, Marrakech…"
+              placeholder={t('form.placeholderCity')}
               className={INPUT}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Adresse de livraison <span className="text-red-500">*</span>
+            <label className="block text-xs font-medium text-muted mb-1">
+              {t('form.labelAddress')} <span className="text-red-500">{t('form.required')}</span>
             </label>
             <textarea
               name="customer_address"
               required
               disabled={isPending}
               rows={2}
-              placeholder="N° rue, quartier, immeuble…"
+              placeholder={t('form.placeholderAddress')}
               className={INPUT + ' resize-none'}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Remarques (optionnel)
+            <label className="block text-xs font-medium text-muted mb-1">
+              {t('form.labelNotes')}
             </label>
             <input
               name="notes"
               type="text"
               disabled={isPending}
-              placeholder="Couleur, taille…"
+              placeholder={t('form.placeholderNotes')}
               className={INPUT}
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5 text-xs text-amber-800">
-          💵 Paiement à la livraison (COD) — {formatMAD(total)}
+          💵 {t('form.codBadge', { amount: formatMAD(total) })}
         </div>
 
         {state.error && (
@@ -199,29 +202,29 @@ export function CodOrderForm({
         <button
           type="submit"
           disabled={isPending || maxQty === 0}
-          className="w-full py-3.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl shadow-gold hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
           {isPending
-            ? 'Envoi en cours…'
+            ? t('form.submitting')
             : maxQty === 0
-            ? 'Produit épuisé'
-            : 'Commander en COD'}
+            ? t('form.outOfStock')
+            : t('form.submit')}
         </button>
       </form>
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
+          <div className="w-full border-t border-line" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-white px-2 text-gray-400">ou</span>
+          <span className="bg-surface px-2 text-faint">{t('form.orSeparator')}</span>
         </div>
       </div>
 
       <WhatsAppCodButton productName={productName} sellPrice={sellPrice} />
 
-      <p className="text-xs text-center text-gray-400 leading-relaxed">
-        En commandant, vous acceptez d&apos;être contacté(e) pour confirmer la livraison.
+      <p className="text-xs text-center text-faint leading-relaxed">
+        {t('form.consent')}
       </p>
     </div>
   )
