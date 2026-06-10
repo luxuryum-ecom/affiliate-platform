@@ -703,6 +703,10 @@ export interface SupplierProduct {
   /** Set when admin archives a product. */
   archived_at: string | null
 
+  // Ingestion source + Telegram traceability (migration 053)
+  source: 'web' | 'telegram' | 'bulk_csv'
+  telegram_message_id: string | null
+
   // Admin-editable public fields
   public_name: string | null
   public_description: string | null
