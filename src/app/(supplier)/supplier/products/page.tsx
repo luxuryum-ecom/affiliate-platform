@@ -9,6 +9,8 @@ import {
   SUPPLIER_PRODUCT_SELECT,
   SUPPLIER_PRODUCT_STATUS_BADGES,
 } from '@/lib/supplier-product-moderation'
+import { TelegramLinkCard } from '@/components/supplier/telegram-link-card'
+import { getTelegramLinkStatus } from '@/app/actions/telegram-link'
 
 export async function generateMetadata() {
   const t = await getTranslations('supplier.products')
@@ -25,13 +27,14 @@ export default async function SupplierProductsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileResult, productsResult] = await Promise.all([
+  const [profileResult, productsResult, telegramStatus] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
       .from('supplier_products')
       .select(SUPPLIER_PRODUCT_SELECT)
       .eq('supplier_id', user.id)
       .order('created_at', { ascending: false }),
+    getTelegramLinkStatus(),
   ])
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
@@ -65,6 +68,7 @@ export default async function SupplierProductsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mb-6"><TelegramLinkCard initialStatus={telegramStatus} /></div>
         {/* Catalog stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
