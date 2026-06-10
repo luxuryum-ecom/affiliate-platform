@@ -47,6 +47,17 @@ export type TelegramUpdate = z.infer<typeof telegramUpdateSchema>
 export type TelegramMessage = z.infer<typeof telegramMessageSchema>
 export type TelegramPhotoSize = z.infer<typeof telegramPhotoSizeSchema>
 
+/** Clé d'idempotence déterministe d'un message Telegram. */
+export function buildMessageKey(chatId: number, messageId: number): string {
+  return `${chatId}:${messageId}`
+}
+
+/** Telegram trie les tailles par ordre croissant — on prend la plus grande. */
+export function pickLargestPhoto(photos: TelegramPhotoSize[]): TelegramPhotoSize | null {
+  if (photos.length === 0) return null
+  return photos.reduce((best, p) => ((p.file_size ?? 0) >= (best.file_size ?? 0) ? p : best))
+}
+
 // ── 2. Sortie brute de l'IA (avant nettoyage) ────────────────────────────────
 
 export const aiExtractionRawSchema = z.object({
@@ -76,9 +87,11 @@ export function sanitizeExtractedPrice(raw: unknown): number | null {
   if (typeof raw === 'number') {
     n = raw
   } else if (typeof raw === 'string') {
-    // Garder chiffres, séparateurs ; virgule décimale → point ; retirer le reste.
-    const cleaned = raw.replace(/\s/g, '').replace(',', '.').replace(/[^\d.]/g, '')
-    if (cleaned === '' || cleaned === '.') return null
+    // Virgule décimale → point. On CONSERVE le signe « - » pour que « -5 »
+    // parte bien à parseFloat = -5 et tombe ensuite sur le rejet n <= 0
+    // (sinon strip du signe ferait passer un prix négatif pour positif).
+    const cleaned = raw.replace(/\s/g, '').replace(',', '.').replace(/[^\d.-]/g, '')
+    if (cleaned === '' || cleaned === '.' || cleaned === '-') return null
     n = parseFloat(cleaned)
   } else {
     return null

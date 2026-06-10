@@ -8,9 +8,10 @@ import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
 import { extractProductFromTelegram } from './extract'
 import { telegramDownloadPhoto, telegramSendMessage } from './client'
 import {
+  buildMessageKey,
   isValidLinkCodeFormat,
+  pickLargestPhoto,
   type TelegramMessage,
-  type TelegramPhotoSize,
   type TelegramUpdate,
 } from './schema'
 
@@ -21,14 +22,6 @@ const UNIQUE_VIOLATION = '23505'
 
 function nowIso(): string {
   return new Date().toISOString()
-}
-
-/** Telegram trie les tailles par ordre croissant — on prend la plus grande. */
-function pickLargestPhoto(photos: TelegramPhotoSize[]): TelegramPhotoSize | null {
-  if (photos.length === 0) return null
-  return photos.reduce((best, p) =>
-    (p.file_size ?? 0) >= (best.file_size ?? 0) ? p : best,
-  )
 }
 
 /**
@@ -122,7 +115,7 @@ async function handleLinkCommand(admin: Admin, msg: TelegramMessage, codeRaw: st
 async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise<void> {
   const chatId = msg.chat.id
   const telegramUserId = msg.from!.id
-  const messageKey = `${msg.chat.id}:${msg.message_id}`
+  const messageKey = buildMessageKey(msg.chat.id, msg.message_id)
   const largest = pickLargestPhoto(msg.photo ?? [])
   if (!largest) return
 
