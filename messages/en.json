@@ -329,7 +329,11 @@
       "quotaLabel": "Products: {current}/{max}",
       "quotaUnlimited": "Products: {current} (unlimited)",
       "upgrade": "Increase my limit",
-      "botFallback": "the bot"
+      "botFallback": "the bot",
+      "linkedGuide": "Send a product photo with a short description to the bot {bot}. Each product is reviewed by an administrator before publication.",
+      "limitReached": "Limit reached — {current}/{max} products",
+      "limitReachedSub": "Go Premium to add without limits",
+      "goPremium": "Go Premium →"
     },
     "products": {
       "metaTitle": "My products — Supplier area",

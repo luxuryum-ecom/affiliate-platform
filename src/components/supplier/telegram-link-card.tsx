@@ -14,6 +14,15 @@ import {
 
 type Quota = { current: number; max: number; isUnlimited: boolean }
 
+// Icône couronne (pas de lib d'icônes dans le projet) — couleur via currentColor.
+function CrownIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M3 7.5l4.2 3.3L12 4l4.8 6.8L21 7.5 19.2 17H4.8L3 7.5zM4.8 19h14.4v2H4.8v-2z" />
+    </svg>
+  )
+}
+
 export function TelegramLinkCard({
   initialStatus,
   quota,
@@ -32,58 +41,66 @@ export function TelegramLinkCard({
   const linked = state.linked || initialStatus?.linked
 
   const atLimit = !!quota && !quota.isUnlimited && quota.current >= quota.max
-  const nearLimit = !!quota && !quota.isUnlimited && quota.current >= quota.max - 1
 
-  const quotaBlock = quota ? (
-    <div className="shrink-0 text-end">
-      <p
-        className={`text-sm font-semibold ${
-          atLimit ? 'text-danger-fg' : nearLimit ? 'text-warning-fg' : 'text-foreground'
-        }`}
+  // ── Section quota / incitation Premium (partagée liée + non liée) ────────────
+  // Compteur X/Y issu de la vraie limite du plan (quota). Numéraux latins forcés
+  // via String() (substitution verbatim, sans formatage numérique localisé).
+  const quotaSection = !quota ? null : quota.isUnlimited ? (
+    <p className="text-xs font-medium text-muted">
+      {t('quotaUnlimited', { current: String(quota.current) })}
+    </p>
+  ) : atLimit ? (
+    // Carte PREMIUM OR (pas rouge) — incitation à l'abonnement.
+    <div className="flex items-start gap-3 rounded-xl border border-[#EF9F27] bg-[#FAEEDA] p-4">
+      <CrownIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent-fg" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-accent-fg">
+          {t('limitReached', { current: String(quota.current), max: String(quota.max) })}
+        </p>
+        <p className="mt-0.5 text-xs text-accent-fg/80">{t('limitReachedSub')}</p>
+      </div>
+      <Link
+        href="/supplier/premium"
+        className="shrink-0 rounded-lg bg-[#BA7517] px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
       >
-        {quota.isUnlimited
-          ? t('quotaUnlimited', { current: quota.current })
-          : t('quotaLabel', { current: quota.current, max: quota.max })}
-      </p>
-      {(atLimit || nearLimit) && (
-        <Link href="/supplier/premium" className="text-xs text-accent-fg underline">
-          {t('upgrade')}
-        </Link>
-      )}
+        {t('goPremium')}
+      </Link>
     </div>
-  ) : null
+  ) : (
+    <p className="text-xs font-medium text-muted">
+      {t('quotaLabel', { current: String(quota.current), max: String(quota.max) })}
+    </p>
+  )
 
-  // ── État LIÉ : carte visible compacte + quota ───────────────────────────────
+  // ── État LIÉ : en-tête + guide complet + quota / incitation Premium ──────────
   if (linked) {
     return (
-      <div className="rounded-xl border border-line bg-surface p-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">
-            <span className="text-success">✓</span> {t('linkedCompact')}
+      <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <span className="text-success">✅</span> {t('linkedCompact')}
           </p>
-          <p className="text-xs text-muted mt-0.5 truncate">
-            {t('linkedHint')}
-            {botUsername ? ` ${botLabel}` : ''}
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            {t('linkedGuide', { bot: botLabel })}
           </p>
         </div>
-        {quotaBlock}
+        {quotaSection}
       </div>
     )
   }
 
   // ── État NON LIÉ : bloc d'action + quota ────────────────────────────────────
   return (
-    <div className="rounded-xl border border-line bg-surface p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">{t('title')}</p>
-          <p className="mt-1 text-xs text-muted">{t('subtitle')}</p>
-        </div>
-        {quotaBlock}
+    <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">{t('title')}</p>
+        <p className="mt-1 text-xs text-muted">{t('subtitle')}</p>
       </div>
 
+      {quotaSection}
+
       {state.code ? (
-        <div className="mt-4 space-y-2">
+        <div className="space-y-2">
           <p className="text-xs text-muted">{t('instruction', { bot: botLabel })}</p>
           <code className="block rounded-lg bg-ink-900 px-4 py-3 text-center text-lg font-mono tracking-widest text-cream">
             /link {state.code}
@@ -93,7 +110,7 @@ export function TelegramLinkCard({
           </p>
         </div>
       ) : (
-        <form action={action} className="mt-4">
+        <form action={action}>
           <button
             type="submit"
             disabled={isPending}

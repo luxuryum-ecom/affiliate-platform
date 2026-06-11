@@ -329,7 +329,11 @@
       "quotaLabel": "المنتجات: {current}/{max}",
       "quotaUnlimited": "المنتجات: {current} (غير محدود)",
       "upgrade": "رفع الحدّ",
-      "botFallback": "البوت"
+      "botFallback": "البوت",
+      "linkedGuide": "أرسل صورة المنتج مع وصف قصير إلى البوت {bot}. يخضع كل منتج لمراجعة المشرف قبل النشر.",
+      "limitReached": "تم بلوغ الحدّ — {current}/{max} منتجات",
+      "limitReachedSub": "اشترك في بريميوم للإضافة بلا حدود",
+      "goPremium": "الاشتراك في بريميوم ←"
     },
     "products": {
       "metaTitle": "منتجاتي — فضاء المورّد",
