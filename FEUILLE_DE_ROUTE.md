@@ -8,6 +8,19 @@
 > Liste de tête à attaquer en début de prochaine session. Ordre = priorité décroissante.
 > Chaque point : `@architect` plan d'abord → validation Abdou → implémentation. **Rien n'est codé ici.**
 
+## 🚑 BLOQUEUR P0 — RÉGRESSIONS DESIGN à corriger AVANT toute nouvelle feature
+**Le chantier design (lots 3x) a CASSÉ des pages qui marchaient avant**, non détecté par les tests.
+1. **`/wholesale/marketplace/[id]`** : erreur `Functions cannot be passed directly to Client Components`
+   — `stockAvailable` est passé **comme fonction** au lieu d'une **string résolue via `t()`** avant
+   d'être transmise au Client Component.
+2. **AUDIT COMPLET requis** : vérifier **VISUELLEMENT** (pas seulement `tsc` / tests) **toutes les pages
+   touchées par le design**, surtout **grossiste + marketplace**, pour débusquer d'autres régressions
+   du même type (**objets/fonctions de traduction passés à des Client Components** au lieu de strings résolues).
+3. **Question de fond** : les **115 tests ne détectent PAS** ces erreurs de rendu (RSC → Client). À traiter :
+   **renforcer la couverture** (tests de rendu des pages) **et/ou ajouter une passe de vérif visuelle
+   systématique** après tout gros chantier design.
+> ⛔ **À corriger AVANT d'attaquer de nouvelles features.**
+
 ## ⭐ PRIORITÉ N°1 — Gestion des commandes style Deliveroo (B2B)
 **LE chantier à attaquer en premier.** Déjà détaillé en **SECTION 2bis-A** (plus bas) — s'y référer.
 - Les commandes qui **arrivent** dans le SaaS → **état / statut** clair (reçue → assignée → confirmée fournisseur → en préparation → prête → ramassée/expédiée → livrée).
