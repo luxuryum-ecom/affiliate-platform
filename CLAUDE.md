@@ -36,6 +36,7 @@ Développé sous Claude Code. **~80 % déjà construit et FONCTIONNEL** : on ne 
 - **Tout ce qui touche à l'ARGENT** (ledger, commissions, devises, livraison) : **plan d'abord**, puis **audit `@finance` + `@security-reviewer`**, PUIS commit. Jamais dans la précipitation.
 - **Toujours travailler en branches.** Ne **pas pousser ni merger** sans accord explicite d'Abdou.
 - **Fin de chaque session** : mettre à jour `FEUILLE_DE_ROUTE.md` + commit.
+- **🌍 RÈGLE D'OR — i18n OBLIGATOIRE** : Tout nouveau texte visible par l'utilisateur (composant, page, bouton, message, libellé, réponse de bot) DOIT être créé directement avec ses clés de traduction **FR + AR (فصحى) + EN**, et câblé via `getTranslations`/`useTranslations`. **JAMAIS de texte en dur.** Les chiffres restent en numéraux latins `1234567890`. Le **RTL** doit fonctionner. Un composant livré avec du texte en dur est considéré comme **NON terminé**. Cette règle s'applique à chaque ajout ET à toute modification touchant du texte existant.
 
 ### Modèle de commission affilié (référence)
 ```
