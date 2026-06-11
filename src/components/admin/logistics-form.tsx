@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { useTranslations } from 'next-intl'
 import { updateLogisticsSettings } from '@/app/actions/logistics'
 import type { ActionState } from '@/types/orders'
 import type { LogisticsSettings } from '@/types/database'
@@ -11,30 +12,32 @@ interface Props {
   settings: LogisticsSettings
 }
 
+const INPUT =
+  'w-full rounded-lg border border-line bg-surface py-2 pl-3 pr-14 text-sm text-foreground shadow-sm focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400'
+
 export function LogisticsForm({ settings }: Props) {
+  const t  = useTranslations('admin.logisticsForm')
+  const tc = useTranslations('admin.common')
   const [state, action, isPending] = useActionState(updateLogisticsSettings, initialState)
 
   return (
     <form action={action} className="space-y-6">
       {state.error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-danger bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           {state.error}
         </div>
       )}
       {state.success && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          Paramètres enregistrés avec succès.
+        <div className="rounded-lg border border-success bg-success-soft px-4 py-3 text-sm text-success-fg">
+          {t('success')}
         </div>
       )}
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {/* Casablanca delivery fee */}
         <div className="space-y-1.5">
-          <label
-            htmlFor="casablanca_delivery_fee_mad"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Frais de livraison — Casablanca
+          <label htmlFor="casablanca_delivery_fee_mad" className="block text-sm font-medium text-muted">
+            {t('feeCasablanca')}
           </label>
           <div className="relative">
             <input
@@ -45,24 +48,21 @@ export function LogisticsForm({ settings }: Props) {
               step="0.01"
               required
               defaultValue={settings.casablanca_delivery_fee_mad}
-              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-14 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className={INPUT}
             />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400">
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-faint">
               MAD
             </span>
           </div>
-          <p className="text-xs text-gray-500">
-            Appliqué quand la ville = &quot;Casablanca&quot;
+          <p className="text-xs text-muted">
+            {t('helpCasablanca')}
           </p>
         </div>
 
         {/* Default delivery fee */}
         <div className="space-y-1.5">
-          <label
-            htmlFor="default_delivery_fee_mad"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Frais de livraison — Autres villes
+          <label htmlFor="default_delivery_fee_mad" className="block text-sm font-medium text-muted">
+            {t('feeOther')}
           </label>
           <div className="relative">
             <input
@@ -73,24 +73,21 @@ export function LogisticsForm({ settings }: Props) {
               step="0.01"
               required
               defaultValue={settings.default_delivery_fee_mad}
-              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-14 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className={INPUT}
             />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400">
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-faint">
               MAD
             </span>
           </div>
-          <p className="text-xs text-gray-500">
-            Appliqué pour toutes les villes hors Casablanca
+          <p className="text-xs text-muted">
+            {t('helpOther')}
           </p>
         </div>
 
         {/* Return fee */}
         <div className="space-y-1.5">
-          <label
-            htmlFor="return_fee_mad"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Frais de retour
+          <label htmlFor="return_fee_mad" className="block text-sm font-medium text-muted">
+            {t('feeReturn')}
           </label>
           <div className="relative">
             <input
@@ -101,14 +98,14 @@ export function LogisticsForm({ settings }: Props) {
               step="0.01"
               required
               defaultValue={settings.return_fee_mad}
-              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-14 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className={INPUT}
             />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400">
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-faint">
               MAD
             </span>
           </div>
-          <p className="text-xs text-gray-500">
-            Appliqué pour toutes les villes en cas de retour
+          <p className="text-xs text-muted">
+            {t('helpReturn')}
           </p>
         </div>
       </div>
@@ -117,9 +114,9 @@ export function LogisticsForm({ settings }: Props) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {isPending ? 'Enregistrement…' : 'Enregistrer'}
+          {isPending ? tc('saving') : tc('save')}
         </button>
       </div>
     </form>

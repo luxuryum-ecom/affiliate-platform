@@ -1,161 +1,179 @@
-import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
+import { createClient } from '@/lib/supabase/server'
 import { getTariffs } from '@/app/actions/tariffs'
-import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { AddTariffForm, TariffRowActions } from '@/components/admin/tariff-row-actions'
-import type { ImportTariff } from '@/types/database'
+import type { ImportTariff, TariffCountry } from '@/types/database'
 
-export const metadata = { title: 'Frais transport & douane — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.importTariffs')
+  return { title: t('metaTitle') }
+}
+
+const COUNTRIES: TariffCountry[] = ['Turquie', 'Chine', 'Égypte', 'Dubai', 'Autre']
 
 export default async function AdminImportTariffsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const profileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
+  const adminProfile = profileRes.data as { full_name: string } | null
+
+  const t  = await getTranslations('admin.importTariffs')
+  const tc = await getTranslations('admin.common')
+
   const tariffs = await getTariffs()
-  const active = tariffs.filter((t) => t.active)
+  const active = tariffs.filter((it) => it.active)
+  const inactiveCount = tariffs.filter((it) => !it.active).length
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-4 py-10">
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={t('backLabel')}
+        userName={adminProfile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Link href="/admin/dashboard" className="text-sm text-gray-400 hover:text-gray-600">
-            ← Admin
-          </Link>
+      <main className="mx-auto max-w-5xl space-y-8 px-4 py-10">
+
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
+          <p className="mt-1 text-sm text-muted">
+            {t.rich('subtitle', { strong: (c) => <strong>{c}</strong> })}
+          </p>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Frais transport &amp; douane</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Tarifs centralisés de transport et dédouanement par pays et mode d&apos;expédition.
-          Ces frais <strong>ne comprennent pas</strong> le coût d&apos;achat du produit.
-        </p>
-      </div>
 
-      {/* Clarification banner */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-        <p className="text-xs font-semibold text-amber-700 mb-1">Périmètre de ce tableau</p>
-        <p className="text-xs text-amber-700 leading-relaxed">
-          Ces tarifs représentent uniquement les <strong>frais de transport et de dédouanement</strong> vers le Maroc.
-          Le coût d&apos;achat du produit (prix fournisseur) est géré séparément dans la fiche produit.
-        </p>
-      </div>
+        {/* Clarification banner */}
+        <div className="rounded-xl border border-warning bg-warning-soft px-5 py-4">
+          <p className="text-xs font-semibold text-warning-fg mb-1">{t('scopeTitle')}</p>
+          <p className="text-xs text-warning-fg leading-relaxed">
+            {t.rich('scopeBody', { strong: (c) => <strong>{c}</strong> })}
+          </p>
+        </div>
 
-      {/* Summary cards — one per country */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {(['Turquie', 'Chine', 'Égypte', 'Dubai', 'Autre'] as const).map((country) => {
-          const countryTariffs = active.filter((t) => t.country === country)
-          return (
-            <div key={country} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold text-gray-500 mb-2">{country}</p>
-              {countryTariffs.length === 0 ? (
-                <p className="text-xs text-gray-300 italic">—</p>
-              ) : (
-                <div className="space-y-1">
-                  {countryTariffs.map((t) => (
-                    <div key={t.id}>
-                      <p className="text-xs text-gray-400 leading-none">{SHIPPING_MODE_LABELS[t.shipping_mode]}</p>
-                      <p className="text-sm font-bold text-gray-900 tabular-nums">
-                        {Number(t.transport_customs_price_mad).toFixed(0)}&nbsp;MAD
-                      </p>
-                    </div>
+        {/* Summary cards — one per country */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {COUNTRIES.map((country) => {
+            const countryTariffs = active.filter((it) => it.country === country)
+            return (
+              <div key={country} className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+                <p className="text-xs font-semibold text-muted mb-2">{t(`country.${country}`)}</p>
+                {countryTariffs.length === 0 ? (
+                  <p className="text-xs text-faint italic">—</p>
+                ) : (
+                  <div className="space-y-1">
+                    {countryTariffs.map((it) => (
+                      <div key={it.id}>
+                        <p className="text-xs text-faint leading-none">{t(`shippingMode.${it.shipping_mode}`)}</p>
+                        <p className="text-sm font-bold text-foreground tabular-nums">
+                          {Number(it.transport_customs_price_mad).toFixed(0)}&nbsp;MAD
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Add form */}
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-foreground">{t('addTitle')}</h2>
+          <p className="text-xs text-faint mb-4">
+            {t('addSubtitle')}
+          </p>
+          <AddTariffForm />
+        </div>
+
+        {/* Tariffs table */}
+        <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
+          <div className="border-b border-line px-6 py-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">
+              {t('configuredTitle')} ({tariffs.length})
+            </h2>
+            {inactiveCount > 0 && (
+              <span className="text-xs text-faint">
+                {t('deactivatedCount', { count: inactiveCount })}
+              </span>
+            )}
+          </div>
+
+          {tariffs.length === 0 ? (
+            <p className="px-6 py-10 text-center text-sm text-faint">
+              {t('empty')}
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-surface-2">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">{t('colCountry')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">{t('colMode')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">{t('colFee')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted hidden md:table-cell">{t('colDelay')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted hidden lg:table-cell">{t('colNotes')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted">{t('colStatus')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted">{t('colActions')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {tariffs.map((tariff) => (
+                    <TariffTableRow key={tariff.id} tariff={tariff} />
                   ))}
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-          )
-        })}
-      </div>
-
-      {/* Add form */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-1 text-sm font-semibold text-gray-900">Ajouter un tarif</h2>
-        <p className="text-xs text-gray-400 mb-4">
-          Un seul tarif actif autorisé par combinaison pays + mode de transport.
-        </p>
-        <AddTariffForm />
-      </div>
-
-      {/* Tariffs table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Tarifs configurés ({tariffs.length})
-          </h2>
-          {tariffs.filter((t) => !t.active).length > 0 && (
-            <span className="text-xs text-gray-400">
-              {tariffs.filter((t) => !t.active).length} désactivé(s)
-            </span>
           )}
         </div>
 
-        {tariffs.length === 0 ? (
-          <p className="px-6 py-10 text-center text-sm text-gray-400">
-            Aucun tarif configuré. Ajoutez-en un ci-dessus.
+        {/* Usage instructions */}
+        <div className="rounded-xl border border-dashed border-accent bg-accent-soft px-5 py-4">
+          <p className="text-xs font-semibold text-accent-fg mb-1">
+            {t('usageTitle')}
           </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Pays</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Mode transport</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Frais transport & douane</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hidden md:table-cell">Délai</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hidden lg:table-cell">Notes</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Statut</th>
-                  <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {tariffs.map((tariff) => (
-                  <TariffTableRow key={tariff.id} tariff={tariff} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Usage instructions */}
-      <div className="rounded-xl border border-dashed border-purple-300 bg-purple-50 px-5 py-4">
-        <p className="text-xs font-semibold text-purple-700 mb-1">
-          Utilisation dans les fiches produit
-        </p>
-        <p className="text-xs text-purple-600 leading-relaxed">
-          Sur chaque produit <strong>import sur demande</strong>, choisissez un pays d&apos;origine et un
-          mode de transport. Activez <strong>« Tarif global »</strong> pour hériter automatiquement des
-          frais ci-dessus, ou <strong>« Tarif personnalisé »</strong> pour saisir des frais propres au produit.
-          Les grossistes voient les frais transport &amp; douane séparément du prix d&apos;achat.
-        </p>
-      </div>
+          <p className="text-xs text-accent-fg leading-relaxed">
+            {t.rich('usageBody', { strong: (c) => <strong>{c}</strong> })}
+          </p>
+        </div>
+      </main>
     </div>
   )
 }
 
 // ─── Table row ────────────────────────────────────────────────────────────────
 
-function TariffTableRow({ tariff }: { tariff: ImportTariff }) {
+async function TariffTableRow({ tariff }: { tariff: ImportTariff }) {
+  const t  = await getTranslations('admin.importTariffs')
+  const tc = await getTranslations('admin.common')
   const unitLabel = tariff.unit === 'cbm' ? 'CBM' : 'kg'
 
   return (
-    <tr className={tariff.active ? '' : 'bg-gray-50 opacity-60'}>
-      <td className="px-5 py-3 font-medium text-gray-900">{tariff.country}</td>
-      <td className="px-5 py-3 text-gray-700 text-xs">
-        {SHIPPING_MODE_LABELS[tariff.shipping_mode]}
+    <tr className={tariff.active ? '' : 'bg-surface-2 opacity-60'}>
+      <td className="px-5 py-3 font-medium text-foreground">{t(`country.${tariff.country}`)}</td>
+      <td className="px-5 py-3 text-muted text-xs">
+        {t(`shippingMode.${tariff.shipping_mode}`)}
       </td>
-      <td className="px-5 py-3 tabular-nums text-gray-900 font-medium">
+      <td className="px-5 py-3 tabular-nums text-foreground font-medium">
         {Number(tariff.transport_customs_price_mad).toFixed(2)}&nbsp;MAD
-        <span className="ml-1 text-gray-400 font-normal text-xs">/ {unitLabel}</span>
+        <span className="ml-1 text-faint font-normal text-xs">/ {unitLabel}</span>
       </td>
-      <td className="px-5 py-3 hidden md:table-cell text-gray-600">
-        {tariff.delivery_days != null ? `${tariff.delivery_days} j` : <span className="text-gray-300">—</span>}
+      <td className="px-5 py-3 hidden md:table-cell text-muted">
+        {tariff.delivery_days != null ? t('delayDays', { days: tariff.delivery_days }) : <span className="text-faint">—</span>}
       </td>
-      <td className="px-5 py-3 hidden lg:table-cell text-gray-500 text-xs max-w-[200px] truncate">
-        {tariff.notes ?? <span className="text-gray-300">—</span>}
+      <td className="px-5 py-3 hidden lg:table-cell text-muted text-xs max-w-[200px] truncate">
+        {tariff.notes ?? <span className="text-faint">—</span>}
       </td>
       <td className="px-5 py-3">
         <span
-          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-            tariff.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+          className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
+            tariff.active ? 'bg-success-soft text-success-fg border-success' : 'bg-surface-2 text-faint border-line'
           }`}
         >
-          {tariff.active ? 'Actif' : 'Inactif'}
+          {tariff.active ? tc('active') : tc('inactive')}
         </span>
       </td>
       <td className="px-5 py-3 text-right">

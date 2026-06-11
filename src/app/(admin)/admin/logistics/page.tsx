@@ -1,10 +1,24 @@
+import { getTranslations } from 'next-intl/server'
+import { createClient } from '@/lib/supabase/server'
 import { getLogisticsSettings } from '@/app/actions/logistics'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { LogisticsForm } from '@/components/admin/logistics-form'
 import { formatMAD } from '@/lib/utils'
 
-export const metadata = { title: 'Logistique — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.logistics')
+  return { title: t('metaTitle') }
+}
 
 export default async function AdminLogisticsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const profileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
+  const adminProfile = profileRes.data as { full_name: string } | null
+
+  const t  = await getTranslations('admin.logistics')
+  const tc = await getTranslations('admin.common')
+
   const settings = await getLogisticsSettings()
 
   const defaults = {
@@ -20,82 +34,94 @@ export default async function AdminLogisticsPage() {
   const current = settings ?? defaults
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-10">
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={t('backLabel')}
+        userName={adminProfile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-3xl"
+      />
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Logistique COD</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Frais de livraison et de retour appliqués aux commandes COD affiliés.
-        </p>
-      </div>
+      <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
 
-      {/* Current values summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-            Casablanca
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
+          <p className="mt-1 text-sm text-muted">
+            {t('subtitle')}
           </p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">
-            {formatMAD(current.casablanca_delivery_fee_mad)}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Frais de livraison</p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-            Autres villes
-          </p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">
-            {formatMAD(current.default_delivery_fee_mad)}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Frais de livraison</p>
+        {/* Current values summary */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">
+              {t('casablanca')}
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {formatMAD(current.casablanca_delivery_fee_mad)}
+            </p>
+            <p className="mt-1 text-xs text-muted">{t('deliveryFee')}</p>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">
+              {t('otherCities')}
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {formatMAD(current.default_delivery_fee_mad)}
+            </p>
+            <p className="mt-1 text-xs text-muted">{t('deliveryFee')}</p>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">
+              {t('returnLabel')}
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {formatMAD(current.return_fee_mad)}
+            </p>
+            <p className="mt-1 text-xs text-muted">{t('returnFeeAllCities')}</p>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-            Retour
+        {/* Commission formula reference */}
+        <div className="rounded-xl border border-accent bg-accent-soft p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent-fg">
+            {t('formulaTitle')}
           </p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">
-            {formatMAD(current.return_fee_mad)}
+          <p className="mt-2 font-mono text-sm text-foreground">
+            {t('formulaLine1')}
+            <br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{t('formulaLine2')}
           </p>
-          <p className="mt-1 text-xs text-gray-500">Frais de retour (toutes villes)</p>
+          <p className="mt-2 text-xs text-accent-fg">
+            {t('formulaNote')}
+          </p>
         </div>
-      </div>
 
-      {/* Commission formula reference */}
-      <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-          Formule commission affilié
-        </p>
-        <p className="mt-2 font-mono text-sm text-blue-900">
-          Commission = prix_vente − coût_usine − marge_plateforme
-          <br />
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− frais_livraison − frais_confirmation − frais_emballage
-        </p>
-        <p className="mt-2 text-xs text-blue-700">
-          Le frais de livraison est résolu automatiquement selon la ville du client au moment de la commande.
-        </p>
-      </div>
+        {/* Edit form */}
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
+          <h2 className="mb-5 text-base font-semibold text-foreground">
+            {t('editTitle')}
+          </h2>
+          <LogisticsForm settings={current} />
+        </div>
 
-      {/* Edit form */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-5 text-base font-semibold text-gray-900">
-          Modifier les paramètres
-        </h2>
-        <LogisticsForm settings={current} />
-      </div>
-
-      {/* Future API integration notice */}
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4">
-        <p className="text-xs font-medium text-gray-500">
-          🔌 Intégration API transporteur — prévue
-        </p>
-        <p className="mt-1 text-xs text-gray-400">
-          La structure est prête pour une intégration future avec une API de livraison (Amana, Chronopost Maroc, etc.).
-          Le champ <code className="rounded bg-gray-200 px-1 text-gray-600">api_config</code> sur chaque commande est réservé à cet usage.
-        </p>
-      </div>
+        {/* Future API integration notice */}
+        <div className="rounded-xl border border-dashed border-line bg-surface-2 px-5 py-4">
+          <p className="text-xs font-medium text-muted">
+            {t('apiNoticeTitle')}
+          </p>
+          <p className="mt-1 text-xs text-faint">
+            {t.rich('apiNoticeBody', {
+              code: (chunks) => <code className="rounded bg-surface px-1 text-muted">{chunks}</code>,
+            })}
+          </p>
+        </div>
+      </main>
     </div>
   )
 }
