@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { formatConversionRate, formatReturnRate } from '@/lib/order-analytics'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { signOut } from '@/app/actions/auth'
 import type { Profile, Commission } from '@/types/database'
 
 export async function generateMetadata() {

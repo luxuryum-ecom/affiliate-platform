@@ -49,22 +49,22 @@ export function AffiliatePriceForm({
   const minFormatted = formatMAD(platformPrice)
 
   return (
-    <div className="border-t border-gray-100 pt-3 mt-1">
-      <p className="text-xs font-medium text-gray-600 mb-1.5">{strings.myPrice}</p>
+    <div className="border-t border-line pt-3 mt-1">
+      <p className="text-xs font-medium text-muted mb-1.5">{strings.myPrice}</p>
 
       {currentCustomPrice !== null ? (
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm font-bold text-blue-700 tabular-nums">
+          <span className="text-sm font-bold text-accent-fg tabular-nums">
             {formatMAD(currentCustomPrice)}
           </span>
           {markup > 0 && (
-            <span className="text-xs text-gray-400 tabular-nums">
+            <span className="text-xs text-faint tabular-nums">
               {interpolate(strings.priceVsCatalog, { amount: formatMAD(markup) })}
             </span>
           )}
         </div>
       ) : (
-        <p className="text-xs text-gray-400 mb-1.5">
+        <p className="text-xs text-faint mb-1.5">
           {interpolate(strings.priceNotSet, { price: minFormatted })}
         </p>
       )}
@@ -80,28 +80,28 @@ export function AffiliatePriceForm({
             step="1"
             placeholder={interpolate(strings.priceMin, { min: String(platformPrice) })}
             disabled={isPending}
-            className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 tabular-nums"
+            className="w-full px-2.5 py-1.5 text-xs border border-line rounded-lg bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:bg-surface-2 tabular-nums"
           />
         </div>
         <button
           type="submit"
           disabled={isPending}
-          className="shrink-0 text-xs px-2.5 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="shrink-0 text-xs px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {isPending ? strings.priceSaving : strings.priceSave}
         </button>
       </form>
 
       {state.error && (
-        <p className="text-xs text-red-600 mt-1">{state.error}</p>
+        <p className="text-xs text-danger-fg mt-1">{state.error}</p>
       )}
       {state.success && (
-        <p className="text-xs text-green-600 mt-1">
+        <p className="text-xs text-success-fg mt-1">
           {state.cleared ? strings.priceResetOk : strings.priceSavedOk}
         </p>
       )}
 
-      <p className="text-xs text-gray-400 mt-1 leading-tight">
+      <p className="text-xs text-faint mt-1 leading-tight">
         {interpolate(strings.priceReset, { min: minFormatted })}
       </p>
     </div>

@@ -1,15 +1,12 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
 import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
 import { getLogisticsSettings } from '@/app/actions/logistics'
-import { MozounaLogo } from '@/components/shared/branding'
 import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
@@ -144,42 +141,26 @@ export default async function AffiliateProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/affiliate/dashboard"><MozounaLogo size="sm" /></Link>
-            <span className="text-gray-300">{tCommon('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('breadcrumb')}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                {tCommon('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('breadcrumb')}
+        userName={profile?.full_name}
+        signOutLabel={tCommon('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-lg font-semibold text-gray-900">{t('pageTitle')}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+          <p className="text-sm text-muted mt-0.5">
             {t('subtitle', { count: list.length })}
           </p>
         </div>
 
         {list.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">{t('emptyProducts')}</p>
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">{t('emptyProducts')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -291,7 +272,7 @@ function AffiliateProductCard({
     stats.clicks > 0 ? `${((stats.orders / stats.clicks) * 100).toFixed(0)}%` : '—'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
+    <div className="bg-surface rounded-xl border border-line overflow-hidden flex flex-col">
       {/* Thumbnail */}
       <ProductThumbnail
         src={coverUrl}
@@ -304,71 +285,71 @@ function AffiliateProductCard({
         <div>
           <div className="flex items-center gap-1.5 mb-1">
             <span
-              className={`text-xs px-2 py-0.5 rounded-full ${
+              className={`text-xs px-2 py-0.5 rounded-full border ${
                 product.availability_type === 'import_on_demand'
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'bg-green-100 text-green-700'
+                  ? 'bg-surface-2 text-muted border-line'
+                  : 'bg-success-soft text-success-fg border-success'
               }`}
             >
               {product.availability_type === 'import_on_demand' ? t.availImport : t.availStock}
             </span>
           </div>
-          <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2">
+          <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2">
             {product.name}
           </h3>
           {product.description && (
-            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{product.description}</p>
+            <p className="text-xs text-faint mt-1 line-clamp-2">{product.description}</p>
           )}
         </div>
 
         {/* Pricing */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-400">{t.catalogPrice}</p>
-            <p className="text-sm font-medium text-gray-700">{formatMAD(product.sell_price)}</p>
+            <p className="text-xs text-faint">{t.catalogPrice}</p>
+            <p className="text-sm font-medium text-muted">{formatMAD(product.sell_price)}</p>
           </div>
           <div className="text-end">
-            <p className="text-xs text-gray-400">{t.baseCommission}</p>
+            <p className="text-xs text-faint">{t.baseCommission}</p>
             {baseCommission > 0 ? (
-              <p className="text-base font-bold text-green-600">
+              <p className="text-base font-bold text-success-fg">
                 {formatMAD(baseCommission)}
               </p>
             ) : (
-              <p className="text-sm font-bold text-red-500">{t.notProfitable}</p>
+              <p className="text-sm font-bold text-danger-fg">{t.notProfitable}</p>
             )}
           </div>
         </div>
 
         {/* Custom price indicator */}
         {customPrice !== null && (
-          <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 text-xs">
-            <span className="text-blue-700">{t.customPriceActive}</span>
-            <span className="font-bold text-blue-800 tabular-nums">{formatMAD(customPrice)}</span>
+          <div className="flex items-center justify-between bg-accent-soft border border-gold-300 rounded-lg px-2.5 py-1.5 text-xs">
+            <span className="text-accent-fg">{t.customPriceActive}</span>
+            <span className="font-bold text-accent-fg tabular-nums">{formatMAD(customPrice)}</span>
           </div>
         )}
 
         {/* Operational fees */}
-        <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-2.5 py-1.5 space-y-0.5">
+        <div className="text-xs text-faint bg-surface-2 rounded-lg px-2.5 py-1.5 space-y-0.5">
           <div className="flex justify-between">
             <span>{t.feeConfirmation}</span>
-            <span className="text-gray-600">{product.confirmation_fee_mad} MAD</span>
+            <span className="text-muted">{product.confirmation_fee_mad} MAD</span>
           </div>
           <div className="flex justify-between">
             <span>{t.feePackaging}</span>
-            <span className="text-gray-600">{product.packaging_fee_mad} MAD</span>
+            <span className="text-muted">{product.packaging_fee_mad} MAD</span>
           </div>
           {product.delivery_fee_mad > 0 && (
             <div className="flex justify-between">
               <span>{t.feeDelivery}</span>
-              <span className="text-gray-600">{product.delivery_fee_mad} MAD</span>
+              <span className="text-muted">{product.delivery_fee_mad} MAD</span>
             </div>
           )}
         </div>
 
         {/* Stock indicator */}
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-faint">
           {t.stock}&nbsp;:{' '}
-          <span className={product.stock_count > 0 ? 'text-green-600' : 'text-red-500'}>
+          <span className={product.stock_count > 0 ? 'text-success-fg' : 'text-danger-fg'}>
             {product.stock_count > 0 ? t.stockUnits(product.stock_count) : t.stockEmpty}
           </span>
         </p>
@@ -382,24 +363,24 @@ function AffiliateProductCard({
         />
 
         {/* Per-product performance stats */}
-        <div className="grid grid-cols-4 gap-1 bg-gray-50 rounded-lg px-2 py-2">
+        <div className="grid grid-cols-4 gap-1 bg-surface-2 rounded-lg px-2 py-2">
           <div className="text-center">
-            <p className="text-xs font-bold text-gray-800 tabular-nums">{stats.clicks}</p>
-            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{t.statsClicks}</p>
+            <p className="text-xs font-bold text-foreground tabular-nums">{stats.clicks}</p>
+            <p className="text-[10px] text-faint leading-tight mt-0.5">{t.statsClicks}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs font-bold text-gray-800 tabular-nums">{stats.orders}</p>
-            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{t.statsOrders}</p>
+            <p className="text-xs font-bold text-foreground tabular-nums">{stats.orders}</p>
+            <p className="text-[10px] text-faint leading-tight mt-0.5">{t.statsOrders}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs font-bold text-gray-800 tabular-nums">{convRate}</p>
-            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{t.statsConv}</p>
+            <p className="text-xs font-bold text-foreground tabular-nums">{convRate}</p>
+            <p className="text-[10px] text-faint leading-tight mt-0.5">{t.statsConv}</p>
           </div>
           <div className="text-center">
-            <p className={`text-xs font-bold tabular-nums ${stats.commissionEarned > 0 ? 'text-green-600' : 'text-gray-800'}`}>
+            <p className={`text-xs font-bold tabular-nums ${stats.commissionEarned > 0 ? 'text-success-fg' : 'text-foreground'}`}>
               {stats.commissionEarned > 0 ? formatMAD(stats.commissionEarned) : '—'}
             </p>
-            <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{t.statsEarned}</p>
+            <p className="text-[10px] text-faint leading-tight mt-0.5">{t.statsEarned}</p>
           </div>
         </div>
 

@@ -1,12 +1,10 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildCodTimeline } from '@/components/shared/order-timeline'
-import { MozounaLogo } from '@/components/shared/branding'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTranslations, getLocale } from 'next-intl/server'
 import type { Order, Commission, Product } from '@/types/database'
 
@@ -64,11 +62,11 @@ export default async function AffiliateOrdersPage() {
   }
 
   const STATUS_CLS: Record<string, string> = {
-    pending_confirmation: 'bg-amber-100 text-amber-700',
-    confirmed:            'bg-blue-100 text-blue-700',
-    shipped:              'bg-indigo-100 text-indigo-700',
-    delivered:            'bg-green-100 text-green-700',
-    returned:             'bg-red-100 text-red-600',
+    pending_confirmation: 'bg-warning-soft text-warning-fg border-warning',
+    confirmed:            'bg-surface-2 text-muted border-line',
+    shipped:              'bg-surface-2 text-muted border-line',
+    delivered:            'bg-success-soft text-success-fg border-success',
+    returned:             'bg-danger-soft text-danger-fg border-danger',
   }
 
   const PAYOUT_LABELS: Record<string, string> = {
@@ -80,33 +78,23 @@ export default async function AffiliateOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/affiliate/dashboard"><MozounaLogo size="sm" /></Link>
-            <span className="text-gray-300">{tCommon('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
-          </div>
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link
-              href="/affiliate/orders/new"
-              className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
-            >
-              {t('newOrder')}
-            </Link>
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                {tCommon('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        userName={profile?.full_name}
+        signOutLabel={tCommon('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-end mb-6">
+          <Link
+            href="/affiliate/orders/new"
+            className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
+          >
+            {t('newOrder')}
+          </Link>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {[
             { key: 'statPendingConf', value: String(count('pending_confirmation')) },
@@ -115,35 +103,35 @@ export default async function AffiliateOrdersPage() {
             { key: 'statDelivered',   value: String(count('delivered')) },
             { key: 'statReturned',    value: String(count('returned')) },
           ].map((s) => (
-            <div key={s.key} className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">{t(s.key as Parameters<typeof t>[0])}</p>
-              <p className="mt-1 text-xl font-bold text-gray-900 tabular-nums">{s.value}</p>
+            <div key={s.key} className="bg-surface rounded-xl border border-line p-4">
+              <p className="text-xs text-muted">{t(s.key as Parameters<typeof t>[0])}</p>
+              <p className="mt-1 text-xl font-bold text-foreground tabular-nums">{s.value}</p>
             </div>
           ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500">{t('commissionsDue')}</p>
-            <p className="mt-1 text-xl font-bold text-amber-700 tabular-nums">{formatMAD(totalPending)}</p>
+          <div className="bg-warning-soft rounded-xl border border-warning p-4">
+            <p className="text-xs text-muted">{t('commissionsDue')}</p>
+            <p className="mt-1 text-xl font-bold text-warning-fg tabular-nums">{formatMAD(totalPending)}</p>
           </div>
           {totalEarned > 0 && (
-            <div className="bg-green-50 rounded-xl border border-green-200 p-4">
-              <p className="text-xs text-gray-500">{t('commissionsTotal')}</p>
-              <p className="mt-1 text-xl font-bold text-green-700 tabular-nums">{formatMAD(totalEarned)}</p>
+            <div className="bg-success-soft rounded-xl border border-success p-4">
+              <p className="text-xs text-muted">{t('commissionsTotal')}</p>
+              <p className="mt-1 text-xl font-bold text-success-fg tabular-nums">{formatMAD(totalEarned)}</p>
             </div>
           )}
         </div>
 
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">
+        <h2 className="text-sm font-semibold text-foreground mb-3">
           {t('historyTitle', { count: orders.length })}
         </h2>
 
         {orders.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">{t('emptyOrders')}</p>
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">{t('emptyOrders')}</p>
             <Link
               href="/affiliate/products"
-              className="mt-3 inline-block text-sm text-blue-600 hover:underline"
+              className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-600 hover:underline"
             >
               {tCommon('browseCatalog')}
             </Link>
@@ -162,7 +150,7 @@ export default async function AffiliateOrdersPage() {
               return (
                 <article
                   key={order.id}
-                  className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+                  className="bg-surface rounded-xl border border-line overflow-hidden"
                 >
                   <div className="flex items-start gap-3 p-4">
                     <ProductThumbnail
@@ -173,19 +161,19 @@ export default async function AffiliateOrdersPage() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-mono text-gray-400">
+                        <span className="text-xs font-mono text-faint">
                           #{order.id.slice(0, 8).toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badgeCls}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeCls}`}>
                           {badge}
                         </span>
                       </div>
 
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-foreground">
                         {order.product.name} × {order.quantity}
                       </p>
 
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-muted mt-0.5">
                         {order.customer_city} · {formatMAD(order.total_amount)} ·{' '}
                         {new Date(order.created_at).toLocaleDateString(locale, {
                           day: '2-digit',
@@ -197,17 +185,17 @@ export default async function AffiliateOrdersPage() {
                       <p className="text-xs mt-1.5">
                         {comm ? (
                           comm.reversed ? (
-                            <span className="text-red-500 font-medium">
+                            <span className="text-danger-fg font-medium">
                               {t('commCancelled', { amount: formatMAD(Number(comm.amount)) })}
                             </span>
                           ) : (
                             <span
                               className={`font-medium ${
                                 comm.status === 'paid'
-                                  ? 'text-green-600'
+                                  ? 'text-success-fg'
                                   : comm.status === 'approved'
-                                  ? 'text-blue-600'
-                                  : 'text-amber-600'
+                                  ? 'text-muted'
+                                  : 'text-warning-fg'
                               }`}
                             >
                               {t('commLabel', {
@@ -221,7 +209,7 @@ export default async function AffiliateOrdersPage() {
                             </span>
                           )
                         ) : commissionAmount > 0 ? (
-                          <span className="text-gray-400">
+                          <span className="text-faint">
                             {t('commExpected', {
                               amount: formatMAD(commissionAmount),
                               label: PAYOUT_LABELS[order.status] ?? t('payoutLabelDefault'),
@@ -232,8 +220,8 @@ export default async function AffiliateOrdersPage() {
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
-                    <p className="text-xs font-medium text-gray-500 mb-2">{t('tracking')}</p>
+                  <div className="border-t border-line px-4 py-3 bg-surface-2">
+                    <p className="text-xs font-medium text-muted mb-2">{t('tracking')}</p>
                     <OrderTimeline steps={timeline} />
                   </div>
                 </article>
