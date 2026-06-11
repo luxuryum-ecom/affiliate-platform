@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { updateOrderStatus } from '@/app/actions/orders'
 import type { OrderStatus } from '@/types/database'
 
@@ -13,21 +14,13 @@ const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   cancelled:            [],
 }
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending_confirmation: 'En attente de confirmation',
-  confirmed: 'Confirmée',
-  shipped:   'Expédiée',
-  delivered: 'Livrée',
-  returned:  'Retournée',
-  cancelled: 'Annulée',
-}
-
 interface OrderStatusFormProps {
   orderId: string
   currentStatus: OrderStatus
 }
 
 export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps) {
+  const t = useTranslations('admin')
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | ''>('')
@@ -40,7 +33,7 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
   const transitions = VALID_TRANSITIONS[currentStatus] ?? []
   if (transitions.length === 0) {
     return (
-      <p className="text-xs text-gray-400 italic">Statut final — aucune transition possible.</p>
+      <p className="text-xs text-faint italic">{t('orders.statusFinal')}</p>
     )
   }
 
@@ -56,25 +49,25 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
         codReceived: codReceived ? parseFloat(codReceived) : undefined,
         returnReason: returnReason || undefined,
       })
-      setMessage({ ok: result.success, text: result.error ?? 'Statut mis à jour.' })
+      setMessage({ ok: result.success, text: result.error ?? t('orders.statusUpdated') })
     })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
-          Nouveau statut
+        <label className="block text-xs font-medium text-muted mb-1">
+          {t('orders.newStatus')}
         </label>
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value as OrderStatus)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
         >
-          <option value="">Sélectionner…</option>
+          <option value="">{t('common.select')}</option>
           {transitions.map((s) => (
             <option key={s} value={s}>
-              {STATUS_LABELS[s]}
+              {t(`common.cod.${s}`)}
             </option>
           ))}
         </select>
@@ -85,27 +78,27 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
         <>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Transporteur
+              <label className="block text-xs font-medium text-muted mb-1">
+                {t('orders.carrier')}
               </label>
               <input
                 type="text"
                 value={deliveryCompany}
                 onChange={(e) => setDeliveryCompany(e.target.value)}
-                placeholder="Amana, Aramex…"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
+                placeholder={t('orders.carrierPlaceholder')}
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                N° de suivi
+              <label className="block text-xs font-medium text-muted mb-1">
+                {t('orders.trackingNumber')}
               </label>
               <input
                 type="text"
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="ABC123456"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
+                placeholder={t('orders.trackingPlaceholder')}
+                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
               />
             </div>
           </div>
@@ -115,8 +108,8 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
       {/* COD received */}
       {selectedStatus === 'delivered' && (
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Montant COD reçu (MAD)
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('orders.codReceived')}
           </label>
           <input
             type="number"
@@ -124,7 +117,7 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
             value={codReceived}
             onChange={(e) => setCodReceived(e.target.value)}
             placeholder="0.00"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
+            className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
           />
         </div>
       )}
@@ -132,35 +125,35 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
       {/* Return reason */}
       {selectedStatus === 'returned' && (
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Motif du retour
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('orders.returnReason')}
           </label>
           <input
             type="text"
             value={returnReason}
             onChange={(e) => setReturnReason(e.target.value)}
-            placeholder="Client absent, refus, autre…"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
+            placeholder={t('orders.returnReasonPlaceholder')}
+            className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
           />
         </div>
       )}
 
       {/* Notes */}
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
-          Note interne (optionnel)
+        <label className="block text-xs font-medium text-muted mb-1">
+          {t('orders.internalNote')}
         </label>
         <input
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Remarque interne…"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
+          placeholder={t('orders.internalNotePlaceholder')}
+          className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
         />
       </div>
 
       {message && (
-        <p className={`text-xs px-3 py-2 rounded-lg ${message.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+        <p className={`text-xs px-3 py-2 rounded-lg ${message.ok ? 'bg-success-soft text-success-fg' : 'bg-danger-soft text-danger-fg'}`}>
           {message.text}
         </p>
       )}
@@ -168,9 +161,9 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
       <button
         type="submit"
         disabled={isPending || !selectedStatus}
-        className="w-full py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+        className="w-full py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
-        {isPending ? 'Mise à jour…' : 'Confirmer le changement'}
+        {isPending ? t('common.updating') : t('orders.confirmChange')}
       </button>
     </form>
   )
