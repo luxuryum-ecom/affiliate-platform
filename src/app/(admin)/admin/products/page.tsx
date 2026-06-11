@@ -2,30 +2,32 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { signOut } from '@/app/actions/auth'
 import { ProductActions } from '@/components/admin/product-actions'
 import { ProductFilters } from '@/components/admin/product-filters'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD } from '@/lib/utils'
+import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
-export const metadata = {
-  title: 'Produits — Administration',
+export async function generateMetadata() {
+  const t = await getTranslations('admin.products')
+  return { title: t('metaTitle') }
 }
 
-// ── Label maps ────────────────────────────────────────────────────────────────
+// ── Token maps ────────────────────────────────────────────────────────────────
 
-const APPROVAL_BADGE: Record<string, { label: string; cls: string }> = {
-  draft:          { label: 'Brouillon',   cls: 'bg-gray-100 text-gray-500' },
-  pending_review: { label: 'En révision', cls: 'bg-amber-100 text-amber-700' },
-  approved:       { label: 'Approuvé',    cls: 'bg-green-100 text-green-700' },
-  rejected:       { label: 'Rejeté',      cls: 'bg-red-100 text-red-600' },
+const APPROVAL_CLS: Record<string, string> = {
+  draft:          'bg-surface-2 text-faint border-line',
+  pending_review: 'bg-warning-soft text-warning-fg border-warning',
+  approved:       'bg-success-soft text-success-fg border-success',
+  rejected:       'bg-danger-soft text-danger-fg border-danger',
 }
 
-const AVAILABILITY_BADGE: Record<string, { label: string; cls: string }> = {
-  local_stock:       { label: 'Stock Maroc',     cls: 'bg-green-100 text-green-700' },
-  import_on_demand:  { label: 'Import demande',  cls: 'bg-purple-100 text-purple-700' },
+const AVAILABILITY_CLS: Record<string, string> = {
+  local_stock:      'bg-success-soft text-success-fg border-success',
+  import_on_demand: 'bg-surface-2 text-muted border-line',
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,6 +54,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
+
+  const t = await getTranslations('admin.products')
+  const tc = await getTranslations('admin.common')
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -111,67 +116,49 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
     filters.low_stock === 'true'
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/admin/dashboard"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate">Produits</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={tc('dashboard')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Produits</h1>
-            <p className="text-sm text-gray-500 mt-0.5 flex flex-wrap gap-x-2">
-              <span>{totalCount} total</span>
-              <span className="text-gray-300">·</span>
-              <span className="text-green-600">{activeCount} actif{activeCount !== 1 ? 's' : ''}</span>
+            <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+            <p className="text-sm text-muted mt-0.5 flex flex-wrap gap-x-2">
+              <span>{t('statsTotal', { count: totalCount })}</span>
+              <span className="text-faint">·</span>
+              <span className="text-success-fg">{t('statsActive', { count: activeCount })}</span>
               {pendingReview > 0 && (
                 <>
-                  <span className="text-gray-300">·</span>
+                  <span className="text-faint">·</span>
                   <Link
                     href="/admin/products?approval_status=pending_review"
-                    className="text-amber-600 hover:underline"
+                    className="text-warning-fg hover:underline"
                   >
-                    {pendingReview} en révision
+                    {t('statsPending', { count: pendingReview })}
                   </Link>
                 </>
               )}
               {isFiltered && (
                 <>
-                  <span className="text-gray-300">·</span>
-                  <span className="text-blue-600">{list.length} résultat{list.length !== 1 ? 's' : ''}</span>
+                  <span className="text-faint">·</span>
+                  <span className="text-gold-500">{t('statsFiltered', { count: list.length })}</span>
                 </>
               )}
             </p>
           </div>
           <Link
             href="/admin/products/new"
-            className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+            className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
           >
-            + Nouveau produit
+            {t('newProduct')}
           </Link>
         </div>
 
@@ -184,30 +171,28 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
 
         {/* List */}
         {list.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">
-              {isFiltered
-                ? 'Aucun produit ne correspond à ces filtres.'
-                : 'Aucun produit pour le moment.'}
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">
+              {isFiltered ? t('emptyFiltered') : t('empty')}
             </p>
             {isFiltered ? (
               <Link
                 href="/admin/products"
-                className="mt-3 inline-block text-sm text-blue-600 hover:underline"
+                className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-600 hover:underline"
               >
-                Effacer les filtres
+                {t('clearFilters')}
               </Link>
             ) : (
               <Link
                 href="/admin/products/new"
-                className="mt-4 inline-block px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                className="mt-4 inline-block px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
               >
-                Créer le premier produit
+                {t('createFirst')}
               </Link>
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {list.map((product) => (
               <ProductRow key={product.id} product={product} />
             ))}
@@ -220,22 +205,24 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
 
 // ─── Product row ──────────────────────────────────────────────────────────────
 
-function ProductRow({ product }: { product: Product }) {
+async function ProductRow({ product }: { product: Product }) {
+  const t = await getTranslations('admin.products')
+  const tc = await getTranslations('admin.common')
   const coverUrl = getProductCoverUrl(product)
-  const approvalBadge = APPROVAL_BADGE[product.approval_status] ?? APPROVAL_BADGE.draft
-  const sourceBadge = AVAILABILITY_BADGE[product.availability_type] ?? AVAILABILITY_BADGE.local_stock
+  const approvalCls = APPROVAL_CLS[product.approval_status] ?? APPROVAL_CLS.draft
+  const sourceCls = AVAILABILITY_CLS[product.availability_type] ?? AVAILABILITY_CLS.local_stock
 
   return (
-    <div className="flex items-start gap-3 p-4">
+    <div className="flex items-start gap-3 p-4 hover:bg-surface-2 transition-colors">
       {/* Thumbnail */}
       <div className="relative shrink-0">
         <ProductThumbnail
           src={coverUrl}
           name={product.name}
-          className="w-12 h-12 rounded-lg border border-gray-200 text-xs"
+          className="w-12 h-12 rounded-lg border border-line text-xs"
         />
         {!coverUrl && (
-          <span className="absolute -bottom-1.5 -right-1.5 text-xs bg-amber-100 text-amber-700 rounded px-1 leading-tight font-medium">
+          <span className="absolute -bottom-1.5 -right-1.5 text-xs bg-warning-soft text-warning-fg rounded px-1 leading-tight font-medium border border-warning">
             !
           </span>
         )}
@@ -244,65 +231,66 @@ function ProductRow({ product }: { product: Product }) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-          <span className="font-medium text-gray-900 text-sm truncate max-w-[180px]">
+          <span className="font-medium text-foreground text-sm truncate max-w-[180px]">
             {product.name}
           </span>
 
           {/* Source badge */}
-          <span className={`text-xs px-2 py-0.5 rounded-full ${sourceBadge.cls}`}>
-            {sourceBadge.label}
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${sourceCls}`}>
+            {t(`availability.${product.availability_type}` as 'availability.local_stock')}
           </span>
 
           {/* Approval badge */}
-          <span className={`text-xs px-2 py-0.5 rounded-full ${approvalBadge.cls}`}>
-            {approvalBadge.label}
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${approvalCls}`}>
+            {t(`approval.${product.approval_status}` as 'approval.draft')}
           </span>
 
           {/* No image badge */}
           {!coverUrl && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-              Sans image
+            <span className="text-xs px-2 py-0.5 rounded-full border bg-warning-soft text-warning-fg border-warning">
+              {tc('noImage')}
             </span>
           )}
 
           {/* Affiliate enabled badge */}
           {!product.affiliate_enabled && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
-              Gros seulement
+            <span className="text-xs px-2 py-0.5 rounded-full border bg-surface-2 text-muted border-line">
+              {tc('wholesaleOnly')}
             </span>
           )}
 
           {/* Active / inactive */}
           {product.approval_status === 'approved' && (
             <span
-              className={`text-xs px-2 py-0.5 rounded-full ${
-                product.active ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
+              className={`text-xs px-2 py-0.5 rounded-full border ${
+                product.active
+                  ? 'bg-success-soft text-success-fg border-success'
+                  : 'bg-surface-2 text-faint border-line'
               }`}
             >
-              {product.active ? 'Visible' : 'Masqué'}
+              {product.active ? tc('visible') : tc('hidden')}
             </span>
           )}
         </div>
 
         {/* Pricing line */}
-        <p className="text-xs text-gray-500 leading-relaxed flex flex-wrap gap-x-2">
+        <p className="text-xs text-muted leading-relaxed flex flex-wrap gap-x-2">
           <span>
-            Prix&nbsp;:{' '}
-            <strong className="text-gray-700">{formatMAD(product.sell_price)}</strong>
+            {t('priceLine')}&nbsp;:{' '}
+            <strong className="text-foreground">{formatMAD(product.sell_price)}</strong>
           </span>
-          <span className="text-gray-300">·</span>
+          <span className="text-faint">·</span>
           <span>
-            Commission&nbsp;:{' '}
-            <strong className="text-green-700">{formatMAD(product.commission_amount)}</strong>
+            {t('commissionLine')}&nbsp;:{' '}
+            <strong className="text-success-fg">{formatMAD(product.commission_amount)}</strong>
           </span>
-          <span className="text-gray-300">·</span>
-          <span>Stock&nbsp;: {product.stock_count}</span>
+          <span className="text-faint">·</span>
+          <span>{t('stockLine')}&nbsp;: {product.stock_count}</span>
           {product.wholesale_tiers.length > 0 && (
             <>
-              <span className="text-gray-300">·</span>
+              <span className="text-faint">·</span>
               <span>
-                {product.wholesale_tiers.length} palier
-                {product.wholesale_tiers.length !== 1 ? 's' : ''} gros
+                {t('wholsaleTiers', { count: product.wholesale_tiers.length })}
               </span>
             </>
           )}
@@ -310,26 +298,26 @@ function ProductRow({ product }: { product: Product }) {
 
         {/* Cost breakdown mini-line */}
         {(product.factory_cost_mad != null || product.purchase_price_mad != null || product.supplier_name || product.origin_country) && (
-          <p className="text-xs text-gray-400 leading-relaxed flex flex-wrap gap-x-2 mt-0.5">
+          <p className="text-xs text-faint leading-relaxed flex flex-wrap gap-x-2 mt-0.5">
             {(product.factory_cost_mad != null || product.purchase_price_mad != null) && (
               <>
                 <span>
-                  Coût&nbsp;: {formatMAD(product.factory_cost_mad ?? product.purchase_price_mad ?? 0)}
+                  {t('costLine')}&nbsp;: {formatMAD(product.factory_cost_mad ?? product.purchase_price_mad ?? 0)}
                 </span>
                 {product.platform_margin_value != null && (
                   <>
-                    <span className="text-gray-200">·</span>
+                    <span className="text-line">·</span>
                     <span>
-                      Marge&nbsp;:{' '}
+                      {t('marginLine')}&nbsp;:{' '}
                       {product.platform_margin_type === 'percentage'
                         ? `${product.platform_margin_value}%`
                         : `${formatMAD(product.platform_margin_value)}`}
                     </span>
                   </>
                 )}
-                <span className="text-gray-200">·</span>
+                <span className="text-line">·</span>
                 <span>
-                  Frais&nbsp;: {formatMAD(
+                  {t('feesLine')}&nbsp;: {formatMAD(
                     (product.confirmation_fee_mad ?? 0) +
                     (product.packaging_fee_mad ?? 0) +
                     (product.delivery_fee_mad ?? 0)
@@ -339,13 +327,13 @@ function ProductRow({ product }: { product: Product }) {
             )}
             {product.supplier_name && (
               <>
-                <span className="text-gray-200">·</span>
+                <span className="text-line">·</span>
                 <span>{product.supplier_name}</span>
               </>
             )}
             {product.origin_country && (
               <>
-                <span className="text-gray-200">·</span>
+                <span className="text-line">·</span>
                 <span>{product.origin_country}</span>
               </>
             )}

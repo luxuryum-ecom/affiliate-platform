@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { uploadProductImage, formatProductImageUploadError } from '@/lib/product-image-upload'
 import { isValidMediaUrl } from '@/lib/product-media'
@@ -21,6 +22,9 @@ export function ProductCoverUpload({
   onUploaded,
   onError,
 }: ProductCoverUploadProps) {
+  const t = useTranslations('admin.productForm')
+  const tc = useTranslations('admin.common')
+
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
@@ -49,9 +53,9 @@ export function ProductCoverUpload({
       setDragOver(false)
       const file = e.dataTransfer.files?.[0]
       if (file?.type.startsWith('image/')) void processFile(file)
-      else onError('Déposez un fichier image (JPEG, PNG ou WebP).')
+      else onError(t('coverDropError'))
     },
-    [processFile, onError]
+    [processFile, onError, t]
   )
 
   const hasCover = isValidMediaUrl(coverUrl)
@@ -59,16 +63,17 @@ export function ProductCoverUpload({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <p className="text-xs font-medium text-gray-600">
-          Image de couverture <span className="text-gray-400 font-normal">(miniature catalogue)</span>
+        <p className="text-xs font-medium text-muted">
+          {t('coverTitle')}{' '}
+          <span className="text-faint font-normal">{t('coverHint')}</span>
         </p>
         {hasCover ? (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-green-50 text-green-700 font-medium">
-            ✓ Image chargée
+          <span className="text-xs px-1.5 py-0.5 rounded border bg-success-soft text-success-fg border-success font-medium">
+            {t('coverLoaded')}
           </span>
         ) : (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-medium">
-            Aucune image
+          <span className="text-xs px-1.5 py-0.5 rounded border bg-warning-soft text-warning-fg border-warning font-medium">
+            {t('coverNone')}
           </span>
         )}
       </div>
@@ -89,38 +94,34 @@ export function ProductCoverUpload({
         className={cn(
           'relative flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl border-2 border-dashed transition-colors cursor-pointer',
           dragOver
-            ? 'border-gray-900 bg-gray-50'
+            ? 'border-primary bg-surface-2'
             : hasCover
-            ? 'border-green-200 hover:border-green-400 hover:bg-green-50/30'
-            : 'border-amber-200 hover:border-amber-400 hover:bg-amber-50/30',
+            ? 'border-success hover:border-success hover:bg-success-soft/30'
+            : 'border-warning hover:border-warning hover:bg-warning-soft/30',
           (disabled || uploading) && 'opacity-60 cursor-not-allowed pointer-events-none'
         )}
       >
         <ProductThumbnail
           src={coverUrl || null}
-          name={productName || 'Produit'}
-          className="w-24 h-24 rounded-xl border border-gray-200 text-xl"
+          name={productName || tc('productFallback')}
+          className="w-24 h-24 rounded-xl border border-line text-xl"
         />
 
         <div className="flex-1 text-center sm:text-left min-w-0">
           {uploading ? (
-            <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
-              <span className="inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              Compression et upload en cours…
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-muted">
+              <span className="inline-block w-4 h-4 border-2 border-muted border-t-transparent rounded-full animate-spin" />
+              {t('coverUploading')}
             </div>
           ) : (
             <>
-              <p className="text-sm font-medium text-gray-800">
-                {hasCover
-                  ? 'Remplacer la couverture — glissez ou cliquez'
-                  : 'Ajouter une couverture — glissez ou cliquez'}
+              <p className="text-sm font-medium text-foreground">
+                {hasCover ? t('coverReplace') : t('coverAdd')}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
-                JPEG, PNG, WebP · max 10 Mo · redimensionné automatiquement
-              </p>
-              <p className="text-xs text-gray-400">
-                Bucket Supabase{' '}
-                <code className="font-mono bg-gray-100 px-1 rounded">product-images</code>
+              <p className="text-xs text-faint mt-1">{t('coverFileHint')}</p>
+              <p className="text-xs text-faint">
+                {t('coverBucketHint')}{' '}
+                <code className="font-mono bg-surface-2 px-1 rounded">product-images</code>
               </p>
             </>
           )}

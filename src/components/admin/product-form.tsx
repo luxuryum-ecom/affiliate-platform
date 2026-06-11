@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useRef } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import { upsertProduct, type ProductFormState } from '@/app/actions/products'
 import { ProductCoverUpload } from '@/components/admin/product-cover-upload'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
@@ -49,17 +50,17 @@ function rowToTier(r: TierRow): WholesaleTier | null {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const INPUT =
-  'w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400'
+  'w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent disabled:bg-surface-2 disabled:text-faint'
 
-const LABEL = 'block text-xs font-medium text-gray-600 mb-1'
+const LABEL = 'block text-xs font-medium text-muted mb-1'
 
-const SECTION_TITLE = 'text-sm font-semibold text-gray-900 pb-1 border-b border-gray-100'
+const SECTION_TITLE = 'text-sm font-semibold text-foreground pb-1 border-b border-line'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function InfoBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700 leading-relaxed">
+    <div className="bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-muted leading-relaxed">
       {children}
     </div>
   )
@@ -68,17 +69,10 @@ function InfoBox({ children }: { children: React.ReactNode }) {
 function CalcRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className="text-gray-500">{label}</span>
-      <span className={`font-medium ${highlight ? 'text-green-700' : 'text-gray-900'}`}>{value}</span>
+      <span className="text-muted">{label}</span>
+      <span className={`font-medium ${highlight ? 'text-success-fg' : 'text-foreground'}`}>{value}</span>
     </div>
   )
-}
-
-const MEDIA_TYPE_LABELS: Record<MediaItem['type'], string> = {
-  image:          '🖼 Image',
-  video:          '🎬 Vidéo',
-  telegram_link:  '📲 Telegram',
-  external_link:  '🔗 Lien externe',
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -93,6 +87,10 @@ interface ProductFormProps {
 const initialState: ProductFormState = { error: null }
 
 export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormProps) {
+  const t = useTranslations('admin.productForm')
+  const tc = useTranslations('admin.common')
+  const locale = useLocale()
+
   const [state, action, isPending] = useActionState(upsertProduct, initialState)
 
   // ── Availability state ────────────────────────────────────────────────────
@@ -276,7 +274,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
     setTiers((prev) => [...prev, { min_qty: '', max_qty: '', price_per_unit: '' }])
   const removeTier = (i: number) => setTiers((prev) => prev.filter((_, idx) => idx !== i))
   const updateTier = (i: number, key: keyof TierRow, val: string) =>
-    setTiers((prev) => prev.map((t, idx) => (idx === i ? { ...t, [key]: val } : t)))
+    setTiers((prev) => prev.map((row, idx) => (idx === i ? { ...row, [key]: val } : row)))
 
   // Auto-generate standard tiers from factory cost (10+/50+/100+/500+ pieces)
   const autoGenerateTiers = () => {
@@ -330,10 +328,10 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
     mediaItems[0]?.url ??
     ''
 
-  const productDisplayName = product?.name ?? 'Produit'
+  const productDisplayName = product?.name ?? tc('product')
 
   // ── Serialised hidden values ──────────────────────────────────────────────
-  const validTiers = tiers.map(rowToTier).filter((t): t is WholesaleTier => t !== null)
+  const validTiers = tiers.map(rowToTier).filter((row): row is WholesaleTier => row !== null)
   const validMedia = mediaItems.filter(
     (m) => m.url.trim().length > 0 && (m.type !== 'image' || isValidMediaUrl(m.url))
   )
@@ -342,6 +340,14 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
   const handleAvailabilityChange = (val: string) => {
     setAvailabilityType(val)
     if (val === 'import_on_demand') setAffiliateEnabled(false)
+  }
+
+  // ── Media type labels (i18n) ──────────────────────────────────────────────
+  const MEDIA_TYPE_LABELS: Record<MediaItem['type'], string> = {
+    image:         t('mediaTypeImage'),
+    video:         t('mediaTypeVideo'),
+    telegram_link: t('mediaTypeTelegram'),
+    external_link: t('mediaTypeExternalLink'),
   }
 
   return (
@@ -356,7 +362,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
 
       {/* Error banner */}
       {state?.error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
+        <div className="bg-danger-soft border border-danger text-danger-fg text-sm px-4 py-3 rounded-xl">
           {state.error}
         </div>
       )}
@@ -365,23 +371,23 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           1. INFORMATIONS GÉNÉRALES
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Informations générales</h2>
+        <h2 className={SECTION_TITLE}>{t('section1')}</h2>
 
         <div>
           <label htmlFor="name" className={LABEL}>
-            Nom du produit <span className="text-red-500">*</span>
+            {t('productName')} <span className="text-danger-fg">*</span>
           </label>
           <input
             id="name" name="name" type="text" required disabled={isPending}
             defaultValue={product?.name}
             className={INPUT}
-            placeholder="Ex : Crème hydratante Argan"
+            placeholder={t('productNamePlaceholder')}
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="category" className={LABEL}>Catégorie</label>
+            <label htmlFor="category" className={LABEL}>{t('category')}</label>
             <select
               id="category"
               name="category"
@@ -398,9 +404,9 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               }}
               className={INPUT}
             >
-              <option value="">Sélectionner une catégorie...</option>
+              <option value="">{t('categoryPlaceholder')}</option>
               {productCategory && !(PRODUCT_CATEGORIES as readonly string[]).includes(productCategory) && (
-                <option value={productCategory}>{productCategory} (⚠ valeur legacy)</option>
+                <option value={productCategory}>{productCategory} ({t('legacyValue')})</option>
               )}
               {PRODUCT_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -408,7 +414,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
             </select>
           </div>
           <div>
-            <label htmlFor="subcategory" className={LABEL}>Sous-catégorie</label>
+            <label htmlFor="subcategory" className={LABEL}>{t('subcategory')}</label>
             {subcategoryOptions.length > 0 ? (
               <select
                 id="subcategory"
@@ -418,10 +424,10 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 onChange={(e) => setProductSubcategory(e.target.value)}
                 className={INPUT}
               >
-                <option value="">Sélectionner...</option>
+                <option value="">{t('subcategoryPlaceholder')}</option>
                 {/* Preserve legacy value if it doesn't match any current option */}
                 {productSubcategory && !(subcategoryOptions as readonly string[]).includes(productSubcategory) && (
-                  <option value={productSubcategory}>{productSubcategory} (⚠ valeur legacy)</option>
+                  <option value={productSubcategory}>{productSubcategory} ({t('legacyValue')})</option>
                 )}
                 {subcategoryOptions.map((sub) => (
                   <option key={sub} value={sub}>{sub}</option>
@@ -436,19 +442,19 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 value={productSubcategory}
                 onChange={(e) => setProductSubcategory(e.target.value)}
                 className={INPUT}
-                placeholder={productCategory ? 'Précisez...' : 'Sélectionnez une catégorie'}
+                placeholder={productCategory ? t('subcategoryPlaceholder') : t('subcategoryParentPlaceholder')}
               />
             )}
           </div>
         </div>
 
         <div>
-          <label htmlFor="description" className={LABEL}>Description</label>
+          <label htmlFor="description" className={LABEL}>{t('description')}</label>
           <textarea
             id="description" name="description" rows={3} disabled={isPending}
             defaultValue={product?.description ?? ''}
             className={INPUT + ' resize-none'}
-            placeholder="Description courte du produit…"
+            placeholder={t('descriptionPlaceholder')}
           />
         </div>
       </section>
@@ -457,28 +463,28 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           2. DISPONIBILITÉ COMMERCIALE
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Disponibilité commerciale</h2>
+        <h2 className={SECTION_TITLE}>{t('section2')}</h2>
 
         {/* availability_type */}
         <div>
           <p className={LABEL}>
-            Type de disponibilité <span className="text-red-500">*</span>
+            {t('availabilityType')} <span className="text-danger-fg">*</span>
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
             {([
               {
                 val: 'local_stock',
-                title: 'Stock local au Maroc',
-                desc: 'Disponible en stock. Peut être vendu par affiliés et/ou grossistes.',
-                color: 'border-green-300 bg-green-50',
-                activeColor: 'border-green-600 bg-green-100 ring-2 ring-green-400',
+                title: t('availLocalTitle'),
+                desc: t('availLocalDesc'),
+                color: 'border-line bg-surface',
+                activeColor: 'border-success bg-success-soft ring-2 ring-success',
               },
               {
                 val: 'import_on_demand',
-                title: 'Produit à importer sur demande',
-                desc: 'Import B2B uniquement. Pas disponible pour les affiliés.',
-                color: 'border-purple-200 bg-purple-50',
-                activeColor: 'border-purple-600 bg-purple-100 ring-2 ring-purple-400',
+                title: t('availImportTitle'),
+                desc: t('availImportDesc'),
+                color: 'border-line bg-surface',
+                activeColor: 'border-primary bg-accent-soft ring-2 ring-gold-400',
               },
             ] as const).map(({ val, title, desc, color, activeColor }) => (
               <label
@@ -494,11 +500,11 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   checked={availabilityType === val}
                   onChange={() => handleAvailabilityChange(val)}
                   disabled={isPending}
-                  className="mt-0.5 w-4 h-4 accent-gray-900 shrink-0"
+                  className="mt-0.5 w-4 h-4 accent-gold-500 shrink-0"
                 />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                  <p className="text-sm font-medium text-foreground">{title}</p>
+                  <p className="text-xs text-muted mt-0.5">{desc}</p>
                 </div>
               </label>
             ))}
@@ -509,7 +515,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
         {availabilityType === 'local_stock' && (
           <div>
             <label htmlFor="origin_detail" className={LABEL}>
-              Origine du produit
+              {t('originDetail')}
             </label>
             <select
               id="origin_detail"
@@ -519,22 +525,21 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               onChange={(e) => setOriginDetail(e.target.value)}
               className={INPUT}
             >
-              <option value="locally_produced">Produit localement (Maroc)</option>
-              <option value="imported_but_in_morocco_stock">Importé mais disponible au Maroc</option>
+              <option value="locally_produced">{t('originLocallyProduced')}</option>
+              <option value="imported_but_in_morocco_stock">{t('originImportedStock')}</option>
             </select>
           </div>
         )}
 
         {/* import_on_demand display fields — only shown when relevant */}
         {availabilityType === 'import_on_demand' && (
-          <div className="space-y-4 p-4 rounded-xl border border-purple-200 bg-purple-50">
+          <div className="space-y-4 p-4 rounded-xl border border-line bg-surface-2">
             <div>
-              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                Transport &amp; douane — affiché aux grossistes
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                {t('importSectionTitle')}
               </p>
-              <p className="text-xs text-purple-500 mt-0.5">
-                Ces champs représentent les <strong>frais de transport et douane</strong> uniquement —
-                séparés du coût d&apos;achat fournisseur (saisi dans la section « Coût usine » ci-dessous).
+              <p className="text-xs text-muted mt-0.5">
+                {t('importSectionDesc')}
               </p>
             </div>
 
@@ -544,13 +549,13 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 [
                   {
                     val: 'global' as TariffMode,
-                    title: 'Tarif global',
-                    desc: 'Hérite du tarif centralisé pour ce pays (recommandé)',
+                    title: t('tariffGlobalTitle'),
+                    desc: t('tariffGlobalDesc'),
                   },
                   {
                     val: 'custom' as TariffMode,
-                    title: 'Tarif personnalisé',
-                    desc: 'Définit des tarifs spécifiques à ce produit',
+                    title: t('tariffCustomTitle'),
+                    desc: t('tariffCustomDesc'),
                   },
                 ] as const
               ).map(({ val, title, desc }) => (
@@ -558,8 +563,8 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   key={val}
                   className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                     tariffMode === val
-                      ? 'border-purple-600 bg-purple-100 ring-2 ring-purple-400'
-                      : 'border-purple-200 bg-white'
+                      ? 'border-primary bg-accent-soft ring-2 ring-gold-400'
+                      : 'border-line bg-surface'
                   }`}
                 >
                   <input
@@ -569,11 +574,11 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                     checked={tariffMode === val}
                     onChange={() => setTariffMode(val)}
                     disabled={isPending}
-                    className="mt-0.5 w-4 h-4 accent-purple-700 shrink-0"
+                    className="mt-0.5 w-4 h-4 accent-gold-500 shrink-0"
                   />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                    <p className="text-sm font-medium text-foreground">{title}</p>
+                    <p className="text-xs text-muted mt-0.5">{desc}</p>
                   </div>
                 </label>
               ))}
@@ -582,62 +587,62 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
             {/* Global tariff preview */}
             {tariffMode === 'global' && (() => {
               const matchingTariff = tariffs.find(
-                (t) =>
-                  t.country === importOriginCountry &&
-                  t.shipping_mode === importShippingMode &&
-                  t.active
+                (row) =>
+                  row.country === importOriginCountry &&
+                  row.shipping_mode === importShippingMode &&
+                  row.active
               )
               const needsCountry = !importOriginCountry
               return (
-                <div className="rounded-lg border border-purple-200 bg-white px-4 py-3 space-y-1.5 text-sm">
-                  <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">
-                    Tarif global actif (frais transport &amp; douane)
+                <div className="rounded-lg border border-line bg-surface px-4 py-3 space-y-1.5 text-sm">
+                  <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2">
+                    {t('globalTariffTitle')}
                   </p>
                   {needsCountry ? (
-                    <p className="text-xs text-gray-400 italic">
-                      Sélectionnez un pays et un mode de transport pour voir le tarif global.
+                    <p className="text-xs text-faint italic">
+                      {t('tariffSelectHint')}
                     </p>
                   ) : matchingTariff ? (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Mode</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="text-muted">{t('tariffMode')}</span>
+                        <span className="font-medium text-foreground">
                           {SHIPPING_MODE_LABELS[matchingTariff.shipping_mode]}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Frais transport &amp; douane</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="text-muted">{t('tariffTransportFees')}</span>
+                        <span className="font-medium text-foreground">
                           {Number(matchingTariff.transport_customs_price_mad).toFixed(2)} MAD&nbsp;
-                          <span className="text-gray-400 font-normal text-xs">
-                            / {matchingTariff.unit === 'cbm' ? 'CBM' : 'kg'}
+                          <span className="text-faint font-normal text-xs">
+                            / {matchingTariff.unit === 'cbm' ? t('shippingUnitCBM') : t('shippingUnitKG')}
                           </span>
                         </span>
                       </div>
                       {matchingTariff.delivery_days != null && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Délai estimé</span>
-                          <span className="font-medium text-gray-900">
-                            {matchingTariff.delivery_days} jour{matchingTariff.delivery_days > 1 ? 's' : ''}
+                          <span className="text-muted">{t('tariffDeliveryDays')}</span>
+                          <span className="font-medium text-foreground">
+                            {t('deliveryDaysCount', { count: matchingTariff.delivery_days })}
                           </span>
                         </div>
                       )}
                       {matchingTariff.notes && (
-                        <p className="text-xs text-gray-500 pt-1 border-t border-purple-100 mt-1">
+                        <p className="text-xs text-muted pt-1 border-t border-line mt-1">
                           {matchingTariff.notes}
                         </p>
                       )}
                     </>
                   ) : (
-                    <p className="text-xs text-amber-600">
-                      Aucun tarif actif pour {importOriginCountry} — {SHIPPING_MODE_LABELS[importShippingMode]}.{' '}
+                    <p className="text-xs text-warning-fg">
+                      {t('tariffNoActive', { country: importOriginCountry, mode: SHIPPING_MODE_LABELS[importShippingMode] })}{' '}
                       <a
                         href="/admin/import-tariffs"
                         target="_blank"
                         rel="noreferrer"
-                        className="underline"
+                        className="text-gold-500 hover:text-gold-600 underline"
                       >
-                        Configurer →
+                        {t('tariffConfigure')}
                       </a>
                     </p>
                   )}
@@ -649,7 +654,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="import_origin_country" className={LABEL}>
-                  Pays d&apos;origine <span className="text-red-500">*</span>
+                  {t('originCountry')} <span className="text-danger-fg">*</span>
                 </label>
                 <select
                   id="import_origin_country"
@@ -659,19 +664,19 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   onChange={(e) => setImportOriginCountry(e.target.value)}
                   className={INPUT}
                 >
-                  <option value="">— Sélectionner —</option>
-                  <option value="Turquie">Turquie</option>
-                  <option value="Chine">Chine</option>
-                  <option value="Égypte">Égypte</option>
-                  <option value="Dubai">Dubai</option>
-                  <option value="Autre">Autre</option>
-                  <option value="Mixte">Mixte (plusieurs origines)</option>
+                  <option value="">{t('originCountrySelect')}</option>
+                  <option value="Turquie">{t('countryTurkey')}</option>
+                  <option value="Chine">{t('countryChina')}</option>
+                  <option value="Égypte">{t('countryEgypt')}</option>
+                  <option value="Dubai">{t('countryDubai')}</option>
+                  <option value="Autre">{t('countryOther')}</option>
+                  <option value="Mixte">{t('countryMixed')}</option>
                 </select>
               </div>
 
               <div>
                 <label htmlFor="import_shipping_mode_ui" className={LABEL}>
-                  Mode de transport
+                  {t('shippingMode')}
                 </label>
                 <select
                   id="import_shipping_mode_ui"
@@ -684,8 +689,9 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                     <option key={val} value={val}>{label}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-1">
-                  Unité auto : <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'}</strong>
+                <p className="text-xs text-faint mt-1">
+                  {t('shippingUnitAuto')}{' '}
+                  <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? t('shippingUnitCBM') : t('shippingUnitKG')}</strong>
                 </p>
               </div>
             </div>
@@ -693,15 +699,15 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
             {/* Custom tariff fields — only shown when tariffMode = 'custom' */}
             {tariffMode === 'custom' && (
               <>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-                  Frais de <strong>transport &amp; douane uniquement</strong> — ne pas inclure le prix d&apos;achat du produit.
+                <div className="bg-warning-soft border border-warning rounded-lg px-3 py-2 text-xs text-warning-fg">
+                  {t('customTariffWarning')}
                 </div>
 
                 {/* Price + delivery days */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="estimated_import_price_mad" className={LABEL}>
-                      Frais transport &amp; douane (MAD / {unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'})
+                      {t('importTransportFees', { unit: unitFromShippingMode(importShippingMode) === 'cbm' ? t('shippingUnitCBM') : t('shippingUnitKG') })}
                     </label>
                     <input
                       id="estimated_import_price_mad"
@@ -715,14 +721,15 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                       className={INPUT}
                       placeholder="0.00"
                     />
-                    <p className="text-xs text-gray-400 mt-1">
-                      Unité auto-sélectionnée depuis le mode : <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? 'CBM' : 'kg'}</strong>
+                    <p className="text-xs text-faint mt-1">
+                      {t('importUnitAuto')}{' '}
+                      <strong>{unitFromShippingMode(importShippingMode) === 'cbm' ? t('shippingUnitCBM') : t('shippingUnitKG')}</strong>
                     </p>
                   </div>
 
                   <div>
                     <label htmlFor="estimated_delivery_days" className={LABEL}>
-                      Délai estimé (jours)
+                      {t('deliveryDays')}
                     </label>
                     <input
                       id="estimated_delivery_days"
@@ -734,7 +741,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                       value={estimatedDeliveryDays}
                       onChange={(e) => setEstimatedDeliveryDays(e.target.value)}
                       className={INPUT}
-                      placeholder="Ex : 21"
+                      placeholder={t('deliveryDaysPlaceholder')}
                     />
                   </div>
                 </div>
@@ -742,9 +749,9 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 {/* Notes */}
                 <div>
                   <label htmlFor="import_notes" className={LABEL}>
-                    Notes transport &amp; douane
+                    {t('importNotes')}
                     {importOriginCountry === 'Mixte' && (
-                      <span className="ml-1.5 text-amber-600 font-semibold">(recommandé — origines multiples)</span>
+                      <span className="ml-1.5 text-warning-fg font-semibold">{t('importNotesMixed')}</span>
                     )}
                   </label>
                   <textarea
@@ -754,12 +761,12 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                     disabled={isPending}
                     value={importNotes}
                     onChange={(e) => setImportNotes(e.target.value)}
-                    className={`${INPUT} resize-none ${importOriginCountry === 'Mixte' ? 'border-amber-400 ring-1 ring-amber-300' : ''}`}
-                    placeholder="Ex : taxe douanière variable, inspection aléatoire…"
+                    className={`${INPUT} resize-none ${importOriginCountry === 'Mixte' ? 'border-warning ring-1 ring-warning' : ''}`}
+                    placeholder={t('importNotesPlaceholder')}
                   />
                   {importOriginCountry === 'Mixte' && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      Origine mixte détectée — précisez les pays et conditions dans les notes.
+                    <p className="text-xs text-warning-fg mt-1">
+                      {t('importNotesMixedWarn')}
                     </p>
                   )}
                 </div>
@@ -772,15 +779,15 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className={`flex items-center justify-between px-3 py-2.5 border rounded-lg ${
             availabilityType === 'import_on_demand'
-              ? 'bg-gray-50 border-gray-200 opacity-50'
-              : 'bg-white border-gray-200'
+              ? 'bg-surface-2 border-line opacity-50'
+              : 'bg-surface border-line'
           }`}>
             <div>
-              <p className="text-sm font-medium text-gray-900">Disponible pour affiliés</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-sm font-medium text-foreground">{t('affiliateChannel')}</p>
+              <p className="text-xs text-faint">
                 {availabilityType === 'import_on_demand'
-                  ? 'Non disponible (import sur demande)'
-                  : 'Les affiliés peuvent partager ce produit'}
+                  ? t('affiliateChannelDisabled')
+                  : t('affiliateChannelDesc')}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -792,17 +799,17 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 disabled={isPending || availabilityType === 'import_on_demand'}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
+              <div className="w-9 h-5 bg-surface-2 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-line after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success" />
             </label>
           </div>
 
-          <div className="flex items-center justify-between px-3 py-2.5 border border-gray-200 bg-white rounded-lg">
+          <div className="flex items-center justify-between px-3 py-2.5 border border-line bg-surface rounded-lg">
             <div>
-              <p className="text-sm font-medium text-gray-900">Disponible pour grossistes</p>
-              <p className="text-xs text-gray-400">Toujours activé</p>
+              <p className="text-sm font-medium text-foreground">{t('wholesaleChannel')}</p>
+              <p className="text-xs text-faint">{t('wholesaleChannelAlways')}</p>
             </div>
-            <span className="text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-              Oui
+            <span className="text-xs font-medium text-success-fg bg-success-soft px-2 py-0.5 rounded-full">
+              {t('wholesaleChannelYes')}
             </span>
           </div>
         </div>
@@ -812,29 +819,27 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           3. SOURCING & TRAÇABILITÉ
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Sourcing & traçabilité</h2>
+        <h2 className={SECTION_TITLE}>{t('section3')}</h2>
 
         <InfoBox>
-          Ces informations ne sont jamais visibles des affiliés ou grossistes.
-          Elles servent à tracer l&apos;origine du produit et seront utilisées lors de
-          l&apos;intégration future Telegram / fournisseur.
+          {t('sourcingInfo')}
         </InfoBox>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="supplier_name" className={LABEL}>Nom du fournisseur</label>
+            <label htmlFor="supplier_name" className={LABEL}>{t('supplierName')}</label>
             <input
               id="supplier_name" name="supplier_name" type="text" disabled={isPending}
               defaultValue={product?.supplier_name ?? ''}
               className={INPUT}
-              placeholder="Ex : Fournisseur Casablanca"
+              placeholder={t('supplierNamePlaceholder')}
             />
           </div>
 
           {/* origin_country shown here for local_stock; for import_on_demand it is in the availability section */}
           {availabilityType === 'local_stock' && (
             <div>
-              <label htmlFor="origin_country" className={LABEL}>Pays d&apos;origine</label>
+              <label htmlFor="origin_country" className={LABEL}>{t('originCountryLocal')}</label>
               <input
                 id="origin_country"
                 name="origin_country"
@@ -842,33 +847,33 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 disabled={isPending}
                 defaultValue={product?.origin_country ?? ''}
                 className={INPUT}
-                placeholder="Ex : Maroc, Chine, Turquie…"
+                placeholder={t('originCountryLocalPlaceholder')}
               />
             </div>
           )}
         </div>
 
         <div>
-          <label htmlFor="source_notes" className={LABEL}>Notes de sourcing</label>
+          <label htmlFor="source_notes" className={LABEL}>{t('sourceNotes')}</label>
           <textarea
             id="source_notes" name="source_notes" rows={2} disabled={isPending}
             defaultValue={product?.source_notes ?? ''}
             className={INPUT + ' resize-none'}
-            placeholder="Informations sur le fournisseur, conditions, délais…"
+            placeholder={t('sourceNotesPlaceholder')}
           />
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-xs text-gray-500">
-          <span>Canal :</span>
-          <span className="font-medium text-gray-700">
+        <div className="flex items-center gap-2 px-3 py-2 border border-line rounded-lg bg-surface-2 text-xs text-muted">
+          <span>{t('channel')}</span>
+          <span className="font-medium text-foreground">
             {product?.submitted_via === 'telegram_future'
-              ? 'Telegram (futur)'
+              ? t('channelTelegram')
               : product?.submitted_via === 'supplier_future'
-              ? 'Fournisseur (futur)'
-              : 'Dashboard admin'}
+              ? t('channelSupplier')
+              : t('channelDashboard')}
           </span>
           {product?.submitted_by && (
-            <span className="ml-auto font-mono text-gray-400">
+            <span className="ml-auto font-mono text-faint">
               {product.submitted_by.slice(0, 8)}…
             </span>
           )}
@@ -879,12 +884,12 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           4. COÛT USINE & MARGE PLATEFORME
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Coût usine & marge plateforme</h2>
+        <h2 className={SECTION_TITLE}>{t('section4')}</h2>
 
         {/* Sourcing / traceability row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label htmlFor="purchase_price" className={LABEL}>Prix d&apos;achat fournisseur</label>
+            <label htmlFor="purchase_price" className={LABEL}>{t('purchasePrice')}</label>
             <input
               id="purchase_price" name="purchase_price" type="number"
               step="0.01" min="0" disabled={isPending}
@@ -896,22 +901,22 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           </div>
 
           <div>
-            <label htmlFor="purchase_currency" className={LABEL}>Devise</label>
+            <label htmlFor="purchase_currency" className={LABEL}>{t('currency')}</label>
             <select
               id="purchase_currency" name="purchase_currency" disabled={isPending}
               value={purchaseCurrency}
               onChange={(e) => handleCurrencyChange(e.target.value)}
               className={INPUT}
             >
-              <option value="MAD">MAD — Dirham marocain</option>
-              <option value="USD">USD — Dollar américain</option>
-              <option value="AED">AED — Dirham des Émirats</option>
+              <option value="MAD">{t('currencyMAD')}</option>
+              <option value="USD">{t('currencyUSD')}</option>
+              <option value="AED">{t('currencyAED')}</option>
             </select>
           </div>
 
           <div className={!needsConversion ? 'opacity-40' : ''}>
             <label htmlFor="exchange_rate_to_mad" className={LABEL}>
-              Taux de change → MAD
+              {t('exchangeRate')}
             </label>
             <input
               id="exchange_rate_to_mad" name="exchange_rate_to_mad"
@@ -923,7 +928,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               placeholder="1.00"
             />
             {!needsConversion && (
-              <p className="text-xs text-gray-400 mt-1">Non applicable (production locale MAD)</p>
+              <p className="text-xs text-faint mt-1">{t('exchangeRateNA')}</p>
             )}
           </div>
         </div>
@@ -932,7 +937,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="factory_cost_mad" className={LABEL}>
-              Coût usine (MAD) <span className="text-red-500">*</span>
+              {t('factoryCostMad')} <span className="text-danger-fg">*</span>
             </label>
             <div className="flex gap-2">
               <input
@@ -948,17 +953,17 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   type="button"
                   onClick={() => setFactoryCostMad(String(purchasePriceMad))}
                   disabled={isPending}
-                  className="shrink-0 text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
-                  title="Remplir depuis le prix d'achat converti"
+                  className="shrink-0 text-xs px-2.5 py-1.5 border border-line rounded-lg hover:bg-surface-2 transition-colors whitespace-nowrap"
+                  title={t('autoFillTitle')}
                 >
-                  ← Auto
+                  {t('autoFill')}
                 </button>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Coût réel en MAD. Base de calcul de la commission affilié.
+            <p className="text-xs text-faint mt-1">
+              {t('factoryCostHint')}
               {purchasePriceMad !== null && (
-                <> Calculé&nbsp;: <strong>{formatMAD(purchasePriceMad)}</strong></>
+                <> {t('factoryCostComputed')} <strong>{formatMAD(purchasePriceMad)}</strong></>
               )}
             </p>
           </div>
@@ -971,7 +976,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="platform_margin_type" className={LABEL}>
-              Type de marge plateforme
+              {t('platformMarginType')}
             </label>
             <select
               id="platform_margin_type" name="platform_margin_type" disabled={isPending}
@@ -979,14 +984,14 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               onChange={(e) => setPlatformMarginType(e.target.value)}
               className={INPUT}
             >
-              <option value="percentage">Pourcentage (%)</option>
-              <option value="fixed">Montant fixe (MAD)</option>
+              <option value="percentage">{t('marginTypePercentage')}</option>
+              <option value="fixed">{t('marginTypeFixed')}</option>
             </select>
           </div>
 
           <div>
             <label htmlFor="platform_margin_value" className={LABEL}>
-              {platformMarginType === 'percentage' ? 'Marge (%)' : 'Marge fixe (MAD)'}
+              {platformMarginType === 'percentage' ? t('marginPct') : t('marginFixedLabel')}
             </label>
             <input
               id="platform_margin_value" name="platform_margin_value"
@@ -1005,18 +1010,18 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
 
         {/* Cost breakdown preview */}
         {!isNaN(fCost) && fCost > 0 && platformMarginMad !== null && (
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Décomposition des coûts
+          <div className="bg-surface-2 border border-line rounded-xl p-3 space-y-1.5">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+              {t('costBreakdown')}
             </p>
-            <CalcRow label="Coût usine" value={formatMAD(fCost)} />
+            <CalcRow label={t('costFactory')} value={formatMAD(fCost)} />
             <CalcRow
-              label={`Marge plateforme (${pmType === 'percentage' ? `${pmValue}%` : `fixe`})`}
+              label={t('costPlatformMargin', { type: pmType === 'percentage' ? `${pmValue}%` : t('marginFixed') })}
               value={formatMAD(platformMarginMad)}
             />
-            <div className="pt-1 border-t border-gray-200">
+            <div className="pt-1 border-t border-line">
               <CalcRow
-                label="Prix plateforme (coût + marge)"
+                label={t('costPlatformTotal')}
                 value={platformCostMad !== null ? formatMAD(platformCostMad) : '—'}
                 highlight
               />
@@ -1029,11 +1034,11 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           5. PRIX DE VENTE & COMMISSIONS
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Prix de vente & commissions</h2>
+        <h2 className={SECTION_TITLE}>{t('section5')}</h2>
 
         <div>
           <label htmlFor="sell_price" className={LABEL}>
-            Prix de vente plateforme (MAD) <span className="text-red-500">*</span>
+            {t('sellPrice')} <span className="text-danger-fg">*</span>
           </label>
           <input
             id="sell_price" name="sell_price" type="number"
@@ -1043,10 +1048,10 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
             className={INPUT}
             placeholder={suggestedSellPrice ? String(suggestedSellPrice) : '0.00'}
           />
-          <p className="text-xs text-gray-400 mt-1">
-            Prix affiché aux affiliés / prix de référence plateforme.
+          <p className="text-xs text-faint mt-1">
+            {t('sellPriceHint')}
             {suggestedSellPrice && (
-              <> Suggéré depuis coût+marge&nbsp;: <strong>{formatMAD(suggestedSellPrice)}</strong></>
+              <> {t('sellPriceSuggested')} <strong>{formatMAD(suggestedSellPrice)}</strong></>
             )}
           </p>
         </div>
@@ -1055,7 +1060,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label htmlFor="confirmation_fee_mad" className={LABEL}>
-              Frais de confirmation (MAD)
+              {t('confirmationFee')}
             </label>
             <input
               id="confirmation_fee_mad" name="confirmation_fee_mad"
@@ -1064,12 +1069,12 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               onChange={(e) => setConfirmationFee(e.target.value)}
               className={INPUT}
             />
-            <p className="text-xs text-gray-400 mt-1">Coût opérationnel par commande confirmée.</p>
+            <p className="text-xs text-faint mt-1">{t('confirmationFeeHint')}</p>
           </div>
 
           <div>
             <label htmlFor="packaging_fee_mad" className={LABEL}>
-              Frais d&apos;emballage (MAD)
+              {t('packagingFee')}
             </label>
             <input
               id="packaging_fee_mad" name="packaging_fee_mad"
@@ -1078,12 +1083,12 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               onChange={(e) => setPackagingFee(e.target.value)}
               className={INPUT}
             />
-            <p className="text-xs text-gray-400 mt-1">Coût emballage par commande confirmée.</p>
+            <p className="text-xs text-faint mt-1">{t('packagingFeeHint')}</p>
           </div>
 
           <div>
             <label htmlFor="delivery_fee_mad" className={LABEL}>
-              Frais de livraison (MAD)
+              {t('deliveryFee')}
             </label>
             <input
               id="delivery_fee_mad" name="delivery_fee_mad"
@@ -1092,49 +1097,49 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               onChange={(e) => setDeliveryFee(e.target.value)}
               className={INPUT}
             />
-            <p className="text-xs text-gray-400 mt-1">Frais livreur estimés par commande.</p>
+            <p className="text-xs text-faint mt-1">{t('deliveryFeeHint')}</p>
           </div>
         </div>
 
         {/* Auto-computed commission — read-only preview, no manual input */}
         <div className={`rounded-xl border p-4 space-y-2 ${
-          !affiliateEnabled ? 'bg-gray-50 border-gray-100 opacity-60' : 'bg-green-50 border-green-100'
+          !affiliateEnabled ? 'bg-surface-2 border-line opacity-60' : 'bg-success-soft border-success'
         }`}>
-          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-            Commission affilié — calculée automatiquement
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+            {t('commissionTitle')}
           </p>
           {affiliateEnabled ? (
             <>
               <div className="space-y-1">
                 <CalcRow
-                  label="Prix de vente"
+                  label={t('commissionSellPrice')}
                   value={!isNaN(spVal) && spVal > 0 ? formatMAD(spVal) : '—'}
                 />
-                <CalcRow label="− Coût usine" value={!isNaN(fCost) && fCost > 0 ? `−${formatMAD(fCost)}` : '—'} />
+                <CalcRow label={t('commissionFactoryCost')} value={!isNaN(fCost) && fCost > 0 ? `−${formatMAD(fCost)}` : '—'} />
                 <CalcRow
-                  label={`− Marge plateforme (${pmType === 'percentage' ? `${pmValue}%` : 'fixe'})`}
+                  label={t('commissionPlatformMargin', { type: pmType === 'percentage' ? `${pmValue}%` : t('marginFixed') })}
                   value={platformMarginMad !== null ? `−${formatMAD(platformMarginMad)}` : '—'}
                 />
-                <CalcRow label="− Frais de livraison" value={delivFeeVal > 0 ? `−${formatMAD(delivFeeVal)}` : `−${formatMAD(0)}`} />
-                <CalcRow label="− Frais de confirmation" value={`−${formatMAD(confFeeVal)}`} />
-                <CalcRow label="− Frais d'emballage" value={`−${formatMAD(packFeeVal)}`} />
+                <CalcRow label={t('commissionDeliveryFee')} value={delivFeeVal > 0 ? `−${formatMAD(delivFeeVal)}` : `−${formatMAD(0)}`} />
+                <CalcRow label={t('commissionConfirmFee')} value={`−${formatMAD(confFeeVal)}`} />
+                <CalcRow label={t('commissionPackagingFee')} value={`−${formatMAD(packFeeVal)}`} />
               </div>
-              <div className="pt-2 border-t border-green-200">
+              <div className="pt-2 border-t border-success">
                 <CalcRow
-                  label="Commission nette affilié"
+                  label={t('commissionNet')}
                   value={estimatedCommission !== null ? formatMAD(estimatedCommission) : '—'}
                   highlight
                 />
               </div>
               {estimatedCommission !== null && estimatedCommission <= 0 && (
-                <p className="text-xs text-amber-600 mt-1">
-                  Commission nulle ou négative — ajustez le prix de vente ou réduisez les frais.
+                <p className="text-xs text-warning-fg mt-1">
+                  {t('commissionWarnZero')}
                 </p>
               )}
             </>
           ) : (
-            <p className="text-xs text-gray-400">
-              Les affiliés sont désactivés pour ce produit — aucune commission n&apos;est versée.
+            <p className="text-xs text-faint">
+              {t('commissionDisabled')}
             </p>
           )}
         </div>
@@ -1144,11 +1149,11 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           6. STOCK & QUANTITÉS
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Stock & quantités disponibles</h2>
+        <h2 className={SECTION_TITLE}>{t('section6')}</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="stock_count" className={LABEL}>Quantité disponible (stock)</label>
+            <label htmlFor="stock_count" className={LABEL}>{t('stockCount')}</label>
             <input
               id="stock_count" name="stock_count" type="number"
               min="0" disabled={isPending}
@@ -1159,7 +1164,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
 
           <div>
             <label htmlFor="wholesale_min_qty" className={LABEL}>
-              Commande min. grossiste (unités)
+              {t('wholesaleMinQty')}
             </label>
             <input
               id="wholesale_min_qty" name="wholesale_min_qty" type="number"
@@ -1167,10 +1172,10 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               defaultValue={product?.wholesale_min_qty ?? (availabilityType === 'import_on_demand' ? 10 : 1)}
               className={INPUT}
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-faint mt-1">
               {availabilityType === 'import_on_demand'
-                ? 'Import sur demande — minimum recommandé : 10 pièces.'
-                : 'Quantité minimale pour une commande grossiste.'}
+                ? t('wholesaleMinQtyHintImport')
+                : t('wholesaleMinQtyHint')}
             </p>
           </div>
         </div>
@@ -1182,9 +1187,9 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className={SECTION_TITLE}>Paliers de prix gros</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Prix arrondis au MAD entier. Paliers standards : 10 / 50 / 100 / 500 pièces.
+            <h2 className={SECTION_TITLE}>{t('section7')}</h2>
+            <p className="text-xs text-faint mt-0.5">
+              {t('tierHint')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -1192,34 +1197,34 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               <button
                 type="button"
                 onClick={autoGenerateTiers}
-                className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
-                title="Génère 4 paliers standards à partir du coût usine MAD"
+                className="text-xs px-3 py-1.5 border border-line text-muted rounded-lg hover:bg-surface-2 transition-colors"
+                title={t('tierAutoTitle')}
               >
-                ✦ Auto (coût + marges)
+                {t('tierAuto')}
               </button>
             )}
             <button
               type="button"
               onClick={addTier}
-              className="text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="text-xs px-3 py-1.5 border border-line rounded-lg hover:bg-surface-2 transition-colors"
             >
-              + Palier
+              {t('addTier')}
             </button>
           </div>
         </div>
 
         {tiers.length === 0 ? (
-          <p className="text-xs text-gray-400 py-3 bg-gray-50 rounded-lg text-center">
-            Aucun palier.
+          <p className="text-xs text-faint py-3 bg-surface-2 rounded-lg text-center">
+            {t('tierEmpty')}
             {(!isNaN(fCost) && fCost > 0) || purchasePriceMad
-              ? ' Cliquez « ✦ Auto » pour générer les 4 paliers standards.'
-              : ' Entrez un coût usine pour activer la génération automatique.'}
+              ? t('tierEmptyWithCost')
+              : t('tierEmptyNoCost')}
           </p>
         ) : (
           <div className="space-y-2">
             <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_auto] gap-2 px-1">
-              {['Qté min', 'Qté max (vide = ∞)', 'Prix / u (MAD entier)', ''].map((h) => (
-                <span key={h} className="text-xs font-medium text-gray-500">{h}</span>
+              {[t('tierQtyMin'), t('tierQtyMax'), t('tierPriceUnit'), ''].map((h) => (
+                <span key={h} className="text-xs font-medium text-muted">{h}</span>
               ))}
             </div>
             {tiers.map((tier, i) => (
@@ -1228,27 +1233,27 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   type="number" min="1" placeholder="10"
                   value={tier.min_qty}
                   onChange={(e) => updateTier(i, 'min_qty', e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  aria-label="Quantité minimum"
+                  className="px-2 py-2 border border-line bg-surface text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  aria-label={t('tierAriaMin')}
                 />
                 <input
                   type="number" min="1" placeholder="∞"
                   value={tier.max_qty}
                   onChange={(e) => updateTier(i, 'max_qty', e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  aria-label="Quantité maximum"
+                  className="px-2 py-2 border border-line bg-surface text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  aria-label={t('tierAriaMax')}
                 />
                 <input
                   type="number" min="1" step="1" placeholder="120"
                   value={tier.price_per_unit}
                   onChange={(e) => updateTier(i, 'price_per_unit', e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  aria-label="Prix par unité (MAD)"
+                  className="px-2 py-2 border border-line bg-surface text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  aria-label={t('tierAriaPrice')}
                 />
                 <button
                   type="button" onClick={() => removeTier(i)}
-                  className="text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
-                  aria-label="Supprimer le palier"
+                  className="text-faint hover:text-danger-fg transition-colors text-lg leading-none"
+                  aria-label={t('tierAriaRemove')}
                 >×</button>
               </div>
             ))}
@@ -1257,19 +1262,21 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
 
         {/* Tier preview */}
         {tiers.length > 0 && (!isNaN(fCost) && fCost > 0 || purchasePriceMad !== null) && (
-          <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 text-xs text-indigo-700 space-y-0.5">
-            <p className="font-semibold mb-1">Aperçu des marges grossiste :</p>
-            {tiers.map((t, i) => {
+          <div className="bg-surface-2 border border-line rounded-lg px-3 py-2 text-xs text-muted space-y-0.5">
+            <p className="font-semibold mb-1">{t('tierPreviewTitle')}</p>
+            {tiers.map((row, i) => {
               const costBase = !isNaN(fCost) && fCost > 0 ? fCost : (purchasePriceMad ?? 0)
-              const price = parseFloat(t.price_per_unit)
+              const price = parseFloat(row.price_per_unit)
               const marginPct = costBase > 0 && !isNaN(price)
                 ? (((price - costBase) / costBase) * 100).toFixed(0)
                 : '—'
-              const label = t.max_qty ? `${t.min_qty}–${t.max_qty} u` : `${t.min_qty}+ u`
+              const label = row.max_qty
+                ? t('tierPreviewUnit', { min: row.min_qty, max: row.max_qty })
+                : t('tierPreviewPlus', { min: row.min_qty })
               return (
                 <div key={i} className="flex justify-between">
                   <span>{label}</span>
-                  <span>{isNaN(price) ? '—' : `${price} MAD`} · marge {marginPct}%</span>
+                  <span>{t('tierPreviewMargin', { price: isNaN(price) ? '—' : String(price), pct: marginPct })}</span>
                 </div>
               )
             })}
@@ -1283,16 +1290,16 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className={SECTION_TITLE}>Médias</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Image de couverture + médias additionnels (vidéo, Telegram, liens).
+            <h2 className={SECTION_TITLE}>{t('section8')}</h2>
+            <p className="text-xs text-faint mt-0.5">
+              {t('mediasHint')}
             </p>
           </div>
           <button
             type="button" onClick={addMedia}
-            className="text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="text-xs px-3 py-1.5 border border-line rounded-lg hover:bg-surface-2 transition-colors"
           >
-            + Média
+            {t('addMedia')}
           </button>
         </div>
 
@@ -1306,14 +1313,14 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
 
         {/* Upload error banner */}
         {uploadError && (
-          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+          <div className="flex items-start gap-2 bg-danger-soft border border-danger rounded-lg px-3 py-2 text-xs text-danger-fg">
             <span className="shrink-0 mt-0.5">⚠</span>
             <span>{uploadError}</span>
             <button
               type="button"
               onClick={() => setUploadError(null)}
-              className="ml-auto shrink-0 text-red-400 hover:text-red-600"
-              aria-label="Fermer"
+              className="ml-auto shrink-0 text-danger-fg hover:opacity-80 transition-opacity"
+              aria-label={t('uploadClose')}
             >×</button>
           </div>
         )}
@@ -1326,8 +1333,8 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 <select
                   value={item.type}
                   onChange={(e) => updateMediaType(i, e.target.value as MediaItem['type'])}
-                  className="shrink-0 text-xs px-2 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
-                  aria-label="Type de média"
+                  className="shrink-0 text-xs px-2 py-2.5 border border-line bg-surface text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  aria-label={t('mediaAriaType')}
                 >
                   {(Object.entries(MEDIA_TYPE_LABELS) as [MediaItem['type'], string][]).map(([val, label]) => (
                     <option key={val} value={val}>{label}</option>
@@ -1341,13 +1348,13 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   onChange={(e) => updateMediaUrl(i, e.target.value)}
                   placeholder={
                     item.type === 'telegram_link'
-                      ? 'https://t.me/... ou lien Telegram direct'
+                      ? t('mediaPlaceholderTelegram')
                       : item.type === 'image'
-                      ? 'URL image ou utilisez ↑ Upload'
-                      : 'https://…'
+                      ? t('mediaPlaceholderImage')
+                      : t('mediaPlaceholderLink')
                   }
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 min-w-0"
-                  aria-label={`URL média ${i + 1}`}
+                  className="flex-1 px-3 py-2 border border-line bg-surface text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 min-w-0"
+                  aria-label={t('mediaAriaUrl', { n: i + 1 })}
                 />
 
                 {/* Upload button (images only) */}
@@ -1368,15 +1375,15 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                       type="button"
                       disabled={uploadingIndex !== null || isPending}
                       onClick={() => fileInputRefs.current[i]?.click()}
-                      className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                      title="Uploader une image vers Supabase Storage"
+                      className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-2 border border-line rounded-lg hover:bg-surface-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                      title={t('uploadTriggerTitle')}
                     >
                       {uploadingIndex === i ? (
-                        <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        <span className="inline-block w-3 h-3 border-2 border-line border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <span>↑</span>
                       )}
-                      {uploadingIndex === i ? 'Upload…' : 'Upload'}
+                      {uploadingIndex === i ? t('uploadingBtn') : t('uploadBtn')}
                     </button>
                   </>
                 )}
@@ -1386,15 +1393,15 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   <ProductThumbnail
                     src={item.url}
                     name={productDisplayName}
-                    className="w-9 h-9 rounded border border-gray-200 text-[10px]"
+                    className="w-9 h-9 rounded border border-line text-[10px]"
                   />
                 )}
 
                 {mediaItems.length > 1 && (
                   <button
                     type="button" onClick={() => removeMedia(i)}
-                    className="shrink-0 text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
-                    aria-label="Supprimer le média"
+                    className="shrink-0 text-faint hover:text-danger-fg transition-colors text-lg leading-none"
+                    aria-label={t('mediaAriaRemove')}
                   >×</button>
                 )}
               </div>
@@ -1402,9 +1409,9 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           ))}
         </div>
 
-        <p className="text-xs text-gray-400">
-          Upload direct → Supabase Storage bucket <code className="font-mono bg-gray-100 px-1 rounded">product-images</code>.
-          URL manuelle acceptée en secours (ex : lien CDN externe, Telegram).
+        <p className="text-xs text-faint">
+          {t('uploadHint')} <code className="font-mono bg-surface-2 px-1 rounded">{t('uploadHintBucket')}</code>.{' '}
+          {t('uploadHintFallback')}
         </p>
       </section>
 
@@ -1412,12 +1419,12 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
           9. STATUT & APPROBATION
          ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className={SECTION_TITLE}>Statut & approbation</h2>
+        <h2 className={SECTION_TITLE}>{t('section9')}</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="approval_status" className={LABEL}>
-              Statut d&apos;approbation
+              {t('approvalStatus')}
             </label>
             <select
               id="approval_status" name="approval_status" disabled={isPending}
@@ -1425,66 +1432,65 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
               onChange={(e) => setApprovalStatus(e.target.value as ProductApprovalStatus)}
               className={INPUT}
             >
-              <option value="draft">Brouillon</option>
-              <option value="pending_review">En révision</option>
-              <option value="approved">Approuvé</option>
-              <option value="rejected">Rejeté</option>
+              <option value="draft">{t('approvalDraft')}</option>
+              <option value="pending_review">{t('approvalPendingReview')}</option>
+              <option value="approved">{t('approvalApproved')}</option>
+              <option value="rejected">{t('approvalRejected')}</option>
             </select>
           </div>
 
           <div>
-            <p className={LABEL}>Visibilité catalogue</p>
+            <p className={LABEL}>{t('catalogVisibility')}</p>
             {approvalStatus === 'approved' ? (
               <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                 <input
                   type="checkbox" name="active"
                   defaultChecked={product?.active ?? false}
                   disabled={isPending}
-                  className="w-4 h-4 accent-gray-900"
+                  className="w-4 h-4 accent-gold-500"
                 />
-                <span className="text-sm text-gray-700">Produit actif (visible)</span>
+                <span className="text-sm text-foreground">{t('activeCheckbox')}</span>
               </label>
             ) : (
-              <div className="mt-1.5 px-3 py-2.5 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700">
-                Le produit doit être <strong>approuvé</strong> avant d&apos;être activé.
+              <div className="mt-1.5 px-3 py-2.5 bg-warning-soft border border-warning rounded-lg text-xs text-warning-fg">
+                {t('notApprovedYet')}
               </div>
             )}
           </div>
         </div>
 
         {product?.approved_by && (
-          <div className="flex items-center gap-3 text-xs text-gray-400 bg-gray-50 px-3 py-2 rounded-lg">
+          <div className="flex items-center gap-3 text-xs text-faint bg-surface-2 px-3 py-2 rounded-lg">
             <span>
-              Approuvé le&nbsp;
-              <strong className="text-gray-600">
-                {new Date(product.approved_at!).toLocaleDateString('fr-MA', {
+              {t('approvedAt', {
+                date: new Date(product.approved_at!).toLocaleDateString(locale, {
                   day: '2-digit', month: 'long', year: 'numeric',
-                })}
-              </strong>
+                }),
+              })}
             </span>
-            <span className="text-gray-300">·</span>
-            <span>Par&nbsp;<span className="font-mono">{product.approved_by.slice(0, 8)}…</span></span>
+            <span className="text-line">·</span>
+            <span>{t('approvedBy')}&nbsp;<span className="font-mono">{product.approved_by.slice(0, 8)}…</span></span>
           </div>
         )}
       </section>
 
       {/* ── Submit ── */}
-      <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-100">
+      <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-line">
         <button
           type="submit" disabled={isPending}
-          className="py-2.5 px-6 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="py-2.5 px-6 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending
-            ? 'Enregistrement…'
+            ? tc('saving')
             : product
-            ? 'Mettre à jour le produit'
-            : 'Créer le produit'}
+            ? t('submitUpdate')
+            : t('submitCreate')}
         </button>
         <Link
           href="/admin/products"
-          className="py-2.5 px-4 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors text-center"
+          className="py-2.5 px-4 border border-line text-foreground text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors text-center"
         >
-          Annuler
+          {tc('cancel')}
         </Link>
       </div>
     </form>

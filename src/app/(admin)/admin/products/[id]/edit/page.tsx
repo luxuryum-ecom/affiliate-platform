@@ -1,18 +1,19 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
-import { signOut } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/server'
 import { ProductForm } from '@/components/admin/product-form'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTariffs } from '@/app/actions/tariffs'
 import { getRatesMap } from '@/lib/fx'
+import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
 interface EditProductPageProps {
   params: Promise<{ id: string }>
 }
 
-export const metadata = {
-  title: 'Modifier le produit — Administration',
+export async function generateMetadata() {
+  const t = await getTranslations('admin.productEdit')
+  return { title: t('metaTitle') }
 }
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
@@ -25,6 +26,10 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
+
+  const t = await getTranslations('admin.productEdit')
+  const tc = await getTranslations('admin.common')
+  const tp = await getTranslations('admin.products')
 
   const [profileResult, productResult, tariffs, rates] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
@@ -39,49 +44,31 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   if (!product) notFound()
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/admin/products"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              ← Produits
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate">{product.name}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={product.name}
+        backHref="/admin/products"
+        backLabel={tp('backProducts')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-lg font-semibold text-gray-900">Modifier le produit</h1>
+          <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
           <span
-            className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+            className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
               product.active
-                ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-gray-500'
+                ? 'bg-success-soft text-success-fg border-success'
+                : 'bg-surface-2 text-faint border-line'
             }`}
           >
-            {product.active ? 'Actif' : 'Brouillon'}
+            {product.active ? t('statusActive') : t('statusDraft')}
           </span>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-surface rounded-xl border border-line p-6">
           <ProductForm product={product} tariffs={tariffs} rates={rates} />
         </div>
       </main>
