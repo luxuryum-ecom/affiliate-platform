@@ -75,7 +75,7 @@ export default async function HomePage() {
           <p className="mt-5 text-lg font-semibold text-gold-400 drop-shadow-md sm:text-2xl">
             {t('hero.slogan')}
           </p>
-          <p className="mt-1.5 text-base text-gray-100 drop-shadow sm:text-lg">
+          <p className="mt-1.5 text-base text-foreground drop-shadow sm:text-lg">
             {t('hero.subtitle')}
           </p>
 
@@ -101,7 +101,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <p className="mt-6 text-xs font-medium text-gray-300">{t('hero.note')}</p>
+          <p className="mt-6 text-xs font-medium text-muted">{t('hero.note')}</p>
         </div>
       </section>
 

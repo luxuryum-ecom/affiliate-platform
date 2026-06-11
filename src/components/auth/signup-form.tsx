@@ -29,7 +29,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
 
       {/* Role badge */}
       <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-2 rounded-full text-xs font-medium text-muted">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+        <span className="w-1.5 h-1.5 rounded-full bg-success" />
         {roleLabel}
       </div>
 
@@ -52,7 +52,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
       {defaultRole === 'supplier' && (
         <div>
           <label htmlFor="country_code" className="block text-sm font-medium text-muted mb-1">
-            Pays <span className="text-red-500">*</span>
+            Pays <span className="text-danger">*</span>
           </label>
           <select
             id="country_code"
@@ -108,7 +108,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
       </div>
 
       {state?.error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+        <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
           {state.error}
         </p>
       )}
