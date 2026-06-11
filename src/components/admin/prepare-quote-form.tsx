@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { prepareQuote } from '@/app/actions/quote-requests'
 import { formatCurrency } from '@/lib/utils'
 import type { QuoteRequest } from '@/types/database'
@@ -36,6 +37,7 @@ export function PrepareQuoteForm({
   rates,
   displayCurrency,
 }: Props) {
+  const t = useTranslations('admin.prepareQuoteForm')
   const [state, action, isPending] = useActionState(prepareQuote, initialState)
 
   const currencyCodes = Object.keys(rates)
@@ -55,6 +57,8 @@ export function PrepareQuoteForm({
   const previewMad =
     effectiveRate && !isNaN(priceNum) ? parseFloat((priceNum * effectiveRate).toFixed(2)) : null
 
+  const inputCls = "w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="request_id" value={requestId} />
@@ -62,14 +66,14 @@ export function PrepareQuoteForm({
       {/* ── Prix marchandise en devise source → conversion MAD ── */}
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Devise source <span className="text-red-500">*</span>
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('labelSourceCurrency')} <span className="text-danger">{t('required')}</span>
           </label>
           <select
             name="source_currency"
             value={sourceCurrency}
             onChange={(e) => setSourceCurrency(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className={inputCls}
           >
             {currencyCodes.map((c) => (
               <option key={c} value={c}>
@@ -79,8 +83,8 @@ export function PrepareQuoteForm({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Prix unitaire ({sourceCurrency}) <span className="text-red-500">*</span>
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('labelUnitPrice', { currency: sourceCurrency })} <span className="text-danger">{t('required')}</span>
           </label>
           <input
             type="number"
@@ -91,18 +95,20 @@ export function PrepareQuoteForm({
             value={sourceUnitPrice}
             onChange={(e) => setSourceUnitPrice(e.target.value)}
             placeholder="0.00"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className={inputCls}
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Quantité <span className="text-red-500">*</span></label>
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('labelQuantity')} <span className="text-danger">{t('required')}</span>
+          </label>
           <input
             type="number"
             name="quoted_quantity"
             min="1"
             required
             defaultValue={currentQuote.quoted_quantity ?? quantityRequested}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className={inputCls}
           />
         </div>
       </div>
@@ -111,8 +117,8 @@ export function PrepareQuoteForm({
       {sourceCurrency !== 'MAD' && (
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Taux {sourceCurrency}→MAD (override)
+            <label className="block text-xs font-medium text-muted mb-1">
+              {t('labelFxOverride', { currency: sourceCurrency })}
             </label>
             <input
               type="number"
@@ -122,27 +128,26 @@ export function PrepareQuoteForm({
               value={fxOverride}
               onChange={(e) => setFxOverride(e.target.value)}
               placeholder={centralRate != null ? `central : ${centralRate}` : 'aucun taux central'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className={inputCls}
             />
           </div>
-          <div className="text-xs text-gray-600">
-            Taux appliqué : <span className="font-semibold">{effectiveRate ?? '—'}</span>
+          <div className="text-xs text-muted">
+            {t('fxApplied', { rate: effectiveRate ?? '—' })}
             {centralRate == null && overrideNum == null && (
-              <span className="text-red-600 block">Aucun taux central — saisissez un override.</span>
+              <span className="text-danger block">{t('fxNoRate')}</span>
             )}
           </div>
         </div>
       )}
 
-      <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
-        Prix unitaire converti :{' '}
-        <span className="font-bold">{previewMad != null ? formatCurrency(previewMad, 'MAD') : '—'}</span>
-        <span className="text-indigo-500"> (pivot interne MAD)</span>
+      <div className="rounded-lg bg-surface-2 border border-line px-3 py-2 text-sm text-foreground">
+        {t('previewMad', { price: previewMad != null ? formatCurrency(previewMad, 'MAD') : '—' })}{' '}
+        <span className="text-muted">{t('previewMadPivot')}</span>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
-          Transport + douane total (MAD) <span className="text-red-500">*</span>
+        <label className="block text-xs font-medium text-muted mb-1">
+          {t('labelTransport')} <span className="text-danger">{t('required')}</span>
         </label>
         <input
           type="number"
@@ -152,72 +157,72 @@ export function PrepareQuoteForm({
           required
           defaultValue={currentQuote.quoted_transport_total_mad ?? ''}
           placeholder="0.00"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          className={inputCls}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Mode de transport</label>
+        <label className="block text-xs font-medium text-muted mb-1">{t('labelShippingMode')}</label>
         <input
           type="text"
           name="quoted_shipping_mode"
           defaultValue={currentQuote.quoted_shipping_mode ?? ''}
-          placeholder="ex. Aérien door-to-door, Maritime FCL…"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          placeholder={t('placeholderShippingMode')}
+          className={inputCls}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Délai de livraison estimé</label>
+        <label className="block text-xs font-medium text-muted mb-1">{t('labelDeliveryDelay')}</label>
         <input
           type="text"
           name="quoted_delivery_delay"
           defaultValue={currentQuote.quoted_delivery_delay ?? ''}
-          placeholder="ex. 21–28 jours ouvrés"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          placeholder={t('placeholderDeliveryDelay')}
+          className={inputCls}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Validité du devis</label>
+        <label className="block text-xs font-medium text-muted mb-1">{t('labelValidity')}</label>
         <input
           type="date"
           name="quote_validity_date"
           defaultValue={currentQuote.quote_validity_date ?? ''}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          className={inputCls}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Note publique au client</label>
+        <label className="block text-xs font-medium text-muted mb-1">{t('labelPublicNote')}</label>
         <textarea
           name="quote_public_note"
           rows={3}
           defaultValue={currentQuote.quote_public_note ?? ''}
-          placeholder="Conditions particulières, remarques visibles par le client…"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none resize-none"
+          placeholder={t('placeholderPublicNote')}
+          className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none"
         />
       </div>
 
-      <p className="text-xs text-gray-400">
-        Le client verra ce devis dans sa devise : <span className="font-medium">{displayCurrency}</span>.
+      <p className="text-xs text-faint">
+        {t('clientCurrencyInfo', { currency: displayCurrency })}
       </p>
 
       {state.error && (
-        <p className="text-xs px-3 py-2 rounded-lg bg-red-50 text-red-600">{state.error}</p>
+        <p className="text-xs px-3 py-2 rounded-lg bg-danger-subtle text-danger border border-danger-line">{state.error}</p>
       )}
       {state.success && (
-        <p className="text-xs px-3 py-2 rounded-lg bg-green-50 text-green-700">
-          Devis enregistré — statut mis à jour en &laquo;&nbsp;Devis préparé&nbsp;&raquo;.
+        <p className="text-xs px-3 py-2 rounded-lg bg-success-subtle text-success border border-success-line">
+          {t('successMessage')}
         </p>
       )}
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        className="w-full py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity focus:outline-none focus:ring-2 focus:ring-gold-400"
       >
-        {isPending ? 'Enregistrement…' : 'Enregistrer le devis'}
+        {isPending ? t('submitting') : t('submitLabel')}
       </button>
     </form>
   )
