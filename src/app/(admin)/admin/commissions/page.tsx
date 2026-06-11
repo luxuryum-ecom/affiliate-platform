@@ -1,17 +1,22 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { CommissionStatusForm } from '@/components/admin/commission-status-form'
 import { BulkApproveButton } from '@/components/admin/bulk-approve-button'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import type { Commission, Profile, Order, CommissionStatus } from '@/types/database'
 
-export const metadata = { title: 'Commissions affiliés — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.commissions')
+  return { title: t('metaTitle') }
+}
 
-const STATUS_BADGE: Record<CommissionStatus, { label: string; cls: string }> = {
-  pending:  { label: 'En attente', cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Approuvée',  cls: 'bg-blue-100 text-blue-700' },
-  paid:     { label: 'Payée',      cls: 'bg-green-100 text-green-700' },
+// CSS-only map — no labels in JS (resolved via t() at render)
+const STATUS_CLS: Record<CommissionStatus, string> = {
+  pending:  'bg-warning-soft text-warning-fg border border-warning',
+  approved: 'bg-success-soft text-success-fg border border-success',
+  paid:     'bg-success-soft text-success-fg border border-success',
 }
 
 type CommissionRow = Commission & {
@@ -31,6 +36,9 @@ const STATUSES: CommissionStatus[] = ['pending', 'approved', 'paid']
 export default async function AdminCommissionsPage({ searchParams }: PageProps) {
   const { status: filterStatus, affiliate_id } = await searchParams
   const supabase = await createClient()
+  const t = await getTranslations('admin.commissions')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
 
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profileData } = await supabase
@@ -69,7 +77,7 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
   const { data: rows } = (await query) as { data: CommissionRow[] | null; error: unknown }
   const list = rows ?? []
 
-  // Totals over full dataset (unfiltered)
+  // Totals over full dataset (unfiltered) — ARGENT: calculs inchangés
   const { data: allRows } = (await supabase
     .from('commissions')
     .select('status, amount')) as { data: { status: CommissionStatus; amount: number }[] | null; error: unknown }
@@ -98,62 +106,61 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
     return `/admin/commissions${s ? `?${s}` : ''}`
   }
 
+  // i18n status label helper
+  function statusLabel(s: CommissionStatus) {
+    if (s === 'pending')  return t('statusPending')
+    if (s === 'approved') return t('statusApproved')
+    return t('statusPaid')
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm shrink-0">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300 shrink-0">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate">Commissions affiliés</span>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="text-sm text-gray-500 hidden sm:block">{profileData?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={tc('dashboard')}
+        userName={profileData?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
 
         {/* Summary stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-xs text-amber-700">En attente</p>
-            <p className="mt-1 text-xl font-bold text-amber-800 tabular-nums">{formatMAD(totalPending)}</p>
-            <p className="text-xs text-amber-600 mt-0.5">{countMap.pending ?? 0} commission{(countMap.pending ?? 0) !== 1 ? 's' : ''}</p>
+          <div className="bg-warning-soft border border-warning rounded-xl p-4">
+            <p className="text-xs text-warning-fg">{t('kpiPending')}</p>
+            {/* ARGENT: formatMAD inchangé */}
+            <p className="mt-1 text-xl font-bold text-warning-fg tabular-nums">{formatMAD(totalPending)}</p>
+            <p className="text-xs text-warning-fg/80 mt-0.5">{t('kpiCount', { count: countMap.pending ?? 0 })}</p>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-xs text-blue-700">Approuvées</p>
-            <p className="mt-1 text-xl font-bold text-blue-800 tabular-nums">{formatMAD(totalApproved)}</p>
-            <p className="text-xs text-blue-600 mt-0.5">{countMap.approved ?? 0} commission{(countMap.approved ?? 0) !== 1 ? 's' : ''}</p>
+          <div className="bg-surface-2 border border-line rounded-xl p-4">
+            <p className="text-xs text-muted">{t('kpiApproved')}</p>
+            {/* ARGENT: formatMAD inchangé */}
+            <p className="mt-1 text-xl font-bold text-foreground tabular-nums">{formatMAD(totalApproved)}</p>
+            <p className="text-xs text-muted mt-0.5">{t('kpiCount', { count: countMap.approved ?? 0 })}</p>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <p className="text-xs text-green-700">Payées</p>
-            <p className="mt-1 text-xl font-bold text-green-800 tabular-nums">{formatMAD(totalPaid)}</p>
-            <p className="text-xs text-green-600 mt-0.5">{countMap.paid ?? 0} commission{(countMap.paid ?? 0) !== 1 ? 's' : ''}</p>
+          <div className="bg-success-soft border border-success rounded-xl p-4">
+            <p className="text-xs text-success-fg">{t('kpiPaid')}</p>
+            {/* ARGENT: formatMAD inchangé */}
+            <p className="mt-1 text-xl font-bold text-success-fg tabular-nums">{formatMAD(totalPaid)}</p>
+            <p className="text-xs text-success-fg/80 mt-0.5">{t('kpiCount', { count: countMap.paid ?? 0 })}</p>
           </div>
         </div>
 
         {/* Affiliate filter */}
         {affiliates.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className="text-xs text-gray-500 shrink-0">Affilié&nbsp;:</span>
+            <span className="text-xs text-muted shrink-0">{t('affiliateLabel')}</span>
             <Link
               href={buildHref({ status: filterStatus })}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 !affiliate_id
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary hover:opacity-90 transition-opacity'
+                  : 'bg-surface border-line text-muted hover:bg-surface-2'
               }`}
             >
-              Tous
+              {t('allAffiliates')}
             </Link>
             {affiliates.map((a) => (
               <Link
@@ -161,8 +168,8 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
                 href={buildHref({ status: filterStatus, affiliate_id: a.id })}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                   affiliate_id === a.id
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    ? 'bg-primary text-primary-foreground border-primary hover:opacity-90 transition-opacity'
+                    : 'bg-surface border-line text-muted hover:bg-surface-2'
                 }`}
               >
                 {a.full_name}
@@ -177,11 +184,11 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
             href={buildHref({ affiliate_id })}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
               !filterStatus
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                ? 'bg-primary text-primary-foreground border-primary hover:opacity-90 transition-opacity'
+                : 'bg-surface border-line text-muted hover:bg-surface-2'
             }`}
           >
-            Tous ({all.length})
+            {tc('all')} ({all.length})
           </Link>
           {STATUSES.map((s) => (
             <Link
@@ -189,35 +196,36 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
               href={buildHref({ status: s, affiliate_id })}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 filterStatus === s
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary hover:opacity-90 transition-opacity'
+                  : 'bg-surface border-line text-muted hover:bg-surface-2'
               }`}
             >
-              {STATUS_BADGE[s].label} ({countMap[s] ?? 0})
+              {statusLabel(s)} ({countMap[s] ?? 0})
             </Link>
           ))}
         </div>
 
         {/* Results header + bulk action */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <p className="text-xs text-gray-500">
-            {list.length} commission{list.length !== 1 ? 's' : ''}
-            {isFiltered ? ' (filtré)' : ''}
+          <p className="text-xs text-muted">
+            {isFiltered
+              ? t('resultFiltered', { count: list.length })
+              : t('resultCount', { count: list.length })}
           </p>
           <BulkApproveButton pendingIds={pendingIdsInView} />
         </div>
 
         {/* Commission list */}
         {list.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">
-              Aucune commission{isFiltered ? ' pour ce filtre' : ''}.
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">
+              {isFiltered ? t('emptyFiltered') : t('empty')}
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {list.map((commission) => {
-              const badge = STATUS_BADGE[commission.status]
+              const badgeCls = STATUS_CLS[commission.status]
               const order = commission.order
               const affiliate = commission.affiliate
 
@@ -228,23 +236,24 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
                     {/* Left: commission info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                        <span className="text-xs font-mono text-gray-400">
+                        <span className="text-xs font-mono text-faint">
                           #{commission.id.slice(0, 8).toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                          {badge.label}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${badgeCls}`}>
+                          {statusLabel(commission.status)}
                         </span>
-                        <span className="text-xs font-bold text-gray-900 tabular-nums ml-auto sm:ml-0">
+                        {/* ARGENT: formatMAD inchangé */}
+                        <span className="text-xs font-bold text-foreground tabular-nums ml-auto sm:ml-0">
                           {formatMAD(Number(commission.amount))}
                         </span>
                       </div>
 
                       {/* Affiliate */}
                       {affiliate && (
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-foreground">
                           {affiliate.full_name}
                           {affiliate.phone && (
-                            <span className="text-xs text-gray-400 font-normal ml-1.5">
+                            <span className="text-xs text-faint font-normal ml-1.5">
                               {affiliate.phone}
                             </span>
                           )}
@@ -253,31 +262,35 @@ export default async function AdminCommissionsPage({ searchParams }: PageProps) 
 
                       {/* Order details */}
                       {order && (
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Commande{' '}
+                        <p className="text-xs text-muted mt-0.5">
+                          {t('order')}{' '}
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="text-blue-600 hover:underline font-mono"
+                            className="text-gold-500 hover:text-gold-600 font-mono"
                           >
                             #{order.id.slice(0, 8).toUpperCase()}
                           </Link>
                           {' · '}{order.customer_name}
                           {' · '}{order.customer_city}
                           {' · '}×{order.quantity}
-                          {' · '}<strong className="text-gray-700">{formatMAD(order.total_amount)}</strong>
+                          {/* ARGENT: formatMAD inchangé */}
+                          {' · '}<strong className="text-foreground">{formatMAD(order.total_amount)}</strong>
                         </p>
                       )}
 
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Créée le{' '}
-                        {new Date(commission.created_at).toLocaleDateString('fr-MA', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
+                      <p className="text-xs text-faint mt-0.5">
+                        {t('createdAt', {
+                          date: new Date(commission.created_at).toLocaleDateString(locale, {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          }),
                         })}
                         {commission.paid_at && (
-                          <> · Payée le {new Date(commission.paid_at).toLocaleDateString('fr-MA', {
-                            day: '2-digit', month: 'short', year: 'numeric',
+                          <> · {t('paidAt', {
+                            date: new Date(commission.paid_at).toLocaleDateString(locale, {
+                              day: '2-digit', month: 'short', year: 'numeric',
+                            }),
                           })}</>
                         )}
                       </p>

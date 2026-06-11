@@ -1,22 +1,31 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { CreatePayoutForm } from '@/components/admin/create-payout-form'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import type { Payout, Profile, PayoutStatus } from '@/types/database'
 
-export const metadata = { title: 'Paiements affiliés — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.payouts')
+  return { title: t('metaTitle') }
+}
 
-const STATUS_BADGE: Record<PayoutStatus, { label: string; cls: string }> = {
-  pending:    { label: 'En attente',   cls: 'bg-amber-100 text-amber-700' },
-  processing: { label: 'En cours',     cls: 'bg-blue-100 text-blue-700' },
-  paid:       { label: 'Payé',         cls: 'bg-green-100 text-green-700' },
+// CSS-only map — labels resolved via t() at render
+const STATUS_CLS: Record<PayoutStatus, string> = {
+  pending:    'bg-warning-soft text-warning-fg border border-warning',
+  processing: 'bg-surface-2 text-foreground border border-line',
+  paid:       'bg-success-soft text-success-fg border border-success',
 }
 
 type PayoutRow = Payout & { affiliate: Pick<Profile, 'id' | 'full_name' | 'phone'> | null }
 
 export default async function AdminPayoutsPage() {
   const supabase = await createClient()
+  const t = await getTranslations('admin.payouts')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: profileData } = await supabase
@@ -52,7 +61,7 @@ export default async function AdminPayoutsPage() {
   const allCommissions = commissionsRes.data ?? []
   const payouts = payoutsRes.data ?? []
 
-  // Build per-affiliate commission stats
+  // Build per-affiliate commission stats — ARGENT: calculs inchangés
   const approvedByAffiliate = allCommissions.reduce<
     Record<string, { total: number; count: number }>
   >((acc, c) => {
@@ -70,7 +79,7 @@ export default async function AdminPayoutsPage() {
     approvedCommissionCount: approvedByAffiliate[a.id]?.count ?? 0,
   }))
 
-  // Summary totals
+  // Summary totals — ARGENT: calculs inchangés
   const totalPaid = payouts
     .filter((p) => p.status === 'paid')
     .reduce((s, p) => s + Number(p.amount), 0)
@@ -79,48 +88,47 @@ export default async function AdminPayoutsPage() {
     0
   )
 
+  function statusLabel(s: PayoutStatus) {
+    if (s === 'pending')    return t('statusPending')
+    if (s === 'processing') return t('statusProcessing')
+    return t('statusPaid')
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm shrink-0">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300 shrink-0">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate">Paiements affiliés</span>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="text-sm text-gray-500 hidden sm:block">{profileData?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={tc('dashboard')}
+        userName={profileData?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
 
         {/* Summary */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-xs text-amber-700">Commissions approuvées (à payer)</p>
-            <p className="mt-1 text-2xl font-bold text-amber-800 tabular-nums">
+          <div className="bg-warning-soft border border-warning rounded-xl p-4">
+            <p className="text-xs text-warning-fg">{t('kpiApprovedLabel')}</p>
+            {/* ARGENT: formatMAD inchangé */}
+            <p className="mt-1 text-2xl font-bold text-warning-fg tabular-nums">
               {formatMAD(pendingApprovedTotal)}
             </p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              {affiliatesForForm.filter((a) => a.approvedCommissionCount > 0).length} affilié(s)
+            <p className="text-xs text-warning-fg/80 mt-0.5">
+              {t('kpiApprovedAffiliates', {
+                count: affiliatesForForm.filter((a) => a.approvedCommissionCount > 0).length,
+              })}
             </p>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <p className="text-xs text-green-700">Total paiements versés</p>
-            <p className="mt-1 text-2xl font-bold text-green-800 tabular-nums">
+          <div className="bg-success-soft border border-success rounded-xl p-4">
+            <p className="text-xs text-success-fg">{t('kpiPaidLabel')}</p>
+            {/* ARGENT: formatMAD inchangé */}
+            <p className="mt-1 text-2xl font-bold text-success-fg tabular-nums">
               {formatMAD(totalPaid)}
             </p>
-            <p className="text-xs text-green-600 mt-0.5">
-              {payouts.filter((p) => p.status === 'paid').length} virement(s)
+            <p className="text-xs text-success-fg/80 mt-0.5">
+              {t('kpiPaidCount', { count: payouts.filter((p) => p.status === 'paid').length })}
             </p>
           </div>
         </div>
@@ -129,12 +137,10 @@ export default async function AdminPayoutsPage() {
 
           {/* Create payout form — left panel */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 sticky top-20">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Enregistrer un paiement</h2>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Sélectionnez un affilié : le montant est <strong>calculé automatiquement</strong>{' '}
-                (somme de ses commissions approuvées). Vous validez le versement et ajoutez une
-                référence. Toutes ses commissions <strong>approuvées</strong> sont alors marquées payées.
+            <div className="bg-surface rounded-xl border border-line p-5 sticky top-20">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{t('createPanelTitle')}</h2>
+              <p className="text-xs text-muted mb-4 leading-relaxed">
+                {t('createPanelDescription')}
               </p>
               <CreatePayoutForm affiliates={affiliatesForForm} />
             </div>
@@ -142,63 +148,65 @@ export default async function AdminPayoutsPage() {
 
           {/* Payout history — right panel */}
           <div className="lg:col-span-3">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">
-              Historique ({payouts.length})
+            <h2 className="text-sm font-semibold text-foreground mb-3">
+              {t('historyTitle', { count: payouts.length })}
             </h2>
 
             {payouts.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-sm text-gray-400">Aucun paiement enregistré pour l&apos;instant.</p>
+              <div className="bg-surface rounded-xl border border-line p-12 text-center">
+                <p className="text-sm text-faint">{t('historyEmpty')}</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+              <div className="bg-surface rounded-xl border border-line divide-y divide-line">
                 {payouts.map((payout) => {
-                  const badge = STATUS_BADGE[payout.status]
+                  const badgeCls = STATUS_CLS[payout.status]
                   const affiliate = payout.affiliate
                   return (
                     <div key={payout.id} className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                            <span className="text-xs font-mono text-gray-400">
+                            <span className="text-xs font-mono text-faint">
                               #{payout.id.slice(0, 8).toUpperCase()}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                              {badge.label}
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${badgeCls}`}>
+                              {statusLabel(payout.status)}
                             </span>
                           </div>
                           {affiliate && (
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-foreground">
                               {affiliate.full_name}
                               {affiliate.phone && (
-                                <span className="text-xs text-gray-400 font-normal ml-1.5">
+                                <span className="text-xs text-faint font-normal ml-1.5">
                                   {affiliate.phone}
                                 </span>
                               )}
                             </p>
                           )}
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {new Date(payout.created_at).toLocaleDateString('fr-MA', {
+                          <p className="text-xs text-muted mt-0.5">
+                            {new Date(payout.created_at).toLocaleDateString(locale, {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',
                             })}
                             {payout.reference && (
-                              <> · Réf&nbsp;: <span className="font-mono">{payout.reference}</span></>
+                              <> · {t('ref', { ref: payout.reference })}</>
                             )}
                             {payout.notes && <> · {payout.notes}</>}
                           </p>
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-base font-bold text-gray-900 tabular-nums">
+                          {/* ARGENT: formatMAD inchangé */}
+                          <p className="text-base font-bold text-foreground tabular-nums">
                             {formatMAD(Number(payout.amount))}
                           </p>
                           {payout.paid_at && (
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              versé le{' '}
-                              {new Date(payout.paid_at).toLocaleDateString('fr-MA', {
-                                day: '2-digit',
-                                month: 'short',
+                            <p className="text-xs text-faint mt-0.5">
+                              {t('paidAt', {
+                                date: new Date(payout.paid_at).toLocaleDateString(locale, {
+                                  day: '2-digit',
+                                  month: 'short',
+                                }),
                               })}
                             </p>
                           )}
