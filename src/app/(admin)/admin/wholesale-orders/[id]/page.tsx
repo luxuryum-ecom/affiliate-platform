@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
@@ -14,30 +15,36 @@ import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrd
 
 interface Params { params: Promise<{ id: string }> }
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
-  confirmed: { label: 'Confirmée',   cls: 'bg-blue-100 text-blue-700' },
-  sourcing:  { label: 'En sourcing', cls: 'bg-purple-100 text-purple-700' },
-  shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
-  delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
+export async function generateMetadata() {
+  const t = await getTranslations('admin.wholesaleOrderDetail')
+  return { title: t('metaTitle') }
 }
 
-const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
-  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-600' },
-  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
-  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
-  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
-  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
-  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
-  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+// CSS only — labels via t()
+const STATUS_CLS: Record<string, string> = {
+  pending:   'bg-warning-soft text-warning-fg border-warning',
+  confirmed: 'bg-surface-2 text-muted border-line',
+  sourcing:  'bg-accent-soft text-accent-fg border-accent',
+  shipped:   'bg-surface-2 text-muted border-line',
+  delivered: 'bg-success-soft text-success-fg border-success',
+  cancelled: 'bg-surface-2 text-faint border-line',
 }
 
-const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
-  no_deposit:        { label: 'Aucun acompte',       cls: 'bg-gray-100 text-gray-500' },
-  deposit_requested: { label: 'Acompte demandé',     cls: 'bg-amber-100 text-amber-700' },
-  deposit_received:  { label: 'Acompte reçu',        cls: 'bg-blue-100 text-blue-700' },
-  fully_paid:        { label: 'Entièrement réglé',   cls: 'bg-green-100 text-green-700' },
+const IMPORT_STATUS_CLS: Record<WholesaleImportStatus, string> = {
+  awaiting_supplier: 'bg-surface-2 text-muted border-line',
+  purchased:         'bg-warning-soft text-warning-fg border-warning',
+  in_production:     'bg-warning-soft text-warning-fg border-warning',
+  ready_to_ship:     'bg-warning-soft text-warning-fg border-warning',
+  shipped:           'bg-surface-2 text-muted border-line',
+  customs_clearance: 'bg-accent-soft text-accent-fg border-accent',
+  delivered:         'bg-success-soft text-success-fg border-success',
+}
+
+const PAYMENT_STATUS_CLS: Record<WholesalePaymentStatus, string> = {
+  no_deposit:        'bg-surface-2 text-faint border-line',
+  deposit_requested: 'bg-warning-soft text-warning-fg border-warning',
+  deposit_received:  'bg-surface-2 text-muted border-line',
+  fully_paid:        'bg-success-soft text-success-fg border-success',
 }
 
 type OrderItemWithProduct = WholesaleOrderItem & {
@@ -53,6 +60,12 @@ type LinkedQuote = Pick<QuoteRequest, 'id'>
 export default async function AdminWholesaleOrderDetailPage({ params }: Params) {
   const { id } = await params
   const supabase = await createClient()
+
+  const t  = await getTranslations('admin.wholesaleOrderDetail')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+  const isRtl = locale === 'ar'
+  const dateLocale = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-MA'
 
   const { data: { user } } = await supabase.auth.getUser()
   const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
@@ -109,34 +122,33 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
     items.length > 0 &&
     items.every((item) => item.product.availability_type === 'local_stock')
 
-  const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
-  const importBadge = order.import_status
-    ? IMPORT_STATUS_BADGE[order.import_status as WholesaleImportStatus] ?? null
-    : null
+  const statusCls = STATUS_CLS[order.status] ?? STATUS_CLS.pending
+  const importStatus = order.import_status as WholesaleImportStatus | null
+  const importCls = importStatus ? IMPORT_STATUS_CLS[importStatus] ?? null : null
   const paymentStatus = (order.payment_status ?? 'no_deposit') as WholesalePaymentStatus
-  const paymentBadge = PAYMENT_STATUS_BADGE[paymentStatus] ?? PAYMENT_STATUS_BADGE.no_deposit
+  const paymentCls = PAYMENT_STATUS_CLS[paymentStatus] ?? PAYMENT_STATUS_CLS.no_deposit
 
   const timeline = buildWholesaleTimeline(order)
   const importTimeline = buildImportHistoryTimeline(importHistory)
   const paymentTimeline = buildPaymentHistoryTimeline(paymentHistory)
 
+  const proofLabel = (type: string) =>
+    type === 'bank_receipt'
+      ? t('proofBankReceipt')
+      : type === 'transfer_proof'
+      ? t('proofTransferProof')
+      : t('proofOther')
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/wholesale-orders" className="text-gray-400 hover:text-gray-600 text-sm">← Grossiste</Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-mono text-sm text-gray-700">#{id.slice(0,8).toUpperCase()}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{adminProfile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">Déconnexion</button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={`#${id.slice(0,8).toUpperCase()}`}
+        backHref="/admin/wholesale-orders"
+        backLabel={t('backLabel')}
+        userName={adminProfile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -144,59 +156,61 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
           <div className="lg:col-span-2 space-y-5">
 
             {/* Status + buyer */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-surface rounded-xl border border-line p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
-                    {importBadge && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
-                        {importBadge.label}
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${statusCls}`}>
+                      {tc(`wholesaleStatus.${order.status}`)}
+                    </span>
+                    {importCls && importStatus && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importCls}`}>
+                        {tc(`importStatusBadge.${importStatus}`)}
                       </span>
                     )}
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
-                      {paymentBadge.label}
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${paymentCls}`}>
+                      {tc(`paymentStatus.${paymentStatus}`)}
                     </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                      {order.quote_request_id ? '📋 Via devis' : '🛒 Commande directe'}
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">
+                      {order.quote_request_id ? t('viaQuote') : t('directOrder')}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs text-gray-400">
-                    Créée le {new Date(order.created_at).toLocaleString('fr-MA')}
+                  <p className="mt-2 text-xs text-faint">
+                    {t('createdOn', { date: new Date(order.created_at).toLocaleString(dateLocale) })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900">{formatMAD(order.total_amount)}</p>
-                  <p className="text-xs text-gray-400">{items.length} article{items.length !== 1 ? 's' : ''}</p>
+                  <p className="text-lg font-bold text-foreground">{formatMAD(order.total_amount)}</p>
+                  <p className="text-xs text-faint">{t('itemsCount', { count: items.length })}</p>
                 </div>
               </div>
             </div>
 
             {/* Buyer info */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Acheteur</h2>
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-3">{t('buyer')}</h2>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><p className="text-xs text-gray-400">Nom</p><p className="font-medium">{order.buyer.full_name}</p></div>
-                <div><p className="text-xs text-gray-400">Téléphone</p><p className="font-medium">{order.buyer.phone ?? '—'}</p></div>
-                <div><p className="text-xs text-gray-400">Ville</p><p className="font-medium">{order.city ?? order.buyer.city ?? '—'}</p></div>
-                <div><p className="text-xs text-gray-400">Adresse</p><p className="font-medium">{order.address ?? '—'}</p></div>
+                <div><p className="text-xs text-faint">{tc('name')}</p><p className="font-medium text-foreground">{order.buyer.full_name}</p></div>
+                <div><p className="text-xs text-faint">{tc('phone')}</p><p className="font-medium text-foreground">{order.buyer.phone ?? '—'}</p></div>
+                <div><p className="text-xs text-faint">{tc('city')}</p><p className="font-medium text-foreground">{order.city ?? order.buyer.city ?? '—'}</p></div>
+                <div><p className="text-xs text-faint">{tc('address')}</p><p className="font-medium text-foreground">{order.address ?? '—'}</p></div>
                 {order.buyer_notes && (
-                  <div className="col-span-2 mt-1 flex gap-2 items-start rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
-                    <span className="text-amber-500 mt-0.5 shrink-0">⚠</span>
+                  <div className="col-span-2 mt-1 flex gap-2 items-start rounded-lg bg-warning-soft border border-warning px-3 py-2.5">
+                    <span className="text-warning-fg mt-0.5 shrink-0">⚠</span>
                     <div>
-                      <p className="text-xs font-semibold text-amber-700">Note acheteur</p>
-                      <p className="text-sm text-amber-900 mt-0.5">{order.buyer_notes}</p>
+                      <p className="text-xs font-semibold text-warning-fg">{t('buyerNote')}</p>
+                      <p className="text-sm text-foreground mt-0.5">{order.buyer_notes}</p>
                     </div>
                   </div>
                 )}
-                {order.agent_notes && <div className="col-span-2"><p className="text-xs text-gray-400">Note agent</p><p className="text-gray-700">{order.agent_notes}</p></div>}
+                {order.agent_notes && <div className="col-span-2"><p className="text-xs text-faint">{t('agentNote')}</p><p className="text-muted">{order.agent_notes}</p></div>}
               </div>
             </div>
 
             {/* Order items */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Articles commandés</h2>
-              <div className="divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-3">{t('orderedItems')}</h2>
+              <div className="divide-y divide-line">
                 {items.map((item) => {
                   const coverUrl = getProductCoverUrl(item.product)
                   const lowStock = item.product.stock_count < 5
@@ -205,42 +219,40 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                       <ProductThumbnail
                         src={coverUrl}
                         name={item.product.name}
-                        className="w-10 h-10 rounded-lg border shrink-0 text-[10px]"
+                        className="w-10 h-10 rounded-lg border border-line shrink-0 text-[10px]"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm font-medium text-foreground truncate">{item.product.name}</p>
+                        <p className="text-xs text-muted">
                           {item.tier_label_snapshot} · {item.quantity} × {formatMAD(item.unit_price_snapshot)}
                         </p>
-                        {lowStock && <p className="text-xs text-amber-500">⚠ Stock bas ({item.product.stock_count})</p>}
+                        {lowStock && <p className="text-xs text-warning-fg">{t('lowStock', { count: item.product.stock_count })}</p>}
                       </div>
-                      <p className="text-sm font-bold text-gray-900 shrink-0">{formatMAD(item.subtotal)}</p>
+                      <p className="text-sm font-bold text-foreground shrink-0">{formatMAD(item.subtotal)}</p>
                     </div>
                   )
                 })}
               </div>
-              <div className="pt-3 border-t border-gray-100 mt-3 flex justify-between">
-                <span className="text-sm font-semibold text-gray-700">Total</span>
-                <span className="text-sm font-bold text-gray-900">{formatMAD(order.total_amount)}</span>
+              <div className="pt-3 border-t border-line mt-3 flex justify-between">
+                <span className="text-sm font-semibold text-foreground">{t('total')}</span>
+                <span className="text-sm font-bold text-foreground">{formatMAD(order.total_amount)}</span>
               </div>
             </div>
 
             {/* Timeline */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Suivi de la commande</h2>
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{t('orderTracking')}</h2>
               <OrderTimeline steps={timeline} />
             </div>
 
             {/* Import progress history */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">
-                {isLocalStockOrder ? 'Historique préparation / livraison' : 'Historique import'}
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">
+                {isLocalStockOrder ? t('historyLocalHeading') : t('historyImportHeading')}
               </h2>
               {importTimeline.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">
-                  {isLocalStockOrder
-                    ? 'Aucun statut enregistré. Utilisez le panneau de droite pour commencer le suivi.'
-                    : 'Aucun statut import enregistré. Utilisez le panneau de droite pour commencer le suivi.'}
+                <p className="text-xs text-faint italic">
+                  {isLocalStockOrder ? t('historyLocalEmpty') : t('historyImportEmpty')}
                 </p>
               ) : (
                 <OrderTimeline steps={importTimeline} />
@@ -248,11 +260,11 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
             </div>
 
             {/* Payment history */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Historique paiement</h2>
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{t('paymentHistory')}</h2>
               {paymentTimeline.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">
-                  Aucun événement de paiement enregistré.
+                <p className="text-xs text-faint italic">
+                  {t('paymentHistoryEmpty')}
                 </p>
               ) : (
                 <OrderTimeline steps={paymentTimeline} />
@@ -261,9 +273,9 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
             {/* Justificatifs soumis par le grossiste */}
             {proofs.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-3">
-                  Justificatifs de paiement
+              <div className="bg-surface rounded-xl border border-line p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-3">
+                  {t('paymentProofs')}
                 </h2>
                 <ul className="space-y-2">
                   {proofs.map((p) => (
@@ -272,19 +284,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                         href={p.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-gold-500 hover:text-gold-600 transition-colors"
                       >
-                        {p.proof_type === 'bank_receipt'
-                          ? 'Reçu bancaire'
-                          : p.proof_type === 'transfer_proof'
-                          ? 'Preuve de virement'
-                          : 'Autre'}
+                        {proofLabel(p.proof_type)}
                       </a>
-                      <span className="text-gray-400 shrink-0">
-                        {new Date(p.uploaded_at).toLocaleDateString('fr-MA')}
+                      <span className="text-faint shrink-0">
+                        {new Date(p.uploaded_at).toLocaleDateString(dateLocale)}
                       </span>
                       {p.notes && (
-                        <span className="text-gray-500 italic truncate">{p.notes}</span>
+                        <span className="text-muted italic truncate">{p.notes}</span>
                       )}
                     </li>
                   ))}
@@ -295,8 +303,8 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
           {/* ── Right: status update + cost breakdown ── */}
           <div className="space-y-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Mettre à jour</h2>
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{t('updateHeading')}</h2>
               <WholesaleOrderStatusForm
                 orderId={order.id}
                 currentStatus={order.status as WholesaleOrderStatus}
@@ -304,9 +312,9 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
             </div>
 
             {/* Import status form */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">
-                {isLocalStockOrder ? 'Statut préparation / livraison locale' : 'Statut import'}
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">
+                {isLocalStockOrder ? t('importStatusLocalHeading') : t('importStatusHeading')}
               </h2>
               <WholesaleImportStatusForm
                 orderId={order.id}
@@ -336,47 +344,47 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
             {/* Linked quote */}
             {linkedQuote && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-400 mb-1">Créée depuis un devis</p>
+              <div className="bg-surface rounded-xl border border-line p-4">
+                <p className="text-xs text-faint mb-1">{t('createdFromQuote')}</p>
                 <Link
                   href={`/admin/quote-requests/${linkedQuote.id}`}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+                  className="text-sm text-gold-500 hover:text-gold-600 font-medium underline underline-offset-2 transition-colors"
                 >
-                  Devis #{linkedQuote.id.slice(0, 8).toUpperCase()} →
+                  {t('quoteLink')} #{linkedQuote.id.slice(0, 8).toUpperCase()} {isRtl ? '←' : '→'}
                 </Link>
               </div>
             )}
 
             {order.agent && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-400">Agent assigné</p>
-                <p className="text-sm font-medium text-gray-900 mt-0.5">{order.agent.full_name}</p>
+              <div className="bg-surface rounded-xl border border-line p-4">
+                <p className="text-xs text-faint">{t('assignedAgent')}</p>
+                <p className="text-sm font-medium text-foreground mt-0.5">{order.agent.full_name}</p>
               </div>
             )}
 
             {/* Invoice request */}
             {order.invoice_requested && (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+              <div className="bg-accent-soft border border-accent rounded-xl p-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  <p className="text-xs font-semibold text-indigo-800">Demande de facture</p>
+                  <p className="text-xs font-semibold text-accent-fg">{t('invoiceRequest')}</p>
                   {order.invoice_requested_at && (
-                    <p className="text-xs text-indigo-500">
-                      {new Date(order.invoice_requested_at).toLocaleDateString('fr-MA')}
+                    <p className="text-xs text-accent-fg">
+                      {new Date(order.invoice_requested_at).toLocaleDateString(dateLocale)}
                     </p>
                   )}
                 </div>
                 <dl className="space-y-1.5 text-sm">
                   {order.invoice_company_name && (
-                    <div><dt className="text-xs text-indigo-500">Raison sociale</dt><dd className="font-medium text-indigo-900">{order.invoice_company_name}</dd></div>
+                    <div><dt className="text-xs text-accent-fg">{t('invoiceCompanyName')}</dt><dd className="font-medium text-foreground">{order.invoice_company_name}</dd></div>
                   )}
                   {order.invoice_ice && (
-                    <div><dt className="text-xs text-indigo-500">ICE</dt><dd className="font-medium text-indigo-900">{order.invoice_ice}</dd></div>
+                    <div><dt className="text-xs text-accent-fg">{t('invoiceIce')}</dt><dd className="font-medium text-foreground">{order.invoice_ice}</dd></div>
                   )}
                   {order.invoice_registre_commerce && (
-                    <div><dt className="text-xs text-indigo-500">RC</dt><dd className="font-medium text-indigo-900">{order.invoice_registre_commerce}</dd></div>
+                    <div><dt className="text-xs text-accent-fg">{t('invoiceRc')}</dt><dd className="font-medium text-foreground">{order.invoice_registre_commerce}</dd></div>
                   )}
                   {order.invoice_billing_address && (
-                    <div><dt className="text-xs text-indigo-500">Adresse de facturation</dt><dd className="font-medium text-indigo-900">{order.invoice_billing_address}</dd></div>
+                    <div><dt className="text-xs text-accent-fg">{t('invoiceBillingAddress')}</dt><dd className="font-medium text-foreground">{order.invoice_billing_address}</dd></div>
                   )}
                 </dl>
               </div>

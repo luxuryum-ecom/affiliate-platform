@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { updateWholesaleOrderStatus } from '@/app/actions/orders'
 import type { WholesaleOrderStatus } from '@/types/database'
 
@@ -13,15 +14,6 @@ const TRANSITIONS: Record<WholesaleOrderStatus, WholesaleOrderStatus[]> = {
   cancelled: [],
 }
 
-const LABELS: Record<WholesaleOrderStatus, string> = {
-  pending:   'En attente',
-  confirmed: 'Confirmée',
-  sourcing:  'En sourcing',
-  shipped:   'Expédiée',
-  delivered: 'Livrée',
-  cancelled: 'Annulée',
-}
-
 export function WholesaleOrderStatusForm({
   orderId,
   currentStatus,
@@ -29,6 +21,8 @@ export function WholesaleOrderStatusForm({
   orderId: string
   currentStatus: WholesaleOrderStatus
 }) {
+  const t  = useTranslations('admin.wholesaleStatusForm')
+  const tc = useTranslations('admin.common')
   const [isPending, startTransition] = useTransition()
   const [selected, setSelected] = useState<WholesaleOrderStatus | ''>('')
   const [notes, setNotes] = useState('')
@@ -36,51 +30,51 @@ export function WholesaleOrderStatusForm({
 
   const options = TRANSITIONS[currentStatus] ?? []
   if (options.length === 0)
-    return <p className="text-xs text-gray-400 italic">Statut final.</p>
+    return <p className="text-xs text-faint italic">{t('statusFinal')}</p>
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selected) return
     startTransition(async () => {
       const result = await updateWholesaleOrderStatus(orderId, selected as WholesaleOrderStatus, notes || undefined)
-      setMsg({ ok: result.success, text: result.error ?? 'Statut mis à jour.' })
+      setMsg({ ok: result.success, text: result.error ?? t('statusUpdated') })
     })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Nouveau statut</label>
+        <label className="block text-xs font-medium text-muted mb-1">{t('newStatus')}</label>
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value as WholesaleOrderStatus)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
         >
-          <option value="">Sélectionner…</option>
-          {options.map((s) => <option key={s} value={s}>{LABELS[s]}</option>)}
+          <option value="">{tc('select')}</option>
+          {options.map((s) => <option key={s} value={s}>{tc(`wholesaleStatus.${s}`)}</option>)}
         </select>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Note agent (optionnel)</label>
+        <label className="block text-xs font-medium text-muted mb-1">{t('agentNote')}</label>
         <input
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Remarque interne…"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
+          placeholder={t('agentNotePlaceholder')}
+          className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
         />
       </div>
       {msg && (
-        <p className={`text-xs px-3 py-2 rounded-lg ${msg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+        <p className={`text-xs px-3 py-2 rounded-lg ${msg.ok ? 'bg-success-soft text-success-fg' : 'bg-danger-soft text-danger-fg'}`}>
           {msg.text}
         </p>
       )}
       <button
         type="submit"
         disabled={isPending || !selected}
-        className="w-full py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+        className="w-full py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
-        {isPending ? 'Mise à jour…' : 'Confirmer'}
+        {isPending ? tc('updating') : t('confirm')}
       </button>
     </form>
   )

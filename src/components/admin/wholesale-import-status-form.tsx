@@ -1,28 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { updateWholesaleImportStatus } from '@/app/actions/orders'
 import type { WholesaleImportStatus } from '@/types/database'
-
-export const IMPORT_STATUS_LABELS: Record<WholesaleImportStatus, string> = {
-  awaiting_supplier: 'En attente fournisseur',
-  purchased:         'Acheté',
-  in_production:     'En production',
-  ready_to_ship:     'Prêt à expédier',
-  shipped:           'Expédié',
-  customs_clearance: 'Dédouanement',
-  delivered:         'Livré',
-}
-
-export const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
-  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-600' },
-  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
-  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
-  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
-  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
-  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
-  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
-}
 
 const ALL_STATUSES: WholesaleImportStatus[] = [
   'awaiting_supplier',
@@ -43,6 +24,8 @@ export function WholesaleImportStatusForm({
   currentImportStatus: WholesaleImportStatus | null
   isLocalStock?: boolean
 }) {
+  const t  = useTranslations('admin.wholesaleImportForm')
+  const tc = useTranslations('admin.common')
   const [isPending, startTransition] = useTransition()
   const [selected, setSelected] = useState<WholesaleImportStatus | ''>('')
   const [notes, setNotes] = useState('')
@@ -59,7 +42,7 @@ export function WholesaleImportStatusForm({
       )
       setMsg({
         ok: result.success,
-        text: result.error ?? (isLocalStock ? 'Statut mis à jour.' : 'Statut import mis à jour.'),
+        text: result.error ?? (isLocalStock ? t('updatedLocal') : t('updatedImport')),
       })
       if (result.success) {
         setSelected('')
@@ -71,50 +54,50 @@ export function WholesaleImportStatusForm({
   return (
     <div>
       {currentImportStatus && (
-        <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
-          <p className="text-xs text-blue-500">Statut actuel</p>
-          <p className="text-sm font-semibold text-blue-800">
-            {IMPORT_STATUS_LABELS[currentImportStatus]}
+        <div className="mb-3 px-3 py-2 bg-accent-soft border border-accent rounded-lg">
+          <p className="text-xs text-accent-fg">{t('currentStatus')}</p>
+          <p className="text-sm font-semibold text-accent-fg">
+            {t(`statusLabel.${currentImportStatus}`)}
           </p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            {isLocalStock ? 'Nouveau statut' : 'Nouveau statut import'}
+          <label className="block text-xs font-medium text-muted mb-1">
+            {isLocalStock ? t('newStatus') : t('newStatusImport')}
           </label>
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value as WholesaleImportStatus)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
           >
-            <option value="">Sélectionner…</option>
+            <option value="">{tc('select')}</option>
             {ALL_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {IMPORT_STATUS_LABELS[s]}
+                {t(`statusLabel.${s}`)}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Note (optionnel)
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('note')}
           </label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ex: commande passée le…"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none"
+            placeholder={t('notePlaceholder')}
+            className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
           />
         </div>
 
         {msg && (
           <p
             className={`text-xs px-3 py-2 rounded-lg ${
-              msg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+              msg.ok ? 'bg-success-soft text-success-fg' : 'bg-danger-soft text-danger-fg'
             }`}
           >
             {msg.text}
@@ -124,9 +107,9 @@ export function WholesaleImportStatusForm({
         <button
           type="submit"
           disabled={isPending || !selected}
-          className="w-full py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="w-full py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {isPending ? 'Mise à jour…' : 'Confirmer'}
+          {isPending ? tc('updating') : t('confirm')}
         </button>
       </form>
     </div>

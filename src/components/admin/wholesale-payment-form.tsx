@@ -1,15 +1,17 @@
 'use client'
 
 import { useActionState } from 'react'
+import { useTranslations } from 'next-intl'
 import { updateWholesalePaymentStatus } from '@/app/actions/orders'
 import { formatMAD } from '@/lib/utils'
 import type { WholesalePaymentStatus } from '@/types/database'
 
-export const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
-  no_deposit:        { label: 'Aucun acompte',       cls: 'bg-gray-100 text-gray-500' },
-  deposit_requested: { label: 'Acompte demandé',     cls: 'bg-amber-100 text-amber-700' },
-  deposit_received:  { label: 'Acompte reçu',        cls: 'bg-blue-100 text-blue-700' },
-  fully_paid:        { label: 'Entièrement réglé',   cls: 'bg-green-100 text-green-700' },
+// CSS only — labels via t()
+const PAYMENT_STATUS_CLS: Record<WholesalePaymentStatus, string> = {
+  no_deposit:        'bg-surface-2 text-faint border-line',
+  deposit_requested: 'bg-warning-soft text-warning-fg border-warning',
+  deposit_received:  'bg-surface-2 text-muted border-line',
+  fully_paid:        'bg-success-soft text-success-fg border-success',
 }
 
 interface Props {
@@ -29,38 +31,40 @@ export function WholesalePaymentForm({
   depositAmount,
   depositReceived,
 }: Props) {
+  const t  = useTranslations('admin.wholesalePaymentForm')
+  const tc = useTranslations('admin.common')
   const [state, action, isPending] = useActionState(updateWholesalePaymentStatus, initial)
 
   const remainingBalance = totalAmount - depositReceived
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+    <div className="bg-surface rounded-xl border border-line p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">Suivi du paiement</h2>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PAYMENT_STATUS_BADGE[currentStatus].cls}`}>
-          {PAYMENT_STATUS_BADGE[currentStatus].label}
+        <h2 className="text-sm font-semibold text-foreground">{t('heading')}</h2>
+        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${PAYMENT_STATUS_CLS[currentStatus]}`}>
+          {tc(`paymentStatus.${currentStatus}`)}
         </span>
       </div>
 
       {/* Balance summary */}
-      <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+      <div className="bg-surface-2 rounded-lg p-3 space-y-2 text-sm">
         <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">Total commande</span>
-          <span className="font-semibold tabular-nums text-gray-900">{formatMAD(totalAmount)}</span>
+          <span className="text-xs text-muted">{t('totalOrder')}</span>
+          <span className="font-semibold tabular-nums text-foreground">{formatMAD(totalAmount)}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">Acompte demandé</span>
-          <span className="font-medium tabular-nums text-gray-700">
+          <span className="text-xs text-muted">{t('depositRequested')}</span>
+          <span className="font-medium tabular-nums text-foreground">
             {depositAmount != null ? formatMAD(depositAmount) : '—'}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">Acompte reçu</span>
-          <span className="font-medium tabular-nums text-blue-700">{formatMAD(depositReceived)}</span>
+          <span className="text-xs text-muted">{t('depositReceived')}</span>
+          <span className="font-medium tabular-nums text-accent-fg">{formatMAD(depositReceived)}</span>
         </div>
-        <div className="flex justify-between items-center border-t border-gray-200 pt-2">
-          <span className="text-xs font-semibold text-gray-700">Solde restant</span>
-          <span className={`font-bold tabular-nums text-sm ${remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+        <div className="flex justify-between items-center border-t border-line pt-2">
+          <span className="text-xs font-semibold text-foreground">{t('remainingBalance')}</span>
+          <span className={`font-bold tabular-nums text-sm ${remainingBalance > 0 ? 'text-danger' : 'text-success'}`}>
             {formatMAD(remainingBalance)}
           </span>
         </div>
@@ -70,21 +74,21 @@ export function WholesalePaymentForm({
         <input type="hidden" name="orderId" value={orderId} />
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Statut de paiement</label>
+          <label className="block text-xs text-muted mb-1">{t('paymentStatusLabel')}</label>
           <select
             name="payment_status"
             defaultValue={currentStatus}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20 bg-white"
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
           >
-            <option value="no_deposit">Aucun acompte</option>
-            <option value="deposit_requested">Acompte demandé</option>
-            <option value="deposit_received">Acompte reçu</option>
-            <option value="fully_paid">Entièrement réglé</option>
+            <option value="no_deposit">{tc('paymentStatus.no_deposit')}</option>
+            <option value="deposit_requested">{tc('paymentStatus.deposit_requested')}</option>
+            <option value="deposit_received">{tc('paymentStatus.deposit_received')}</option>
+            <option value="fully_paid">{tc('paymentStatus.fully_paid')}</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Montant de l&apos;acompte (MAD)</label>
+          <label className="block text-xs text-muted mb-1">{t('depositAmountLabel')}</label>
           <div className="relative">
             <input
               type="number"
@@ -93,14 +97,14 @@ export function WholesalePaymentForm({
               min={0}
               step={0.01}
               placeholder="0"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-14 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+              className="w-full border border-line rounded-lg px-3 py-2 text-sm pr-14 bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">MAD</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint">MAD</span>
           </div>
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Acompte reçu (MAD)</label>
+          <label className="block text-xs text-muted mb-1">{t('depositReceivedLabel')}</label>
           <div className="relative">
             <input
               type="number"
@@ -108,39 +112,39 @@ export function WholesalePaymentForm({
               defaultValue={depositReceived}
               min={0}
               step={0.01}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-14 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+              className="w-full border border-line rounded-lg px-3 py-2 text-sm pr-14 bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">MAD</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint">MAD</span>
           </div>
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Note (optionnelle)</label>
+          <label className="block text-xs text-muted mb-1">{t('note')}</label>
           <input
             type="text"
             name="notes"
-            placeholder="Ex : virement reçu le 28/05"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+            placeholder={t('notePlaceholder')}
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
           />
         </div>
 
         {state.error && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-danger-fg bg-danger-soft border border-danger rounded-lg px-3 py-2">
             {state.error}
           </p>
         )}
         {state.success && (
-          <p className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-            Paiement mis à jour.
+          <p className="text-xs text-success-fg bg-success-soft border border-success rounded-lg px-3 py-2">
+            {t('updated')}
           </p>
         )}
 
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-2 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="w-full py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {isPending ? 'Enregistrement…' : 'Mettre à jour le paiement'}
+          {isPending ? tc('saving') : t('submit')}
         </button>
       </form>
     </div>

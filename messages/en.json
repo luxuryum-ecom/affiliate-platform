@@ -1484,7 +1484,30 @@
       "commission": "Commission",
       "stock": "Stock",
       "required": "required",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "wholesaleStatus": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "sourcing": "Sourcing",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled"
+      },
+      "importStatusBadge": {
+        "awaiting_supplier": "Awaiting supplier",
+        "purchased": "Purchased",
+        "in_production": "In production",
+        "ready_to_ship": "Ready to ship",
+        "shipped": "Shipped",
+        "customs_clearance": "Customs clearance",
+        "delivered": "Delivered (import)"
+      },
+      "paymentStatus": {
+        "no_deposit": "No deposit",
+        "deposit_requested": "Deposit requested",
+        "deposit_received": "Deposit received",
+        "fully_paid": "Fully paid"
+      }
     },
     "orders": {
       "metaTitle": "COD Orders — Administration",
@@ -2491,6 +2514,110 @@
       "statusApproved": "Approved",
       "statusRejected": "Rejected",
       "statusConvertedToOrder": "Converted to order"
+    },
+    "wholesaleOrders": {
+      "metaTitle": "Wholesale orders — Administration",
+      "pageTitle": "Wholesale orders",
+      "backLabel": "Dashboard",
+      "pendingCartsHeading": "Carts awaiting conversion",
+      "itemsCount": "{count, plural, one {# item} other {# items}}",
+      "estimatedTotal": "Estimated total",
+      "createOrder": "Create order",
+      "ordersHeading": "Orders",
+      "empty": "No wholesale orders yet.",
+      "sale": "Sale",
+      "profit": "Profit"
+    },
+    "wholesaleOrderDetail": {
+      "metaTitle": "Wholesale order — Administration",
+      "backLabel": "Wholesale",
+      "viaQuote": "📋 Via quote",
+      "directOrder": "🛒 Direct order",
+      "createdOn": "Created on {date}",
+      "itemsCount": "{count, plural, one {# item} other {# items}}",
+      "buyer": "Buyer",
+      "buyerNote": "Buyer note",
+      "agentNote": "Agent note",
+      "orderedItems": "Ordered items",
+      "lowStock": "⚠ Low stock ({count})",
+      "total": "Total",
+      "orderTracking": "Order tracking",
+      "historyLocalHeading": "Preparation / delivery history",
+      "historyImportHeading": "Import history",
+      "historyLocalEmpty": "No status recorded. Use the right panel to start tracking.",
+      "historyImportEmpty": "No import status recorded. Use the right panel to start tracking.",
+      "paymentHistory": "Payment history",
+      "paymentHistoryEmpty": "No payment events recorded.",
+      "paymentProofs": "Payment proofs",
+      "proofBankReceipt": "Bank receipt",
+      "proofTransferProof": "Transfer proof",
+      "proofOther": "Other",
+      "updateHeading": "Update",
+      "importStatusLocalHeading": "Local preparation / delivery status",
+      "importStatusHeading": "Import status",
+      "createdFromQuote": "Created from a quote",
+      "quoteLink": "Quote",
+      "assignedAgent": "Assigned agent",
+      "invoiceRequest": "Invoice request",
+      "invoiceCompanyName": "Company name",
+      "invoiceIce": "ICE",
+      "invoiceRc": "RC",
+      "invoiceBillingAddress": "Billing address"
+    },
+    "wholesaleStatusForm": {
+      "statusFinal": "Final status.",
+      "newStatus": "New status",
+      "agentNote": "Agent note (optional)",
+      "agentNotePlaceholder": "Internal remark…",
+      "statusUpdated": "Status updated.",
+      "confirm": "Confirm"
+    },
+    "wholesaleImportForm": {
+      "statusLabel": {
+        "awaiting_supplier": "Awaiting supplier",
+        "purchased": "Purchased",
+        "in_production": "In production",
+        "ready_to_ship": "Ready to ship",
+        "shipped": "Shipped",
+        "customs_clearance": "Customs clearance",
+        "delivered": "Delivered"
+      },
+      "currentStatus": "Current status",
+      "newStatus": "New status",
+      "newStatusImport": "New import status",
+      "note": "Note (optional)",
+      "notePlaceholder": "E.g. ordered on…",
+      "updatedLocal": "Status updated.",
+      "updatedImport": "Import status updated.",
+      "confirm": "Confirm"
+    },
+    "wholesalePaymentForm": {
+      "heading": "Payment tracking",
+      "totalOrder": "Order total",
+      "depositRequested": "Deposit requested",
+      "depositReceived": "Deposit received",
+      "remainingBalance": "Remaining balance",
+      "paymentStatusLabel": "Payment status",
+      "depositAmountLabel": "Deposit amount (MAD)",
+      "depositReceivedLabel": "Deposit received (MAD)",
+      "note": "Note (optional)",
+      "notePlaceholder": "E.g. transfer received on 28/05",
+      "updated": "Payment updated.",
+      "submit": "Update payment"
+    },
+    "wholesaleCostForm": {
+      "headingLocal": "Local costs",
+      "headingImport": "Import costs",
+      "supplierCost": "Supplier cost",
+      "transportLocal": "Local delivery",
+      "transportImport": "Transport & customs",
+      "additionalCost": "Additional costs",
+      "saved": "Costs saved.",
+      "submit": "Save costs",
+      "sellPrice": "Sale price",
+      "totalCost": "Total cost",
+      "grossProfit": "Gross profit",
+      "margin": "Margin"
     }
   }
 }

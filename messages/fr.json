@@ -1484,7 +1484,30 @@
       "commission": "Commission",
       "stock": "Stock",
       "required": "requis",
-      "unknown": "Inconnu"
+      "unknown": "Inconnu",
+      "wholesaleStatus": {
+        "pending": "En attente",
+        "confirmed": "Confirmée",
+        "sourcing": "En sourcing",
+        "shipped": "Expédiée",
+        "delivered": "Livrée",
+        "cancelled": "Annulée"
+      },
+      "importStatusBadge": {
+        "awaiting_supplier": "Attente fournisseur",
+        "purchased": "Acheté",
+        "in_production": "En production",
+        "ready_to_ship": "Prêt à expédier",
+        "shipped": "Expédié",
+        "customs_clearance": "Dédouanement",
+        "delivered": "Livré (import)"
+      },
+      "paymentStatus": {
+        "no_deposit": "Aucun acompte",
+        "deposit_requested": "Acompte demandé",
+        "deposit_received": "Acompte reçu",
+        "fully_paid": "Entièrement réglé"
+      }
     },
     "orders": {
       "metaTitle": "Commandes COD — Administration",
@@ -2491,6 +2514,110 @@
       "statusApproved": "Approuvé",
       "statusRejected": "Refusé",
       "statusConvertedToOrder": "Converti en commande"
+    },
+    "wholesaleOrders": {
+      "metaTitle": "Commandes grossiste — Administration",
+      "pageTitle": "Commandes grossiste",
+      "backLabel": "Dashboard",
+      "pendingCartsHeading": "Paniers en attente de conversion",
+      "itemsCount": "{count, plural, one {# article} other {# articles}}",
+      "estimatedTotal": "Total estimé",
+      "createOrder": "Créer la commande",
+      "ordersHeading": "Commandes",
+      "empty": "Aucune commande grossiste pour le moment.",
+      "sale": "Vente",
+      "profit": "Profit"
+    },
+    "wholesaleOrderDetail": {
+      "metaTitle": "Commande grossiste — Administration",
+      "backLabel": "Grossiste",
+      "viaQuote": "📋 Via devis",
+      "directOrder": "🛒 Commande directe",
+      "createdOn": "Créée le {date}",
+      "itemsCount": "{count, plural, one {# article} other {# articles}}",
+      "buyer": "Acheteur",
+      "buyerNote": "Note acheteur",
+      "agentNote": "Note agent",
+      "orderedItems": "Articles commandés",
+      "lowStock": "⚠ Stock bas ({count})",
+      "total": "Total",
+      "orderTracking": "Suivi de la commande",
+      "historyLocalHeading": "Historique préparation / livraison",
+      "historyImportHeading": "Historique import",
+      "historyLocalEmpty": "Aucun statut enregistré. Utilisez le panneau de droite pour commencer le suivi.",
+      "historyImportEmpty": "Aucun statut import enregistré. Utilisez le panneau de droite pour commencer le suivi.",
+      "paymentHistory": "Historique paiement",
+      "paymentHistoryEmpty": "Aucun événement de paiement enregistré.",
+      "paymentProofs": "Justificatifs de paiement",
+      "proofBankReceipt": "Reçu bancaire",
+      "proofTransferProof": "Preuve de virement",
+      "proofOther": "Autre",
+      "updateHeading": "Mettre à jour",
+      "importStatusLocalHeading": "Statut préparation / livraison locale",
+      "importStatusHeading": "Statut import",
+      "createdFromQuote": "Créée depuis un devis",
+      "quoteLink": "Devis",
+      "assignedAgent": "Agent assigné",
+      "invoiceRequest": "Demande de facture",
+      "invoiceCompanyName": "Raison sociale",
+      "invoiceIce": "ICE",
+      "invoiceRc": "RC",
+      "invoiceBillingAddress": "Adresse de facturation"
+    },
+    "wholesaleStatusForm": {
+      "statusFinal": "Statut final.",
+      "newStatus": "Nouveau statut",
+      "agentNote": "Note agent (optionnel)",
+      "agentNotePlaceholder": "Remarque interne…",
+      "statusUpdated": "Statut mis à jour.",
+      "confirm": "Confirmer"
+    },
+    "wholesaleImportForm": {
+      "statusLabel": {
+        "awaiting_supplier": "En attente fournisseur",
+        "purchased": "Acheté",
+        "in_production": "En production",
+        "ready_to_ship": "Prêt à expédier",
+        "shipped": "Expédié",
+        "customs_clearance": "Dédouanement",
+        "delivered": "Livré"
+      },
+      "currentStatus": "Statut actuel",
+      "newStatus": "Nouveau statut",
+      "newStatusImport": "Nouveau statut import",
+      "note": "Note (optionnel)",
+      "notePlaceholder": "Ex : commande passée le…",
+      "updatedLocal": "Statut mis à jour.",
+      "updatedImport": "Statut import mis à jour.",
+      "confirm": "Confirmer"
+    },
+    "wholesalePaymentForm": {
+      "heading": "Suivi du paiement",
+      "totalOrder": "Total commande",
+      "depositRequested": "Acompte demandé",
+      "depositReceived": "Acompte reçu",
+      "remainingBalance": "Solde restant",
+      "paymentStatusLabel": "Statut de paiement",
+      "depositAmountLabel": "Montant de l’acompte (MAD)",
+      "depositReceivedLabel": "Acompte reçu (MAD)",
+      "note": "Note (optionnelle)",
+      "notePlaceholder": "Ex : virement reçu le 28/05",
+      "updated": "Paiement mis à jour.",
+      "submit": "Mettre à jour le paiement"
+    },
+    "wholesaleCostForm": {
+      "headingLocal": "Coûts locaux",
+      "headingImport": "Coûts d’import",
+      "supplierCost": "Coût fournisseur",
+      "transportLocal": "Livraison locale",
+      "transportImport": "Transport & douanes",
+      "additionalCost": "Coûts supplémentaires",
+      "saved": "Coûts enregistrés.",
+      "submit": "Enregistrer les coûts",
+      "sellPrice": "Prix de vente",
+      "totalCost": "Coût total",
+      "grossProfit": "Profit brut",
+      "margin": "Marge"
     }
   }
 }

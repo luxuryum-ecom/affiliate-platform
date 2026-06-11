@@ -1484,7 +1484,30 @@
       "commission": "العمولة",
       "stock": "المخزون",
       "required": "مطلوب",
-      "unknown": "غير معروف"
+      "unknown": "غير معروف",
+      "wholesaleStatus": {
+        "pending": "قيد الانتظار",
+        "confirmed": "مؤكَّدة",
+        "sourcing": "قيد التوريد",
+        "shipped": "مشحونة",
+        "delivered": "مُسلَّمة",
+        "cancelled": "ملغاة"
+      },
+      "importStatusBadge": {
+        "awaiting_supplier": "بانتظار المورّد",
+        "purchased": "تم الشراء",
+        "in_production": "قيد الإنتاج",
+        "ready_to_ship": "جاهز للشحن",
+        "shipped": "مشحون",
+        "customs_clearance": "تخليص جمركي",
+        "delivered": "مُسلَّم (استيراد)"
+      },
+      "paymentStatus": {
+        "no_deposit": "لا توجد عربون",
+        "deposit_requested": "طُلب العربون",
+        "deposit_received": "تم استلام العربون",
+        "fully_paid": "مدفوع بالكامل"
+      }
     },
     "orders": {
       "metaTitle": "طلبات الدفع عند الاستلام — الإدارة",
@@ -2491,6 +2514,110 @@
       "statusApproved": "معتمَد",
       "statusRejected": "مرفوض",
       "statusConvertedToOrder": "محوَّل إلى طلب"
+    },
+    "wholesaleOrders": {
+      "metaTitle": "طلبات الجملة — الإدارة",
+      "pageTitle": "طلبات الجملة",
+      "backLabel": "لوحة التحكم",
+      "pendingCartsHeading": "سلال بانتظار التحويل",
+      "itemsCount": "{count, plural, one {# منتج} other {# منتجات}}",
+      "estimatedTotal": "الإجمالي التقديري",
+      "createOrder": "إنشاء الطلب",
+      "ordersHeading": "الطلبات",
+      "empty": "لا توجد طلبات جملة حتى الآن.",
+      "sale": "البيع",
+      "profit": "الربح"
+    },
+    "wholesaleOrderDetail": {
+      "metaTitle": "طلب جملة — الإدارة",
+      "backLabel": "الجملة",
+      "viaQuote": "📋 عبر عرض سعر",
+      "directOrder": "🛒 طلب مباشر",
+      "createdOn": "أُنشئت في {date}",
+      "itemsCount": "{count, plural, one {# منتج} other {# منتجات}}",
+      "buyer": "المشتري",
+      "buyerNote": "ملاحظة المشتري",
+      "agentNote": "ملاحظة الوكيل",
+      "orderedItems": "المنتجات المطلوبة",
+      "lowStock": "⚠ مخزون منخفض ({count})",
+      "total": "الإجمالي",
+      "orderTracking": "تتبّع الطلب",
+      "historyLocalHeading": "سجل التحضير / التسليم",
+      "historyImportHeading": "سجل الاستيراد",
+      "historyLocalEmpty": "لا توجد حالة مسجَّلة. استخدم اللوحة الجانبية لبدء التتبّع.",
+      "historyImportEmpty": "لا توجد حالة استيراد مسجَّلة. استخدم اللوحة الجانبية لبدء التتبّع.",
+      "paymentHistory": "سجل الدفع",
+      "paymentHistoryEmpty": "لا توجد أحداث دفع مسجَّلة.",
+      "paymentProofs": "إثباتات الدفع",
+      "proofBankReceipt": "إيصال بنكي",
+      "proofTransferProof": "إثبات تحويل",
+      "proofOther": "أخرى",
+      "updateHeading": "تحديث",
+      "importStatusLocalHeading": "حالة التحضير / التسليم المحلي",
+      "importStatusHeading": "حالة الاستيراد",
+      "createdFromQuote": "أُنشئت من عرض سعر",
+      "quoteLink": "عرض سعر",
+      "assignedAgent": "الوكيل المعيَّن",
+      "invoiceRequest": "طلب فاتورة",
+      "invoiceCompanyName": "الاسم التجاري",
+      "invoiceIce": "ICE",
+      "invoiceRc": "RC",
+      "invoiceBillingAddress": "عنوان الفوترة"
+    },
+    "wholesaleStatusForm": {
+      "statusFinal": "حالة نهائية.",
+      "newStatus": "الحالة الجديدة",
+      "agentNote": "ملاحظة الوكيل (اختياري)",
+      "agentNotePlaceholder": "ملاحظة داخلية…",
+      "statusUpdated": "تم تحديث الحالة.",
+      "confirm": "تأكيد"
+    },
+    "wholesaleImportForm": {
+      "statusLabel": {
+        "awaiting_supplier": "بانتظار المورّد",
+        "purchased": "تم الشراء",
+        "in_production": "قيد الإنتاج",
+        "ready_to_ship": "جاهز للشحن",
+        "shipped": "مشحون",
+        "customs_clearance": "تخليص جمركي",
+        "delivered": "مُسلَّم"
+      },
+      "currentStatus": "الحالة الحالية",
+      "newStatus": "الحالة الجديدة",
+      "newStatusImport": "حالة الاستيراد الجديدة",
+      "note": "ملاحظة (اختياري)",
+      "notePlaceholder": "مثال: تم الطلب بتاريخ…",
+      "updatedLocal": "تم تحديث الحالة.",
+      "updatedImport": "تم تحديث حالة الاستيراد.",
+      "confirm": "تأكيد"
+    },
+    "wholesalePaymentForm": {
+      "heading": "متابعة الدفع",
+      "totalOrder": "إجمالي الطلب",
+      "depositRequested": "العربون المطلوب",
+      "depositReceived": "العربون المستلَم",
+      "remainingBalance": "الرصيد المتبقّي",
+      "paymentStatusLabel": "حالة الدفع",
+      "depositAmountLabel": "مبلغ العربون (درهم)",
+      "depositReceivedLabel": "العربون المستلَم (درهم)",
+      "note": "ملاحظة (اختياري)",
+      "notePlaceholder": "مثال: تحويل مستلَم بتاريخ 28/05",
+      "updated": "تم تحديث الدفع.",
+      "submit": "تحديث الدفع"
+    },
+    "wholesaleCostForm": {
+      "headingLocal": "التكاليف المحلية",
+      "headingImport": "تكاليف الاستيراد",
+      "supplierCost": "تكلفة المورّد",
+      "transportLocal": "التسليم المحلي",
+      "transportImport": "النقل والجمارك",
+      "additionalCost": "تكاليف إضافية",
+      "saved": "تم حفظ التكاليف.",
+      "submit": "حفظ التكاليف",
+      "sellPrice": "سعر البيع",
+      "totalCost": "التكلفة الإجمالية",
+      "grossProfit": "الربح الإجمالي",
+      "margin": "الهامش"
     }
   }
 }
