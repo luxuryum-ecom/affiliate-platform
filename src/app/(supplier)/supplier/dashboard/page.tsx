@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
@@ -15,10 +14,10 @@ export async function generateMetadata() {
 
 /** Couleurs des badges de statut de reversement (libellé résolu via i18n). */
 const PAYOUT_BADGE_CLS: Record<SupplierPayoutStatus, string> = {
-  not_due:        'bg-gray-100 text-gray-500',
-  pending:        'bg-amber-100 text-amber-700',
-  partially_paid: 'bg-blue-100 text-blue-700',
-  paid:           'bg-green-100 text-green-700',
+  not_due:        'bg-surface-2 text-muted',
+  pending:        'bg-warning-soft text-warning-fg border border-warning',
+  partially_paid: 'bg-accent-soft text-accent-fg border border-gold-300',
+  paid:           'bg-success-soft text-success-fg border border-success',
 }
 
 /** Safe columns visible to supplier — no client identity exposed. */
@@ -129,56 +128,51 @@ export default async function SupplierDashboardPage() {
   const approvedProducts = Array.from(productMap.values())
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-bg">
+      <header className="bg-surface border-b border-line">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MozounaLogo size="md" />
-            <span className="hidden sm:block text-gray-300">|</span>
-            <span className="hidden sm:block text-sm font-medium text-gray-600">{t('spaceLabel')}</span>
+            <span className="hidden sm:block text-line">|</span>
+            <span className="hidden sm:block text-sm font-medium text-muted">{t('spaceLabel')}</span>
           </div>
           <div className="flex items-center gap-4">
             <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                {tc('signOut')}
-              </button>
-            </form>
+            <span className="text-sm text-muted hidden sm:block">{profile?.full_name}</span>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">{t('greeting', { name: profile?.full_name ?? '' })}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{t('subtitle')}</p>
+          <h1 className="text-lg font-semibold text-foreground">{t('greeting', { name: profile?.full_name ?? '' })}</h1>
+          <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
 
         {/* Product stats */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-2xl font-bold text-amber-600">{pending}</p>
-            <p className="text-xs text-gray-500 mt-1">{t('statPending')}</p>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <p className="text-2xl font-bold text-warning-fg">{pending}</p>
+            <p className="text-xs text-muted mt-1">{t('statPending')}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-2xl font-bold text-green-600">{approved}</p>
-            <p className="text-xs text-gray-500 mt-1">{t('statApproved', { count: approved })}</p>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <p className="text-2xl font-bold text-success-fg">{approved}</p>
+            <p className="text-xs text-muted mt-1">{t('statApproved', { count: approved })}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-2xl font-bold text-red-500">{rejected}</p>
-            <p className="text-xs text-gray-500 mt-1">{t('statRejected', { count: rejected })}</p>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <p className="text-2xl font-bold text-danger-fg">{rejected}</p>
+            <p className="text-xs text-muted mt-1">{t('statRejected', { count: rejected })}</p>
           </div>
         </div>
 
         {/* RFQ widget */}
         {(rfqOpportunities ?? 0) > 0 && (
-          <div className={`rounded-xl border p-4 flex items-center justify-between gap-3 ${(rfqOpportunities ?? 0) > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200'}`}>
+          <div className={`rounded-xl border p-4 flex items-center justify-between gap-3 ${(rfqOpportunities ?? 0) > 0 ? 'bg-accent-soft border-gold-300' : 'bg-surface border-line'}`}>
             <div>
-              <p className="text-xs text-gray-500">{t('rfqLabel')}</p>
-              <p className="text-2xl font-bold text-indigo-700 mt-1">{rfqOpportunities ?? 0}</p>
+              <p className="text-xs text-muted">{t('rfqLabel')}</p>
+              <p className="text-2xl font-bold text-accent-fg mt-1">{rfqOpportunities ?? 0}</p>
             </div>
-            <Link href="/supplier/opportunities" className="text-xs px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+            <Link href="/supplier/opportunities" className="text-xs px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
               {t('rfqCta')}
             </Link>
           </div>
@@ -187,13 +181,13 @@ export default async function SupplierDashboardPage() {
         {/* Sample request counters */}
         {sampleTotalCount > 0 && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">{t('samplesTotal')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{sampleTotalCount}</p>
+            <div className="bg-surface rounded-xl border border-line p-4">
+              <p className="text-xs text-muted">{t('samplesTotal')}</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{sampleTotalCount}</p>
             </div>
-            <div className={`rounded-xl border p-4 ${samplePendingCount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
-              <p className="text-xs text-gray-500">{t('samplesPendingResponse')}</p>
-              <p className={`text-2xl font-bold mt-1 ${samplePendingCount > 0 ? 'text-amber-700' : 'text-gray-900'}`}>{samplePendingCount}</p>
+            <div className={`rounded-xl border p-4 ${samplePendingCount > 0 ? 'bg-warning-soft border-warning' : 'bg-surface border-line'}`}>
+              <p className="text-xs text-muted">{t('samplesPendingResponse')}</p>
+              <p className={`text-2xl font-bold mt-1 ${samplePendingCount > 0 ? 'text-warning-fg' : 'text-foreground'}`}>{samplePendingCount}</p>
             </div>
           </div>
         )}
@@ -201,13 +195,13 @@ export default async function SupplierDashboardPage() {
         {/* Payout summary (only if there are approved products with quotes) */}
         {safeQuotes.length > 0 && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-amber-200 p-5">
-              <p className="text-xs text-amber-600 mb-1">{t('payoutDue')}</p>
-              <p className="text-2xl font-bold text-amber-700 tabular-nums">{formatMAD(totalPayoutDue)}</p>
+            <div className="bg-surface rounded-xl border border-warning p-5">
+              <p className="text-xs text-warning-fg mb-1">{t('payoutDue')}</p>
+              <p className="text-2xl font-bold text-warning-fg tabular-nums">{formatMAD(totalPayoutDue)}</p>
             </div>
-            <div className="bg-white rounded-xl border border-green-200 p-5">
-              <p className="text-xs text-green-600 mb-1">{t('payoutPaid')}</p>
-              <p className="text-2xl font-bold text-green-700 tabular-nums">{formatMAD(totalPayoutPaid)}</p>
+            <div className="bg-surface rounded-xl border border-success p-5">
+              <p className="text-xs text-success-fg mb-1">{t('payoutPaid')}</p>
+              <p className="text-2xl font-bold text-success-fg tabular-nums">{formatMAD(totalPayoutPaid)}</p>
             </div>
           </div>
         )}
@@ -216,82 +210,82 @@ export default async function SupplierDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Link
             href="/supplier/products/new"
-            className="flex items-center gap-3 bg-gray-900 text-white rounded-xl p-5 hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-3 bg-primary text-primary-foreground rounded-xl p-5 hover:opacity-90 transition-opacity"
           >
             <span className="text-2xl">+</span>
             <div>
               <p className="font-medium text-sm">{t('navSubmitTitle')}</p>
-              <p className="text-xs text-gray-300 mt-0.5">{t('navSubmitDesc')}</p>
+              <p className="text-xs text-primary-foreground/70 mt-0.5">{t('navSubmitDesc')}</p>
             </div>
           </Link>
           <Link
             href="/supplier/products"
-            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+            className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
           >
             <span className="text-2xl">📦</span>
             <div>
-              <p className="font-medium text-sm text-gray-900">{t('navProductsTitle')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('navProductsDesc')}</p>
+              <p className="font-medium text-sm text-foreground">{t('navProductsTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navProductsDesc')}</p>
             </div>
           </Link>
           <Link
             href="/supplier/products/import"
-            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+            className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
           >
             <span className="text-2xl">📥</span>
             <div>
-              <p className="font-medium text-sm text-gray-900">{t('navImportTitle')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('navImportDesc')}</p>
+              <p className="font-medium text-sm text-foreground">{t('navImportTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navImportDesc')}</p>
             </div>
           </Link>
           <Link
             href="/supplier/analytics"
-            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+            className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
           >
             <span className="text-2xl">📊</span>
             <div>
-              <p className="font-medium text-sm text-gray-900">{t('navAnalyticsTitle')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('navAnalyticsDesc')}</p>
+              <p className="font-medium text-sm text-foreground">{t('navAnalyticsTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navAnalyticsDesc')}</p>
             </div>
           </Link>
           <Link
             href="/supplier/catalogs"
-            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+            className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
           >
             <span className="text-2xl">📒</span>
             <div>
-              <p className="font-medium text-sm text-gray-900">{t('navCatalogsTitle')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('navCatalogsDesc')}</p>
+              <p className="font-medium text-sm text-foreground">{t('navCatalogsTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navCatalogsDesc')}</p>
             </div>
           </Link>
           <Link
             href="/supplier/samples"
-            className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+            className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
           >
             <span className="text-2xl">🧪</span>
             <div>
-              <p className="font-medium text-sm text-gray-900">{t('navSamplesTitle')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('navSamplesDesc')}</p>
+              <p className="font-medium text-sm text-foreground">{t('navSamplesTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navSamplesDesc')}</p>
             </div>
           </Link>
           <Link
             href="/supplier/opportunities"
-            className="flex items-center gap-3 bg-white rounded-xl border border-indigo-200 p-5 hover:shadow-sm transition-shadow"
+            className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
           >
             <span className="text-2xl">⚡</span>
             <div>
-              <p className="font-medium text-sm text-gray-900">{t('navOpportunitiesTitle')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('navOpportunitiesDesc')}</p>
+              <p className="font-medium text-sm text-foreground">{t('navOpportunitiesTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navOpportunitiesDesc')}</p>
             </div>
           </Link>
           <Link
             href="/supplier/premium"
-            className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-amber-50 rounded-xl border border-amber-200 p-5 hover:shadow-sm transition-shadow"
+            className="flex items-center gap-3 bg-accent-soft rounded-xl border border-gold-300 p-5 hover:shadow-sm transition-shadow"
           >
             <span className="text-2xl">★</span>
             <div>
-              <p className="font-medium text-sm text-gray-900">{t('navSubscriptionTitle')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('navSubscriptionDesc')}</p>
+              <p className="font-medium text-sm text-foreground">{t('navSubscriptionTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navSubscriptionDesc')}</p>
             </div>
           </Link>
         </div>
@@ -299,8 +293,8 @@ export default async function SupplierDashboardPage() {
         {/* Approved products with order & payout tracking */}
         {approvedProducts.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">{t('approvedSectionTitle')}</h2>
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <h2 className="text-sm font-semibold text-foreground mb-3">{t('approvedSectionTitle')}</h2>
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {approvedProducts.map((product) => {
                 const orderCount = product.quotes.length
                 const payoutDue = product.quotes
@@ -313,8 +307,8 @@ export default async function SupplierDashboardPage() {
                 return (
                   <div key={product.id} className="p-4">
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <p className="font-medium text-gray-900 text-sm">{product.product_name}</p>
-                      <span className="text-xs text-gray-500 shrink-0">
+                      <p className="font-medium text-foreground text-sm">{product.product_name}</p>
+                      <span className="text-xs text-muted shrink-0">
                         {t('orderCount', { count: orderCount })}
                       </span>
                     </div>
@@ -322,13 +316,13 @@ export default async function SupplierDashboardPage() {
                     {orderCount > 0 ? (
                       <>
                         <div className="grid grid-cols-2 gap-3 mb-3">
-                          <div className="bg-amber-50 rounded-lg px-3 py-2">
-                            <p className="text-xs text-amber-600">{t('payoutDueShort')}</p>
-                            <p className="font-semibold tabular-nums text-amber-700 text-sm">{formatMAD(payoutDue)}</p>
+                          <div className="bg-warning-soft rounded-lg px-3 py-2">
+                            <p className="text-xs text-warning-fg">{t('payoutDueShort')}</p>
+                            <p className="font-semibold tabular-nums text-warning-fg text-sm">{formatMAD(payoutDue)}</p>
                           </div>
-                          <div className="bg-green-50 rounded-lg px-3 py-2">
-                            <p className="text-xs text-green-600">{t('payoutPaidShort')}</p>
-                            <p className="font-semibold tabular-nums text-green-700 text-sm">{formatMAD(payoutPaid)}</p>
+                          <div className="bg-success-soft rounded-lg px-3 py-2">
+                            <p className="text-xs text-success-fg">{t('payoutPaidShort')}</p>
+                            <p className="font-semibold tabular-nums text-success-fg text-sm">{formatMAD(payoutPaid)}</p>
                           </div>
                         </div>
 
@@ -337,17 +331,17 @@ export default async function SupplierDashboardPage() {
                           {product.quotes.map((q) => {
                             const badgeCls = PAYOUT_BADGE_CLS[q.supplier_payout_status]
                             return (
-                              <div key={q.id} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
-                                <div className="flex items-center gap-2 text-gray-600">
+                              <div key={q.id} className="flex items-center justify-between text-xs bg-surface-2 rounded-lg px-3 py-2">
+                                <div className="flex items-center gap-2 text-muted">
                                   <span>{t('unitsShort', { count: q.quantity_requested })}</span>
-                                  <span className="text-gray-300">·</span>
+                                  <span className="text-line">·</span>
                                   <span>{q.destination_country}{q.destination_city ? ` — ${q.destination_city}` : ''}</span>
-                                  <span className="text-gray-300">·</span>
+                                  <span className="text-line">·</span>
                                   <span>{new Date(q.created_at).toLocaleDateString(locale)}</span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {q.supplier_payout_amount_mad != null && (
-                                    <span className="font-semibold tabular-nums text-gray-900">
+                                    <span className="font-semibold tabular-nums text-foreground">
                                       {formatMAD(q.supplier_payout_amount_mad)}
                                     </span>
                                   )}
@@ -361,7 +355,7 @@ export default async function SupplierDashboardPage() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-xs text-gray-400">{t('noOrders')}</p>
+                      <p className="text-xs text-faint">{t('noOrders')}</p>
                     )}
                   </div>
                 )

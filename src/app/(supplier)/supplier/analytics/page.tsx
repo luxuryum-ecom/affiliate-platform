@@ -2,9 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import type { Profile, SupplierProduct, SupplierQuoteRequest } from '@/types/database'
 
 export async function generateMetadata() {
@@ -71,40 +70,32 @@ export default async function SupplierAnalyticsPage() {
   const tc = await getTranslations('supplier.common')
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/supplier/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">← {tc('dashboard')}</Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('breadcrumb')}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">{tc('signOut')}</button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('breadcrumb')}
+        backHref="/supplier/dashboard"
+        backLabel={tc('dashboard')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-4xl"
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">{t('pageTitle')}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{t('pageSubtitle')}</p>
+          <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+          <p className="text-sm text-muted mt-0.5">{t('pageSubtitle')}</p>
         </div>
 
         {/* Top stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: t('statApproved'),  value: String(approvedProducts.length),  cls: 'bg-green-50 border-green-200 text-green-700' },
-            { label: t('statPending'),   value: String(pendingProducts.length),    cls: 'bg-amber-50 border-amber-200 text-amber-700' },
-            { label: t('statRejected'),  value: String(rejectedProducts.length),   cls: 'bg-red-50 border-red-200 text-red-600' },
-            { label: t('statQuotes'),    value: String(totalQuotes),               cls: 'bg-white border-gray-200 text-gray-900' },
+            { label: t('statApproved'),  value: String(approvedProducts.length),  cls: 'bg-success-soft border-success text-success-fg' },
+            { label: t('statPending'),   value: String(pendingProducts.length),    cls: 'bg-warning-soft border-warning text-warning-fg' },
+            { label: t('statRejected'),  value: String(rejectedProducts.length),   cls: 'bg-danger-soft border-danger text-danger-fg' },
+            { label: t('statQuotes'),    value: String(totalQuotes),               cls: 'bg-surface border-line text-foreground' },
           ].map((s) => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.cls.split(' ').slice(0, 2).join(' ')}`}>
-              <p className="text-xs text-gray-500 leading-tight">{s.label}</p>
+              <p className="text-xs text-muted leading-tight">{s.label}</p>
               <p className={`text-2xl font-bold tabular-nums mt-1 ${s.cls.split(' ').slice(2).join(' ')}`}>{s.value}</p>
             </div>
           ))}
@@ -113,12 +104,12 @@ export default async function SupplierAnalyticsPage() {
         {/* Quote stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { label: t('statNewQuotes'),      value: String(newQuotes),            cls: 'bg-blue-50 border-blue-200 text-blue-700' },
-            { label: t('statApprovedQuotes'), value: String(approvedQuotes),       cls: 'bg-green-50 border-green-200 text-green-700' },
-            { label: t('statRevenue'),        value: formatMAD(totalRevenueMad),   cls: 'bg-white border-gray-200 text-gray-900' },
+            { label: t('statNewQuotes'),      value: String(newQuotes),            cls: 'bg-surface-2 border-line text-foreground' },
+            { label: t('statApprovedQuotes'), value: String(approvedQuotes),       cls: 'bg-success-soft border-success text-success-fg' },
+            { label: t('statRevenue'),        value: formatMAD(totalRevenueMad),   cls: 'bg-surface border-line text-foreground' },
           ].map((s) => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.cls.split(' ').slice(0, 2).join(' ')}`}>
-              <p className="text-xs text-gray-500">{s.label}</p>
+              <p className="text-xs text-muted">{s.label}</p>
               <p className={`text-2xl font-bold tabular-nums mt-1 ${s.cls.split(' ').slice(2).join(' ')}`}>{s.value}</p>
             </div>
           ))}
@@ -127,19 +118,19 @@ export default async function SupplierAnalyticsPage() {
         {/* Per-product breakdown */}
         {productStats.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">{t('productBreakdownTitle')}</h2>
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <h2 className="text-sm font-semibold text-foreground mb-3">{t('productBreakdownTitle')}</h2>
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {productStats.map((p) => (
                 <div key={p.id} className="p-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{p.product_name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-sm font-medium text-foreground">{p.product_name}</p>
+                    <p className="text-xs text-muted mt-0.5">
                       {t('quoteCount', { count: p.quoteCount })} · {t('approvedCount', { count: p.approvedQuotes })}
                     </p>
                   </div>
                   <div className="text-end">
-                    <p className="text-sm font-bold text-gray-900">{formatMAD(p.revenue)}</p>
-                    <p className="text-xs text-gray-400">{t('revenueLabel')}</p>
+                    <p className="text-sm font-bold text-foreground">{formatMAD(p.revenue)}</p>
+                    <p className="text-xs text-faint">{t('revenueLabel')}</p>
                   </div>
                 </div>
               ))}
@@ -148,9 +139,9 @@ export default async function SupplierAnalyticsPage() {
         )}
 
         {approvedProducts.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-            <p className="text-sm text-gray-400">{t('emptyState')}</p>
-            <Link href="/supplier/products" className="mt-3 inline-block text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors">
+          <div className="bg-surface rounded-xl border border-line p-10 text-center">
+            <p className="text-sm text-faint">{t('emptyState')}</p>
+            <Link href="/supplier/products" className="mt-3 inline-block text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
               {t('emptyCtaProducts')}
             </Link>
           </div>
