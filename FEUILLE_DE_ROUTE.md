@@ -4,6 +4,37 @@
 
 ---
 
+# 🔴 PROCHAINE SESSION — PRIORITÉS ABDOU
+> Liste de tête à attaquer en début de prochaine session. Ordre = priorité décroissante.
+> Chaque point : `@architect` plan d'abord → validation Abdou → implémentation. **Rien n'est codé ici.**
+
+## ⭐ PRIORITÉ N°1 — Gestion des commandes style Deliveroo (B2B)
+**LE chantier à attaquer en premier.** Déjà détaillé en **SECTION 2bis-A** (plus bas) — s'y référer.
+- Les commandes qui **arrivent** dans le SaaS → **état / statut** clair (reçue → assignée → confirmée fournisseur → en préparation → prête → ramassée/expédiée → livrée).
+- **Notifications multi-rôles** (fournisseur, admin/superviseur, owner).
+- **Intégrer la saisie des devis** pour les **sur-commandes** (raccord au flux devis existant `quote_requests` / `supplier_quote_requests`).
+- ⚠️ **AVANT tout code : audit de l'existant** (`wholesale_orders` : statuts, timestamps, RLS déjà présents ?). Touche aux **rôles/permissions** → **audit @security RLS** ; tout ce qui touche commission/marge → **audit @finance**. **Ne rien reconstruire sans audit.**
+
+## 2. 🐛 BUG quota produits — la limite ne bloque PAS vraiment
+- **Symptôme constaté** : un fournisseur a **7 produits** alors que le plan **Gratuit en autorise 5** → la limite n'est pas réellement appliquée au moment de l'ajout.
+- **Diagnostiquer les 3 voies d'ajout** : **web** (formulaire / server action), **Telegram** (worker bot), **import CSV** (`publishBulkImport`). Identifier laquelle (ou lesquelles) contourne(nt) le contrôle de limite.
+- **Faire respecter la limite** de façon **centralisée** (un seul chokepoint partagé par les 3 voies, sinon le trou réapparaît). S'appuyer sur `getProductLimitStatus` (`maxAllowed` / `currentCount`) déjà utilisé à l'affichage.
+- *Note* : c'est l'affichage du compteur (carte Telegram) qui a révélé l'incohérence `7/5` — l'affichage est correct, c'est l'**application** de la limite qui manque.
+
+## 3. 🧭 Page « Soumettre un produit » — à repenser comme un GUIDE
+- Aujourd'hui : un simple **message rouge** (« limite atteinte ») bloque sans orienter.
+- **Cible** : une page qui **guide** en proposant directement les **3 voies d'ajout** :
+  1. **Abonnement / plan** (passer à un plan supérieur pour augmenter la limite — réutiliser la carte Premium OR déjà faite).
+  2. **Telegram** (avec l'explication : lier le compte, envoyer photo + description au bot).
+  3. **Import CSV** (catalogue en masse).
+- Esprit : zéro jargon, parcours le plus court, défauts intelligents (fil rouge « utilisateurs pas tech »).
+
+## 4. ⚡ Perf — serveur lourd / lent
+- **Diagnostiquer** la lenteur du serveur (dev et/ou prod) : requêtes lourdes / N+1, `Promise.all` manquants, gros payloads, images, cache, bundle.
+- Établir un constat chiffré **avant** d'optimiser (mesurer d'abord, pas d'optimisation à l'aveugle).
+
+---
+
 ## Comment l'orchestration fonctionne
 
 La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas tout elle-même : elle délègue à l'agent spécialisé selon la tâche (`@architect`, `@backend-db`, `@finance`, `@frontend`, `@security-reviewer`), rassemble les résultats, et te présente les points de validation.
