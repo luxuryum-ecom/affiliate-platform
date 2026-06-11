@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { computeSourcingMatches } from '@/app/actions/sourcing'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import SelectSupplierButton from './SelectSupplierButton'
 import type {
   SourcingRequest,
@@ -12,14 +13,18 @@ import type {
   Product,
 } from '@/types/database'
 
-export const metadata = { title: 'Sourcing intelligent — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.sourcing')
+  return { title: t('metaTitle') }
+}
 
-const STATUS_BADGE: Record<SourcingRequestStatus, { label: string; cls: string }> = {
-  pending:  { label: 'En attente',            cls: 'bg-gray-100 text-gray-500' },
-  matching: { label: 'Analyse en cours',      cls: 'bg-blue-100 text-blue-700' },
-  matched:  { label: 'Fournisseur identifié', cls: 'bg-indigo-100 text-indigo-700' },
-  quoted:   { label: 'Devis créé',            cls: 'bg-green-100 text-green-700' },
-  closed:   { label: 'Clôturée',              cls: 'bg-gray-100 text-gray-400' },
+// CSS only — no label in this map (labels via t())
+const STATUS_BADGE_CLS: Record<SourcingRequestStatus, string> = {
+  pending:  'bg-surface-2 text-muted border border-line',
+  matching: 'bg-warning-subtle text-warning border border-warning-line',
+  matched:  'bg-warning-subtle text-warning-dark border border-warning-line',
+  quoted:   'bg-success-subtle text-success border border-success-line',
+  closed:   'bg-surface-2 text-faint border border-line',
 }
 
 type RequestRow = SourcingRequest & {
@@ -27,13 +32,13 @@ type RequestRow = SourcingRequest & {
 }
 
 function ScoreBar({ score }: { score: number }) {
-  const color = score >= 60 ? 'bg-green-500' : score >= 35 ? 'bg-amber-500' : 'bg-red-400'
+  const color = score >= 60 ? 'bg-success' : score >= 35 ? 'bg-warning' : 'bg-danger'
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+      <div className="flex-1 bg-surface-2 rounded-full h-1.5">
         <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${score}%` }} />
       </div>
-      <span className="text-xs font-semibold text-gray-700 tabular-nums w-6 text-right">{score}</span>
+      <span className="text-xs font-semibold text-foreground tabular-nums w-6 text-right">{score}</span>
     </div>
   )
 }
@@ -51,7 +56,22 @@ export default async function AdminSourcingPage() {
 
   if (profile?.role !== 'admin') redirect('/login')
 
-  // ── Stats ────────────────────────────────────────────────────────────────────
+  const t  = await getTranslations('admin.sourcing')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+
+  function statusLabel(status: SourcingRequestStatus): string {
+    const map: Record<SourcingRequestStatus, string> = {
+      pending:  t('statusPending'),
+      matching: t('statusMatching'),
+      matched:  t('statusMatched'),
+      quoted:   t('statusQuoted'),
+      closed:   t('statusClosed'),
+    }
+    return map[status] ?? status
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
   const [
     { data: allData },
     { count: totalCount },
@@ -85,7 +105,7 @@ export default async function AdminSourcingPage() {
 
   const products = (productsData ?? []) as unknown as Pick<Product, 'id' | 'name'>[]
 
-  // ── Compute matches for pending requests (top 3 each) ────────────────────
+  // ── Compute matches for pending requests (top 3 each) ───────────────────
   const pendingIds = requests.filter((r) => r.status === 'pending').map((r) => r.id)
   const matchesMap = new Map<string, ScoredSupplier[]>()
   await Promise.all(
@@ -95,51 +115,40 @@ export default async function AdminSourcingPage() {
     })
   )
 
+  const stats = [
+    { label: t('statReceived'),   value: String(total),    highlight: false },
+    { label: t('statMatched'),    value: String(matched),  highlight: matched > 0 },
+    { label: t('statQuoted'),     value: String(quoted),   highlight: false },
+    { label: t('statConvRate'),   value: `${convRate}%`,   highlight: false },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Sourcing intelligent</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={tc('dashboard')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         {/* Title */}
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Sourcing intelligent</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Matching automatique grossiste → fournisseur. L&apos;identité du fournisseur reste confidentielle.
-          </p>
+          <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+          <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
 
         {/* Analytics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Demandes reçues',     value: String(total),    highlight: false },
-            { label: 'Matchées / devisées',  value: String(matched),  highlight: matched > 0 },
-            { label: 'Converties en devis',  value: String(quoted),   highlight: false },
-            { label: 'Taux de conversion',   value: `${convRate}%`,   highlight: false },
-          ].map((s) => (
+          {stats.map((s) => (
             <div
               key={s.label}
-              className={`rounded-xl border p-4 ${s.highlight ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}
+              className={`rounded-xl border p-4 ${s.highlight ? 'bg-warning-subtle border-warning-line' : 'bg-surface border-line'}`}
             >
-              <p className="text-xs text-gray-500">{s.label}</p>
-              <p className={`mt-1.5 text-2xl font-bold tabular-nums ${s.highlight ? 'text-amber-700' : 'text-gray-900'}`}>
+              <p className="text-xs text-muted">{s.label}</p>
+              <p className={`mt-1.5 text-2xl font-bold tabular-nums ${s.highlight ? 'text-warning-dark' : 'text-foreground'}`}>
                 {s.value}
               </p>
             </div>
@@ -148,69 +157,69 @@ export default async function AdminSourcingPage() {
 
         {/* Requests list */}
         {requests.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">Aucune demande de sourcing pour le moment.</p>
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">{t('empty')}</p>
           </div>
         ) : (
           <div className="space-y-4">
             {requests.map((r) => {
-              const badge   = STATUS_BADGE[r.status]
-              const matches = matchesMap.get(r.id) ?? []
+              const badgeCls = STATUS_BADGE_CLS[r.status]
+              const matches  = matchesMap.get(r.id) ?? []
 
               return (
-                <div key={r.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div key={r.id} className="bg-surface rounded-xl border border-line overflow-hidden">
                   {/* Header */}
-                  <div className="p-5 border-b border-gray-100">
+                  <div className="p-5 border-b border-line">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{r.product_name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {r.category} · {r.quantity} unités · {Number(r.target_budget_mad).toFixed(2)} MAD/u
+                        <p className="text-sm font-semibold text-foreground">{r.product_name}</p>
+                        <p className="text-xs text-muted mt-0.5">
+                          {r.category} · {t('units', { qty: r.quantity })} · {t('budgetPerUnit', { amount: Number(r.target_budget_mad).toFixed(2) })}
                           {r.target_country ? ` · ${r.target_country}` : ''}
                         </p>
                         {r.wholesaler && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-faint mt-1">
                             {r.wholesaler.full_name}
                             {r.wholesaler.company_name ? ` (${r.wholesaler.company_name})` : ''}
                             {r.wholesaler.phone ? ` · ${r.wholesaler.phone}` : ''}
                           </p>
                         )}
                         {r.notes && (
-                          <p className="text-xs text-gray-500 mt-1 italic">&ldquo;{r.notes}&rdquo;</p>
+                          <p className="text-xs text-muted mt-1 italic">&ldquo;{r.notes}&rdquo;</p>
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>
-                          {badge.label}
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${badgeCls}`}>
+                          {statusLabel(r.status)}
                         </span>
                         <Link
                           href={`/admin/sourcing/${r.id}`}
-                          className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium"
+                          className="text-xs px-3 py-1.5 bg-surface-2 hover:bg-line text-foreground rounded-lg transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-gold-400"
                         >
-                          Détail →
+                          {t('detailLink')}
                         </Link>
                       </div>
                     </div>
                     {r.delivery_deadline && (
-                      <p className="text-xs text-gray-400 mt-2">
-                        Délai : {new Date(r.delivery_deadline).toLocaleDateString('fr-MA')}
+                      <p className="text-xs text-faint mt-2">
+                        {t('deadline', { date: new Date(r.delivery_deadline).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) })}
                       </p>
                     )}
                   </div>
 
                   {/* Matched suppliers (for pending requests) */}
                   {matches.length > 0 && (
-                    <div className="p-5 border-b border-gray-100">
-                      <p className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                        Meilleurs fournisseurs (confidentiel)
+                    <div className="p-5 border-b border-line">
+                      <p className="text-xs font-semibold text-muted mb-3 uppercase tracking-wide">
+                        {t('bestSuppliers')}
                       </p>
                       <div className="space-y-3">
                         {matches.map((m, idx) => (
-                          <div key={m.supplierId} className="rounded-lg border border-gray-100 p-3">
+                          <div key={m.supplierId} className="rounded-lg border border-line p-3">
                             <div className="flex items-center justify-between gap-3 mb-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400 font-semibold w-4">#{idx + 1}</span>
-                                <p className="text-sm font-medium text-gray-900">{m.supplierName}</p>
+                                <span className="text-xs text-faint font-semibold w-4">#{idx + 1}</span>
+                                <p className="text-sm font-medium text-foreground">{m.supplierName}</p>
                               </div>
                               <SelectSupplierButton
                                 requestId={r.id}
@@ -219,16 +228,16 @@ export default async function AdminSourcingPage() {
                               />
                             </div>
                             <ScoreBar score={m.matchScore} />
-                            <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-gray-500">
-                              <span>Catégories: {m.scoreBreakdown.categoryMatch}/30</span>
-                              <span>Pays: {m.scoreBreakdown.countryMatch}/20</span>
-                              <span>Fiabilité: {m.scoreBreakdown.reliability}/30</span>
-                              <span>MOQ: {m.scoreBreakdown.moqCompatibility}/10</span>
-                              <span>Perf: {m.scoreBreakdown.performance}/10</span>
-                              {m.minMoq != null && <span>Min MOQ: {m.minMoq}</span>}
+                            <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-muted">
+                              <span>{t('scoreCategory', { val: m.scoreBreakdown.categoryMatch })}</span>
+                              <span>{t('scoreCountry', { val: m.scoreBreakdown.countryMatch })}</span>
+                              <span>{t('scoreReliability', { val: m.scoreBreakdown.reliability })}</span>
+                              <span>{t('scoreMoq', { val: m.scoreBreakdown.moqCompatibility })}</span>
+                              <span>{t('scorePerf', { val: m.scoreBreakdown.performance })}</span>
+                              {m.minMoq != null && <span>{t('minMoq', { val: m.minMoq })}</span>}
                             </div>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {m.categories} · {m.countries} · Fiabilité {m.reliabilityScore}/100
+                            <p className="text-xs text-faint mt-1">
+                              {m.categories} · {m.countries}
                             </p>
                           </div>
                         ))}
@@ -238,41 +247,41 @@ export default async function AdminSourcingPage() {
 
                   {/* Convert to quote */}
                   {(r.status === 'pending' || r.status === 'matched') && products.length > 0 && (
-                    <div className="p-5 bg-gray-50">
-                      <p className="text-xs font-semibold text-gray-700 mb-3">Créer un devis directement</p>
+                    <div className="p-5 bg-surface-2">
+                      <p className="text-xs font-semibold text-muted mb-3">{t('createQuote')}</p>
                       <form action="/admin/sourcing/convert" method="POST" className="flex flex-wrap gap-3 items-end">
                         <input type="hidden" name="sourcing_request_id" value={r.id} />
                         <input type="hidden" name="quantity" value={r.quantity} />
                         <input type="hidden" name="target_budget_mad" value={r.target_budget_mad} />
                         <input type="hidden" name="notes" value={r.notes ?? ''} />
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Produit catalogue</label>
+                          <label className="block text-xs text-muted mb-1">{t('catalogProduct')}</label>
                           <select
                             name="product_id"
-                            className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                            className="border border-line rounded-lg px-3 py-2 text-xs bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
                           >
-                            <option value="">Choisir un produit...</option>
+                            <option value="">{t('chooseProduct')}</option>
                             {products.map((p) => (
                               <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </select>
                         </div>
                         <Link
-                          href={`/admin/quote-requests`}
-                          className="text-xs px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                          href="/admin/quote-requests"
+                          className="text-xs px-3 py-2 bg-surface-2 text-muted hover:bg-line rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400"
                         >
-                          Voir les devis →
+                          {t('viewQuotes')}
                         </Link>
                       </form>
                     </div>
                   )}
 
                   {r.status === 'quoted' && r.quote_request_id && (
-                    <div className="p-4 bg-green-50">
-                      <p className="text-xs text-green-700">
-                        Devis créé —{' '}
-                        <Link href="/admin/quote-requests" className="underline font-medium">
-                          Voir les demandes de devis
+                    <div className="p-4 bg-success-subtle border-t border-success-line">
+                      <p className="text-xs text-success-dark">
+                        {t('quotedBanner')}{' '}
+                        <Link href="/admin/quote-requests" className="underline font-medium text-success-dark hover:text-success transition-colors">
+                          {t('quotedLink')}
                         </Link>
                       </p>
                     </div>

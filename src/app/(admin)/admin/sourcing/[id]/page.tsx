@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { computeSourcingMatches } from '@/app/actions/sourcing'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import SelectSupplierButton from '../SelectSupplierButton'
 import type {
   SourcingRequest,
@@ -11,24 +12,28 @@ import type {
   ScoredSupplier,
 } from '@/types/database'
 
-export const metadata = { title: 'Détail sourcing — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.sourcingDetail')
+  return { title: t('metaTitle') }
+}
 
-const STATUS_BADGE: Record<SourcingRequestStatus, { label: string; cls: string }> = {
-  pending:  { label: 'En attente',            cls: 'bg-gray-100 text-gray-500' },
-  matching: { label: 'Analyse en cours',      cls: 'bg-blue-100 text-blue-700' },
-  matched:  { label: 'Fournisseur identifié', cls: 'bg-indigo-100 text-indigo-700' },
-  quoted:   { label: 'Devis créé',            cls: 'bg-green-100 text-green-700' },
-  closed:   { label: 'Clôturée',              cls: 'bg-gray-100 text-gray-400' },
+// CSS only — no label in this map (labels via t())
+const STATUS_BADGE_CLS: Record<SourcingRequestStatus, string> = {
+  pending:  'bg-surface-2 text-muted border border-line',
+  matching: 'bg-warning-subtle text-warning border border-warning-line',
+  matched:  'bg-warning-subtle text-warning-dark border border-warning-line',
+  quoted:   'bg-success-subtle text-success border border-success-line',
+  closed:   'bg-surface-2 text-faint border border-line',
 }
 
 function ScoreBar({ score }: { score: number }) {
-  const color = score >= 60 ? 'bg-green-500' : score >= 35 ? 'bg-amber-500' : 'bg-red-400'
+  const color = score >= 60 ? 'bg-success' : score >= 35 ? 'bg-warning' : 'bg-danger'
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+      <div className="flex-1 bg-surface-2 rounded-full h-1.5">
         <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${score}%` }} />
       </div>
-      <span className="text-xs font-semibold text-gray-700 tabular-nums w-6 text-right">{score}</span>
+      <span className="text-xs font-semibold text-foreground tabular-nums w-6 text-right">{score}</span>
     </div>
   )
 }
@@ -55,6 +60,22 @@ export default async function AdminSourcingDetailPage({ params }: PageProps) {
 
   if (profile?.role !== 'admin') redirect('/login')
 
+  const t  = await getTranslations('admin.sourcingDetail')
+  const ts = await getTranslations('admin.sourcing')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+
+  function statusLabel(status: SourcingRequestStatus): string {
+    const map: Record<SourcingRequestStatus, string> = {
+      pending:  ts('statusPending'),
+      matching: ts('statusMatching'),
+      matched:  ts('statusMatched'),
+      quoted:   ts('statusQuoted'),
+      closed:   ts('statusClosed'),
+    }
+    return map[status] ?? status
+  }
+
   const { data } = await supabase
     .from('sourcing_requests')
     .select('*, wholesaler:profiles!wholesaler_id(id,full_name,phone,company_name)')
@@ -65,127 +86,111 @@ export default async function AdminSourcingDetailPage({ params }: PageProps) {
 
   const r = data as unknown as RequestRow
 
-  // Also fetch wholesaler email from auth.users via profiles view
-  const { data: wholesalerAuth } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', r.wholesaler_id)
-    .single()
-
   const matches: ScoredSupplier[] = r.status === 'pending' || r.status === 'matching'
     ? (await computeSourcingMatches(id)).slice(0, 5)
     : []
 
-  const badge = STATUS_BADGE[r.status]
+  const badgeCls = STATUS_BADGE_CLS[r.status]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/admin/sourcing" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Sourcing intelligent
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate max-w-[200px]">
-              {r.product_name}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={r.product_name}
+        backHref="/admin/sourcing"
+        backLabel={t('backLabel')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-4xl"
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
 
         {/* Status + date */}
         <div className="flex items-center gap-3">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>
-            {badge.label}
+          <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${badgeCls}`}>
+            {statusLabel(r.status)}
           </span>
-          <span className="text-xs text-gray-400">
-            Reçue le {new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+          <span className="text-xs text-faint">
+            {t('receivedAt', { date: new Date(r.created_at).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }) })}
           </span>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6">
           {/* Request details */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900">Détails de la demande</h2>
+          <div className="bg-surface rounded-xl border border-line p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-foreground">{t('requestTitle')}</h2>
             <dl className="space-y-2.5 text-sm">
               <div className="flex justify-between gap-2">
-                <dt className="text-gray-500">Produit</dt>
-                <dd className="font-medium text-gray-900 text-right">{r.product_name}</dd>
+                <dt className="text-muted">{t('productLabel')}</dt>
+                <dd className="font-medium text-foreground text-right">{r.product_name}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-gray-500">Catégorie</dt>
-                <dd className="font-medium text-gray-900 text-right">{r.category}</dd>
+                <dt className="text-muted">{t('categoryLabel')}</dt>
+                <dd className="font-medium text-foreground text-right">{r.category}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-gray-500">Quantité</dt>
-                <dd className="font-medium text-gray-900 text-right">{r.quantity.toLocaleString('fr-MA')} unités</dd>
+                <dt className="text-muted">{t('quantityLabel')}</dt>
+                <dd className="font-medium text-foreground text-right">
+                  {t('quantityValue', { qty: r.quantity })}
+                </dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-gray-500">Budget cible</dt>
-                <dd className="font-medium text-gray-900 text-right">{Number(r.target_budget_mad).toFixed(2)} MAD/u</dd>
+                <dt className="text-muted">{t('budgetLabel')}</dt>
+                <dd className="font-medium text-foreground text-right">
+                  {t('budgetValue', { amount: Number(r.target_budget_mad).toFixed(2) })}
+                </dd>
               </div>
               {r.target_country && (
                 <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">Pays cible</dt>
-                  <dd className="font-medium text-gray-900 text-right">{r.target_country}</dd>
+                  <dt className="text-muted">{t('targetCountry')}</dt>
+                  <dd className="font-medium text-foreground text-right">{r.target_country}</dd>
                 </div>
               )}
               {r.delivery_deadline && (
                 <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">Délai souhaité</dt>
-                  <dd className="font-medium text-gray-900 text-right">
-                    {new Date(r.delivery_deadline).toLocaleDateString('fr-FR')}
+                  <dt className="text-muted">{t('deadline')}</dt>
+                  <dd className="font-medium text-foreground text-right">
+                    {new Date(r.delivery_deadline).toLocaleDateString(locale)}
                   </dd>
                 </div>
               )}
             </dl>
             {r.notes && (
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Notes grossiste</p>
-                <p className="text-sm text-gray-700 italic">&ldquo;{r.notes}&rdquo;</p>
+              <div className="pt-3 border-t border-line">
+                <p className="text-xs text-muted mb-1">{t('wholesalerNotes')}</p>
+                <p className="text-sm text-foreground italic">&ldquo;{r.notes}&rdquo;</p>
               </div>
             )}
             {r.admin_notes && (
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Notes internes (admin)</p>
-                <p className="text-sm text-gray-700">{r.admin_notes}</p>
+              <div className="pt-3 border-t border-line">
+                <p className="text-xs text-muted mb-1">{t('adminNotes')}</p>
+                <p className="text-sm text-foreground">{r.admin_notes}</p>
               </div>
             )}
           </div>
 
           {/* Wholesaler contact */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900">Contact grossiste</h2>
+          <div className="bg-surface rounded-xl border border-line p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-foreground">{t('contactTitle')}</h2>
             {r.wholesaler ? (
               <dl className="space-y-2.5 text-sm">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">Nom</dt>
-                  <dd className="font-medium text-gray-900 text-right">{r.wholesaler.full_name}</dd>
+                  <dt className="text-muted">{tc('name')}</dt>
+                  <dd className="font-medium text-foreground text-right">{r.wholesaler.full_name}</dd>
                 </div>
                 {r.wholesaler.company_name && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-gray-500">Société</dt>
-                    <dd className="font-medium text-gray-900 text-right">{r.wholesaler.company_name}</dd>
+                    <dt className="text-muted">{t('companyLabel')}</dt>
+                    <dd className="font-medium text-foreground text-right">{r.wholesaler.company_name}</dd>
                   </div>
                 )}
                 {r.wholesaler.phone && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-gray-500">Téléphone</dt>
+                    <dt className="text-muted">{t('phoneLabel')}</dt>
                     <dd className="text-right">
                       <a
                         href={`tel:${r.wholesaler.phone}`}
-                        className="font-medium text-blue-600 hover:underline"
+                        className="font-medium text-gold-500 hover:text-gold-600 transition-colors"
                       >
                         {r.wholesaler.phone}
                       </a>
@@ -194,22 +199,22 @@ export default async function AdminSourcingDetailPage({ params }: PageProps) {
                 )}
               </dl>
             ) : (
-              <p className="text-sm text-gray-400">Informations grossiste non disponibles.</p>
+              <p className="text-sm text-faint">{t('noWholesaler')}</p>
             )}
 
-            <div className="pt-3 border-t border-gray-100 space-y-2">
-              <p className="text-xs font-medium text-gray-700">Actions</p>
+            <div className="pt-3 border-t border-line space-y-2">
+              <p className="text-xs font-medium text-muted">{t('actionsTitle')}</p>
               <Link
                 href="/admin/quote-requests"
-                className="block w-full text-center text-xs px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                className="block w-full text-center text-xs px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium focus:outline-none focus:ring-2 focus:ring-gold-400"
               >
-                Voir les demandes de devis →
+                {t('viewQuoteRequests')}
               </Link>
               <Link
                 href="/admin/supplier-quotes"
-                className="block w-full text-center text-xs px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="block w-full text-center text-xs px-3 py-2 bg-surface-2 text-muted hover:bg-line rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400"
               >
-                Voir les devis marketplace →
+                {t('viewMarketplaceQuotes')}
               </Link>
             </div>
           </div>
@@ -217,17 +222,18 @@ export default async function AdminSourcingDetailPage({ params }: PageProps) {
 
         {/* Matched suppliers */}
         {matches.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">
-              Fournisseurs suggérés <span className="text-xs font-normal text-gray-400">(confidentiel — non visible grossiste)</span>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">
+              {t('suppliersTitle')}{' '}
+              <span className="text-xs font-normal text-faint">{t('suppliersConfidential')}</span>
             </h2>
             <div className="space-y-3">
               {matches.map((m, idx) => (
-                <div key={m.supplierId} className="rounded-lg border border-gray-100 p-4">
+                <div key={m.supplierId} className="rounded-lg border border-line p-4">
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 font-semibold w-4">#{idx + 1}</span>
-                      <p className="text-sm font-medium text-gray-900">{m.supplierName}</p>
+                      <span className="text-xs text-faint font-semibold w-4">#{idx + 1}</span>
+                      <p className="text-sm font-medium text-foreground">{m.supplierName}</p>
                     </div>
                     <SelectSupplierButton
                       requestId={r.id}
@@ -236,16 +242,16 @@ export default async function AdminSourcingDetailPage({ params }: PageProps) {
                     />
                   </div>
                   <ScoreBar score={m.matchScore} />
-                  <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-gray-500">
-                    <span>Catégories: {m.scoreBreakdown.categoryMatch}/30</span>
-                    <span>Pays: {m.scoreBreakdown.countryMatch}/20</span>
-                    <span>Fiabilité: {m.scoreBreakdown.reliability}/30</span>
-                    <span>MOQ: {m.scoreBreakdown.moqCompatibility}/10</span>
-                    <span>Perf: {m.scoreBreakdown.performance}/10</span>
-                    {m.minMoq != null && <span>Min MOQ: {m.minMoq}</span>}
+                  <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-muted">
+                    <span>{ts('scoreCategory', { val: m.scoreBreakdown.categoryMatch })}</span>
+                    <span>{ts('scoreCountry', { val: m.scoreBreakdown.countryMatch })}</span>
+                    <span>{ts('scoreReliability', { val: m.scoreBreakdown.reliability })}</span>
+                    <span>{ts('scoreMoq', { val: m.scoreBreakdown.moqCompatibility })}</span>
+                    <span>{ts('scorePerf', { val: m.scoreBreakdown.performance })}</span>
+                    {m.minMoq != null && <span>{ts('minMoq', { val: m.minMoq })}</span>}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {m.categories} · {m.countries} · Fiabilité {m.reliabilityScore}/100
+                  <p className="text-xs text-faint mt-1">
+                    {m.categories} · {m.countries}
                   </p>
                 </div>
               ))}
@@ -254,11 +260,11 @@ export default async function AdminSourcingDetailPage({ params }: PageProps) {
         )}
 
         {r.status === 'quoted' && r.quote_request_id && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <p className="text-sm text-green-700">
-              Devis créé —{' '}
-              <Link href="/admin/quote-requests" className="underline font-medium">
-                Voir les demandes de devis
+          <div className="bg-success-subtle border border-success-line rounded-xl p-4">
+            <p className="text-sm text-success-dark">
+              {t('quotedBanner')}{' '}
+              <Link href="/admin/quote-requests" className="underline font-medium text-success-dark hover:text-success transition-colors">
+                {t('quotedLink')}
               </Link>
             </p>
           </div>
