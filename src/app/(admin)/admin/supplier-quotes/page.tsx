@@ -1,20 +1,28 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { labelPurchaseProfile, labelVolumeTier } from '@/lib/rfq-buyer-intake'
-import { PAYOUT_STATUS_BADGE } from '@/components/admin/supplier-payout-form'
+import { PAYOUT_STATUS_CLS } from '@/components/admin/supplier-payout-form'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import type { SupplierQuoteRequest, SupplierProduct, SupplierQuoteRequestStatus, SupplierPayoutStatus, Profile } from '@/types/database'
 
-export const metadata = { title: 'Devis fournisseurs — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.supplierQuotes')
+  return { title: t('metaTitle') }
+}
 
-const STATUS_BADGE: Record<SupplierQuoteRequestStatus, { label: string; cls: string }> = {
-  new:       { label: 'Nouveau',    cls: 'bg-gray-100 text-gray-600' },
-  studying:  { label: 'En étude',   cls: 'bg-amber-100 text-amber-700' },
-  quoted:    { label: 'Devis émis', cls: 'bg-blue-100 text-blue-700' },
-  approved:  { label: 'Approuvé',   cls: 'bg-green-100 text-green-700' },
-  rejected:  { label: 'Rejeté',     cls: 'bg-red-100 text-red-600' },
+function getStatusBadgeI18n(status: SupplierQuoteRequestStatus, t: Awaited<ReturnType<typeof getTranslations<'admin.supplierQuoteDetail'>>>): { label: string; cls: string } {
+  const map: Record<SupplierQuoteRequestStatus, { labelKey: string; cls: string }> = {
+    new:       { labelKey: 'statusNew',      cls: 'bg-surface-2 text-muted border border-line' },
+    studying:  { labelKey: 'statusStudying', cls: 'bg-warning-soft text-warning-fg border border-warning' },
+    quoted:    { labelKey: 'statusQuoted',   cls: 'bg-surface-2 text-foreground border border-line' },
+    approved:  { labelKey: 'statusApproved', cls: 'bg-success-soft text-success-fg border border-success' },
+    rejected:  { labelKey: 'statusRejected', cls: 'bg-danger-soft text-danger-fg border border-danger' },
+  }
+  const entry = map[status]
+  return { label: t(entry.labelKey as Parameters<typeof t>[0]), cls: entry.cls }
 }
 
 type QuoteRow = SupplierQuoteRequest & {
@@ -30,6 +38,11 @@ interface PageProps {
 export default async function AdminSupplierQuotesPage({ searchParams }: PageProps) {
   const filters = await searchParams
   const supabase = await createClient()
+  const t = await getTranslations('admin.supplierQuotes')
+  const td = await getTranslations('admin.supplierQuoteDetail')
+  const tc = await getTranslations('admin.common')
+  const tp = await getTranslations('admin.supplierPayoutForm')
+  const locale = await getLocale()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -59,7 +72,7 @@ export default async function AdminSupplierQuotesPage({ searchParams }: PageProp
   const { data } = await query
   const quotes = (data ?? []) as unknown as QuoteRow[]
 
-  // Analytics summary
+  // Analytics summary — ARGENT: calculs inchangés
   const totalDue = quotes
     .filter((q) => ['pending', 'partially_paid'].includes(q.supplier_payout_status))
     .reduce((s, q) => s + (q.supplier_payout_amount_mad ?? 0), 0)
@@ -69,56 +82,50 @@ export default async function AdminSupplierQuotesPage({ searchParams }: PageProp
   const totalCommission = quotes
     .reduce((s, q) => s + (q.platform_commission_amount_mad ?? 0), 0)
 
+  const payoutFilterLabels: Record<string, string> = {
+    '':              t('filterAll'),
+    not_due:        tp('status.not_due'),
+    pending:        tp('status.pending'),
+    partially_paid: tp('status.partially_paid'),
+    paid:           tp('status.paid'),
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Demandes de devis — Marketplace</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/admin/supplier-analytics" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
-              Analytics →
-            </Link>
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={tc('dashboard')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Demandes de devis — Marketplace</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Devis issus de la marketplace fournisseurs (produits supplier). Pour les devis catalogue interne, voir{' '}
-            <Link href="/admin/quote-requests" className="underline underline-offset-2 hover:text-gray-800">
-              Demandes de devis →
+          <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+          <p className="text-sm text-muted mt-0.5">
+            {t('subtitle')}{' '}
+            <Link href="/admin/quote-requests" className="underline underline-offset-2 hover:text-foreground">
+              {t('internalQuotesLink')}
             </Link>
           </p>
         </div>
 
-        {/* Analytics strip */}
+        {/* Analytics strip — ARGENT: valeurs inchangées */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">À verser</p>
-            <p className="text-xl font-bold text-amber-600 tabular-nums">{formatMAD(totalDue)}</p>
+          <div className="bg-surface rounded-xl border border-warning p-4">
+            <p className="text-xs text-muted mb-1">{t('kpiDue')}</p>
+            <p className="text-xl font-bold text-warning-fg tabular-nums">{formatMAD(totalDue)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Versé</p>
-            <p className="text-xl font-bold text-green-600 tabular-nums">{formatMAD(totalPaid)}</p>
+          <div className="bg-surface rounded-xl border border-success p-4">
+            <p className="text-xs text-muted mb-1">{t('kpiPaid')}</p>
+            <p className="text-xl font-bold text-success-fg tabular-nums">{formatMAD(totalPaid)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Commission Mozouna</p>
-            <p className="text-xl font-bold text-gray-900 tabular-nums">{formatMAD(totalCommission)}</p>
+          <div className="bg-surface rounded-xl border border-line p-4">
+            <p className="text-xs text-muted mb-1">{t('kpiCommission')}</p>
+            <p className="text-xl font-bold text-foreground tabular-nums">{formatMAD(totalCommission)}</p>
           </div>
         </div>
 
@@ -130,78 +137,78 @@ export default async function AdminSupplierQuotesPage({ searchParams }: PageProp
               href={s ? `/admin/supplier-quotes?payout=${s}` : '/admin/supplier-quotes'}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 (filters.payout ?? '') === s
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-surface text-muted border-line hover:border-foreground'
               }`}
             >
-              {s === '' ? 'Tous' : PAYOUT_STATUS_BADGE[s as SupplierPayoutStatus].label}
+              {payoutFilterLabels[s]}
             </Link>
           ))}
         </div>
 
         {quotes.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">Aucun devis fournisseur.</p>
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">{t('empty')}</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {quotes.map((q) => {
-              const payoutBadge = PAYOUT_STATUS_BADGE[q.supplier_payout_status]
-              const statusBadge = STATUS_BADGE[q.status]
+              const payoutCls = PAYOUT_STATUS_CLS[q.supplier_payout_status]
+              const statusBadge = getStatusBadgeI18n(q.status, td)
               return (
                 <div key={q.id} className="p-4 flex items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="font-medium text-gray-900 text-sm truncate max-w-[200px]">
-                        {q.supplier_product?.product_name ?? 'Produit inconnu'}
+                      <span className="font-medium text-foreground text-sm truncate max-w-[200px]">
+                        {q.supplier_product?.product_name ?? tc('productFallback')}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge.cls}`}>
                         {statusBadge.label}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${payoutBadge.cls}`}>
-                        {payoutBadge.label}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${payoutCls}`}>
+                        {tp(`status.${q.supplier_payout_status}` as Parameters<typeof tp>[0])}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 flex flex-wrap gap-x-2">
-                      <span>Fournisseur : {q.supplier_product?.supplier?.full_name ?? '—'}</span>
-                      <span className="text-gray-300">·</span>
-                      <span>{q.quantity_requested} u.</span>
+                    <p className="text-xs text-muted flex flex-wrap gap-x-2">
+                      <span>{t('supplier')} : {q.supplier_product?.supplier?.full_name ?? '—'}</span>
+                      <span className="text-faint">·</span>
+                      <span>{t('units', { qty: q.quantity_requested })}</span>
                       {q.buyer_purchase_profile && (
                         <>
-                          <span className="text-gray-300">·</span>
+                          <span className="text-faint">·</span>
                           <span>{labelPurchaseProfile(q.buyer_purchase_profile)}</span>
                         </>
                       )}
                       {q.buyer_volume_tier && (
                         <>
-                          <span className="text-gray-300">·</span>
+                          <span className="text-faint">·</span>
                           <span>{labelVolumeTier(q.buyer_volume_tier)}</span>
                         </>
                       )}
                       {q.quoted_unit_price_mad != null && (
                         <>
-                          <span className="text-gray-300">·</span>
+                          <span className="text-faint">·</span>
                           <span>{formatMAD(q.quoted_unit_price_mad)}/u</span>
                         </>
                       )}
                       {q.supplier_payout_amount_mad != null && (
                         <>
-                          <span className="text-gray-300">·</span>
-                          <span className="font-medium text-gray-700">
-                            Reversement : {formatMAD(q.supplier_payout_amount_mad)}
+                          <span className="text-faint">·</span>
+                          <span className="font-medium text-foreground">
+                            {t('payout', { amount: formatMAD(q.supplier_payout_amount_mad) })}
                           </span>
                         </>
                       )}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(q.created_at).toLocaleDateString('fr-FR')}
+                    <p className="text-xs text-faint mt-0.5">
+                      {new Date(q.created_at).toLocaleDateString(locale)}
                     </p>
                   </div>
                   <Link
                     href={`/admin/supplier-quotes/${q.id}`}
-                    className="shrink-0 text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium"
+                    className="shrink-0 text-xs px-3 py-1.5 bg-surface-2 hover:bg-line text-foreground rounded-lg transition-colors font-medium"
                   >
-                    Détail →
+                    {locale === 'ar' ? t('detailAr') : t('detail')}
                   </Link>
                 </div>
               )
