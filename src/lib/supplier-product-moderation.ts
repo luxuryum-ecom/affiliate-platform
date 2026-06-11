@@ -201,9 +201,9 @@ export const SUPPLIER_PRODUCT_STATUS_BADGES: Record<
   SupplierProductStatus,
   { label: string; cls: string }
 > = {
-  pending_review: { label: 'En attente de validation', cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Approuvé', cls: 'bg-green-100 text-green-700' },
-  blocked: { label: 'Bloqué', cls: 'bg-red-100 text-red-600' },
+  pending_review: { label: 'En attente de validation', cls: 'bg-warning-soft text-warning-fg' },
+  approved: { label: 'Approuvé', cls: 'bg-success-soft text-success-fg' },
+  blocked: { label: 'Bloqué', cls: 'bg-danger-soft text-danger-fg' },
 }
 
 export const MODERATION_SIGNAL_LABELS: Record<ModerationSignal, string> = {

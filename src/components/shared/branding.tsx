@@ -37,20 +37,22 @@ export function OriginBadge({ country, className = '' }: { country: string; clas
 
 // ─── Category badge ────────────────────────────────────────────────────────────
 
+// Chips catégorie neutralisés (plus d'arc-en-ciel) : fond neutre + accent OR.
+const CATEGORY_CHIP = 'bg-surface-2 text-accent-fg border border-line'
 const CATEGORY_COLORS: Record<string, string> = {
-  'Textile':              'bg-pink-50 text-pink-700 border border-pink-200',
-  'Matières premières':   'bg-stone-50 text-stone-700 border border-stone-200',
-  'Chaussures':           'bg-orange-50 text-orange-700 border border-orange-200',
-  'Cosmétique & hygiène': 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200',
-  'Alimentaire':          'bg-lime-50 text-lime-700 border border-lime-200',
-  'Maison & packaging':   'bg-cyan-50 text-cyan-700 border border-cyan-200',
-  'Artisanat':            'bg-amber-50 text-amber-700 border border-amber-200',
-  'Autres':               'bg-gray-100 text-gray-600 border border-gray-200',
+  'Textile':              CATEGORY_CHIP,
+  'Matières premières':   CATEGORY_CHIP,
+  'Chaussures':           CATEGORY_CHIP,
+  'Cosmétique & hygiène': CATEGORY_CHIP,
+  'Alimentaire':          CATEGORY_CHIP,
+  'Maison & packaging':   CATEGORY_CHIP,
+  'Artisanat':            CATEGORY_CHIP,
+  'Autres':               CATEGORY_CHIP,
 }
 
 export function CategoryBadge({ category, subcategory, className = '' }: { category?: string; subcategory?: string; className?: string }) {
   if (!category) return null
-  const cls = CATEGORY_COLORS[category] ?? 'bg-gray-100 text-gray-600 border border-gray-200'
+  const cls = CATEGORY_COLORS[category] ?? CATEGORY_CHIP
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cls} ${className}`}>
       {category}
@@ -62,13 +64,10 @@ export function CategoryBadge({ category, subcategory, className = '' }: { categ
 // ─── Supplier type badge ───────────────────────────────────────────────────────
 
 export function SupplierTypeBadge({ type }: { type: 'morocco' | 'international' }) {
-  return type === 'morocco' ? (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-      🇲🇦 Fournisseur Maroc
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-200">
-      🌍 International
+  // Type = information neutre (différencié par le drapeau), plus de vert/bleu.
+  return (
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-surface-2 text-muted border border-line">
+      {type === 'morocco' ? '🇲🇦 Fournisseur Maroc' : '🌍 International'}
     </span>
   )
 }
@@ -77,11 +76,13 @@ export function SupplierTypeBadge({ type }: { type: 'morocco' | 'international' 
 
 export function AvailabilityBadge({ type }: { type: string }) {
   return type === 'local_stock' ? (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+    // Stock dispo = SUCCÈS (vert sémantique légitime).
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success-soft text-success-fg border border-success">
       ✓ Stock disponible
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+    // Import/commande = info neutre (plus de violet).
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">
       ⏳ Import / Commande
     </span>
   )
@@ -90,8 +91,9 @@ export function AvailabilityBadge({ type }: { type: string }) {
 // ─── Premium badges ────────────────────────────────────────────────────────────
 
 export function VerifiedBadge() {
+  // Signal premium → accent OR (signature).
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700 border border-amber-300">
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-300">
       ✓ Vérifié
     </span>
   )
@@ -99,7 +101,7 @@ export function VerifiedBadge() {
 
 export function FeaturedBadge() {
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-700 border border-indigo-300">
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-300">
       ★ Vedette
     </span>
   )
@@ -124,15 +126,16 @@ export function TrustBadgesStrip() {
 
 export function GoldSupplierBadge() {
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-yellow-50 text-yellow-700 border border-yellow-300">
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-400">
       ✦ Gold
     </span>
   )
 }
 
 export function FastResponseBadge() {
+  // Trait premium positif (pas un succès/stock) → accent OR, plus de vert déco.
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-green-50 text-green-700 border border-green-300">
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-200">
       ⚡ Réactif
     </span>
   )
@@ -161,7 +164,7 @@ export function SupplierLogoBlock({
 }) {
   const icon = (category && CATEGORY_ICONS[category]) ?? (supplierType === 'morocco' ? '🇲🇦' : '🌍')
   const dim = size === 'sm' ? 'w-7 h-7 text-sm' : 'w-9 h-9 text-base'
-  const bg = supplierType === 'morocco' ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'
+  const bg = 'bg-surface-2 border-line' // neutre (plus de vert/bleu) — l'icône différencie
   return (
     <div className={`${dim} ${bg} rounded-lg border flex items-center justify-center flex-shrink-0`}>
       {icon}
@@ -173,26 +176,28 @@ export function SupplierLogoBlock({
 
 export function MOQChip({ qty, unit }: { qty: number; unit: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-surface-2 text-muted border border-line">
       MOQ {qty} {unit}
     </span>
   )
 }
 
 export function LeadTimeChip({ days }: { days: number }) {
+  // Délai = info neutre (plus de bleu).
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200">
+    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-surface-2 text-muted border border-line">
       {days}j
     </span>
   )
 }
 
 export function StockChip({ qty, unit }: { qty: number; unit: string }) {
+  // Niveau de stock = sémantique : succès / en attente / rupture.
   const cls = qty > 100
-    ? 'bg-green-50 text-green-700 border-green-200'
+    ? 'bg-success-soft text-success-fg border-success'
     : qty > 0
-    ? 'bg-amber-50 text-amber-700 border-amber-200'
-    : 'bg-red-50 text-red-600 border-red-200'
+    ? 'bg-warning-soft text-warning-fg border-warning'
+    : 'bg-danger-soft text-danger-fg border-danger'
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border ${cls}`}>
       {qty > 0 ? `${qty} ${unit}` : 'Rupture'}
