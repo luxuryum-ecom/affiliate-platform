@@ -2618,6 +2618,59 @@
       "totalCost": "Coût total",
       "grossProfit": "Profit brut",
       "margin": "Marge"
+    },
+    "samples": {
+      "metaTitle": "Médiation échantillons — Administration",
+      "pageTitle": "Médiation échantillons",
+      "backLabel": "Dashboard",
+      "heading": "Médiation échantillons & catalogues",
+      "subtitle": "Identité fournisseur et identité acheteur masquées mutuellement.",
+      "statTotal": "Demandes totales",
+      "statPending": "En attente",
+      "statPendingFiles": "Fichiers à valider",
+      "statPendingCatalogs": "Catalogues à valider",
+      "requestsHeading": "Demandes d’échantillons",
+      "empty": "Aucune demande.",
+      "adminNote": "Note admin",
+      "supplierFiles": "Fichiers fournisseur",
+      "open": "Ouvrir",
+      "detail": "Détail",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "markShipped": "Marquer expédié",
+      "markDelivered": "Marquer livré",
+      "catalogsHeading": "Catalogues fournisseurs",
+      "attachmentsHeading": "Pièces jointes produit",
+      "status": {
+        "pending": "En attente",
+        "supplier_reply": "Répondu",
+        "approved": "Approuvé",
+        "rejected": "Refusé",
+        "shipped": "Expédié",
+        "delivered": "Livré"
+      },
+      "type": {
+        "sample": "Échantillon physique",
+        "photos": "Photos produit",
+        "video": "Vidéo produit",
+        "technical_sheet": "Fiche technique"
+      }
+    },
+    "sampleDetail": {
+      "metaTitle": "Détail demande échantillon — Administration",
+      "receivedOn": "Reçue le {date}",
+      "requestDetails": "Détails de la demande",
+      "typeLabel": "Type",
+      "wholesalerMessage": "Message grossiste",
+      "adminNotes": "Notes internes (admin)",
+      "wholesalerContact": "Contact grossiste",
+      "company": "Société",
+      "wholesalerUnavailable": "Identité grossiste non disponible.",
+      "actions": "Actions",
+      "supplierFiles": "Fichiers fournisseur",
+      "fileApproved": "Approuvé",
+      "filePending": "En attente d’approbation",
+      "noFiles": "Aucun fichier fournisseur pour le moment."
     }
   }
 }

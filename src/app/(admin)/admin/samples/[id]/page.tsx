@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import {
   SampleStatusButton,
   FileApprovalButton,
@@ -14,23 +15,26 @@ import type {
   SupplierProduct,
 } from '@/types/database'
 
-export const metadata = { title: 'Détail demande échantillon — Administration' }
-
-const STATUS_BADGE: Record<SampleRequestStatus, { label: string; cls: string }> = {
-  pending:        { label: 'En attente',    cls: 'bg-amber-100 text-amber-700' },
-  supplier_reply: { label: 'Répondu',       cls: 'bg-blue-100 text-blue-700' },
-  approved:       { label: 'Approuvé',      cls: 'bg-green-100 text-green-700' },
-  rejected:       { label: 'Refusé',        cls: 'bg-red-100 text-red-600' },
-  shipped:        { label: 'Expédié',       cls: 'bg-indigo-100 text-indigo-700' },
-  delivered:      { label: 'Livré',         cls: 'bg-gray-100 text-gray-500' },
+export async function generateMetadata() {
+  const t = await getTranslations('admin.sampleDetail')
+  return { title: t('metaTitle') }
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  sample:          'Échantillon physique',
-  photos:          'Photos produit',
-  video:           'Vidéo produit',
-  technical_sheet: 'Fiche technique',
+const TYPE_KEYS = ['sample', 'photos', 'video', 'technical_sheet']
+
+// CSS only — labels via t()
+const STATUS_CLS: Record<SampleRequestStatus, string> = {
+  pending:        'bg-warning-soft text-warning-fg border-warning',
+  supplier_reply: 'bg-surface-2 text-muted border-line',
+  approved:       'bg-success-soft text-success-fg border-success',
+  rejected:       'bg-danger-soft text-danger-fg border-danger',
+  shipped:        'bg-surface-2 text-muted border-line',
+  delivered:      'bg-surface-2 text-faint border-line',
 }
+
+const NEUTRAL_BTN = 'bg-surface-2 text-muted border border-line hover:bg-surface'
+const APPROVE_BTN = 'bg-success-soft text-success-fg border border-success hover:opacity-80'
+const REJECT_BTN  = 'bg-danger-soft text-danger-fg border border-danger hover:opacity-80'
 
 type SampleRow = SampleRequest & {
   product: Pick<SupplierProduct, 'id' | 'product_name'> | null
@@ -56,6 +60,14 @@ export default async function AdminSampleDetailPage({ params }: PageProps) {
     .single() as { data: Pick<Profile, 'full_name' | 'role'> | null; error: unknown }
 
   if (profile?.role !== 'admin') redirect('/login')
+
+  const t  = await getTranslations('admin.sampleDetail')
+  const ts = await getTranslations('admin.samples')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+  const isRtl = locale === 'ar'
+  const dateLocale = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-FR'
+  const typeLabel = (type: string) => (TYPE_KEYS.includes(type) ? ts(`type.${type}`) : type)
 
   const { data } = await supabase
     .from('sample_requests')
@@ -84,60 +96,47 @@ export default async function AdminSampleDetailPage({ params }: PageProps) {
     })
   )
 
-  const badge = STATUS_BADGE[r.status]
+  const cls = STATUS_CLS[r.status]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/admin/samples" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Médiation échantillons
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate max-w-[200px]">
-              {TYPE_LABEL[r.request_type] ?? r.request_type}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={typeLabel(r.request_type)}
+        backHref="/admin/samples"
+        backLabel={ts('pageTitle')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-4xl"
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
 
         {/* Status + date */}
         <div className="flex items-center gap-3">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>
-            {badge.label}
+          <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${cls}`}>
+            {ts(`status.${r.status}`)}
           </span>
-          <span className="text-xs text-gray-400">
-            Reçue le {new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+          <span className="text-xs text-faint">
+            {t('receivedOn', { date: new Date(r.created_at).toLocaleDateString(dateLocale, { day: 'numeric', month: 'long', year: 'numeric' }) })}
           </span>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6">
           {/* Request details */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900">Détails de la demande</h2>
+          <div className="bg-surface rounded-xl border border-line p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-foreground">{t('requestDetails')}</h2>
             <dl className="space-y-2.5 text-sm">
               <div className="flex justify-between gap-2">
-                <dt className="text-gray-500">Type</dt>
-                <dd className="font-medium text-gray-900 text-right">{TYPE_LABEL[r.request_type] ?? r.request_type}</dd>
+                <dt className="text-muted">{t('typeLabel')}</dt>
+                <dd className="font-medium text-foreground text-right">{typeLabel(r.request_type)}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-gray-500">Produit</dt>
-                <dd className="font-medium text-gray-900 text-right">
+                <dt className="text-muted">{tc('product')}</dt>
+                <dd className="font-medium text-foreground text-right">
                   {r.product ? (
                     <Link
                       href={`/wholesale/marketplace/${r.product.id}`}
-                      className="text-blue-600 hover:underline"
+                      className="text-gold-500 hover:text-gold-600 transition-colors"
                     >
                       {r.product.product_name}
                     </Link>
@@ -146,39 +145,39 @@ export default async function AdminSampleDetailPage({ params }: PageProps) {
               </div>
             </dl>
             {r.message && (
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Message grossiste</p>
-                <p className="text-sm text-gray-700 italic">&ldquo;{r.message}&rdquo;</p>
+              <div className="pt-3 border-t border-line">
+                <p className="text-xs text-muted mb-1">{t('wholesalerMessage')}</p>
+                <p className="text-sm text-foreground italic">&ldquo;{r.message}&rdquo;</p>
               </div>
             )}
             {r.admin_notes && (
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Notes internes (admin)</p>
-                <p className="text-sm text-gray-700">{r.admin_notes}</p>
+              <div className="pt-3 border-t border-line">
+                <p className="text-xs text-muted mb-1">{t('adminNotes')}</p>
+                <p className="text-sm text-foreground">{r.admin_notes}</p>
               </div>
             )}
           </div>
 
           {/* Wholesaler contact */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900">Contact grossiste</h2>
+          <div className="bg-surface rounded-xl border border-line p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-foreground">{t('wholesalerContact')}</h2>
             {r.wholesaler ? (
               <dl className="space-y-2.5 text-sm">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">Nom</dt>
-                  <dd className="font-medium text-gray-900 text-right">{r.wholesaler.full_name}</dd>
+                  <dt className="text-muted">{tc('name')}</dt>
+                  <dd className="font-medium text-foreground text-right">{r.wholesaler.full_name}</dd>
                 </div>
                 {r.wholesaler.company_name && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-gray-500">Société</dt>
-                    <dd className="font-medium text-gray-900 text-right">{r.wholesaler.company_name}</dd>
+                    <dt className="text-muted">{t('company')}</dt>
+                    <dd className="font-medium text-foreground text-right">{r.wholesaler.company_name}</dd>
                   </div>
                 )}
                 {r.wholesaler.phone && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-gray-500">Téléphone</dt>
+                    <dt className="text-muted">{tc('phone')}</dt>
                     <dd className="text-right">
-                      <a href={`tel:${r.wholesaler.phone}`} className="font-medium text-blue-600 hover:underline">
+                      <a href={`tel:${r.wholesaler.phone}`} className="font-medium text-gold-500 hover:text-gold-600 transition-colors">
                         {r.wholesaler.phone}
                       </a>
                     </dd>
@@ -186,35 +185,35 @@ export default async function AdminSampleDetailPage({ params }: PageProps) {
                 )}
               </dl>
             ) : (
-              <p className="text-sm text-gray-400">Identité grossiste non disponible.</p>
+              <p className="text-sm text-faint">{t('wholesalerUnavailable')}</p>
             )}
           </div>
         </div>
 
         {/* Status actions */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-3">Actions</h2>
+        <div className="bg-surface rounded-xl border border-line p-5">
+          <h2 className="text-sm font-semibold text-foreground mb-3">{t('actions')}</h2>
           <div className="flex flex-wrap gap-2">
-            {r.status !== 'approved'  && <SampleStatusButton requestId={r.id} newStatus="approved"  label="Approuver"       cls="bg-green-600 text-white hover:bg-green-700" />}
-            {r.status !== 'rejected'  && <SampleStatusButton requestId={r.id} newStatus="rejected"  label="Rejeter"         cls="bg-red-500 text-white hover:bg-red-600" />}
-            {r.status === 'approved'  && <SampleStatusButton requestId={r.id} newStatus="shipped"   label="Marquer expédié" cls="bg-indigo-600 text-white hover:bg-indigo-700" />}
-            {r.status === 'shipped'   && <SampleStatusButton requestId={r.id} newStatus="delivered" label="Marquer livré"   cls="bg-gray-700 text-white hover:bg-gray-800" />}
+            {r.status !== 'approved'  && <SampleStatusButton requestId={r.id} newStatus="approved"  label={ts('approve')}       cls={APPROVE_BTN} />}
+            {r.status !== 'rejected'  && <SampleStatusButton requestId={r.id} newStatus="rejected"  label={ts('reject')}        cls={REJECT_BTN} />}
+            {r.status === 'approved'  && <SampleStatusButton requestId={r.id} newStatus="shipped"   label={ts('markShipped')}   cls={NEUTRAL_BTN} />}
+            {r.status === 'shipped'   && <SampleStatusButton requestId={r.id} newStatus="delivered" label={ts('markDelivered')} cls={NEUTRAL_BTN} />}
           </div>
         </div>
 
         {/* Files */}
         {files.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Fichiers fournisseur</h2>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-3">{t('supplierFiles')}</h2>
             <div className="space-y-3">
               {files.map((f) => (
-                <div key={f.id} className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-gray-100 p-3">
+                <div key={f.id} className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-line p-3">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{f.file_type === 'image' ? '🖼️' : f.file_type === 'video' ? '🎥' : '📄'}</span>
                     <div>
-                      <p className="text-xs font-medium text-gray-800">{f.filename}</p>
-                      <p className="text-xs text-gray-400">
-                        {f.admin_approved ? 'Approuvé' : 'En attente d\'approbation'}
+                      <p className="text-xs font-medium text-foreground">{f.filename}</p>
+                      <p className="text-xs text-faint">
+                        {f.admin_approved ? t('fileApproved') : t('filePending')}
                       </p>
                     </div>
                   </div>
@@ -224,9 +223,9 @@ export default async function AdminSampleDetailPage({ params }: PageProps) {
                         href={f.signedUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                        className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${NEUTRAL_BTN}`}
                       >
-                        Ouvrir →
+                        {ts('open')} {isRtl ? '←' : '→'}
                       </a>
                     )}
                     {!f.admin_approved && <FileApprovalButton fileId={f.id} approved={true} />}
@@ -239,8 +238,8 @@ export default async function AdminSampleDetailPage({ params }: PageProps) {
         )}
 
         {files.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-            <p className="text-sm text-gray-400">Aucun fichier fournisseur pour le moment.</p>
+          <div className="bg-surface rounded-xl border border-line p-5 text-center">
+            <p className="text-sm text-faint">{t('noFiles')}</p>
           </div>
         )}
 

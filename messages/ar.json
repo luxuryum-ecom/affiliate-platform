@@ -2618,6 +2618,59 @@
       "totalCost": "التكلفة الإجمالية",
       "grossProfit": "الربح الإجمالي",
       "margin": "الهامش"
+    },
+    "samples": {
+      "metaTitle": "وساطة العيّنات — الإدارة",
+      "pageTitle": "وساطة العيّنات",
+      "backLabel": "لوحة التحكم",
+      "heading": "وساطة العيّنات والكتالوجات",
+      "subtitle": "هوية المورّد وهوية المشتري مخفيّتان عن بعضهما.",
+      "statTotal": "إجمالي الطلبات",
+      "statPending": "قيد الانتظار",
+      "statPendingFiles": "ملفات بانتظار التحقّق",
+      "statPendingCatalogs": "كتالوجات بانتظار التحقّق",
+      "requestsHeading": "طلبات العيّنات",
+      "empty": "لا توجد طلبات.",
+      "adminNote": "ملاحظة الإدارة",
+      "supplierFiles": "ملفات المورّد",
+      "open": "فتح",
+      "detail": "التفاصيل",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "markShipped": "تحديد كمشحون",
+      "markDelivered": "تحديد كمُسلَّم",
+      "catalogsHeading": "كتالوجات المورّدين",
+      "attachmentsHeading": "مرفقات المنتج",
+      "status": {
+        "pending": "قيد الانتظار",
+        "supplier_reply": "تم الرد",
+        "approved": "موافَق عليه",
+        "rejected": "مرفوض",
+        "shipped": "مشحون",
+        "delivered": "مُسلَّم"
+      },
+      "type": {
+        "sample": "عيّنة مادية",
+        "photos": "صور المنتج",
+        "video": "فيديو المنتج",
+        "technical_sheet": "ورقة تقنية"
+      }
+    },
+    "sampleDetail": {
+      "metaTitle": "تفاصيل طلب عيّنة — الإدارة",
+      "receivedOn": "استُلم في {date}",
+      "requestDetails": "تفاصيل الطلب",
+      "typeLabel": "النوع",
+      "wholesalerMessage": "رسالة تاجر الجملة",
+      "adminNotes": "ملاحظات داخلية (الإدارة)",
+      "wholesalerContact": "جهة اتصال تاجر الجملة",
+      "company": "الشركة",
+      "wholesalerUnavailable": "هوية تاجر الجملة غير متاحة.",
+      "actions": "إجراءات",
+      "supplierFiles": "ملفات المورّد",
+      "fileApproved": "موافَق عليه",
+      "filePending": "بانتظار الموافقة",
+      "noFiles": "لا توجد ملفات من المورّد حتى الآن."
     }
   }
 }

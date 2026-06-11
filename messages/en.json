@@ -2618,6 +2618,59 @@
       "totalCost": "Total cost",
       "grossProfit": "Gross profit",
       "margin": "Margin"
+    },
+    "samples": {
+      "metaTitle": "Sample mediation — Administration",
+      "pageTitle": "Sample mediation",
+      "backLabel": "Dashboard",
+      "heading": "Sample & catalog mediation",
+      "subtitle": "Supplier identity and buyer identity hidden from each other.",
+      "statTotal": "Total requests",
+      "statPending": "Pending",
+      "statPendingFiles": "Files to review",
+      "statPendingCatalogs": "Catalogs to review",
+      "requestsHeading": "Sample requests",
+      "empty": "No requests.",
+      "adminNote": "Admin note",
+      "supplierFiles": "Supplier files",
+      "open": "Open",
+      "detail": "Detail",
+      "approve": "Approve",
+      "reject": "Reject",
+      "markShipped": "Mark shipped",
+      "markDelivered": "Mark delivered",
+      "catalogsHeading": "Supplier catalogs",
+      "attachmentsHeading": "Product attachments",
+      "status": {
+        "pending": "Pending",
+        "supplier_reply": "Replied",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "shipped": "Shipped",
+        "delivered": "Delivered"
+      },
+      "type": {
+        "sample": "Physical sample",
+        "photos": "Product photos",
+        "video": "Product video",
+        "technical_sheet": "Technical sheet"
+      }
+    },
+    "sampleDetail": {
+      "metaTitle": "Sample request detail — Administration",
+      "receivedOn": "Received on {date}",
+      "requestDetails": "Request details",
+      "typeLabel": "Type",
+      "wholesalerMessage": "Wholesaler message",
+      "adminNotes": "Internal notes (admin)",
+      "wholesalerContact": "Wholesaler contact",
+      "company": "Company",
+      "wholesalerUnavailable": "Wholesaler identity unavailable.",
+      "actions": "Actions",
+      "supplierFiles": "Supplier files",
+      "fileApproved": "Approved",
+      "filePending": "Pending approval",
+      "noFiles": "No supplier files yet."
     }
   }
 }
