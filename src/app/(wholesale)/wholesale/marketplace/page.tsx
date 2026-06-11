@@ -140,7 +140,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   )
 
   return (
-    <div className="theme-dark bg-bg text-foreground min-h-screen">
+    <div className="bg-bg text-foreground min-h-screen">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="bg-surface border-b border-line sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -186,24 +186,24 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 
         {/* ── Trust strip ──────────────────────────────────────────────────────── */}
         <div className="flex flex-wrap gap-2 mb-6 pb-5 border-b border-line">
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-accent-soft text-accent-fg border border-gold-300 font-medium">
             ✓ {t('trustBadgeVerified')}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
             🏭 {t('trustBadgeMorocco')}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
             🌍 {t('trustBadgeImport')}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
+          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
             🔒 {t('trustBadgeSecure')}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 font-medium">
+          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
             🛡 {t('trustBadgeProtected')}
           </span>
           <Link
             href="/wholesale/marketplace?availability=import_on_demand"
-            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-medium hover:bg-blue-100 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium hover:bg-surface transition-colors"
           >
             📦 {t('trustBadgeSeeImport')}
           </Link>
@@ -412,40 +412,40 @@ const INTERNATIONAL_SOURCES = [
     flag: '🇹🇷',
     tagline: 'textile',
     note: 'import-7-14',
-    activeCls: 'border-red-400 bg-red-500/15 ring-2 ring-red-400/50',
-    inactiveCls: 'border-line bg-surface hover:border-red-400/50 hover:bg-red-500/10',
-    nameCls: 'text-red-300',
-    taglineCls: 'text-red-400',
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+    nameCls: 'text-foreground',
+    taglineCls: 'text-muted',
   },
   {
     origin: 'Chine',
     flag: '🇨🇳',
     tagline: 'volume',
     note: 'maritime-20-45',
-    activeCls: 'border-rose-400 bg-rose-500/15 ring-2 ring-rose-400/50',
-    inactiveCls: 'border-line bg-surface hover:border-rose-400/50 hover:bg-rose-500/10',
-    nameCls: 'text-rose-300',
-    taglineCls: 'text-rose-400',
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+    nameCls: 'text-foreground',
+    taglineCls: 'text-muted',
   },
   {
     origin: 'Égypte',
     flag: '🇪🇬',
     tagline: 'coton',
     note: 'stock-variable',
-    activeCls: 'border-amber-400 bg-amber-500/15 ring-2 ring-amber-400/50',
-    inactiveCls: 'border-line bg-surface hover:border-amber-400/50 hover:bg-amber-500/10',
-    nameCls: 'text-amber-300',
-    taglineCls: 'text-amber-400',
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+    nameCls: 'text-foreground',
+    taglineCls: 'text-muted',
   },
   {
     origin: 'Dubai',
     flag: '🇦🇪',
     tagline: 'hub',
     note: 'groupee',
-    activeCls: 'border-sky-400 bg-sky-500/15 ring-2 ring-sky-400/50',
-    inactiveCls: 'border-line bg-surface hover:border-sky-400/50 hover:bg-sky-500/10',
-    nameCls: 'text-sky-300',
-    taglineCls: 'text-sky-400',
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+    nameCls: 'text-foreground',
+    taglineCls: 'text-muted',
   },
 ] as const
 
@@ -502,8 +502,8 @@ function CountrySourceSection({
         href="/wholesale/marketplace?availability=local_stock"
         className={`block rounded-2xl border-2 p-5 mb-4 transition-all duration-200 ${
           moroccoActive
-            ? 'border-emerald-500 bg-emerald-600 shadow-lg shadow-emerald-200'
-            : 'border-emerald-400 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-md'
+            ? 'border-gold-400 bg-accent-soft shadow-gold'
+            : 'border-gold-300 bg-accent-soft hover:border-gold-400 hover:shadow-gold shadow-sm'
         }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -511,33 +511,33 @@ function CountrySourceSection({
             <span className="text-5xl leading-none flex-shrink-0">🇲🇦</span>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+                <h3 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight">
                   {t('moroccoHeroTitle')}
                 </h3>
                 {moroccoActive && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-emerald-700 border border-emerald-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface text-accent-fg border border-gold-300">
                     {t('badgeActive')}
                   </span>
                 )}
               </div>
-              <p className="text-emerald-100 text-sm font-medium mb-2">
+              <p className="text-muted text-sm font-medium mb-2">
                 {t('moroccoHeroSubtitle')}
               </p>
               <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-white/20 text-white font-medium border border-white/30">
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
                   ✓ {t('moroccoTagDelivery')}
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-white/20 text-white font-medium border border-white/30">
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
                   ✓ {t('moroccoTagNoCustoms')}
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-white/20 text-white font-medium border border-white/30">
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
                   ✓ {t('moroccoTagPayment')}
                 </span>
               </div>
             </div>
           </div>
           <div className="flex-shrink-0">
-            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-emerald-700 font-bold text-sm shadow-sm hover:shadow transition-shadow whitespace-nowrap">
+            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap">
               {t('moroccoHeroCta')}
             </span>
           </div>
@@ -546,16 +546,16 @@ function CountrySourceSection({
 
       {/* ── Trust metrics strip ──────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
           📦 {t('trustTotalProducts', { count: totalProducts })}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-accent-soft text-accent-fg border border-gold-300 font-medium">
           ✓ {t('trustVerifiedSuppliers', { count: verifiedSuppliers })}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
           🚚 {t('trustLocalDelivery', { count: localStockProducts })}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
+        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
           🔒 {t('trustSecurePayment')}
         </span>
       </div>
@@ -645,9 +645,9 @@ function MarketplaceProductCard({
   const hasTiers = moqTiers.length > 1
 
   const cardBorder = isVerified
-    ? 'border-amber-300 ring-1 ring-amber-100'
+    ? 'border-gold-300 ring-1 ring-gold-100'
     : isFeatured
-    ? 'border-indigo-300 ring-1 ring-indigo-100'
+    ? 'border-gold-200 ring-1 ring-gold-100'
     : 'border-line'
 
   const deliveryLabel = isLocalStock
@@ -673,13 +673,13 @@ function MarketplaceProductCard({
   return (
     <article className={`group bg-surface rounded-xl border overflow-hidden flex flex-col hover:shadow-premium transition-all duration-200 ${cardBorder}`}>
       {/* Square image — compact density */}
-      <Link href={productUrl} className="block relative aspect-[5/3] overflow-hidden bg-gradient-to-br from-stone-50 to-amber-50">
+      <Link href={productUrl} className="block relative aspect-[5/3] overflow-hidden bg-surface-2">
         {product.photos.length > 0 ? (
           <ProductCardImage src={product.photos[0]} alt={displayName} category={product.category} />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-50 via-stone-50 to-amber-100">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-surface-2">
             <span className="text-4xl">{categoryIcon}</span>
-            <span className="text-[10px] text-stone-500 font-semibold text-center px-3 leading-tight line-clamp-2">{displayName}</span>
+            <span className="text-[10px] text-muted font-semibold text-center px-3 leading-tight line-clamp-2">{displayName}</span>
           </div>
         )}
 
@@ -700,7 +700,7 @@ function MarketplaceProductCard({
         {/* Bottom-left: stock tag */}
         {isLocalStock && (
           <div className="absolute bottom-2 start-2 flex gap-1">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600/90 text-white font-semibold">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-success-soft text-success-fg font-semibold border border-success">
               {t('cardStockLocal')}
             </span>
           </div>
@@ -715,12 +715,12 @@ function MarketplaceProductCard({
             {isMorocco ? `🇲🇦 ${t('cardSupplierMorocco')}` : `🌍 ${t('cardSupplierIntl')}`}
           </span>
           {isVerified && (
-            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 leading-none">
+            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-accent-soft text-accent-fg leading-none">
               ✓ {t('cardVerified')}
             </span>
           )}
           {!isVerified && isFeatured && (
-            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-indigo-100 text-indigo-700 leading-none">
+            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-accent-soft text-accent-fg leading-none">
               ★ {t('cardPremium')}
             </span>
           )}
@@ -736,7 +736,7 @@ function MarketplaceProductCard({
         {/* MOQ + delivery */}
         <div className="flex gap-1 flex-wrap">
           <MOQChip qty={product.min_quantity} unit={product.unit ?? 'u.'} />
-          <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 font-medium">
+          <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-surface-2 text-muted border border-line font-medium">
             🚚 {deliveryLabel}
           </span>
         </div>
@@ -744,7 +744,7 @@ function MarketplaceProductCard({
         {/* Stock quantity */}
         {product.stock_quantity != null && (
           <p className="text-[10px] leading-none">
-            <span className={product.stock_quantity > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>
+            <span className={product.stock_quantity > 0 ? 'text-success-fg font-semibold' : 'text-danger-fg font-semibold'}>
               {product.stock_quantity > 0
                 ? t('cardStockCount', { count: product.stock_quantity.toLocaleString(numLocale) })
                 : t('cardOutOfStock')
@@ -772,7 +772,7 @@ function MarketplaceProductCard({
                     })}
                   </p>
                   {marginLow != null && marginHigh != null && (
-                    <p className="text-[9px] text-emerald-400 font-semibold leading-none">
+                    <p className="text-[9px] text-success-fg font-semibold leading-none">
                       {t('cardMargin', {
                         low: marginLow.toLocaleString(numLocale),
                         high: marginHigh.toLocaleString(numLocale),
@@ -800,7 +800,7 @@ function MarketplaceProductCard({
               href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 block w-full text-center text-[8px] font-normal py-1 text-emerald-400 hover:text-emerald-300 hover:underline underline-offset-2"
+              className="mt-1 block w-full text-center text-[8px] font-normal py-1 text-muted hover:text-foreground hover:underline underline-offset-2"
             >
               🟢 {t('cardCtaWhatsapp')}
             </a>
