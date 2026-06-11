@@ -11,6 +11,9 @@ import {
 
 const initial: SupplierProductState = { error: null }
 
+const INPUT = 'w-full px-3 py-2 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent bg-surface text-foreground placeholder:text-faint disabled:bg-surface-2'
+const LABEL = 'block text-xs font-medium text-muted mb-1'
+
 interface TQuote {
   qtyLabel: string
   qtyMin: string
@@ -49,7 +52,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
 
   if (state?.success) {
     return (
-      <div className="text-sm text-green-700 bg-green-50 border border-green-100 px-4 py-3 rounded-lg">
+      <div className="text-sm text-success-fg bg-success-soft border border-success px-4 py-3 rounded-lg">
         {tQuote.success}
       </div>
     )
@@ -59,7 +62,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+        className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
       >
         {tQuote.cta}
       </button>
@@ -71,7 +74,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
       <input type="hidden" name="supplier_product_id" value={supplierProductId} />
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+        <label className={LABEL}>
           {tQuote.qtyLabel}
         </label>
         <input
@@ -81,18 +84,18 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
           defaultValue={minQuantity}
           required
           disabled={isPending}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+          className={INPUT}
         />
-        <p className="text-xs text-gray-400 mt-0.5">{tQuote.qtyMin}</p>
+        <p className="text-xs text-faint mt-0.5">{tQuote.qtyMin}</p>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.activityLabel}</label>
+        <label className={LABEL}>{tQuote.activityLabel}</label>
         <select
           name="buyer_purchase_profile"
           required
           disabled={isPending}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+          className={INPUT}
         >
           <option value="">{tQuote.activityPlaceholder}</option>
           {BUYER_PURCHASE_PROFILES.map((value) => (
@@ -104,12 +107,12 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.volumeLabel}</label>
+        <label className={LABEL}>{tQuote.volumeLabel}</label>
         <select
           name="buyer_volume_tier"
           required
           disabled={isPending}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+          className={INPUT}
         >
           <option value="">{tQuote.volumePlaceholder}</option>
           {BUYER_VOLUME_TIERS.map((value) => (
@@ -118,10 +121,10 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
             </option>
           ))}
         </select>
-        <p className="text-xs text-gray-500 mt-1">{tQuote.volumeHint}</p>
+        <p className="text-xs text-muted mt-1">{tQuote.volumeHint}</p>
       </div>
 
-      <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800 space-y-0.5">
+      <div className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-muted space-y-0.5">
         <p>{tQuote.tier1}</p>
         <p>{tQuote.tier2}</p>
         <p>{tQuote.tier3}</p>
@@ -129,55 +132,55 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.countryLabel}</label>
+        <label className={LABEL}>{tQuote.countryLabel}</label>
         <input
           name="destination_country"
           type="text"
           defaultValue="Maroc"
           required
           disabled={isPending}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+          className={INPUT}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.cityLabel}</label>
+        <label className={LABEL}>{tQuote.cityLabel}</label>
         <input
           name="destination_city"
           type="text"
           disabled={isPending}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+          className={INPUT}
           placeholder={tQuote.cityPlaceholder}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
-          {tQuote.whatsappLabel} <span className="text-red-500">*</span>
+        <label className={LABEL}>
+          {tQuote.whatsappLabel} <span className="text-danger-fg">*</span>
         </label>
         <input
           name="whatsapp_number"
           type="tel"
           required
           disabled={isPending}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50"
+          className={INPUT}
           placeholder={tQuote.whatsappPlaceholder}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{tQuote.notesLabel}</label>
+        <label className={LABEL}>{tQuote.notesLabel}</label>
         <textarea
           name="buyer_notes"
           rows={2}
           disabled={isPending}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50 resize-none"
+          className={`${INPUT} resize-none`}
           placeholder={tQuote.notesPlaceholder}
         />
       </div>
 
       {state?.error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+        <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
           {state.error}
         </p>
       )}
@@ -187,14 +190,14 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
           type="button"
           onClick={() => setOpen(false)}
           disabled={isPending}
-          className="flex-1 py-2 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          className="flex-1 py-2 border border-line text-muted text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors"
         >
           {tQuote.cancel}
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isPending ? tQuote.submitting : tQuote.submit}
         </button>

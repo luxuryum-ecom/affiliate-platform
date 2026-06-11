@@ -1,8 +1,6 @@
-import Link from 'next/link'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import SourcingForm from './SourcingForm'
 import type { Profile, SourcingRequest, SourcingRequestStatus } from '@/types/database'
 
@@ -37,46 +35,34 @@ export default async function WholesaleSourcingPage() {
   const locale = await getLocale()
 
   const STATUS_LABELS: Record<SourcingRequestStatus, { label: string; cls: string }> = {
-    pending:  { label: t('statusPending'),  cls: 'bg-gray-100 text-gray-500' },
-    matching: { label: t('statusMatching'), cls: 'bg-blue-100 text-blue-700' },
-    matched:  { label: t('statusMatched'),  cls: 'bg-indigo-100 text-indigo-700' },
-    quoted:   { label: t('statusQuoted'),   cls: 'bg-green-100 text-green-700' },
-    closed:   { label: t('statusClosed'),   cls: 'bg-gray-100 text-gray-400' },
+    pending:  { label: t('statusPending'),  cls: 'bg-surface-2 text-muted' },
+    matching: { label: t('statusMatching'), cls: 'bg-warning-soft text-warning-fg' },
+    matched:  { label: t('statusMatched'),  cls: 'bg-warning-soft text-warning-fg' },
+    quoted:   { label: t('statusQuoted'),   cls: 'bg-success-soft text-success-fg' },
+    closed:   { label: t('statusClosed'),   cls: 'bg-surface-2 text-faint' },
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/wholesale/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              {tc('backToDashboard')}
-            </Link>
-            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <LanguageSwitcher variant="light" />
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                {tc('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/wholesale/dashboard"
+        backLabel={tc('backToDashboard')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {/* Intro */}
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">{t('pageTitle')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
+          <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+          <p className="text-sm text-muted mt-1">{t('subtitle')}</p>
         </div>
 
         {/* Submission form */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-5">{t('formTitle')}</h2>
+        <div className="bg-surface rounded-xl border border-line p-6">
+          <h2 className="text-sm font-semibold text-foreground mb-5">{t('formTitle')}</h2>
           <SourcingForm
             labels={{
               fieldProduct: t('fieldProduct'),
@@ -103,19 +89,19 @@ export default async function WholesaleSourcingPage() {
         {/* Past requests */}
         {requests.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">
+            <h2 className="text-sm font-semibold text-foreground mb-3">
               {t('requestsTitle', { count: requests.length })}
             </h2>
             <div className="space-y-3">
               {requests.map((r) => {
                 const badge = STATUS_LABELS[r.status]
                 return (
-                  <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div key={r.id} className="bg-surface rounded-xl border border-line p-4">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
                         {/* product_name is user input / DB data */}
-                        <p className="text-sm font-medium text-gray-900">{r.product_name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-sm font-medium text-foreground">{r.product_name}</p>
+                        <p className="text-xs text-muted mt-0.5">
                           {t('requestMeta', {
                             category: r.category,
                             quantity: r.quantity,
@@ -129,13 +115,13 @@ export default async function WholesaleSourcingPage() {
                       </span>
                     </div>
                     {r.delivery_deadline && (
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-faint mt-2">
                         {t('deadlineLabel', {
                           date: new Date(r.delivery_deadline).toLocaleDateString(locale),
                         })}
                       </p>
                     )}
-                    <p className="text-xs text-gray-300 mt-1">
+                    <p className="text-xs text-faint mt-1">
                       {new Date(r.created_at).toLocaleDateString(locale)}
                     </p>
                   </div>

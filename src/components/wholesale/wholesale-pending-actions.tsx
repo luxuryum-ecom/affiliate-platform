@@ -39,48 +39,48 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
 
   if (status === 'pending') {
     return (
-      <div className="bg-white rounded-xl border border-amber-200 p-5 space-y-4">
+      <div className="bg-surface rounded-xl border border-warning p-5 space-y-4">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">{t('pendingModifyTitle')}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t('pendingModifySubtitle')}</p>
+          <h2 className="text-sm font-semibold text-foreground">{t('pendingModifyTitle')}</h2>
+          <p className="text-xs text-muted mt-0.5">{t('pendingModifySubtitle')}</p>
         </div>
 
         <form action={noteAction} className="space-y-2">
           <input type="hidden" name="orderId" value={orderId} />
-          <label className="block text-xs font-medium text-gray-600">{t('pendingNoteLabel')}</label>
+          <label className="block text-xs font-medium text-muted">{t('pendingNoteLabel')}</label>
           <textarea
             name="buyer_notes"
             defaultValue={currentNote ?? ''}
             rows={2}
             placeholder={t('pendingNotePlaceholder')}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none bg-surface text-foreground placeholder:text-faint"
           />
           {noteState.error && (
-            <p className="text-xs text-red-600">{noteState.error}</p>
+            <p className="text-xs text-danger-fg">{noteState.error}</p>
           )}
           {noteState.success && (
-            <p className="text-xs text-green-600">{t('pendingNoteUpdated')}</p>
+            <p className="text-xs text-success-fg">{t('pendingNoteUpdated')}</p>
           )}
           <button
             type="submit"
             disabled={notePending}
-            className="px-4 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
             {notePending ? t('pendingNoteSaving') : t('pendingNoteSave')}
           </button>
         </form>
 
-        <hr className="border-gray-100" />
+        <hr className="border-line" />
 
         <form action={cancelAction} onSubmit={handleCancel}>
           <input type="hidden" name="orderId" value={orderId} />
           {cancelState.error && (
-            <p className="text-xs text-red-600 mb-2">{cancelState.error}</p>
+            <p className="text-xs text-danger-fg mb-2">{cancelState.error}</p>
           )}
           <button
             type="submit"
             disabled={cancelPending}
-            className="px-4 py-1.5 text-xs font-medium bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors"
+            className="px-4 py-1.5 text-xs font-medium bg-danger-soft text-danger-fg border border-danger rounded-lg hover:bg-danger hover:text-primary-foreground disabled:opacity-50 transition-colors"
           >
             {cancelPending ? t('pendingCancelCancelling') : t('pendingCancelBtn')}
           </button>
@@ -94,16 +94,16 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
       t('pendingCancelWaMsg', { ref: shortRef })
     )
     return (
-      <div className="bg-white rounded-xl border border-amber-200 p-5 space-y-3">
+      <div className="bg-surface rounded-xl border border-warning p-5 space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">{t('pendingCancelRequestTitle')}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t('pendingCancelRequestSubtitle')}</p>
+          <h2 className="text-sm font-semibold text-foreground">{t('pendingCancelRequestTitle')}</h2>
+          <p className="text-xs text-muted mt-0.5">{t('pendingCancelRequestSubtitle')}</p>
         </div>
         <a
           href={`https://wa.me/${WHATSAPP_PHONE}?text=${msg}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-success-fg text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
         >
           <WhatsAppIcon />
           {t('pendingCancelWaBtn', { ref: shortRef })}
@@ -117,16 +117,16 @@ export function WholesalePendingActions({ orderId, currentNote, status, orderRef
       t('pendingReturnWaMsg', { ref: shortRef })
     )
     return (
-      <div className="bg-white rounded-xl border border-teal-200 p-5 space-y-3">
+      <div className="bg-surface rounded-xl border border-line p-5 space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">{t('pendingReturnTitle')}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t('pendingReturnSubtitle')}</p>
+          <h2 className="text-sm font-semibold text-foreground">{t('pendingReturnTitle')}</h2>
+          <p className="text-xs text-muted mt-0.5">{t('pendingReturnSubtitle')}</p>
         </div>
         <a
           href={`https://wa.me/${WHATSAPP_PHONE}?text=${msg}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-success-fg text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
         >
           <WhatsAppIcon />
           {t('pendingReturnWaBtn', { ref: shortRef })}

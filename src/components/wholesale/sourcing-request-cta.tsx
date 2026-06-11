@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 
 const INPUT =
-  'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
-const LABEL = 'block text-xs font-medium text-gray-500 mb-1'
+  'w-full px-3 py-2 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint'
+const LABEL = 'block text-xs font-medium text-muted mb-1'
 
 export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string }) {
   const t = useTranslations('wholesale.sourcingCta')
@@ -38,13 +38,13 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
 
   return (
     <>
-      <div className="mt-3 w-full rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-        <p className="text-sm font-semibold text-gray-900">{t('ctaTitle')}</p>
-        <p className="text-xs text-gray-600 mt-1">{t('ctaBody')}</p>
+      <div className="mt-3 w-full rounded-xl border border-success bg-success-soft p-4">
+        <p className="text-sm font-semibold text-foreground">{t('ctaTitle')}</p>
+        <p className="text-xs text-muted mt-1">{t('ctaBody')}</p>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-3 w-full text-center text-sm font-semibold px-4 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+          className="mt-3 w-full text-center text-sm font-semibold px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
         >
           {t('ctaBtn')}
         </button>
@@ -59,10 +59,10 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white rounded-xl border border-gray-200 shadow-lg w-full max-w-md p-4 max-h-[90vh] overflow-y-auto"
+            className="bg-surface rounded-xl border border-line shadow-lg w-full max-w-md p-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="sourcing-modal-title" className="text-base font-bold text-gray-900 mb-3">
+            <h2 id="sourcing-modal-title" className="text-base font-bold text-foreground mb-3">
               {t('modalTitle')}
             </h2>
 
@@ -124,7 +124,7 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex-1 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-line text-muted text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors"
               >
                 {t('cancelBtn')}
               </button>
@@ -132,7 +132,7 @@ export function SourcingRequestCta({ whatsappPhone }: { whatsappPhone: string })
                 type="button"
                 onClick={handleSend}
                 disabled={!productDesc.trim()}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t('sendBtn')}
               </button>

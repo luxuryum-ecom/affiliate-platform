@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
 import { QuoteRequestForm } from '@/components/wholesale/quote-request-form'
@@ -11,7 +10,7 @@ import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getActiveTariff } from '@/app/actions/tariffs'
 import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
 import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import type { Product, ImportTariff } from '@/types/database'
 
 interface Params {
@@ -70,42 +69,16 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const ctaMode = getCatalogProductCtaMode(product.availability_type)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/wholesale/products"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              {t('backToCatalog')}
-            </Link>
-            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm truncate max-w-[160px]">
-              {product.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/wholesale/cart"
-              className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-            >
-              {t('myCart')}
-            </Link>
-            <span className="text-gray-400 hidden sm:inline">{profile?.full_name}</span>
-            <LanguageSwitcher variant="light" />
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                {tc('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        breadcrumb={product.name}
+        backHref="/wholesale/products"
+        backLabel={t('backToCatalog')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -114,7 +87,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
             <ProductThumbnail
               src={coverUrl}
               name={product.name}
-              className="aspect-square w-full rounded-2xl border border-gray-200 text-4xl"
+              className="aspect-square w-full rounded-2xl border border-line text-4xl"
             />
 
             {galleryUrls.length > 0 && (
@@ -124,7 +97,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                     key={url}
                     src={url}
                     name={`${product.name} ${i + 2}`}
-                    className="h-16 w-16 shrink-0 rounded-lg border border-gray-200"
+                    className="h-16 w-16 shrink-0 rounded-lg border border-line"
                   />
                 ))}
               </div>
@@ -138,24 +111,24 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
                   product.availability_type === 'import_on_demand'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-green-100 text-green-700'
+                    ? 'bg-surface-2 text-muted border border-line'
+                    : 'bg-success-soft text-success-fg border border-success'
                 }`}
               >
                 {product.availability_type === 'import_on_demand' ? t('badgeImport') : t('badgeStock')}
               </span>
               {product.wholesale_tiers.length > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning-fg border border-warning">
                   {t('badgeTiers')}
                 </span>
               )}
               {product.stock_count === 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-danger-soft text-danger-fg border border-danger">
                   {t('badgeUnavailable')}
                 </span>
               )}
               {product.stock_count > 0 && product.stock_count < product.wholesale_min_qty && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning-fg border border-warning">
                   {t('badgePartialStock')}
                 </span>
               )}
@@ -163,24 +136,24 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
             {/* Name */}
             <div>
-              <h1 className="text-xl font-bold text-gray-900 leading-tight">{product.name}</h1>
+              <h1 className="text-xl font-bold text-foreground leading-tight">{product.name}</h1>
               {product.description && (
-                <p className="text-sm text-gray-500 mt-2 leading-relaxed">{product.description}</p>
+                <p className="text-sm text-muted mt-2 leading-relaxed">{product.description}</p>
               )}
             </div>
 
             {/* Stock location + origin — local_stock only */}
             {product.availability_type === 'local_stock' && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 space-y-1.5 text-sm">
+              <div className="rounded-xl border border-success bg-success-soft px-4 py-3 space-y-1.5 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">{t('stockLocation')}</span>
-                  <span className="font-medium text-green-700">🇲🇦 {t('stockMorocco')}</span>
+                  <span className="text-muted">{t('stockLocation')}</span>
+                  <span className="font-medium text-success-fg">🇲🇦 {t('stockMorocco')}</span>
                 </div>
                 {product.origin_country && (
                   <div className="flex items-center justify-between">
                     {/* origin_country is DB data — not translatable */}
-                    <span className="text-gray-500">{t('originCountry')}</span>
-                    <span className="font-medium text-gray-700">{product.origin_country}</span>
+                    <span className="text-muted">{t('originCountry')}</span>
+                    <span className="font-medium text-foreground">{product.origin_country}</span>
                   </div>
                 )}
               </div>
@@ -198,20 +171,20 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
             {/* Public price reference */}
             <div className="flex items-center gap-3 text-sm">
-              <span className="text-gray-400">{t('publicPrice')}</span>
-              <span className="font-medium text-gray-700">{formatMAD(product.sell_price)}</span>
+              <span className="text-faint">{t('publicPrice')}</span>
+              <span className="font-medium text-muted">{formatMAD(product.sell_price)}</span>
             </div>
 
             {ctaMode === 'rfq' ? (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                <p className="text-xs font-semibold text-muted uppercase tracking-wide">
                   {t('labelImportSection')}
                 </p>
                 <QuoteRequestForm productId={product.id} productName={product.name} />
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+                <p className="text-xs font-semibold text-success-fg uppercase tracking-wide">
                   {t('labelStockSection')}
                 </p>
                 <AddToCartForm
@@ -258,18 +231,18 @@ function ImportInfoBlock({
   const notes = tariff?.notes ?? product.import_notes
 
   return (
-    <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 space-y-2 text-sm">
+    <div className="rounded-xl border border-line bg-bg px-4 py-3 space-y-2 text-sm">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">
             {t('importTitle')}
           </p>
-          <p className="text-xs text-purple-500 mt-0.5">
+          <p className="text-xs text-faint mt-0.5">
             {t('importSubtitle')}
           </p>
         </div>
         {product.tariff_mode === 'global' && globalTariff && (
-          <span className="text-xs text-purple-500 bg-purple-100 px-2 py-0.5 rounded-full shrink-0">
+          <span className="text-xs text-muted bg-surface-2 px-2 py-0.5 rounded-full shrink-0 border border-line">
             {t('importBadgeGlobal')}
           </span>
         )}
@@ -278,25 +251,25 @@ function ImportInfoBlock({
       {product.origin_country && (
         <div className="flex items-center justify-between">
           {/* origin_country is DB data */}
-          <span className="text-gray-500">{t('importOrigin')}</span>
-          <span className="font-medium text-gray-900">{product.origin_country}</span>
+          <span className="text-muted">{t('importOrigin')}</span>
+          <span className="font-medium text-foreground">{product.origin_country}</span>
         </div>
       )}
 
       {shippingModeLabel && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">{t('importShippingMode')}</span>
-          <span className="font-medium text-gray-900">{shippingModeLabel}</span>
+          <span className="text-muted">{t('importShippingMode')}</span>
+          <span className="font-medium text-foreground">{shippingModeLabel}</span>
         </div>
       )}
 
       {transportCostMad != null && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">{t('importCost')}</span>
-          <span className="font-medium text-gray-900">
+          <span className="text-muted">{t('importCost')}</span>
+          <span className="font-medium text-foreground">
             {formatMAD(transportCostMad)}{' '}
             {unit && (
-              <span className="text-gray-500 font-normal">
+              <span className="text-muted font-normal">
                 / {unit === 'cbm' ? t('importUnitCbm') : t('importUnitKg')}
               </span>
             )}
@@ -306,18 +279,18 @@ function ImportInfoBlock({
 
       {deliveryDays != null && (
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">{t('importDelivery')}</span>
-          <span className="font-medium text-gray-900">
+          <span className="text-muted">{t('importDelivery')}</span>
+          <span className="font-medium text-foreground">
             {t('importDays', { count: deliveryDays })}
           </span>
         </div>
       )}
 
       {notes && (
-        <div className="pt-2 border-t border-purple-200">
-          <p className="text-xs text-purple-700 font-medium mb-1">{t('importNotes')}</p>
+        <div className="pt-2 border-t border-line">
+          <p className="text-xs text-muted font-medium mb-1">{t('importNotes')}</p>
           {/* notes is DB data */}
-          <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-line">{notes}</p>
+          <p className="text-foreground text-xs leading-relaxed whitespace-pre-line">{notes}</p>
         </div>
       )}
     </div>

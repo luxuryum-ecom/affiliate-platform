@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import type { QuoteRequest, QuoteRequestStatus, SupplierQuoteRequestStatus, Profile, Product } from '@/types/database'
 
 export async function generateMetadata() {
@@ -66,105 +65,93 @@ export default async function WholesaleQuoteRequestsPage() {
 
   // Status badge maps using translations
   const CATALOG_STATUS_BADGE: Record<QuoteRequestStatus, { label: string; cls: string }> = {
-    new:                { label: t('statusNew'),              cls: 'bg-blue-100 text-blue-700' },
-    studying:           { label: t('statusStudying'),         cls: 'bg-amber-100 text-amber-700' },
-    quoted:             { label: t('statusQuoted'),           cls: 'bg-purple-100 text-purple-700' },
-    quote_prepared:     { label: t('statusQuotePrepared'),    cls: 'bg-indigo-100 text-indigo-700' },
-    accepted_by_client: { label: t('statusAcceptedByClient'), cls: 'bg-green-100 text-green-700' },
-    rejected_by_client: { label: t('statusRejectedByClient'), cls: 'bg-red-100 text-red-600' },
-    negotiating:        { label: t('statusNegotiating'),      cls: 'bg-orange-100 text-orange-700' },
-    approved:           { label: t('statusApproved'),         cls: 'bg-green-100 text-green-700' },
-    rejected:           { label: t('statusRejected'),         cls: 'bg-red-100 text-red-600' },
-    converted_to_order: { label: t('statusConvertedToOrder'), cls: 'bg-gray-100 text-gray-500' },
+    new:                { label: t('statusNew'),              cls: 'bg-surface-2 text-muted border border-line' },
+    studying:           { label: t('statusStudying'),         cls: 'bg-warning-soft text-warning-fg' },
+    quoted:             { label: t('statusQuoted'),           cls: 'bg-surface-2 text-muted border border-line' },
+    quote_prepared:     { label: t('statusQuotePrepared'),    cls: 'bg-warning-soft text-warning-fg' },
+    accepted_by_client: { label: t('statusAcceptedByClient'), cls: 'bg-success-soft text-success-fg' },
+    rejected_by_client: { label: t('statusRejectedByClient'), cls: 'bg-danger-soft text-danger-fg' },
+    negotiating:        { label: t('statusNegotiating'),      cls: 'bg-warning-soft text-warning-fg' },
+    approved:           { label: t('statusApproved'),         cls: 'bg-success-soft text-success-fg' },
+    rejected:           { label: t('statusRejected'),         cls: 'bg-danger-soft text-danger-fg' },
+    converted_to_order: { label: t('statusConvertedToOrder'), cls: 'bg-surface-2 text-faint' },
   }
 
   const MARKETPLACE_STATUS_BADGE: Record<SupplierQuoteRequestStatus, { label: string; cls: string }> = {
-    new:      { label: t('statusNew'),      cls: 'bg-blue-100 text-blue-700' },
-    studying: { label: t('statusStudying'), cls: 'bg-amber-100 text-amber-700' },
-    quoted:   { label: t('statusQuoted'),   cls: 'bg-purple-100 text-purple-700' },
-    approved: { label: t('statusApproved'), cls: 'bg-green-100 text-green-700' },
-    rejected: { label: t('statusRejected'), cls: 'bg-red-100 text-red-600' },
+    new:      { label: t('statusNew'),      cls: 'bg-surface-2 text-muted border border-line' },
+    studying: { label: t('statusStudying'), cls: 'bg-warning-soft text-warning-fg' },
+    quoted:   { label: t('statusQuoted'),   cls: 'bg-surface-2 text-muted border border-line' },
+    approved: { label: t('statusApproved'), cls: 'bg-success-soft text-success-fg' },
+    rejected: { label: t('statusRejected'), cls: 'bg-danger-soft text-danger-fg' },
   }
 
   const isRtl = locale === 'ar'
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={isRtl ? 'rtl' : 'ltr'}>
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/wholesale/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              {t('breadcrumbParent')}
-            </Link>
-            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                {t('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg" dir={isRtl ? 'rtl' : 'ltr'}>
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/wholesale/dashboard"
+        backLabel={t('breadcrumbParent')}
+        userName={profile?.full_name}
+        signOutLabel={t('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-sm font-semibold text-gray-900">{t('pageTitle')}</h1>
-          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
+          <h1 className="text-sm font-semibold text-foreground">{t('pageTitle')}</h1>
+          <span className="text-xs px-2 py-0.5 bg-surface-2 text-muted rounded-full border border-line">
             {unified.length}
           </span>
         </div>
 
         {unified.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400 mb-4">
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint mb-4">
               {t('emptyState')}
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               <Link
                 href="/wholesale/products"
-                className="text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
               >
                 {t('emptyCatalogCta')}
               </Link>
               <Link
                 href="/wholesale/marketplace"
-                className="text-xs px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="text-xs px-4 py-2 bg-surface-2 text-muted rounded-lg hover:bg-surface border border-line transition-colors"
               >
                 {t('emptyMarketplaceCta')}
               </Link>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {unified.map((row) => {
               if (row.kind === 'catalog') {
                 const req = row.data
                 const badge = CATALOG_STATUS_BADGE[req.status] ?? CATALOG_STATUS_BADGE.new
                 return (
-                  <div key={`cat-${req.id}`} className="flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors">
+                  <div key={`cat-${req.id}`} className="flex items-start gap-3 p-4 hover:bg-bg transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-surface-2 text-muted font-medium border border-line">
                           {t('badgeCatalog')}
                         </span>
-                        <span className="text-xs font-mono text-gray-400">
+                        <span className="text-xs font-mono text-faint">
                           #{req.id.slice(0, 8).toUpperCase()}
                         </span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
                           {badge.label}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-gray-900">{req.product?.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-sm font-medium text-foreground">{req.product?.name}</p>
+                      <p className="text-xs text-muted mt-0.5">
                         {t('units', { count: req.quantity_requested })} · {req.destination_country}
                         {req.destination_city ? `, ${req.destination_city}` : ''}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-faint mt-0.5">
                         {new Date(req.created_at).toLocaleDateString(
                           locale === 'ar' ? 'ar-MA-u-nu-latn' : locale === 'en' ? 'en-GB' : 'fr-MA',
                           { day: '2-digit', month: 'short', year: 'numeric' },
@@ -173,7 +160,7 @@ export default async function WholesaleQuoteRequestsPage() {
                     </div>
                     <Link
                       href={`/wholesale/quote-requests/${req.id}`}
-                      className="shrink-0 text-xs text-blue-600 hover:underline"
+                      className="shrink-0 text-xs text-muted hover:text-foreground hover:underline transition-colors"
                     >
                       {t('viewLink')}
                     </Link>
@@ -186,25 +173,25 @@ export default async function WholesaleQuoteRequestsPage() {
               const badge = MARKETPLACE_STATUS_BADGE[req.status] ?? MARKETPLACE_STATUS_BADGE.new
               const productName = req.supplier_product?.product_name ?? t('unknownProduct')
               return (
-                <div key={`mkt-${req.id}`} className="flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors">
+                <div key={`mkt-${req.id}`} className="flex items-start gap-3 p-4 hover:bg-bg transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent-soft text-accent-fg font-medium border border-gold-300">
                         {t('badgeMarketplace')}
                       </span>
-                      <span className="text-xs font-mono text-gray-400">
+                      <span className="text-xs font-mono text-faint">
                         #{req.id.slice(0, 8).toUpperCase()}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
                         {badge.label}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-gray-900">{productName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-sm font-medium text-foreground">{productName}</p>
+                    <p className="text-xs text-muted mt-0.5">
                       {t('units', { count: req.quantity_requested })} · {req.destination_country}
                       {req.destination_city ? `, ${req.destination_city}` : ''}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-faint mt-0.5">
                       {new Date(req.created_at).toLocaleDateString(
                         locale === 'ar' ? 'ar-MA-u-nu-latn' : locale === 'en' ? 'en-GB' : 'fr-MA',
                         { day: '2-digit', month: 'short', year: 'numeric' },
@@ -213,7 +200,7 @@ export default async function WholesaleQuoteRequestsPage() {
                   </div>
                   <Link
                     href={`/wholesale/marketplace/${req.supplier_product_id}`}
-                    className="shrink-0 text-xs text-blue-600 hover:underline"
+                    className="shrink-0 text-xs text-muted hover:text-foreground hover:underline transition-colors"
                   >
                     {t('productLink')}
                   </Link>

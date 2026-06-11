@@ -53,15 +53,15 @@ export function AddToCartForm({
   if (stockCount === 0) {
     return (
       <div className="space-y-3">
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 space-y-2">
-          <p className="text-sm font-semibold text-red-700">{t('addToCartUnavailableTitle')}</p>
-          <p className="text-xs text-red-600">{t('addToCartUnavailableDesc')}</p>
+        <div className="rounded-xl border border-danger bg-danger-soft px-4 py-4 space-y-2">
+          <p className="text-sm font-semibold text-danger-fg">{t('addToCartUnavailableTitle')}</p>
+          <p className="text-xs text-danger-fg">{t('addToCartUnavailableDesc')}</p>
         </div>
         <a
           href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent('Bonjour, je souhaite être informé du réapprovisionnement de ce produit.')}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
+          className="flex items-center justify-center gap-2 w-full py-3 bg-success-fg text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity text-sm"
         >
           <span>💬</span> {t('addToCartNotifyWa')}
         </a>
@@ -76,16 +76,16 @@ export function AddToCartForm({
     <div className="space-y-5">
       {/* Partial stock warning */}
       {isPartialStock && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
-          <p className="text-sm font-semibold text-amber-800">{t('addToCartPartialStockTitle')}</p>
-          <p className="text-xs text-amber-700">
+        <div className="rounded-xl border border-warning bg-warning-soft px-4 py-3 space-y-2">
+          <p className="text-sm font-semibold text-warning-fg">{t('addToCartPartialStockTitle')}</p>
+          <p className="text-xs text-warning-fg">
             {t('addToCartPartialStockDesc', { stock: stockCount, min: minQty })}
           </p>
           <a
             href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`Bonjour, je souhaite commander ${stockCount} unités (stock partiel disponible).`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
           >
             💬 {t('addToCartPartialWa')}
           </a>
@@ -95,37 +95,37 @@ export function AddToCartForm({
       {/* Tier pricing table */}
       {tiers.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
             {t('addToCartTiersHeader')}
           </p>
-          <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="rounded-xl border border-line overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-bg">
                 <tr>
-                  <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">
+                  <th className="px-3 py-2 text-start text-xs font-medium text-muted">
                     {t('addToCartTierQty')}
                   </th>
-                  <th className="px-3 py-2 text-end text-xs font-medium text-gray-500">
+                  <th className="px-3 py-2 text-end text-xs font-medium text-muted">
                     {t('addToCartTierPrice')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-line">
                 {tiers.map((tier, i) => {
                   const isActive = activeTier
                     ? qty >= tier.min_qty && (tier.max_qty === undefined || qty <= tier.max_qty)
                     : false
                   return (
-                    <tr key={i} className={isActive ? 'bg-green-50' : ''}>
-                      <td className="px-3 py-2 text-gray-700">
+                    <tr key={i} className={isActive ? 'bg-success-soft' : ''}>
+                      <td className="px-3 py-2 text-muted">
                         {tier.max_qty ? `${tier.min_qty} – ${tier.max_qty}` : `${tier.min_qty}+`} u.
                         {isActive && (
-                          <span className="ms-2 text-xs text-green-600 font-medium">
+                          <span className="ms-2 text-xs text-success-fg font-medium">
                             {t('addToCartTierActive')}
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-end font-medium text-gray-900">
+                      <td className="px-3 py-2 text-end font-medium text-foreground">
                         {formatMAD(tier.price_per_unit)}
                       </td>
                     </tr>
@@ -144,15 +144,15 @@ export function AddToCartForm({
         <input type="hidden" name="quantity" value={qty} />
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-2">
-            {t('addToCartQtyLabel')} <span className="text-gray-400">{t('addToCartQtyMin', { min: minQty })}</span>
+          <label className="block text-xs font-medium text-muted mb-2">
+            {t('addToCartQtyLabel')} <span className="text-faint">{t('addToCartQtyMin', { min: minQty })}</span>
           </label>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={decrement}
               disabled={qty <= minQty}
-              className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-lg leading-none"
+              className="w-9 h-9 flex items-center justify-center border border-line rounded-lg text-muted hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-lg leading-none"
             >
               −
             </button>
@@ -162,12 +162,12 @@ export function AddToCartForm({
               onChange={handleInput}
               min={minQty}
               max={stockCount}
-              className="w-20 text-center py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-20 text-center py-2 border border-line rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground"
             />
             <button
               type="button"
               onClick={increment}
-              className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-lg leading-none"
+              className="w-9 h-9 flex items-center justify-center border border-line rounded-lg text-muted hover:bg-surface-2 transition-colors text-lg leading-none"
             >
               +
             </button>
@@ -176,7 +176,7 @@ export function AddToCartForm({
 
         {/* Next-tier nudge */}
         {nextTierReachable && savingsPerUnit > 0 && (
-          <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-muted bg-surface-2 border border-line rounded-lg px-3 py-2">
             {t('addToCartNudge', {
               units: unitsToNextTier,
               savings: savingsPerUnit.toFixed(0),
@@ -185,22 +185,22 @@ export function AddToCartForm({
         )}
 
         {/* Live pricing summary */}
-        <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
+        <div className="bg-bg rounded-xl p-4 space-y-1.5 border border-line">
           {activeTier && (
-            <p className="text-xs text-green-600 font-medium">
+            <p className="text-xs text-success-fg font-medium">
               {activeTier.label}
             </p>
           )}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">{t('addToCartUnitPrice')}</span>
-            <span className="font-medium text-gray-900">{formatMAD(unitPrice)}</span>
+            <span className="text-muted">{t('addToCartUnitPrice')}</span>
+            <span className="font-medium text-foreground">{formatMAD(unitPrice)}</span>
           </div>
-          <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1.5">
-            <span className="text-gray-700 font-medium">{t('addToCartSubtotal')}</span>
-            <span className="font-bold text-gray-900 text-base">{formatMAD(subtotal)}</span>
+          <div className="flex justify-between text-sm border-t border-line pt-1.5 mt-1.5">
+            <span className="text-foreground font-medium">{t('addToCartSubtotal')}</span>
+            <span className="font-bold text-foreground text-base">{formatMAD(subtotal)}</span>
           </div>
           {stockCount > 0 && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-faint">
               {t('addToCartStockCount', { count: stockCount })}
             </p>
           )}
@@ -208,16 +208,16 @@ export function AddToCartForm({
 
         {/* Feedback */}
         {state.error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+          <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
             {state.error}
           </p>
         )}
         {state.success && (
-          <div className="bg-green-50 border border-green-200 px-3 py-2 rounded-lg flex items-center justify-between">
-            <p className="text-sm text-green-700 font-medium">{t('addToCartSuccess')}</p>
+          <div className="bg-success-soft border border-success px-3 py-2 rounded-lg flex items-center justify-between">
+            <p className="text-sm text-success-fg font-medium">{t('addToCartSuccess')}</p>
             <Link
               href="/wholesale/cart"
-              className="text-xs text-green-700 underline underline-offset-2"
+              className="text-xs text-success-fg underline underline-offset-2"
             >
               {t('addToCartViewCart')}
             </Link>
@@ -227,7 +227,7 @@ export function AddToCartForm({
         <button
           type="submit"
           disabled={isPending || stockCount === 0}
-          className="w-full py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending
             ? t('addToCartAdding')

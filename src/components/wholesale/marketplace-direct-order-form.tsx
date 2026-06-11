@@ -56,15 +56,15 @@ export function MarketplaceDirectOrderForm({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-gray-500">{tDirect.stockNote}</p>
+      <p className="text-xs text-muted">{tDirect.stockNote}</p>
 
       <form action={action} className="space-y-4">
         <input type="hidden" name="supplierProductId" value={supplierProductId} />
         <input type="hidden" name="quantity" value={qty} />
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-2">
-            {tDirect.qtyLabel} <span className="text-gray-400">({tDirect.qtyMin})</span>
+          <label className="block text-xs font-medium text-muted mb-2">
+            {tDirect.qtyLabel} <span className="text-faint">({tDirect.qtyMin})</span>
           </label>
           <div className="flex items-center gap-2">
             <button
@@ -72,7 +72,7 @@ export function MarketplaceDirectOrderForm({
               onClick={decrement}
               disabled={qty <= minQty}
               aria-label="Diminuer la quantité"
-              className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-lg leading-none"
+              className="w-9 h-9 flex items-center justify-center border border-line rounded-lg text-muted hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-lg leading-none"
             >
               −
             </button>
@@ -82,30 +82,30 @@ export function MarketplaceDirectOrderForm({
               onChange={handleInput}
               min={minQty}
               max={stockCount ?? undefined}
-              className="w-20 text-center py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-20 text-center py-2 border border-line rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground"
             />
             <button
               type="button"
               onClick={increment}
               disabled={hasKnownStock && qty >= stockCount!}
               aria-label="Augmenter la quantité"
-              className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-lg leading-none"
+              className="w-9 h-9 flex items-center justify-center border border-line rounded-lg text-muted hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-lg leading-none"
             >
               +
             </button>
           </div>
         </div>
 
-        <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
+        <div className="bg-bg rounded-xl p-4 space-y-1.5 border border-line">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">{tDirect.unitPrice}</span>
-            <span className="font-medium text-gray-900">{formatMAD(unitPrice)}</span>
+            <span className="text-muted">{tDirect.unitPrice}</span>
+            <span className="font-medium text-foreground">{formatMAD(unitPrice)}</span>
           </div>
-          <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1.5">
-            <span className="text-gray-700 font-medium">{tDirect.subtotal}</span>
-            <span className="font-bold text-gray-900 text-base">{formatMAD(subtotal)}</span>
+          <div className="flex justify-between text-sm border-t border-line pt-1.5 mt-1.5">
+            <span className="text-foreground font-medium">{tDirect.subtotal}</span>
+            <span className="font-bold text-foreground text-base">{formatMAD(subtotal)}</span>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-faint">
             {hasKnownStock
               ? tDirect.stockAvailable(stockCount!, unit)
               : isOutOfStock
@@ -116,16 +116,16 @@ export function MarketplaceDirectOrderForm({
         </div>
 
         {state.error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+          <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
             {state.error}
           </p>
         )}
         {state.success && (
-          <div className="bg-green-50 border border-green-200 px-3 py-2 rounded-lg flex items-center justify-between">
-            <p className="text-sm text-green-700 font-medium">✓ {tDirect.addedSuccess}</p>
+          <div className="bg-success-soft border border-success px-3 py-2 rounded-lg flex items-center justify-between">
+            <p className="text-sm text-success-fg font-medium">✓ {tDirect.addedSuccess}</p>
             <Link
               href="/wholesale/cart"
-              className="text-xs text-green-700 underline underline-offset-2"
+              className="text-xs text-success-fg underline underline-offset-2"
             >
               {tDirect.viewCart}
             </Link>
@@ -135,7 +135,7 @@ export function MarketplaceDirectOrderForm({
         <button
           type="submit"
           disabled={isPending || isOutOfStock}
-          className="w-full py-3 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? tDirect.adding : isOutOfStock ? tDirect.outOfStock : tDirect.addToCart}
         </button>

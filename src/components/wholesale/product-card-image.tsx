@@ -24,9 +24,9 @@ export function ProductCardImage({ src, alt, category }: ProductCardImageProps) 
 
   if (errored) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-50 via-stone-50 to-amber-100">
+      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-bg border-b border-line">
         <span className="text-4xl">{icon}</span>
-        <span className="text-[10px] text-stone-500 font-semibold text-center px-2 leading-tight line-clamp-2">{alt}</span>
+        <span className="text-[10px] text-muted font-semibold text-center px-2 leading-tight line-clamp-2">{alt}</span>
       </div>
     )
   }

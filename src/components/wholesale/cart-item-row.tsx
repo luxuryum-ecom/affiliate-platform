@@ -41,7 +41,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
   const coverUrl = getProductCoverUrl(product)
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row gap-4">
+    <div className="bg-surface rounded-xl border border-line p-4 flex flex-col sm:flex-row gap-4">
       {/* Thumbnail */}
       <Link href={`/wholesale/products/${product.id}`} className="shrink-0">
         <ProductThumbnail
@@ -56,7 +56,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
         <div className="flex items-start justify-between gap-2">
           <Link
             href={`/wholesale/products/${product.id}`}
-            className="font-medium text-gray-900 text-sm leading-snug hover:underline"
+            className="font-medium text-foreground text-sm leading-snug hover:underline"
           >
             {/* product.name is DB data */}
             {product.name}
@@ -66,7 +66,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
             <input type="hidden" name="itemId" value={item.id} />
             <button
               type="submit"
-              className="text-gray-300 hover:text-red-500 transition-colors text-lg leading-none"
+              className="text-faint hover:text-danger-fg transition-colors text-lg leading-none"
               aria-label={t('itemRemoveAriaLabel')}
             >
               ×
@@ -76,9 +76,9 @@ export function CartItemRow({ item }: CartItemRowProps) {
 
         {/* Tier hint */}
         {tier ? (
-          <p className="text-xs text-green-600">{tier.label}</p>
+          <p className="text-xs text-success-fg">{tier.label}</p>
         ) : (
-          <p className="text-xs text-gray-400">{formatMAD(product.sell_price)}/u.</p>
+          <p className="text-xs text-faint">{formatMAD(product.sell_price)}/u.</p>
         )}
 
         {/* Qty + price row */}
@@ -89,7 +89,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
               type="button"
               onClick={decrement}
               disabled={qty <= product.wholesale_min_qty}
-              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-base leading-none"
+              className="w-7 h-7 flex items-center justify-center border border-line rounded-md text-muted hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed text-base leading-none"
             >
               −
             </button>
@@ -99,13 +99,13 @@ export function CartItemRow({ item }: CartItemRowProps) {
               onChange={handleInput}
               min={product.wholesale_min_qty}
               max={product.availability_type === 'local_stock' ? product.stock_count : undefined}
-              className="w-14 text-center py-1 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="w-14 text-center py-1 border border-line rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gold-400"
             />
             <button
               type="button"
               onClick={increment}
               disabled={product.availability_type === 'local_stock' && qty >= product.stock_count}
-              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-base leading-none"
+              className="w-7 h-7 flex items-center justify-center border border-line rounded-md text-muted hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed text-base leading-none"
             >
               +
             </button>
@@ -119,8 +119,8 @@ export function CartItemRow({ item }: CartItemRowProps) {
               type="submit"
               className={`text-xs px-2.5 py-1 rounded-md transition-colors border ${
                 qty !== item.quantity
-                  ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-700'
-                  : 'text-gray-500 border-gray-200 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary hover:opacity-90'
+                  : 'text-muted border-line hover:bg-surface-2'
               }`}
             >
               {qty !== item.quantity ? t('itemUpdate') : t('itemUpdated')}
@@ -129,8 +129,8 @@ export function CartItemRow({ item }: CartItemRowProps) {
 
           {/* Live subtotal */}
           <div className="ms-auto text-end">
-            <p className="text-xs text-gray-400">{formatMAD(unitPrice)}/u.</p>
-            <p className="font-bold text-gray-900 text-sm">{formatMAD(subtotal)}</p>
+            <p className="text-xs text-faint">{formatMAD(unitPrice)}/u.</p>
+            <p className="font-bold text-foreground text-sm">{formatMAD(subtotal)}</p>
           </div>
         </div>
       </div>
