@@ -2,8 +2,15 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { isSupplierCountryCode } from '@/lib/supplier-countries'
 import type { Profile } from '@/types/database'
+
+// Format E.164 : « + » suivi d'un indicatif (1er chiffre non nul) puis 6 à 14
+// chiffres (8 à 15 chiffres au total). Ex. +212600000000. Niveau 1 : stocké,
+// pas de vérification OTP — sert à joindre l'utilisateur (appel / WhatsApp).
+const E164_RE = /^\+[1-9]\d{6,14}$/
+const ROLES_REQUIRING_PHONE = ['supplier', 'wholesaler']
 
 export type AuthState = { error: string | null }
 
@@ -24,6 +31,9 @@ export async function signUp(
   const full_name = (formData.get('full_name') as string)?.trim()
   const role = formData.get('role') as string
   const country_code = (formData.get('country_code') as string)?.trim() || ''
+  // Normalisation téléphone : on retire espaces, tirets, points et parenthèses
+  // saisis par l'utilisateur, on conserve le « + » et les chiffres (E.164).
+  const phone = ((formData.get('phone') as string) ?? '').replace(/[\s\-().]/g, '')
 
   if (!email || !password || !full_name) {
     return { error: 'Tous les champs sont requis.' }
@@ -43,6 +53,15 @@ export async function signUp(
     if (!isSupplierCountryCode(country_code)) return { error: 'Pays invalide.' }
   }
 
+  // Téléphone OBLIGATOIRE pour fournisseur ET grossiste (joignabilité appel/WhatsApp).
+  // Niveau 1 : stocké tel quel après validation du format, sans vérification OTP.
+  const phoneRequired = ROLES_REQUIRING_PHONE.includes(role)
+  if (phoneRequired) {
+    const ts = await getTranslations('auth.signup')
+    if (!phone) return { error: ts('phoneRequired') }
+    if (!E164_RE.test(phone)) return { error: ts('phoneInvalid') }
+  }
+
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signUp({
@@ -53,6 +72,7 @@ export async function signUp(
         full_name,
         role,
         ...(role === 'supplier' ? { country_code } : {}),
+        ...(phoneRequired ? { phone } : {}),
       },
     },
   })

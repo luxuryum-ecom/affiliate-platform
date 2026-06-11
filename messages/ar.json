@@ -1397,7 +1397,12 @@
       "haveAccount": "لديك حساب بالفعل؟",
       "loginLink": "تسجيل الدخول",
       "adminQuestion": "هل أنت مدير؟",
-      "directLogin": "دخول مباشر"
+      "directLogin": "دخول مباشر",
+      "phoneLabel": "الهاتف",
+      "phonePlaceholder": "+212600000000",
+      "phoneHelp": "صيغة دولية مع رمز الدولة. تُستعمَل للتواصل معك عبر المكالمة أو واتساب.",
+      "phoneRequired": "رقم الهاتف إلزامي.",
+      "phoneInvalid": "رقم غير صالح. الصيغة الدولية متوقَّعة، مثال: +212600000000."
     },
     "pending": {
       "metaTitle": "الحساب قيد المراجعة — Mozouna Group",

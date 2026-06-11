@@ -1397,7 +1397,12 @@
       "haveAccount": "Already registered?",
       "loginLink": "Sign in",
       "adminQuestion": "Are you an admin?",
-      "directLogin": "Direct login"
+      "directLogin": "Direct login",
+      "phoneLabel": "Phone",
+      "phonePlaceholder": "+212600000000",
+      "phoneHelp": "International format with country code. Used to reach you by call or WhatsApp.",
+      "phoneRequired": "Phone number is required.",
+      "phoneInvalid": "Invalid number. International format expected, e.g. +212600000000."
     },
     "pending": {
       "metaTitle": "Account pending — Mozouna Group",

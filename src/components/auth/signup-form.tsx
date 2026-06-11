@@ -74,6 +74,27 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
         </div>
       )}
 
+      {(defaultRole === 'supplier' || defaultRole === 'wholesaler') && (
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-muted mb-1">
+            {ts('phoneLabel')} <span className="text-danger">*</span>
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            required
+            dir="ltr"
+            inputMode="tel"
+            autoComplete="tel"
+            disabled={isPending}
+            className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint text-start"
+            placeholder={ts('phonePlaceholder')}
+          />
+          <p className="mt-1 text-xs text-muted">{ts('phoneHelp')}</p>
+        </div>
+      )}
+
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-muted mb-1">
           {t('emailLabel')}

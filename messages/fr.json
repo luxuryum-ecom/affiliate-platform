@@ -1397,7 +1397,12 @@
       "haveAccount": "Déjà inscrit ?",
       "loginLink": "Se connecter",
       "adminQuestion": "Vous êtes admin ?",
-      "directLogin": "Connexion directe"
+      "directLogin": "Connexion directe",
+      "phoneLabel": "Téléphone",
+      "phonePlaceholder": "+212600000000",
+      "phoneHelp": "Format international avec indicatif pays. Sert à vous joindre par appel ou WhatsApp.",
+      "phoneRequired": "Le numéro de téléphone est obligatoire.",
+      "phoneInvalid": "Numéro invalide. Format international attendu, ex. +212600000000."
     },
     "pending": {
       "metaTitle": "Compte en attente — Mozouna Group",
