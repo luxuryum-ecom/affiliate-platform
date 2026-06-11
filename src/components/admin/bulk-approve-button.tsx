@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { bulkApproveCommissions } from '@/app/actions/commissions'
 
 interface BulkApproveButtonProps {
@@ -9,6 +10,7 @@ interface BulkApproveButtonProps {
 }
 
 export function BulkApproveButton({ pendingIds }: BulkApproveButtonProps) {
+  const t = useTranslations('admin.bulkApprove')
   const [isPending, startTransition] = useTransition()
   const [result, setResult] = useState<{ updated: number; error: string | null } | null>(null)
 
@@ -24,9 +26,9 @@ export function BulkApproveButton({ pendingIds }: BulkApproveButtonProps) {
 
   if (result && !result.error) {
     return (
-      <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
+      <div className="flex items-center gap-2 text-sm text-success-fg bg-success-soft border border-success rounded-lg px-4 py-2">
         <span>✓</span>
-        <span>{result.updated} commission{result.updated !== 1 ? 's' : ''} approuvée{result.updated !== 1 ? 's' : ''}.</span>
+        <span>{t('success', { count: result.updated })}</span>
       </div>
     )
   }
@@ -34,22 +36,22 @@ export function BulkApproveButton({ pendingIds }: BulkApproveButtonProps) {
   return (
     <div className="flex items-center gap-3">
       {result?.error && (
-        <p className="text-xs text-red-600">{result.error}</p>
+        <p className="text-xs text-danger-fg">{result.error}</p>
       )}
       <button
         type="button"
         disabled={isPending}
         onClick={handleClick}
-        className="flex items-center gap-1.5 text-sm px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        className="flex items-center gap-1.5 text-sm px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
         {isPending ? (
           <>
-            <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Approbation…
+            <span className="inline-block w-3.5 h-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+            {t('approving')}
           </>
         ) : (
           <>
-            ✓ Approuver {pendingIds.length} commission{pendingIds.length !== 1 ? 's' : ''} en attente
+            ✓ {t('pendingCount', { count: pendingIds.length })}
           </>
         )}
       </button>

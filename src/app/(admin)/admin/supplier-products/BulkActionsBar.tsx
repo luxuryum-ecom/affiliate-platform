@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { bulkApproveProducts, bulkRejectProducts, bulkArchiveProducts } from '@/app/actions/supplier-bulk'
 import {
   MODERATION_FLAG_LABELS,
@@ -25,7 +26,14 @@ interface ProductRow {
   createdAt: string
 }
 
-export default function BulkProductList({ products, detailBase }: { products: ProductRow[]; detailBase: string }) {
+interface BulkProductListProps {
+  products: ProductRow[]
+  detailBase: string
+  locale: string
+}
+
+export default function BulkProductList({ products, detailBase, locale }: BulkProductListProps) {
+  const t  = useTranslations('admin.supplierProducts')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [approveState, approveAction, isApproving] = useActionState(bulkApproveProducts, initial)
   const [rejectState,  rejectAction,  isRejecting]  = useActionState(bulkRejectProducts,  initial)
@@ -40,113 +48,154 @@ export default function BulkProductList({ products, detailBase }: { products: Pr
   const anySuccess = approveState.success || rejectState.success || archiveState.success
   const anyError   = approveState.error   || rejectState.error   || archiveState.error
 
+  const isRTL = locale === 'ar'
+  const reviewLabel = isRTL ? t('reviewAr') : t('review')
+
   return (
     <div>
-      {/* Bulk action bar */}
+      {/* ── Bulk action bar ── */}
       {count > 0 && (
-        <div className="sticky top-0 z-10 bg-gray-900 text-white rounded-xl px-4 py-3 mb-4 flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold">{count} sélectionné{count > 1 ? 's' : ''}</span>
+        <div className="sticky top-0 z-10 bg-primary text-primary-foreground rounded-xl px-4 py-3 mb-4 flex flex-wrap items-center gap-3">
+          <span className="text-sm font-semibold">
+            {t('selected', { count })}
+          </span>
 
           <form action={approveAction} className="contents">
             <input type="hidden" name="product_ids" value={ids} />
-            <button type="submit" disabled={isApproving} className="text-xs px-3 py-1.5 bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
-              {isApproving ? '...' : 'Approuver'}
+            <button
+              type="submit"
+              disabled={isApproving}
+              className="text-xs px-3 py-1.5 bg-success-soft text-success-fg border border-success rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isApproving ? t('bulkApproving') : t('bulkApprove')}
             </button>
           </form>
 
           <form action={rejectAction} className="contents">
             <input type="hidden" name="product_ids" value={ids} />
-            <button type="submit" disabled={isRejecting} className="text-xs px-3 py-1.5 bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors">
-              {isRejecting ? '...' : 'Bloquer'}
+            <button
+              type="submit"
+              disabled={isRejecting}
+              className="text-xs px-3 py-1.5 bg-danger-soft text-danger-fg border border-danger rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isRejecting ? t('bulkBlocking') : t('bulkBlock')}
             </button>
           </form>
 
           <form action={archiveAction} className="contents">
             <input type="hidden" name="product_ids" value={ids} />
-            <button type="submit" disabled={isArchiving} className="text-xs px-3 py-1.5 bg-gray-500 rounded-lg hover:bg-gray-600 disabled:opacity-50 transition-colors">
-              {isArchiving ? '...' : 'Archiver'}
+            <button
+              type="submit"
+              disabled={isArchiving}
+              className="text-xs px-3 py-1.5 bg-surface-2 text-muted border border-line rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isArchiving ? t('bulkArchiving') : t('bulkArchive')}
             </button>
           </form>
 
-          <button type="button" onClick={() => setSelected(new Set())} className="text-xs text-gray-400 hover:text-white ml-auto">
-            Effacer la sélection
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="text-xs text-primary-foreground/60 hover:text-primary-foreground ml-auto transition-colors"
+          >
+            {t('clearSelection')}
           </button>
         </div>
       )}
 
       {anySuccess && !approveState.error && (
-        <div className="mb-3 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-          Action effectuée.
+        <div className="mb-3 text-xs text-success-fg bg-success-soft border border-success rounded-lg px-4 py-2">
+          {t('actionDone')}
         </div>
       )}
       {approveState.success && approveState.error && (
-        <div className="mb-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+        <div className="mb-3 text-xs text-warning-fg bg-warning-soft border border-warning rounded-lg px-4 py-2">
           {approveState.error}
         </div>
       )}
       {anyError && !approveState.success && (
-        <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+        <div className="mb-3 text-xs text-danger-fg bg-danger-soft border border-danger rounded-lg px-4 py-2">
           {approveState.error ?? rejectState.error ?? archiveState.error}
         </div>
       )}
 
-      {/* Table header */}
-      <div className="bg-white rounded-t-xl border border-b-0 border-gray-200 px-4 py-2.5 flex items-center gap-3">
-        <input type="checkbox" checked={allChecked} onChange={toggleAll} className="rounded border-gray-300" />
-        <span className="text-xs text-gray-500">Sélectionner tout</span>
+      {/* ── Table header ── */}
+      <div className="bg-surface rounded-t-xl border border-b-0 border-line px-4 py-2.5 flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={allChecked}
+          onChange={toggleAll}
+          className="rounded border-line focus:ring-2 focus:ring-gold-400"
+        />
+        <span className="text-xs text-muted">{t('selectAll')}</span>
       </div>
 
       {products.length === 0 ? (
-        <div className="bg-white rounded-b-xl border border-gray-200 p-12 text-center">
-          <p className="text-sm text-gray-400">Aucune soumission fournisseur.</p>
+        <div className="bg-surface rounded-b-xl border border-line p-12 text-center">
+          <p className="text-sm text-faint">{t('empty')}</p>
         </div>
       ) : (
-        <div className="bg-white rounded-b-xl border border-gray-200 divide-y divide-gray-100">
+        <div className="bg-surface rounded-b-xl border border-line divide-y divide-line">
           {products.map((p) => {
-            const badge = SUPPLIER_PRODUCT_STATUS_BADGES[p.approval_status]
-            const modLabel =
-              p.moderation_flag != null ? MODERATION_FLAG_LABELS[p.moderation_flag] : null
+            const badge    = SUPPLIER_PRODUCT_STATUS_BADGES[p.approval_status]
+            const modLabel = p.moderation_flag != null ? MODERATION_FLAG_LABELS[p.moderation_flag] : null
+            const dateStr  = new Date(p.createdAt).toLocaleDateString(locale, {
+              year: 'numeric', month: 'short', day: 'numeric',
+            })
             return (
-              <div key={p.id} className={`p-4 flex items-start gap-3 transition-colors ${selected.has(p.id) ? 'bg-blue-50' : ''}`}>
+              <div
+                key={p.id}
+                className={`p-4 flex items-start gap-3 transition-colors ${
+                  selected.has(p.id) ? 'bg-gold-50 dark:bg-gold-950/10' : ''
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={selected.has(p.id)}
                   onChange={() => toggle(p.id)}
-                  className="rounded border-gray-300 mt-0.5 flex-shrink-0"
+                  className="rounded border-line mt-0.5 flex-shrink-0 focus:ring-2 focus:ring-gold-400"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="font-medium text-gray-900 text-sm truncate max-w-[200px]">{p.product_name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                    <span className="font-medium text-foreground text-sm truncate max-w-[200px]">
+                      {p.product_name}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${badge.cls}`}>
+                      {badge.label}
+                    </span>
                     {modLabel && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                        IA: {modLabel}
+                      <span className="text-xs px-2 py-0.5 rounded-full border bg-surface-2 border-line text-muted">
+                        {t('aiSignal', { label: modLabel })}
                       </span>
                     )}
                     {p.ai_risk_score != null && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 tabular-nums">
-                        Risque {p.ai_risk_score}
+                      <span className="text-xs px-2 py-0.5 rounded-full border bg-surface-2 border-line text-faint tabular-nums">
+                        {t('risk', { score: p.ai_risk_score })}
                       </span>
                     )}
                     {p.supplier_type && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                        {p.supplier_type === 'morocco' ? '🇲🇦 Maroc' : '🌍 International'}
+                      <span className="text-xs px-2 py-0.5 rounded-full border bg-surface-2 border-line text-muted">
+                        {p.supplier_type === 'morocco'
+                          ? `🇲🇦 ${t('supplierMorocco')}`
+                          : `🌍 ${t('supplierInternational')}`}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 flex flex-wrap gap-x-2">
-                    {p.supplierName && <span className="font-medium text-gray-700">{p.supplierName}</span>}
+                  <p className="text-xs text-muted flex flex-wrap gap-x-2">
+                    {p.supplierName && (
+                      <span className="font-medium text-foreground">{p.supplierName}</span>
+                    )}
                     {p.category && <span>· {p.category}</span>}
-                    <span>· MOQ {p.min_quantity}</span>
+                    <span>· {t('moq', { qty: p.min_quantity })}</span>
                     {p.origin_country && <span>· {p.origin_country}</span>}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{new Date(p.createdAt).toLocaleDateString('fr-FR')}</p>
+                  <p className="text-xs text-faint mt-0.5">{dateStr}</p>
                 </div>
                 <a
                   href={`${detailBase}/${p.id}`}
-                  className="shrink-0 text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  className="shrink-0 text-xs px-3 py-1.5 bg-surface-2 hover:bg-line text-muted rounded-lg transition-colors border border-line"
                 >
-                  Examiner →
+                  {reviewLabel}
                 </a>
               </div>
             )
