@@ -317,6 +317,17 @@
       "dashboard": "Dashboard",
       "signOut": "Sign out"
     },
+    "telegramLink": {
+      "linkedCompact": "Telegram linked",
+      "linkedHint": "Send a photo + description to the bot",
+      "title": "Add products via Telegram",
+      "subtitle": "Link your account once, then simply send a photo + description to the bot.",
+      "generate": "Generate my link code",
+      "generating": "Generating…",
+      "instruction": "Open {bot} on Telegram and send:",
+      "codeValidity": "Code valid for {minutes} minutes, single use.",
+      "botFallback": "the bot"
+    },
     "products": {
       "metaTitle": "My products — Supplier area",
       "breadcrumb": "My products",

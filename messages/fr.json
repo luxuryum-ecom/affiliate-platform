@@ -317,6 +317,17 @@
       "dashboard": "Dashboard",
       "signOut": "Déconnexion"
     },
+    "telegramLink": {
+      "linkedCompact": "Telegram lié",
+      "linkedHint": "Envoyez photo + description au bot",
+      "title": "Ajouter des produits par Telegram",
+      "subtitle": "Liez votre compte une seule fois, puis envoyez simplement photo + description au bot.",
+      "generate": "Générer mon code de liaison",
+      "generating": "Génération…",
+      "instruction": "Ouvrez {bot} sur Telegram et envoyez :",
+      "codeValidity": "Code valable {minutes} minutes, à usage unique.",
+      "botFallback": "le bot"
+    },
     "products": {
       "metaTitle": "Mes produits — Espace Fournisseur",
       "breadcrumb": "Mes produits",
