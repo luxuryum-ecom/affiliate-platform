@@ -6,21 +6,35 @@ import {
   getAllSuppliersForAdmin,
 } from '@/app/actions/premium'
 import { AssignPlanForm, CancelSubscriptionButton } from './PremiumAssignClient'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import type { PremiumPlan } from '@/types/database'
 
-export const metadata = { title: 'Premium — Admin' }
-
-const PLAN_COLORS: Record<string, string> = {
-  free:         'bg-gray-100 text-gray-600',
-  professional: 'bg-indigo-100 text-indigo-700',
-  enterprise:   'bg-amber-100 text-amber-700',
+export async function generateMetadata() {
+  const t = await getTranslations('admin.premium')
+  return { title: t('metaTitle') }
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  active:    'bg-green-100 text-green-700',
-  trial:     'bg-blue-100 text-blue-700',
-  expired:   'bg-red-100 text-red-600',
-  cancelled: 'bg-gray-100 text-gray-500',
+// CSS-only — plan accent OR, pas d'indigo/violet
+const PLAN_CLS: Record<string, string> = {
+  free:         'bg-surface-2 text-muted border border-line',
+  professional: 'bg-gold-50 text-gold-700 border border-gold-200',
+  enterprise:   'bg-warning-soft text-warning-fg border border-warning',
+}
+
+// Plan card borders
+const PLAN_CARD_CLS: Record<string, string> = {
+  free:         'border-line',
+  professional: 'border-gold-300 ring-1 ring-gold-200',
+  enterprise:   'border-warning ring-1 ring-warning/40',
+}
+
+// CSS-only — subscription status
+const STATUS_CLS: Record<string, string> = {
+  active:    'bg-success-soft text-success-fg border border-success',
+  trial:     'bg-surface-2 text-muted border border-line',
+  expired:   'bg-danger-soft text-danger-fg border border-danger',
+  cancelled: 'bg-surface-2 text-faint border border-line',
 }
 
 export default async function AdminPremiumPage() {
@@ -28,17 +42,26 @@ export default async function AdminPremiumPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const t  = await getTranslations('admin.premium')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+
+  const { data: adminProfile } = (await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()) as { data: { full_name: string } | null; error: unknown }
+
   const [plans, suppliers] = await Promise.all([
     getPremiumPlans(),
     getAllSuppliersForAdmin(),
   ])
 
-  // Revenue KPIs
+  // Revenue KPIs — ARGENT: calculs inchangés
   const now = new Date()
   const activeSubs = suppliers.filter((s) => {
     const sub = s.subscription
     if (!sub || sub.plan.price_mad_monthly === 0) return false
-    // Exclude if expires_at is in the past (status may still be 'active' in DB)
     if (sub.expires_at && new Date(sub.expires_at) < now) return false
     return true
   })
@@ -54,82 +77,92 @@ export default async function AdminPremiumPage() {
   const trialCount = suppliers.filter((s) => s.subscription?.status === 'trial').length
   const freeCount  = suppliers.filter((s) => !s.subscription).length
 
+  function statusLabel(status: string) {
+    if (status === 'active')    return t('statusActive')
+    if (status === 'trial')     return t('statusTrial')
+    if (status === 'expired')   return t('statusExpired')
+    if (status === 'cancelled') return t('statusCancelled')
+    return status
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-800">← Admin</a>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Monétisation Premium</span>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={t('backLabel')}
+        userName={adminProfile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
 
         {/* KPI row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-2xl font-bold text-indigo-700 tabular-nums">{formatMAD(mrr)}</p>
-            <p className="text-xs text-gray-500 mt-1">MRR estimé</p>
-            <p className="text-xs text-gray-400 mt-0.5">{paidCount} abonné{paidCount !== 1 ? 's' : ''} actif{paidCount !== 1 ? 's' : ''} non expirés</p>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            {/* ARGENT: formatMAD inchangé */}
+            <p className="text-2xl font-bold text-gold-600 tabular-nums">{formatMAD(mrr)}</p>
+            <p className="text-xs text-muted mt-1">{t('kpiMrrLabel')}</p>
+            <p className="text-xs text-faint mt-0.5">{t('kpiMrrSub', { count: paidCount })}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-2xl font-bold text-green-600">{paidCount}</p>
-            <p className="text-xs text-gray-500 mt-1">Abonnés payants</p>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <p className="text-2xl font-bold text-success-fg">{paidCount}</p>
+            <p className="text-xs text-muted mt-1">{t('kpiPaidLabel')}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-2xl font-bold text-blue-600">{trialCount}</p>
-            <p className="text-xs text-gray-500 mt-1">En essai</p>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <p className="text-2xl font-bold text-foreground">{trialCount}</p>
+            <p className="text-xs text-muted mt-1">{t('kpiTrialLabel')}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-2xl font-bold text-gray-500">{freeCount}</p>
-            <p className="text-xs text-gray-500 mt-1">Plan gratuit (sans abonnement)</p>
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <p className="text-2xl font-bold text-faint">{freeCount}</p>
+            <p className="text-xs text-muted mt-1">{t('kpiFreeLabel')}</p>
           </div>
         </div>
 
         {/* MRR breakdown */}
         {(activeSubs.length > 0 || expiredByDate.length > 0) && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Détail MRR</h2>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <h2 className="text-sm font-semibold text-foreground mb-3">{t('mrrDetailTitle')}</h2>
+            <div className="bg-surface rounded-xl border border-line overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr className="text-left text-gray-500">
-                    <th className="px-4 py-2.5 font-medium">Fournisseur</th>
-                    <th className="px-4 py-2.5 font-medium">Plan</th>
-                    <th className="px-4 py-2.5 font-medium">Prix/mois</th>
-                    <th className="px-4 py-2.5 font-medium">Expire le</th>
-                    <th className="px-4 py-2.5 font-medium">MRR</th>
+                <thead className="bg-surface-2 border-b border-line">
+                  <tr className="text-left text-muted">
+                    <th className="px-4 py-2.5 font-medium">{t('mrrColSupplier')}</th>
+                    <th className="px-4 py-2.5 font-medium">{t('mrrColPlan')}</th>
+                    <th className="px-4 py-2.5 font-medium">{t('mrrColPrice')}</th>
+                    <th className="px-4 py-2.5 font-medium">{t('mrrColExpires')}</th>
+                    <th className="px-4 py-2.5 font-medium">{t('mrrColMrr')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-line">
                   {activeSubs.map(({ supplier, subscription: sub }) => (
-                    <tr key={supplier.id} className="text-gray-700">
+                    <tr key={supplier.id} className="text-foreground">
                       <td className="px-4 py-2.5 font-medium">{supplier.full_name}</td>
                       <td className="px-4 py-2.5">{sub!.plan.name}</td>
+                      {/* ARGENT: formatMAD inchangé */}
                       <td className="px-4 py-2.5 tabular-nums">{formatMAD(sub!.plan.price_mad_monthly)}</td>
                       <td className="px-4 py-2.5">
                         {sub!.expires_at
-                          ? new Date(sub!.expires_at).toLocaleDateString('fr-FR')
-                          : <span className="text-gray-400">—</span>}
+                          ? new Date(sub!.expires_at).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })
+                          : <span className="text-faint">—</span>}
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className="text-green-700 font-medium">✓ inclus</span>
+                        <span className="text-success-fg font-medium">{t('mrrIncluded')}</span>
                       </td>
                     </tr>
                   ))}
                   {expiredByDate.map(({ supplier, subscription: sub }) => (
-                    <tr key={supplier.id} className="text-gray-400 bg-red-50">
+                    <tr key={supplier.id} className="text-faint bg-danger-soft/30">
                       <td className="px-4 py-2.5">{supplier.full_name}</td>
                       <td className="px-4 py-2.5">{sub!.plan.name}</td>
+                      {/* ARGENT: formatMAD inchangé */}
                       <td className="px-4 py-2.5 tabular-nums line-through">{formatMAD(sub!.plan.price_mad_monthly)}</td>
-                      <td className="px-4 py-2.5 text-red-500">
-                        {new Date(sub!.expires_at!).toLocaleDateString('fr-FR')}
+                      <td className="px-4 py-2.5 text-danger-fg">
+                        {new Date(sub!.expires_at!).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className="text-red-500 font-medium">✗ expiré</span>
+                        <span className="text-danger-fg font-medium">{t('mrrExpired')}</span>
                       </td>
                     </tr>
                   ))}
@@ -141,64 +174,67 @@ export default async function AdminPremiumPage() {
 
         {/* Plans overview */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Plans disponibles</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-4">{t('plansTitle')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {plans.map((plan) => (
-              <PlanCard key={plan.id} plan={plan} />
+              <PlanCard key={plan.id} plan={plan} planCardCls={PLAN_CARD_CLS} t={t} />
             ))}
           </div>
         </section>
 
         {/* Supplier list */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">
-            Fournisseurs ({suppliers.length})
+          <h2 className="text-sm font-semibold text-foreground mb-4">
+            {t('suppliersTitle', { count: suppliers.length })}
           </h2>
 
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {suppliers.length === 0 && (
-              <p className="p-6 text-sm text-gray-400 text-center">Aucun fournisseur approuvé.</p>
+              <p className="p-6 text-sm text-faint text-center">{t('suppliersEmpty')}</p>
             )}
             {suppliers.map(({ supplier, subscription }) => {
               const planSlug = subscription?.plan.slug ?? 'free'
-              const planName = subscription?.plan.name ?? 'Gratuit'
+              const planName = subscription?.plan.name ?? t('planFree')
               const status   = subscription?.status ?? 'active'
+              const subStatusCls = STATUS_CLS[status] ?? STATUS_CLS.cancelled
 
               return (
                 <details key={supplier.id} className="group">
-                  <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none hover:bg-gray-50 transition-colors">
+                  <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none hover:bg-surface-2 transition-colors">
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{supplier.full_name}</p>
-                        <p className="text-xs text-gray-500">{supplier.phone} · {supplier.city ?? '—'}</p>
+                        <p className="text-sm font-medium text-foreground">{supplier.full_name}</p>
+                        <p className="text-xs text-muted">{supplier.phone} · {supplier.city ?? '—'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PLAN_COLORS[planSlug] ?? 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${PLAN_CLS[planSlug] ?? PLAN_CLS.free}`}>
                         {planName}
                       </span>
                       {subscription && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-500'}`}>
-                          {status === 'active' ? 'Actif' : status === 'trial' ? 'Essai' : status === 'expired' ? 'Expiré' : 'Résilié'}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${subStatusCls}`}>
+                          {statusLabel(status)}
                         </span>
                       )}
-                      <span className="text-gray-400 group-open:rotate-180 transition-transform text-xs">▼</span>
+                      <span className="text-faint group-open:rotate-180 transition-transform text-xs">▼</span>
                     </div>
                   </summary>
 
-                  <div className="px-5 pb-5 border-t border-gray-100 pt-4 space-y-4">
-                    {/* Subscription details */}
+                  <div className="px-5 pb-5 border-t border-line pt-4 space-y-4">
+                    {/* Subscription details — visuel seulement, logique inchangée */}
                     {subscription && (
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <p>Depuis : {new Date(subscription.started_at).toLocaleDateString('fr-FR')}</p>
+                      <div className="text-xs text-muted space-y-1">
+                        <p>{t('subSince', { date: new Date(subscription.started_at).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }) })}</p>
                         {subscription.expires_at && (
-                          <p>Expire le : {new Date(subscription.expires_at).toLocaleDateString('fr-FR')}</p>
+                          <p>{t('subExpires', { date: new Date(subscription.expires_at).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }) })}</p>
                         )}
-                        {subscription.notes && <p>Notes : {subscription.notes}</p>}
+                        {subscription.notes && (
+                          <p>{t('subNotes', { notes: subscription.notes })}</p>
+                        )}
                       </div>
                     )}
 
-                    {/* Assign form */}
+                    {/* Assign form — name= / server action inchangés */}
                     <div className="max-w-sm space-y-3">
                       <AssignPlanForm
                         supplierId={supplier.id}
@@ -220,41 +256,54 @@ export default async function AdminPremiumPage() {
   )
 }
 
-function PlanCard({ plan }: { plan: PremiumPlan }) {
-  const colorMap: Record<string, string> = {
-    free:         'border-gray-200',
-    professional: 'border-indigo-300 ring-1 ring-indigo-200',
-    enterprise:   'border-amber-300 ring-1 ring-amber-200',
-  }
-
+// ── Plan Card ─────────────────────────────────────────────────────────────────
+function PlanCard({
+  plan,
+  planCardCls,
+  t,
+}: {
+  plan: PremiumPlan
+  planCardCls: Record<string, string>
+  t: Awaited<ReturnType<typeof getTranslations<'admin.premium'>>>
+}) {
   return (
-    <div className={`bg-white rounded-xl border p-5 space-y-3 ${colorMap[plan.slug] ?? 'border-gray-200'}`}>
+    <div className={`bg-surface rounded-xl border p-5 space-y-3 ${planCardCls[plan.slug] ?? 'border-line'}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-semibold text-gray-900 text-sm">{plan.name}</p>
-          <p className="text-lg font-bold text-gray-900 mt-0.5">
+          <p className="font-semibold text-foreground text-sm">{plan.name}</p>
+          <p className="text-lg font-bold text-foreground mt-0.5">
             {plan.price_mad_monthly === 0
-              ? 'Gratuit'
-              : `${plan.price_mad_monthly.toLocaleString('fr-FR')} MAD/mois`}
+              ? t('planFree')
+              : t('planPricePerMonth', { price: plan.price_mad_monthly.toLocaleString('fr-FR') })}
           </p>
         </div>
         {plan.verified_badge && (
-          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Vérifié</span>
+          <span className="text-xs bg-gold-50 text-gold-700 border border-gold-200 px-2 py-0.5 rounded-full">
+            {t('planBadgeVerified')}
+          </span>
         )}
         {!plan.verified_badge && plan.featured_badge && (
-          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Vedette</span>
+          <span className="text-xs bg-warning-soft text-warning-fg border border-warning px-2 py-0.5 rounded-full">
+            {t('planBadgeFeatured')}
+          </span>
         )}
       </div>
 
-      <p className="text-xs text-gray-500">{plan.description}</p>
+      <p className="text-xs text-muted">{plan.description}</p>
 
-      <ul className="text-xs text-gray-600 space-y-1">
-        <li>{plan.max_products === 0 ? 'Produits illimités' : `Jusqu'à ${plan.max_products} produits`}</li>
-        {plan.rfq_priority_boost > 0 && <li>Boost RFQ +{plan.rfq_priority_boost} pts</li>}
-        {plan.featured_badge && <li>Badge Vedette dans la marketplace</li>}
-        {plan.verified_badge && <li>Badge Vérifié</li>}
-        {plan.full_analytics && <li>Analytiques complètes</li>}
-        {plan.priority_support && <li>Support prioritaire</li>}
+      <ul className="text-xs text-muted space-y-1">
+        <li>
+          {plan.max_products === 0
+            ? t('planProductsUnlimited')
+            : t('planProductsMax', { max: plan.max_products })}
+        </li>
+        {plan.rfq_priority_boost > 0 && (
+          <li>{t('planRfqBoost', { boost: plan.rfq_priority_boost })}</li>
+        )}
+        {plan.featured_badge && <li>{t('planFeatureFeaturedBadge')}</li>}
+        {plan.verified_badge && <li>{t('planFeatureVerifiedBadge')}</li>}
+        {plan.full_analytics && <li>{t('planFeatureAnalytics')}</li>}
+        {plan.priority_support && <li>{t('planFeatureSupport')}</li>}
       </ul>
     </div>
   )

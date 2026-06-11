@@ -1,19 +1,28 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { updateUserStatus } from '@/app/actions/users'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import type { Profile } from '@/types/database'
 
-export const metadata = { title: 'Utilisateurs — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.users')
+  return { title: t('metaTitle') }
+}
 
-const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
-  affiliate:  { label: 'Affilié',     cls: 'bg-blue-100 text-blue-700' },
-  wholesaler: { label: 'Grossiste',   cls: 'bg-purple-100 text-purple-700' },
-  supplier:   { label: 'Fournisseur', cls: 'bg-orange-100 text-orange-700' },
+// CSS-only — role badges: neutre/accent, no blue/purple
+const ROLE_BADGE_CLS: Record<string, string> = {
+  affiliate:  'bg-surface-2 text-muted border border-line',
+  wholesaler: 'bg-surface-2 text-foreground border border-line',
+  supplier:   'bg-surface-2 text-muted border border-line',
 }
 
 export default async function AdminUsersPage() {
   const supabase = await createClient()
+  const t  = await getTranslations('admin.users')
+  const tc = await getTranslations('admin.common')
+  const td = await getTranslations('admin.userDetail')
+  const locale = await getLocale()
+
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: adminProfile } = (await supabase
@@ -43,66 +52,63 @@ export default async function AdminUsersPage() {
     'id' | 'full_name' | 'phone' | 'role' | 'status' | 'wholesale_access'
   >[]
 
+  function roleLabel(role: string) {
+    if (role === 'affiliate')  return td('roleAffiliate')
+    if (role === 'wholesaler') return td('roleWholesaler')
+    if (role === 'supplier')   return tc('unknown')
+    return role
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Utilisateurs</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{adminProfile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={tc('dashboard')}
+        userName={adminProfile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-4xl"
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
 
-        {/* ── Pending registrations (existing flow — unchanged) ── */}
+        {/* ── Pending registrations ── */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-semibold text-gray-900">Inscriptions en attente</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('pendingTitle')}</h2>
             {pending.length > 0 && (
-              <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">
+              <span className="text-xs px-2 py-0.5 bg-warning-soft text-warning-fg border border-warning rounded-full font-bold">
                 {pending.length}
               </span>
             )}
           </div>
 
           {pending.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 text-sm text-gray-400">
-              Aucune inscription en attente.
+            <div className="bg-surface rounded-xl border border-line px-5 py-4 text-sm text-faint">
+              {t('pendingEmpty')}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {pending.map((profile) => {
-                const badge = ROLE_BADGE[profile.role] ?? ROLE_BADGE.affiliate
+                const badgeCls = ROLE_BADGE_CLS[profile.role] ?? ROLE_BADGE_CLS.affiliate
                 return (
                   <div key={profile.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-medium text-gray-900">{profile.full_name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                          {badge.label}
+                        <span className="font-medium text-foreground">{profile.full_name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeCls}`}>
+                          {roleLabel(profile.role)}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Inscrit le{' '}
-                        {new Date(profile.created_at).toLocaleDateString('fr-MA', {
-                          day: '2-digit', month: 'long', year: 'numeric',
+                      <p className="text-xs text-muted">
+                        {t('registeredAt', {
+                          date: new Date(profile.created_at).toLocaleDateString(locale, {
+                            day: '2-digit', month: 'long', year: 'numeric',
+                          }),
                         })}
                       </p>
                       {profile.phone && (
-                        <p className="text-xs text-gray-400 mt-0.5">{profile.phone}</p>
+                        <p className="text-xs text-faint mt-0.5">{profile.phone}</p>
                       )}
                     </div>
                     <div className="flex gap-2 shrink-0">
@@ -111,9 +117,9 @@ export default async function AdminUsersPage() {
                         <input type="hidden" name="status" value="approved" />
                         <button
                           type="submit"
-                          className="px-4 py-2 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                          className="px-4 py-2 bg-success-soft text-success-fg border border-success text-xs font-medium rounded-lg hover:opacity-90 transition-opacity"
                         >
-                          Approuver
+                          {t('approve')}
                         </button>
                       </form>
                       <form action={updateUserStatus}>
@@ -121,9 +127,9 @@ export default async function AdminUsersPage() {
                         <input type="hidden" name="status" value="rejected" />
                         <button
                           type="submit"
-                          className="px-4 py-2 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors"
+                          className="px-4 py-2 bg-surface text-danger-fg border border-danger text-xs font-medium rounded-lg hover:bg-danger-soft transition-colors"
                         >
-                          Rejeter
+                          {t('reject')}
                         </button>
                       </form>
                     </div>
@@ -137,46 +143,46 @@ export default async function AdminUsersPage() {
         {/* ── Approved users ── */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-semibold text-gray-900">Utilisateurs approuvés</h2>
-            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
+            <h2 className="text-sm font-semibold text-foreground">{t('approvedTitle')}</h2>
+            <span className="text-xs px-2 py-0.5 bg-surface-2 text-muted border border-line rounded-full">
               {approved.length}
             </span>
           </div>
 
           {approved.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 text-sm text-gray-400">
-              Aucun utilisateur approuvé.
+            <div className="bg-surface rounded-xl border border-line px-5 py-4 text-sm text-faint">
+              {t('approvedEmpty')}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {approved.map((profile) => {
-                const badge = ROLE_BADGE[profile.role] ?? ROLE_BADGE.affiliate
+                const badgeCls = ROLE_BADGE_CLS[profile.role] ?? ROLE_BADGE_CLS.affiliate
                 const hasWholesale = profile.wholesale_access === true
 
                 return (
-                  <div key={profile.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div key={profile.id} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2 transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-gray-900 text-sm">{profile.full_name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>
-                          {badge.label}
+                        <span className="font-medium text-foreground text-sm">{profile.full_name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeCls}`}>
+                          {roleLabel(profile.role)}
                         </span>
                         {hasWholesale && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                            Accès grossiste
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-success-soft text-success-fg border border-success">
+                            {t('wholesaleAccess')}
                           </span>
                         )}
                       </div>
                       {profile.phone && (
-                        <p className="text-xs text-gray-400 mt-0.5">{profile.phone}</p>
+                        <p className="text-xs text-faint mt-0.5">{profile.phone}</p>
                       )}
                     </div>
-                    <Link
+                    <a
                       href={`/admin/users/${profile.id}`}
-                      className="shrink-0 text-xs text-blue-600 hover:underline"
+                      className="shrink-0 text-xs text-gold-500 hover:text-gold-600 transition-colors"
                     >
-                      Gérer →
-                    </Link>
+                      {t('manage')}
+                    </a>
                   </div>
                 )
               })}
