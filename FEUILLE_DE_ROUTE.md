@@ -209,4 +209,5 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
   - `supplier-morocco-03@affipartner.ma` : mot de passe temporaire **`TelegramTest2026!`** → réinitialiser ou retirer.
   - `admin@affipartner.ma` : mot de passe temporaire **`AdminTest2026!`** (posé pour corriger le pays via session admin) → réinitialiser ou retirer.
   - **authtoken ngrok** passé en clair dans la conversation de dev → **régénérer** sur https://dashboard.ngrok.com/get-started/your-authtoken.
+- 🚚 **Dette — Logistique B2B grossiste** : frais de livraison gérés **MANUELLEMENT** par commande (soit **OFFERT = 0**, soit ajouté dans les **frais additionnels**). **Pas de moteur automatique** — le B2C/Ozone existant ne change pas. Vérifier que le champ existe déjà sur la commande grossiste avant d'en ajouter un.
 - 🔀 **MERGE vers `main`** : `origin/main` est figé/en retard ; **`MERGE_PLAN.md` prêt** (Option B, jalonnée `--no-ff`). Merger `feat/habillage-premium` → `main` = **décision séparée, sur GO explicite d'Abdou** (un seul commit/lot à la fois, jamais auto).
