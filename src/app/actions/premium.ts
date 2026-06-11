@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
+import { checkProductLimit } from '@/lib/product-limit'
 import type {
   PremiumPlan,
   SupplierSubscription,
@@ -226,28 +227,13 @@ export async function getProductLimitStatus(supplierId: string): Promise<{
   planName: string
 }> {
   const supabase = await createClient()
-
-  const [subResult, countResult] = await Promise.all([
-    getSupplierSubscription(supplierId),
-    supabase
-      .from('supplier_products')
-      .select('*', { count: 'exact', head: true })
-      .eq('supplier_id', supplierId)
-      .is('archived_at', null),
-  ])
-
-  const planSlug  = subResult?.plan.slug ?? 'free'
-  const planName  = subResult?.plan.name ?? 'Gratuit'
-  const maxAllowed = subResult?.plan.max_products ?? 5
-  const isUnlimited = maxAllowed === 0
-  const currentCount = countResult.count ?? 0
-
+  const l = await checkProductLimit(supabase, supplierId)
   return {
-    currentCount,
-    maxAllowed,
-    isUnlimited,
-    isAtLimit: !isUnlimited && currentCount >= maxAllowed,
-    planSlug,
-    planName,
+    currentCount: l.currentCount,
+    maxAllowed: l.maxAllowed,
+    isUnlimited: l.isUnlimited,
+    isAtLimit: l.isAtLimit,
+    planSlug: l.planSlug,
+    planName: l.planName,
   }
 }

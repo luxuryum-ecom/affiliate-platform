@@ -9,6 +9,7 @@ import { extractProductFromTelegram } from './extract'
 import { telegramDownloadPhoto, telegramSendMessage } from './client'
 import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
 import { getRateToMad } from '@/lib/fx'
+import { checkProductLimit } from '@/lib/product-limit'
 import {
   buildMessageKey,
   isValidLinkCodeFormat,
@@ -219,6 +220,17 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
     await telegramSendMessage(
       chatId,
       "Configurez d'abord votre PAYS dans votre profil fournisseur (il détermine votre devise) avant d'envoyer un produit.",
+    )
+    return
+  }
+
+  // Limite de produits (abonnement) — barrière serveur (Telegram), avant l'IA.
+  const limit = await checkProductLimit(db, supplierId)
+  if (limit.isAtLimit) {
+    await markInbound(admin, messageKey, { status: 'rejected', error: 'limit_reached' })
+    await telegramSendMessage(
+      chatId,
+      `Limite de produits atteinte (${limit.currentCount}/${limit.maxAllowed} — plan ${limit.planName}). Passez à un plan supérieur pour en ajouter.`,
     )
     return
   }

@@ -326,6 +326,9 @@
       "generating": "Generating…",
       "instruction": "Open {bot} on Telegram and send:",
       "codeValidity": "Code valid for {minutes} minutes, single use.",
+      "quotaLabel": "Products: {current}/{max}",
+      "quotaUnlimited": "Products: {current} (unlimited)",
+      "upgrade": "Increase my limit",
       "botFallback": "the bot"
     },
     "products": {
@@ -357,6 +360,8 @@
       "limitTitle": "Product limit reached",
       "limitBody": "Your {plan} plan allows up to {max, plural, one {# product} other {# products}}. You currently have {current}.",
       "limitCta": "Upgrade to a higher plan →",
+      "noCountryTitle": "Country not set",
+      "noCountryBody": "Your country (which determines your currency) is not set yet. Contact the administrator before submitting a product.",
       "nearLimitBody": "You have {remaining, plural, one {# submission} other {# submissions}} left on your {plan} plan.",
       "nearLimitCta": "Change plan"
     },

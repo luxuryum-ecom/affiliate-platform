@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
 import { buildSupplierPricing } from '@/lib/supplier-pricing'
+import { checkProductLimit } from '@/lib/product-limit'
 import type {
   SupplierProduct,
   SupplierProductStatus,
@@ -95,6 +96,12 @@ export async function submitSupplierProduct(
   // price_source/fx_rate/mad lui-même — verrou DB 055).
   const admin = createAdminClient()
   const db = admin as unknown as Parameters<typeof buildSupplierPricing>[0]
+
+  // Limite de produits (abonnement) — barrière serveur (web). Évite la fuite UI.
+  const limit = await checkProductLimit(db, user.id)
+  if (limit.isAtLimit) {
+    return { error: `Limite de produits atteinte (${limit.currentCount}/${limit.maxAllowed} — plan ${limit.planName}). Passez à un plan supérieur pour en ajouter.` }
+  }
 
   // Conversion devise → MAD via taux admin figé. Pas de pays → soumission BLOQUÉE.
   const pricing = await buildSupplierPricing(db, user.id, priceSource)

@@ -8,6 +8,7 @@ import { parseCsvText } from '@/lib/bulk-import'
 import { MAX_CSV_BYTES, looksLikeBinary } from '@/lib/csv-sanitize'
 import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
 import { getRateToMad } from '@/lib/fx'
+import { checkProductLimit } from '@/lib/product-limit'
 import { fetchImageFromUrl } from '@/lib/image-fetch'
 import {
   moderateSupplierProduct,
@@ -158,9 +159,18 @@ export async function publishBulkImport(
   const supplier_type = currency === 'MAD' ? 'morocco' : 'international'
   const availability_type = currency === 'MAD' ? 'local_stock' : 'import_on_demand'
 
+  // Limite de produits (abonnement) — barrière serveur (CSV). Import partiel
+  // jusqu'à la limite, le reste est ignoré et rapporté.
+  const limit = await checkProductLimit(db, user.id)
+  if (limit.isAtLimit) {
+    return fail(`Limite de produits atteinte (${limit.currentCount}/${limit.maxAllowed} — plan ${limit.planName}). Passez à un plan supérieur pour importer.`)
+  }
+
   let imported = 0
+  let skippedByLimit = 0
 
   for (const row of rows) {
+    if (imported >= limit.remaining) { skippedByLimit++; continue }
     const pricing = composePricing(currency, rate, row.price_source)
     const photos = await rehostPhotos(admin, user.id, row.photos)
 
@@ -250,6 +260,13 @@ export async function publishBulkImport(
   revalidatePath('/supplier/products')
   revalidatePath('/supplier/products/import')
 
+  if (skippedByLimit > 0) {
+    return {
+      error: `${imported} produit(s) importé(s). ${skippedByLimit} ignoré(s) — limite du plan atteinte (max ${limit.maxAllowed}). Passez à un plan supérieur.`,
+      success: true,
+      importId,
+    }
+  }
   return ok(importId)
 }
 

@@ -326,6 +326,9 @@
       "generating": "جارٍ الإنشاء…",
       "instruction": "افتح {bot} على تيليغرام وأرسل:",
       "codeValidity": "الرمز صالح لمدة {minutes} دقيقة، للاستعمال مرة واحدة.",
+      "quotaLabel": "المنتجات: {current}/{max}",
+      "quotaUnlimited": "المنتجات: {current} (غير محدود)",
+      "upgrade": "رفع الحدّ",
       "botFallback": "البوت"
     },
     "products": {
@@ -357,6 +360,8 @@
       "limitTitle": "تم بلوغ الحد الأقصى للمنتجات",
       "limitBody": "خطتك {plan} تتيح حتى {max, plural, one {# منتج} other {# منتجات}}. لديك حاليًا {current}.",
       "limitCta": "الترقية إلى خطة أعلى ←",
+      "noCountryTitle": "البلد غير مُعدّ",
+      "noCountryBody": "لم يتم تحديد بلدك بعد (وهو الذي يحدّد عملتك). تواصل مع المسؤول قبل إرسال منتج.",
       "nearLimitBody": "تبقّى لك {remaining, plural, one {# اقتراح} other {# اقتراحات}} ضمن خطتك {plan}.",
       "nearLimitCta": "تغيير الخطة"
     },

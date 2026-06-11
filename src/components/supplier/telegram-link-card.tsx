@@ -1,18 +1,26 @@
 'use client'
 
 // ─── Carte de liaison Telegram (autoportante) ────────────────────────────────
-// À monter dans n'importe quelle page fournisseur :
 //   import { TelegramLinkCard } from '@/components/supplier/telegram-link-card'
-//   <TelegramLinkCard initialStatus={await getTelegramLinkStatus()} />
+//   <TelegramLinkCard initialStatus={await getTelegramLinkStatus()} quota={...} />
 
 import { useActionState } from 'react'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import {
   generateTelegramLinkCode,
   type TelegramLinkState,
 } from '@/app/actions/telegram-link'
 
-export function TelegramLinkCard({ initialStatus }: { initialStatus?: TelegramLinkState }) {
+type Quota = { current: number; max: number; isUnlimited: boolean }
+
+export function TelegramLinkCard({
+  initialStatus,
+  quota,
+}: {
+  initialStatus?: TelegramLinkState
+  quota?: Quota
+}) {
   const t = useTranslations('supplier.telegramLink')
   const [state, action, isPending] = useActionState(
     generateTelegramLinkCode,
@@ -21,24 +29,58 @@ export function TelegramLinkCard({ initialStatus }: { initialStatus?: TelegramLi
 
   const botUsername = state.botUsername ?? initialStatus?.botUsername ?? null
   const botLabel = botUsername ? `@${botUsername}` : t('botFallback')
+  const linked = state.linked || initialStatus?.linked
 
-  // ── État LIÉ : ligne discrète (plus de gros bloc vert) ──────────────────────
-  if (state.linked || initialStatus?.linked) {
-    return (
-      <p className="text-xs text-muted flex items-center gap-1.5">
-        <span className="text-success font-semibold">✓</span>
-        <span className="font-medium text-foreground">{t('linkedCompact')}</span>
-        <span className="text-line">·</span>
-        <span className="text-faint">{t('linkedHint')}{botUsername ? ` ${botLabel}` : ''}</span>
+  const atLimit = !!quota && !quota.isUnlimited && quota.current >= quota.max
+  const nearLimit = !!quota && !quota.isUnlimited && quota.current >= quota.max - 1
+
+  const quotaBlock = quota ? (
+    <div className="shrink-0 text-end">
+      <p
+        className={`text-sm font-semibold ${
+          atLimit ? 'text-danger-fg' : nearLimit ? 'text-warning-fg' : 'text-foreground'
+        }`}
+      >
+        {quota.isUnlimited
+          ? t('quotaUnlimited', { current: quota.current })
+          : t('quotaLabel', { current: quota.current, max: quota.max })}
       </p>
+      {(atLimit || nearLimit) && (
+        <Link href="/supplier/premium" className="text-xs text-accent-fg underline">
+          {t('upgrade')}
+        </Link>
+      )}
+    </div>
+  ) : null
+
+  // ── État LIÉ : carte visible compacte + quota ───────────────────────────────
+  if (linked) {
+    return (
+      <div className="rounded-xl border border-line bg-surface p-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">
+            <span className="text-success">✓</span> {t('linkedCompact')}
+          </p>
+          <p className="text-xs text-muted mt-0.5 truncate">
+            {t('linkedHint')}
+            {botUsername ? ` ${botLabel}` : ''}
+          </p>
+        </div>
+        {quotaBlock}
+      </div>
     )
   }
 
-  // ── État NON LIÉ : bloc d'action ────────────────────────────────────────────
+  // ── État NON LIÉ : bloc d'action + quota ────────────────────────────────────
   return (
     <div className="rounded-xl border border-line bg-surface p-5">
-      <p className="text-sm font-semibold text-foreground">{t('title')}</p>
-      <p className="mt-1 text-xs text-muted">{t('subtitle')}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">{t('title')}</p>
+          <p className="mt-1 text-xs text-muted">{t('subtitle')}</p>
+        </div>
+        {quotaBlock}
+      </div>
 
       {state.code ? (
         <div className="mt-4 space-y-2">
