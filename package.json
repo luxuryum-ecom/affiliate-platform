@@ -17,7 +17,8 @@
     "migrate": "supabase db push",
     "types": "supabase gen types typescript --project-id owvtfzxvirttrbcsiveg --schema public > src/types/supabase-generated.ts",
     "reset-cache": "rm -rf .next",
-    "smoke": "playwright test",
+    "smoke": "next build && playwright test",
+    "smoke:dev": "playwright test",
     "smoke:report": "playwright show-report",
     "prepare": "husky"
   },

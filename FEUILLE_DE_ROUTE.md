@@ -35,9 +35,13 @@
 - **Hooks husky** : `pre-commit` (tsc + vitest) bloque physiquement ; `pre-push` (tsc + build +
   smoke si creds). Ne jamais `--no-verify`.
 - **Smoke Playwright** (`e2e/`, `pnpm smoke`) : chaque route principale doit se RENDRE sans erreur
-  (status, pageerror, overlay). Auth par rôle via comptes test dans `.env.local` (voir
-  `.env.local.example`). Public OK (3/3 verts) ; routes protégées couvertes dès que les
-  `SMOKE_*` sont renseignés.
+  (status, pageerror, overlay). Tourne contre un **build de PRODUCTION** (`next build && next start`),
+  **pas `next dev`** : sous dev, la compilation à froid parallèle crée des faux positifs transitoires
+  (« No intl context found »). Comptes démo dans `.env.local` (4 rôles, voir `.env.local.example`).
+  **Résultat : 19/19 routes vertes en prod** (3 publiques + affilié/grossiste/fournisseur/admin).
+  - 🔎 *Diagnostic 2026-06-12* : l'erreur « No intl context found » vue sous `next dev` était un
+    **artefact dev** (course de compilation), **PAS** un bug — confirmé par curl authentifié (FR/EN/AR)
+    et build prod (0 erreur). Le `NextIntlClientProvider` racine couvre bien toutes les routes.
 - **CI GitHub Actions** (`.github/workflows/ci.yml`, lite) : typecheck + vitest + build à chaque
   push/PR (pnpm 9 + Node 20, sans secret DB).
 

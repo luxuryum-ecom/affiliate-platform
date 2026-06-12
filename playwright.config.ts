@@ -42,13 +42,19 @@ export default defineConfig({
     },
   ],
 
-  // Démarre next dev via le binaire direct (contourne le gotcha pnpm sharp/unrs-resolver).
-  // Réutilise un serveur déjà lancé en local ; en CI on le démarre toujours.
+  // Smoke contre un BUILD DE PRODUCTION (`next start`), PAS `next dev`.
+  // Raison : sous `next dev`, la compilation à froid simultanée de plusieurs routes provoque
+  // des erreurs transitoires (ex. « No intl context found ») → faux positifs. La prod n'a pas
+  // cette course et teste exactement ce qui ship. Le build doit exister AVANT :
+  //   - `pnpm smoke` fait `next build && playwright test` ;
+  //   - le hook pre-push fait `next build` puis `playwright test`.
+  // Binaire direct = contournement du gotcha pnpm sharp/unrs-resolver.
+  // ⚠️ Ne pas laisser un `next dev` tourner sur le port : reuseExistingServer le réutiliserait.
   webServer: {
-    command: './node_modules/.bin/next dev',
+    command: './node_modules/.bin/next start -p 3000',
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
+    timeout: 120_000,
     stdout: 'ignore',
     stderr: 'pipe',
   },
