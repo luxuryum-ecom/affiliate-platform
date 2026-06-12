@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { catalogNameMatchesProduct, getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { findCatalogLink } from '@/lib/wholesale-catalog-link'
 import type { Product } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -128,23 +129,10 @@ export async function addMarketplaceToCart(
     }
   }
 
-  const lookupName = supplierProduct.public_name || supplierProduct.product_name
-
-  const { data: exactMatches } = (await supabase
-    .from('products')
-    .select('id, name, wholesale_min_qty, stock_count')
-    .eq('active', true)
-    .eq('approval_status', 'approved')
-    .eq('availability_type', 'local_stock')
-    .ilike('name', lookupName.trim())) as {
-    data: Pick<Product, 'id' | 'name' | 'wholesale_min_qty' | 'stock_count'>[] | null
-    error: unknown
-  }
-
-  const catalogProduct =
-    exactMatches?.find((p) => catalogNameMatchesProduct(p, lookupName)) ??
-    exactMatches?.[0] ??
-    null
+  // Miroir catalogue interne — MÊME résolution que celle qui gate le CTA côté page
+  // (findCatalogLink), pour garantir une source de vérité unique : si la page affiche
+  // « Commander en direct », c'est que ce miroir existe ; le checkout ne le contredit plus.
+  const catalogProduct = await findCatalogLink(supabase, supplierProduct)
 
   if (!catalogProduct) {
     return {

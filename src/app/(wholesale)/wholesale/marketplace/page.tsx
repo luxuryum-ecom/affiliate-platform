@@ -10,6 +10,7 @@ import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { findCatalogLinks } from '@/lib/wholesale-catalog-link'
 import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
 
 export async function generateMetadata() {
@@ -131,6 +132,11 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const localStockProductCount = allApproved.filter(
     (p) => p.availability_type === 'local_stock'
   ).length
+
+  // Miroirs catalogue (1 requête batch) → un produit candidat 'direct' n'affiche le
+  // CTA « Commander » que s'il a un miroir commandable, sinon 'rfq' (cohérent avec
+  // la fiche détail et addMarketplaceToCart). Évite le « Commander » → refus panier.
+  const catalogLinks = await findCatalogLinks(supabase, products)
 
   const subcategoryOptions = filters.category ? getSubcategories(filters.category) : []
   const isFiltered = !!(
@@ -391,6 +397,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
               <MarketplaceProductCard
                 key={product.id}
                 product={product}
+                directOrderable={catalogLinks.has(product.id)}
                 isFeatured={product.is_featured}
                 isVerified={product.is_verified}
                 locale={locale}
@@ -615,6 +622,7 @@ type MoqTierRow = { min_quantity: number; unit_price_usd: number }
 
 function MarketplaceProductCard({
   product,
+  directOrderable = false,
   isFeatured = false,
   isVerified = false,
   locale,
@@ -630,6 +638,8 @@ function MarketplaceProductCard({
     supplier_product_attachments?: { attachment_type: string; admin_status: string }[]
     supplier_product_moq_tiers?: MoqTierRow[]
   }
+  /** Existence d'un miroir catalogue commandable (résolu en amont, batch). */
+  directOrderable?: boolean
   isFeatured?: boolean
   isVerified?: boolean
   locale: string
@@ -640,7 +650,9 @@ function MarketplaceProductCard({
   const categoryIcon = CATEGORY_ICONS[product.category] ?? '🏷️'
   const isMorocco = product.supplier_type === 'morocco'
   const isLocalStock = product.availability_type === 'local_stock'
-  const ctaMode = getSupplierProductCtaMode(product)
+  // 'direct' seulement si candidat ET miroir catalogue commandable (cf. directOrderable).
+  const ctaMode =
+    getSupplierProductCtaMode(product) === 'direct' && directOrderable ? 'direct' : 'rfq'
   const moqTiers = product.supplier_product_moq_tiers ?? []
   const hasTiers = moqTiers.length > 1
 

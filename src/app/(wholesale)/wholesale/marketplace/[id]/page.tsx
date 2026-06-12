@@ -6,6 +6,7 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
 import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { findCatalogLink } from '@/lib/wholesale-catalog-link'
 import SampleRequestClient from './SampleRequestClient'
 import type {
   Profile,
@@ -78,9 +79,28 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const displayName = product.public_name || product.product_name
   const displayDesc = product.public_description || product.description
   const isMorocco = product.supplier_type === 'morocco'
-  const ctaMode = getSupplierProductCtaMode(product)
   const directUnitPrice = product.suggested_wholesale_price_mad ?? 0
-  const directStock = product.stock_quantity
+
+  // Commande directe = candidat 'direct' ET miroir catalogue interne commandable.
+  // Sans miroir, le checkout refuserait : on rétrograde donc en 'rfq' AVANT
+  // d'afficher le CTA (source de vérité unique partagée avec addMarketplaceToCart).
+  const catalogLink =
+    getSupplierProductCtaMode(product) === 'direct'
+      ? await findCatalogLink(supabase, product)
+      : null
+  const ctaMode: 'direct' | 'rfq' = catalogLink ? 'direct' : 'rfq'
+
+  // Seuils RÉELLEMENT appliqués au checkout = cumul des gardes fournisseur ET
+  // catalogue (cart.ts). On les affiche pour ne pas « déplacer le mur » : MOQ =
+  // max des deux, stock = min des deux. Sans miroir, valeurs fournisseur brutes.
+  const directMinQty = catalogLink
+    ? Math.max(product.min_quantity, catalogLink.wholesale_min_qty)
+    : product.min_quantity
+  const directStock = catalogLink
+    ? product.stock_quantity == null
+      ? catalogLink.stock_count
+      : Math.min(product.stock_quantity, catalogLink.stock_count)
+    : product.stock_quantity
 
   const hasCatalog = attachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
   const hasVideo   = attachments.some((a) => a.attachment_type === 'video')
@@ -266,14 +286,14 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                   <MarketplaceDirectOrderForm
                     supplierProductId={product.id}
                     unitPrice={directUnitPrice}
-                    minQty={product.min_quantity}
+                    minQty={directMinQty}
                     stockCount={directStock}
                     unit={product.unit}
                     locale={locale}
                     tDirect={{
-                      stockNote: t('directStockNote', { moq: product.min_quantity, unit: product.unit }),
+                      stockNote: t('directStockNote', { moq: directMinQty, unit: product.unit }),
                       qtyLabel: t('directQtyLabel'),
-                      qtyMin: t('directQtyMin', { min: product.min_quantity }),
+                      qtyMin: t('directQtyMin', { min: directMinQty }),
                       unitPrice: t('directUnitPrice'),
                       subtotal: t('directSubtotal'),
                       stockAvailable: directStock != null && directStock > 0
