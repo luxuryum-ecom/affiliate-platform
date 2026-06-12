@@ -45,6 +45,18 @@ export async function addToCart(
 
   if (!product) return { error: 'Produit introuvable.', success: false }
 
+  // Défense en profondeur : seul le stock local est commandable en direct. L'UI
+  // (/wholesale/products/[id]) gate déjà via getCatalogProductCtaMode, mais sans
+  // cette garde un import_on_demand pourrait être injecté au panier par appel
+  // direct de l'action, puis rejeté seulement au checkout (submitWholesaleOrder).
+  // Aligne addToCart sur addMarketplaceToCart et sur la garde de soumission.
+  if (product.availability_type !== 'local_stock') {
+    return {
+      error: 'Ce produit nécessite une demande de devis (import ou prix sur mesure).',
+      success: false,
+    }
+  }
+
   if (product.availability_type === 'local_stock' && quantity > product.stock_count) {
     return {
       error: `Stock insuffisant — ${product.stock_count} unités disponibles.`,
