@@ -61,6 +61,8 @@
   bug** (prouvé en prod). Aucun fichier app à corriger côté i18n.
 
 ## ⭐ PRIORITÉ N°1 — Gestion des commandes style Deliveroo (B2B) — **EN COURS** (session 2026-06-12)
+
+> ▶️ **REPRISE PROCHAINE SESSION = LOT 3b** (UI fournisseur + UI admin assignation fournisseur + i18n 5 clés `errors.*` + IMP-2). Détail dans la sous-section LOT 3 plus bas. **FAIT à ce jour** : Lots 1, 2 (Deliveroo) + chantier Transport T0→T3:b **poussés** ; **Lot 3a** (lien fournisseur DB + fix sécu `060`) **poussé**. **Restent** : Lot 3b (UI), Lot 3c (IMP-3 atomicité). Migrations appliquées jusqu'à `060`.
 **LE chantier à attaquer en premier.** Déjà détaillé en **SECTION 2bis-A** (plus bas) — s'y référer.
 - Les commandes qui **arrivent** dans le SaaS → **état / statut** clair (reçue → assignée → confirmée fournisseur → en préparation → prête → ramassée/expédiée → livrée).
 - **Notifications multi-rôles** (fournisseur, admin/superviseur, owner).
