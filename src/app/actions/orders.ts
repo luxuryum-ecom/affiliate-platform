@@ -748,6 +748,8 @@ export async function updateWholesaleOrderStatus(
   const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
   if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
 
+  // ── FSM guard côté action (fail-fast UX) — le RPC re-valide côté DB ──────
+  // On lit le statut courant pour fournir un retour rapide avant le round-trip RPC.
   const { data: order } = (await supabase
     .from('wholesale_orders')
     .select('status')
@@ -757,71 +759,26 @@ export async function updateWholesaleOrderStatus(
   if (!order) return fail('errors.order_not_found')
   if (order.status === newStatus) return fail('errors.status_already_set')
 
-  // ── FSM guard (M-1) ───────────────────────────────────────────────────────
+  // ── FSM guard (M-1) — validé côté action ET côté RPC (defence in depth) ──
   if (!isFsmTransitionAllowed(order.status, newStatus)) {
     return fail('errors.fsm_transition_invalid')
   }
 
-  const now = new Date().toISOString()
-  const prev = order.status
-
-  const update: Record<string, unknown> = { status: newStatus }
-  if (notes) update.agent_notes = notes
-
-  if (newStatus === 'confirmed')  { update.confirmed_at = now }
-  if (newStatus === 'sourcing')   { update.sourcing_at  = now }
-  if (newStatus === 'shipped')    { update.shipped_at   = now }
-  if (newStatus === 'delivered')  { update.delivered_at = now }
-  if (newStatus === 'cancelled')  { update.cancelled_at = now }
-
-  // ── Stock: confirmed → reserve all items; cancelled → restore ────────────
-  if (newStatus === 'confirmed' && prev === 'pending') {
-    const { data: items } = (await supabase
-      .from('wholesale_order_items')
-      .select('product_id, quantity')
-      .eq('order_id', orderId)) as {
-      data: { product_id: string; quantity: number }[] | null
-      error: unknown
-    }
-
-    for (const item of items ?? []) {
-      const { data: reserved } = (await supabase.rpc('reserve_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })) as { data: boolean; error: unknown }
-      if (!reserved) {
-        return fail('errors.insufficient_stock')
-      }
-    }
-  }
-
-  if (newStatus === 'cancelled' && ['confirmed', 'sourcing', 'shipped'].includes(prev)) {
-    const { data: items } = (await supabase
-      .from('wholesale_order_items')
-      .select('product_id, quantity')
-      .eq('order_id', orderId)) as {
-      data: { product_id: string; quantity: number }[] | null
-      error: unknown
-    }
-    for (const item of items ?? []) {
-      await supabase.rpc('restore_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })
-    }
-  }
-
-  const { error } = await supabase.from('wholesale_orders').update(update).eq('id', orderId)
-  if (error) return fail('errors.update_failed')
-
-  // ── Audit trail (append-only) ─────────────────────────────────────────────
-  await supabase.from('wholesale_order_status_history').insert({
-    order_id:   orderId,
-    from_status: prev,
-    to_status:  newStatus,
-    changed_by: userId,
-    note:       notes ?? null,
+  // ── Délégation atomique au RPC Postgres (migration 061) ───────────────────
+  // Le RPC exécute en une seule transaction : verrou FOR UPDATE, stock
+  // reserve/restore, UPDATE commande (timestamps inclus), INSERT history.
+  // AUCUNE colonne financière touchée — trigger compute_wholesale_order_costs intangible.
+  const { error: rpcErr } = await supabase.rpc('transition_wholesale_order_status', {
+    p_order_id:   orderId,
+    p_new_status: newStatus,
+    p_notes:      notes ?? null,
   })
+
+  if (rpcErr) {
+    const msg = rpcErr.message ?? 'errors.update_failed'
+    const key = msg.match(/errors\.[a-z_]+/)?.[0] ?? 'errors.update_failed'
+    return fail(key)
+  }
 
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
@@ -858,27 +815,8 @@ export async function assignWholesaleOrder(
   const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
   if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
 
-  // ── Permission guard : admin OR team member with assign_orders ────────────
-  const { data: canAssign, error: permErr } = (await supabase.rpc('can_assign_orders', {
-    uid: userId,
-  })) as { data: boolean | null; error: unknown }
-
-  if (permErr || !canAssign) return fail('errors.forbidden_assign_orders')
-
-  // ── Verify assignee exists AND is an assignable role (agent/admin) ─────────
-  // Sécurité (IMP-1) : on n'assigne JAMAIS à un wholesaler/affiliate/supplier —
-  // sinon ce profil hériterait, via agent_id, d'un accès lecture/écriture à la
-  // commande (incluant les PII de livraison portées par wholesale_orders).
-  const { data: assignee } = (await supabase
-    .from('profiles')
-    .select('id, role')
-    .eq('id', assigneeId)
-    .single()) as { data: { id: string; role: string } | null; error: unknown }
-
-  if (!assignee || (assignee.role !== 'agent' && assignee.role !== 'admin'))
-    return fail('errors.assignee_not_found')
-
-  // ── Fetch current order state ─────────────────────────────────────────────
+  // ── FSM guard côté action (fail-fast UX) — le RPC re-valide côté DB ──────
+  // Lecture anticipée pour un retour rapide avant le round-trip RPC.
   const { data: order } = (await supabase
     .from('wholesale_orders')
     .select('status, agent_id')
@@ -887,49 +825,29 @@ export async function assignWholesaleOrder(
 
   if (!order) return fail('errors.order_not_found')
 
-  // ── Idempotence : même agent déjà assigné ────────────────────────────────
+  // Idempotence côté action (évite un aller-retour RPC inutile)
   if (order.agent_id === assigneeId && order.status === 'assigned') {
     return ok
   }
 
-  const now = new Date().toISOString()
-  const prevStatus = order.status
-
-  // ── Determine whether a status transition is needed ───────────────────────
-  // If order is already 'assigned' (different agent), we only update agent_id
-  // without a redundant FSM hop.
-  // Otherwise we check FSM and transition to 'assigned'.
-  const needsStatusChange = prevStatus !== 'assigned'
-
-  if (needsStatusChange && !isFsmTransitionAllowed(prevStatus, 'assigned')) {
+  if (order.status !== 'assigned' && !isFsmTransitionAllowed(order.status, 'assigned')) {
     return fail('errors.fsm_transition_invalid')
   }
 
-  const updatePayload: Record<string, unknown> = {
-    agent_id:    assigneeId,
-    assigned_at: now,
-  }
-  if (needsStatusChange) {
-    updatePayload.status = 'assigned'
-  }
-
-  const { error: updateErr } = await supabase
-    .from('wholesale_orders')
-    .update(updatePayload)
-    .eq('id', orderId)
-
-  if (updateErr) return fail('errors.update_failed')
-
-  // ── Audit trail ───────────────────────────────────────────────────────────
-  // L'assignataire est tracé par changed_by + from/to_status + agent_id sur la
-  // commande ; pas de note en dur (i18n) ni d'UUID brut dans la note.
-  await supabase.from('wholesale_order_status_history').insert({
-    order_id:    orderId,
-    from_status: needsStatusChange ? prevStatus : 'assigned',
-    to_status:   'assigned',
-    changed_by:  userId,
-    note:        null,
+  // ── Délégation atomique au RPC Postgres (migration 061) ───────────────────
+  // Le RPC exécute en une seule transaction : garde can_assign_orders,
+  // vérification rôle assignee (IMP-1), verrou FOR UPDATE, FSM, UPDATE, INSERT history.
+  const { error: rpcErr } = await supabase.rpc('assign_wholesale_order_atomic', {
+    p_order_id: orderId,
+    p_assignee: assigneeId,
+    p_notes:    null,
   })
+
+  if (rpcErr) {
+    const msg = rpcErr.message ?? 'errors.update_failed'
+    const key = msg.match(/errors\.[a-z_]+/)?.[0] ?? 'errors.update_failed'
+    return fail(key)
+  }
 
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
