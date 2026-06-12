@@ -9,7 +9,12 @@
     "fsm_transition_invalid": "Ce changement de statut n'est pas autorisé.",
     "insufficient_stock": "Stock insuffisant pour confirmer cette commande.",
     "status_already_set": "La commande est déjà à ce statut.",
-    "update_failed": "Échec de la mise à jour, réessayez."
+    "update_failed": "Échec de la mise à jour, réessayez.",
+    "supplier_not_found": "Fournisseur introuvable.",
+    "supplier_id_required": "Identifiant fournisseur requis.",
+    "forbidden_supplier_only": "Action réservée aux fournisseurs.",
+    "invalid_supplier_response": "Réponse fournisseur invalide.",
+    "invalid_lead_time": "Délai de préparation invalide."
   },
   "common": {
     "login": "Se connecter",

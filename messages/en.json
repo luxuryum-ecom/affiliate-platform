@@ -9,7 +9,12 @@
     "fsm_transition_invalid": "This status change is not allowed.",
     "insufficient_stock": "Insufficient stock to confirm this order.",
     "status_already_set": "The order is already at this status.",
-    "update_failed": "Update failed, please try again."
+    "update_failed": "Update failed, please try again.",
+    "supplier_not_found": "Supplier not found.",
+    "supplier_id_required": "Supplier ID is required.",
+    "forbidden_supplier_only": "This action is reserved for suppliers.",
+    "invalid_supplier_response": "Invalid supplier response.",
+    "invalid_lead_time": "Invalid lead time."
   },
   "common": {
     "login": "Sign in",

@@ -119,7 +119,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
   if (!order) notFound()
 
-  // Membres assignables : membres actifs de l'équipe de cet owner, sinon repli sur les agents.
+  // Membres assignables : membres actifs de l'équipe de cet owner uniquement.
   let assignMembers: { id: string; name: string }[] = []
   const { data: teamRows } = await supabase
     .from('team_members')
@@ -135,15 +135,6 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       })
       .filter((m): m is MemberJoin => m != null)
       .map((m) => ({ id: m.id, name: m.full_name ?? m.id.slice(0, 8) }))
-  } else {
-    const { data: agentRows } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .eq('role', 'agent')
-    assignMembers = (agentRows ?? []).map((a) => {
-      const p = a as { id: string; full_name: string | null }
-      return { id: p.id, name: p.full_name ?? p.id.slice(0, 8) }
-    })
   }
 
   const isLocalStockOrder =

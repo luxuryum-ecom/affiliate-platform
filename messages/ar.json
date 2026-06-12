@@ -9,7 +9,12 @@
     "fsm_transition_invalid": "هذا التغيير في الحالة غير مسموح به.",
     "insufficient_stock": "المخزون غير كافٍ لتأكيد هذا الطلب.",
     "status_already_set": "الطلب موجود بالفعل في هذه الحالة.",
-    "update_failed": "تعذّر التحديث، حاول من جديد."
+    "update_failed": "تعذّر التحديث، حاول من جديد.",
+    "supplier_not_found": "المورّد غير موجود.",
+    "supplier_id_required": "معرّف المورّد مطلوب.",
+    "forbidden_supplier_only": "هذا الإجراء مخصّص للمورّدين فقط.",
+    "invalid_supplier_response": "ردّ المورّد غير صالح.",
+    "invalid_lead_time": "مدّة التحضير غير صالحة."
   },
   "common": {
     "login": "تسجيل الدخول",
