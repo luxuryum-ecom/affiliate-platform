@@ -48,7 +48,8 @@
 > ✅ `.env.local` renseigné (4 rôles, comptes démo `*@affipartner.ma`, gitignored) → smoke des
 > routes protégées **actif** : **19/19 routes vertes en prod**.
 
-### 📓 Journal session 2026-06-12 (branche `feat/habillage-premium`, poussée)
+### 📓 Journal session 2026-06-12 (branche `feat/habillage-premium` — commits LOCAUX, pas encore poussés)
+> ⏳ Push en attente : le token GitHub a besoin du scope `workflow` (à cause de `ci.yml`). Pre-push déjà validé (tsc+build+smoke verts).
 - `8577c12` fix P0 `stockAvailable` (fonction → Client Component) sur `/wholesale/marketplace/[id]`.
 - `9a227ee` blindage : RÈGLES ABSOLUES + DISCIPLINE TOKENS (CLAUDE.md), husky pre-commit/pre-push,
   smoke Playwright (`e2e/`), CI GitHub Actions lite.
