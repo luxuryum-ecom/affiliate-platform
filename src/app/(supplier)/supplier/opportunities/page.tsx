@@ -112,7 +112,7 @@ export default async function SupplierOpportunitiesPage() {
         </div>
 
         {/* Matching profile */}
-        <div className="bg-surface rounded-xl border border-line overflow-hidden">
+        <div id="matching-profile" className="bg-surface rounded-xl border border-line overflow-hidden scroll-mt-20">
           <div className="px-6 py-4 border-b border-line flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t('matchingTitle')}</h2>
@@ -135,8 +135,23 @@ export default async function SupplierOpportunitiesPage() {
 
           {matches.length === 0 ? (
             <div className="bg-surface rounded-xl border border-line p-10 text-center">
-              <p className="text-sm text-faint mb-2">{t('emptyTitle')}</p>
-              <p className="text-xs text-faint">{t('emptySubtitle')}</p>
+              {matchingProfile ? (
+                <>
+                  <p className="text-sm text-faint mb-2">{t('emptyTitle')}</p>
+                  <p className="text-xs text-faint">{t('emptySubtitle')}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-foreground mb-2">{t('emptyNoProfileTitle')}</p>
+                  <p className="text-xs text-muted mb-4">{t('emptyNoProfileSubtitle')}</p>
+                  <a
+                    href="#matching-profile"
+                    className="inline-block text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                  >
+                    {t('emptyNoProfileCta')}
+                  </a>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
