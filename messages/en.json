@@ -408,6 +408,7 @@
       "labelMinQty": "Min.: {count} u.",
       "labelSuggestedPrice": "Suggested price: {price} MAD",
       "blockedNotice": "Product rejected — contact Mozouna for more information.",
+      "awaitingFxRate": "Price awaiting the {currency} exchange rate — shown as “On quote” until the administrator configures it.",
       "submittedOn": "Submitted on {date}",
       "badgeMorocco": "Morocco",
       "badgeInternational": "International"
@@ -1919,6 +1920,9 @@
       "filterPending": "Pending",
       "filterApproved": "Approved",
       "filterBlocked": "Blocked",
+      "awaitingFxTitle": "Products awaiting an exchange rate",
+      "awaitingFxDesc": "These products have a price in a foreign currency with no configured rate: their MAD price stays “On quote”. Configure the currency's exchange rate to unblock them.",
+      "awaitingFxCurrency": "{currency}: {count}",
       "empty": "No supplier submissions.",
       "emptyFiltered": "No products match this filter.",
       "selectAll": "Select all",

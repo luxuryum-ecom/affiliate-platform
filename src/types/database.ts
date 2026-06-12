@@ -893,6 +893,12 @@ export interface SupplierProduct {
   platform_margin_type: PlatformMarginType
   platform_margin_value: number | null
 
+  // Devise source + taux figé → MAD (migration 054). source_currency='MAD' ⇒ taux 1.
+  // fx_rate NULL avec devise étrangère = « no_rate » : prix MAD non calculé (Sur devis).
+  source_currency: string | null
+  price_source: number | null
+  fx_rate_source_to_mad: number | null
+
   created_at: string
   updated_at: string
 }
@@ -957,6 +963,8 @@ export type SupplierProductSupplierView = Pick<
   | 'origin_country'
   | 'min_quantity'
   | 'suggested_wholesale_price_mad'
+  | 'source_currency'
+  | 'fx_rate_source_to_mad'
   | 'supplier_type'
   | 'approval_status'
   | 'created_at'

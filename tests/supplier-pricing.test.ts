@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { convertToMad, composePricing, buildSupplierPricing } from '@/lib/supplier-pricing'
+import { convertToMad, composePricing, buildSupplierPricing, isAwaitingFxRate } from '@/lib/supplier-pricing'
 
 // Faux client Supabase minimal pour tester l'orchestration sans DB réelle.
 // Chaîne .from(table).select().eq().maybeSingle() + .rpc('fx_rate_to_mad').
@@ -162,5 +162,46 @@ describe('composePricing', () => {
     const p = composePricing('AED', 2.72, 999_999)
     expect(p.suggested_wholesale_price_mad).toBeNull()
     expect(p.reason).toBe('no_price')
+  })
+})
+
+// ─── isAwaitingFxRate — détection « no_rate » dérivée (surfaçage, validé @finance) ──
+// Condition canonique : devise étrangère (≠ MAD) SANS taux figé → prix MAD non
+// calculé, affiché « Sur devis ». Aucun calcul ; ce test verrouille la condition.
+describe('isAwaitingFxRate', () => {
+  it('true : devise étrangère sans taux (le cas no_rate)', () => {
+    expect(isAwaitingFxRate({ source_currency: 'AED', fx_rate_source_to_mad: null })).toBe(true)
+    expect(isAwaitingFxRate({ source_currency: 'USD', fx_rate_source_to_mad: null })).toBe(true)
+  })
+
+  it('false : MAD sans taux est EXCLU (invariant sp_mad_identity ⇒ taux 1)', () => {
+    expect(isAwaitingFxRate({ source_currency: 'MAD', fx_rate_source_to_mad: null })).toBe(false)
+  })
+
+  it('false : devise étrangère AVEC taux (no_price ou ok — pas no_rate)', () => {
+    expect(isAwaitingFxRate({ source_currency: 'AED', fx_rate_source_to_mad: 2.72 })).toBe(false)
+    expect(isAwaitingFxRate({ source_currency: 'MAD', fx_rate_source_to_mad: 1 })).toBe(false)
+  })
+
+  it('false : pas de devise (no_country — déjà bloqué en amont)', () => {
+    expect(isAwaitingFxRate({ source_currency: null, fx_rate_source_to_mad: null })).toBe(false)
+  })
+
+  it('cohérent avec composePricing : reason no_rate ⇒ isAwaitingFxRate true', () => {
+    const p = composePricing('AED', null, 100)
+    expect(p.reason).toBe('no_rate')
+    expect(isAwaitingFxRate({
+      source_currency: p.source_currency,
+      fx_rate_source_to_mad: p.fx_rate_source_to_mad,
+    })).toBe(true)
+  })
+
+  it('cohérent avec composePricing : reason no_price ⇒ isAwaitingFxRate false', () => {
+    const p = composePricing('AED', 2.72, null)
+    expect(p.reason).toBe('no_price')
+    expect(isAwaitingFxRate({
+      source_currency: p.source_currency,
+      fx_rate_source_to_mad: p.fx_rate_source_to_mad,
+    })).toBe(false)
   })
 })

@@ -8,6 +8,7 @@ import {
   SUPPLIER_PRODUCT_SELECT,
   SUPPLIER_PRODUCT_STATUS_BADGES,
 } from '@/lib/supplier-product-moderation'
+import { isAwaitingFxRate } from '@/lib/supplier-pricing'
 import { TelegramLinkCard } from '@/components/supplier/telegram-link-card'
 import { getTelegramLinkStatus } from '@/app/actions/telegram-link'
 import { getProductLimitStatus } from '@/app/actions/premium'
@@ -150,6 +151,11 @@ export default async function SupplierProductsPage() {
                     {product.approval_status === 'blocked' && (
                       <p className="mt-1 text-xs text-danger-fg bg-danger-soft rounded px-2 py-1">
                         {t('blockedNotice')}
+                      </p>
+                    )}
+                    {isAwaitingFxRate(product) && (
+                      <p className="mt-1 text-xs text-warning-fg bg-warning-soft border border-warning rounded px-2 py-1">
+                        {t('awaitingFxRate', { currency: product.source_currency ?? '' })}
                       </p>
                     )}
                     <p className="text-xs text-faint mt-0.5">

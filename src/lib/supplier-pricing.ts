@@ -14,6 +14,23 @@ const MAX_PRICE_MAD = 1_000_000
 
 export type PricingReason = 'ok' | 'no_country' | 'no_rate' | 'no_price'
 
+/**
+ * État « no_rate » dérivé (PUR, sans DB) : devise étrangère SANS taux figé → le
+ * prix MAD n'a pas pu être calculé (reste NULL, affiché « Sur devis »). Sert au
+ * surfaçage UI (fournisseur + admin) — JAMAIS au calcul. Condition canonique
+ * validée @finance, alignée sur composePricing (branche rate == null) :
+ *   source_currency non-null, ≠ 'MAD', et fx_rate absent.
+ * 'MAD' est exclu (invariant DB sp_mad_identity ⇒ fx_rate = 1, jamais NULL).
+ * `fx_rate IS NULL` suffit à exclure no_price (qui a un taux) et ok ; on ne teste
+ * pas mad (redondant : fx_rate NULL ⇒ mad NULL par construction).
+ */
+export function isAwaitingFxRate(p: {
+  source_currency: string | null
+  fx_rate_source_to_mad: number | null
+}): boolean {
+  return p.source_currency != null && p.source_currency !== 'MAD' && p.fx_rate_source_to_mad == null
+}
+
 export type SupplierPricing = {
   source_currency: string | null
   price_source: number | null

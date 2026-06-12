@@ -4,7 +4,7 @@ export type ModerationFlag = 'approved' | 'review_required' | 'blocked'
 
 /** Columns safe for supplier-facing reads — excludes moderation and admin-internal fields. */
 export const SUPPLIER_PRODUCT_SELECT =
-  'id, product_name, category, origin_country, min_quantity, suggested_wholesale_price_mad, supplier_type, approval_status, created_at'
+  'id, product_name, category, origin_country, min_quantity, suggested_wholesale_price_mad, source_currency, fx_rate_source_to_mad, supplier_type, approval_status, created_at'
 
 const FORBIDDEN_IN_SUPPLIER_SELECT = [
   'ai_risk_score',

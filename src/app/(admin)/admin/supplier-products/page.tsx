@@ -59,6 +59,26 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
   const approvedCount = products.filter((p) => p.approval_status === 'approved').length
   const blockedCount  = products.filter((p) => p.approval_status === 'blocked').length
 
+  // Produits « no_rate » : devise étrangère SANS taux figé → prix MAD non calculé
+  // (affiché « Sur devis »). Condition canonique validée @finance. Requête dédiée
+  // (hors filtre/limite de la liste) pour toujours remonter l'alerte. Read-only,
+  // dérivé : aucune écriture, aucun calcul. Groupé par devise (l'action admin
+  // corrective = configurer le taux de change de CETTE devise).
+  const { data: noRateData } = await supabase
+    .from('supplier_products')
+    .select('source_currency')
+    .is('archived_at', null)
+    .not('source_currency', 'is', null)
+    .neq('source_currency', 'MAD')
+    .is('fx_rate_source_to_mad', null) as { data: { source_currency: string | null }[] | null; error: unknown }
+
+  const awaitingFxByCurrency = (noRateData ?? []).reduce<Record<string, number>>((acc, r) => {
+    const cur = r.source_currency
+    if (cur) acc[cur] = (acc[cur] ?? 0) + 1
+    return acc
+  }, {})
+  const awaitingFxCurrencies = Object.entries(awaitingFxByCurrency).sort(([a], [b]) => a.localeCompare(b))
+
   const listProducts = products.map((p) => ({
     id: p.id,
     product_name: p.product_name,
@@ -120,6 +140,23 @@ export default async function AdminSupplierProductsPage({ searchParams }: PagePr
             <p className="text-2xl font-bold tabular-nums mt-1 text-danger-fg">{blockedCount}</p>
           </div>
         </div>
+
+        {awaitingFxCurrencies.length > 0 && (
+          <div className="rounded-xl border border-warning bg-warning-soft p-4 mb-5">
+            <p className="text-sm font-semibold text-warning-fg">{t('awaitingFxTitle')}</p>
+            <p className="text-xs text-warning-fg/90 mt-0.5">{t('awaitingFxDesc')}</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {awaitingFxCurrencies.map(([currency, count]) => (
+                <span
+                  key={currency}
+                  className="text-xs px-3 py-1 rounded-full bg-surface border border-warning text-warning-fg font-medium"
+                >
+                  {t('awaitingFxCurrency', { currency, count })}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 mb-4">
           {FILTER_STATUSES.map((s) => (

@@ -408,6 +408,7 @@
       "labelMinQty": "الحد الأدنى: {count} وحدة",
       "labelSuggestedPrice": "السعر المقترح: {price} درهم",
       "blockedNotice": "منتج مرفوض — تواصل مع Mozouna للمزيد من المعلومات.",
+      "awaitingFxRate": "السعر في انتظار سعر صرف {currency} — يظهر «حسب الطلب» إلى أن يقوم المسؤول بإعداده.",
       "submittedOn": "مقترح بتاريخ {date}",
       "badgeMorocco": "المغرب",
       "badgeInternational": "دولي"
@@ -1919,6 +1920,9 @@
       "filterPending": "قيد الانتظار",
       "filterApproved": "المعتمدة",
       "filterBlocked": "المحظورة",
+      "awaitingFxTitle": "منتجات في انتظار سعر الصرف",
+      "awaitingFxDesc": "هذه المنتجات لها سعر بعملة أجنبية بدون سعر صرف مُعدّ: يبقى سعرها بالدرهم «حسب الطلب». أعدّ سعر صرف العملة لرفع الحظر عنها.",
+      "awaitingFxCurrency": "{currency} : {count}",
       "empty": "لا توجد تقديمات من الموردين.",
       "emptyFiltered": "لا يوجد منتج لهذا المُرشِّح.",
       "selectAll": "تحديد الكل",

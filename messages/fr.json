@@ -408,6 +408,7 @@
       "labelMinQty": "Min. : {count} u.",
       "labelSuggestedPrice": "Prix suggéré : {price} MAD",
       "blockedNotice": "Produit refusé — contactez Mozouna pour plus d'informations.",
+      "awaitingFxRate": "Prix en attente du taux de change {currency} — affiché « Sur devis » jusqu'à sa configuration par l'administrateur.",
       "submittedOn": "Soumis le {date}",
       "badgeMorocco": "Maroc",
       "badgeInternational": "International"
@@ -1919,6 +1920,9 @@
       "filterPending": "En attente",
       "filterApproved": "Approuvés",
       "filterBlocked": "Bloqués",
+      "awaitingFxTitle": "Produits en attente de taux de change",
+      "awaitingFxDesc": "Ces produits ont un prix en devise étrangère sans taux configuré : leur prix MAD reste « Sur devis ». Configurez le taux de change de la devise pour les débloquer.",
+      "awaitingFxCurrency": "{currency} : {count}",
       "empty": "Aucune soumission fournisseur.",
       "emptyFiltered": "Aucun produit pour ce filtre.",
       "selectAll": "Sélectionner tout",
