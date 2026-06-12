@@ -2225,6 +2225,10 @@
     "users": {
       "metaTitle": "Users — Administration",
       "pageTitle": "Users",
+      "countrySetupTitle": "Suppliers without a country",
+      "countrySetupDesc": "Their country is not configured: they cannot submit products until it is set. Configure it to unblock them.",
+      "countrySetupRequestedBadge": "Requested",
+      "countrySetupConfigure": "Configure",
       "pendingTitle": "Pending registrations",
       "pendingCount": "{count, plural, one {# registration} other {# registrations}}",
       "pendingEmpty": "No pending registrations.",

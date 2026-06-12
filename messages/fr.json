@@ -2225,6 +2225,10 @@
     "users": {
       "metaTitle": "Utilisateurs — Administration",
       "pageTitle": "Utilisateurs",
+      "countrySetupTitle": "Fournisseurs sans pays",
+      "countrySetupDesc": "Leur pays n'est pas configuré : ils ne peuvent pas soumettre de produit tant qu'il n'est pas posé. Configurez-le pour les débloquer.",
+      "countrySetupRequestedBadge": "Demande envoyée",
+      "countrySetupConfigure": "Configurer",
       "pendingTitle": "Inscriptions en attente",
       "pendingCount": "{count, plural, one {# inscription} other {# inscriptions}}",
       "pendingEmpty": "Aucune inscription en attente.",

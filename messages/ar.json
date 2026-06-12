@@ -2225,6 +2225,10 @@
     "users": {
       "metaTitle": "المستخدمون — الإدارة",
       "pageTitle": "المستخدمون",
+      "countrySetupTitle": "موردون بدون بلد",
+      "countrySetupDesc": "بلدهم غير مُعدّ: لا يمكنهم إرسال منتجات حتى يتم تحديده. أعدّه لرفع الحظر عنهم.",
+      "countrySetupRequestedBadge": "طلب مُرسَل",
+      "countrySetupConfigure": "إعداد",
       "pendingTitle": "التسجيلات المعلَّقة",
       "pendingCount": "{count, plural, one {# تسجيل} other {# تسجيلات}}",
       "pendingEmpty": "لا توجد تسجيلات معلَّقة.",

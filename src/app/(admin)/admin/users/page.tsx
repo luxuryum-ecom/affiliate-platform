@@ -31,7 +31,7 @@ export default async function AdminUsersPage() {
     .eq('id', user!.id)
     .single()) as { data: { full_name: string } | null; error: unknown }
 
-  const [pendingRes, approvedRes] = await Promise.all([
+  const [pendingRes, approvedRes, noCountryRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('*')
@@ -44,12 +44,25 @@ export default async function AdminUsersPage() {
       .eq('status', 'approved')
       .in('role', ['affiliate', 'wholesaler', 'supplier'])
       .order('created_at', { ascending: false }),
+    // Fournisseurs bloqués sur l'onboarding : pas de pays = soumission produit
+    // impossible. country_setup_requested d'abord (demande explicite, mig 066).
+    supabase
+      .from('profiles')
+      .select('id, full_name, country_setup_requested')
+      .eq('role', 'supplier')
+      .is('country_code', null)
+      .order('country_setup_requested', { ascending: false })
+      .order('created_at', { ascending: true }),
   ])
 
   const pending  = (pendingRes.data ?? []) as Profile[]
   const approved = (approvedRes.data ?? []) as Pick<
     Profile,
     'id' | 'full_name' | 'phone' | 'role' | 'status' | 'wholesale_access'
+  >[]
+  const noCountrySuppliers = (noCountryRes.data ?? []) as Pick<
+    Profile,
+    'id' | 'full_name' | 'country_setup_requested'
   >[]
 
   function roleLabel(role: string) {
@@ -71,6 +84,41 @@ export default async function AdminUsersPage() {
       />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+
+        {/* ── Fournisseurs sans pays (onboarding bloqué) ── */}
+        {noCountrySuppliers.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold text-foreground">{t('countrySetupTitle')}</h2>
+              <span className="text-xs px-2 py-0.5 bg-warning-soft text-warning-fg border border-warning rounded-full font-bold">
+                {noCountrySuppliers.length}
+              </span>
+            </div>
+            <p className="text-xs text-muted mb-3">{t('countrySetupDesc')}</p>
+            <div className="bg-surface rounded-xl border border-warning divide-y divide-line">
+              {noCountrySuppliers.map((s) => (
+                <div key={s.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-foreground text-sm">{s.full_name}</span>
+                      {s.country_setup_requested && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning-fg border border-warning">
+                          {t('countrySetupRequestedBadge')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <a
+                    href={`/admin/users/${s.id}`}
+                    className="shrink-0 text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                  >
+                    {t('countrySetupConfigure')}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Pending registrations ── */}
         <section>
