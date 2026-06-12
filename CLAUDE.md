@@ -29,6 +29,19 @@
 5. **CHANGEMENTS FINANCIERS** (ledger, commissions, devises, livraison, COD) : circuit complet
    **`@finance` + `@security-reviewer` + validation Abdou** AVANT commit. Inchangé, rappelé ici.
 
+## 🧭 AUTONOMIE DE DÉCISION
+> But : avancer sans interruptions inutiles. Abdou n'est sollicité que sur ce qui compte vraiment.
+
+1. **Décide seul** toute décision technique qui ne touche **NI l'argent, NI la sécurité, NI une
+   suppression de données, NI un push/merge** : prends l'option **recommandée par `@architect`**,
+   note la décision + sa justification **en une ligne dans `FEUILLE_DE_ROUTE.md`**, et continue
+   **sans demander**.
+2. **N'interromps Abdou QUE pour** : changements **financiers** (circuit `@finance` complet),
+   **failles de sécurité**, **suppressions de données**, **push/merge**, ou un **vrai blocage**
+   sans option raisonnable.
+3. **Fin de chantier** : **un seul rapport** avec — ce qui est fait, les **décisions prises seul**,
+   et **LA prochaine action** s'il y en a une.
+
 ## Contexte projet
 SaaS d'affiliation **Mozouna Group** avec gestion de commissions et flux financiers importants.
 Développé sous Claude Code. **~80 % déjà construit et FONCTIONNEL** : on ne reconstruit pas, on finit.
