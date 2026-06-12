@@ -11,7 +11,7 @@ import { WholesaleProofForm } from '@/components/wholesale/wholesale-proof-form'
 import { WholesalePendingActions } from '@/components/wholesale/wholesale-pending-actions'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import type {
-  WholesaleOrder,
+  WholesaleOrderBuyerView,
   WholesaleOrderItem,
   WholesaleOrderImportHistory,
   WholesaleOrderPaymentHistory,
@@ -91,7 +91,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
       .eq('id', user!.id)
       .single(),
     supabase
-      .from('wholesale_orders')
+      .from('wholesale_orders_buyer_read')
       .select('*')
       .eq('id', id)
       .eq('buyer_id', user!.id)
@@ -118,7 +118,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   ])
 
   const profile = profileRes.data as BillingProfile | null
-  const order = orderRes.data as WholesaleOrder | null
+  const order = orderRes.data as WholesaleOrderBuyerView | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
   const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]

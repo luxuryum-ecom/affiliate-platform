@@ -6,14 +6,14 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
-import type { WholesaleOrder, WholesaleOrderItem, Product, Profile, WholesaleImportStatus } from '@/types/database'
+import type { WholesaleOrderBuyerView, WholesaleOrderItem, Product, Profile, WholesaleImportStatus } from '@/types/database'
 
 export async function generateMetadata() {
   const t = await getTranslations('wholesale.orders')
   return { title: t('metaTitle') }
 }
 
-type OrderWithItems = WholesaleOrder & {
+type OrderWithItems = WholesaleOrderBuyerView & {
   items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> })[]
 }
 
@@ -43,7 +43,7 @@ export default async function WholesaleOrdersPage({ searchParams }: PageProps) {
       .eq('id', user!.id)
       .single(),
     supabase
-      .from('wholesale_orders')
+      .from('wholesale_orders_buyer_read')
       .select('*, items:wholesale_order_items(*, product:products(id,name,images,media))')
       .eq('buyer_id', user!.id)
       .order('created_at', { ascending: false }),

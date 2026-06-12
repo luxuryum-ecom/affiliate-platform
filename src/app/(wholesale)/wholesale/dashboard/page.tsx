@@ -5,7 +5,7 @@ import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
-import type { Profile, WholesaleOrder } from '@/types/database'
+import type { Profile, WholesaleOrderBuyerView } from '@/types/database'
 
 type QuoteCountRow = { status: string }
 type SupplierQuoteCountRow = { status: string }
@@ -39,7 +39,7 @@ export default async function WholesaleDashboardPage() {
     { count: pendingSampleCount },
   ] = await Promise.all([
     supabase
-      .from('wholesale_orders')
+      .from('wholesale_orders_buyer_read')
       .select('*', { count: 'exact', head: true })
       .eq('buyer_id', user!.id),
     supabase
@@ -47,9 +47,9 @@ export default async function WholesaleDashboardPage() {
       .select('*', { count: 'exact', head: true })
       .eq('buyer_id', user!.id),
     supabase
-      .from('wholesale_orders')
+      .from('wholesale_orders_buyer_read')
       .select('*')
-      .eq('buyer_id', user!.id) as unknown as Promise<{ data: WholesaleOrder[] | null; error: unknown }>,
+      .eq('buyer_id', user!.id) as unknown as Promise<{ data: WholesaleOrderBuyerView[] | null; error: unknown }>,
     supabase
       .from('quote_requests')
       .select('status')

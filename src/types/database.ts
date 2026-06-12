@@ -123,6 +123,34 @@ export type WholesalePaymentStatus =
   | 'deposit_received'
   | 'fully_paid'
 
+/**
+ * Mode d'acheminement physique de la commande wholesale (migration 062).
+ *   pickup_by_runner : coursier envoyé par Mozouna.
+ *   supplier_fleet   : flotte du fournisseur.
+ */
+export type WholesaleLogisticsMode = 'pickup_by_runner' | 'supplier_fleet'
+
+/**
+ * Qui supporte le coût de livraison wholesale (migration 062).
+ * Règle business : Mozouna ne porte JAMAIS un coût sans contrepartie.
+ *   rebilled_client : Mozouna paie le livreur, refacture au client (delivery_rebill_mad >= delivery_cost_mad).
+ *   supplier_billed : fournisseur facture — coût Mozouna = 0.
+ *   supplier_free   : livraison gratuite — coût Mozouna = 0.
+ */
+export type WholesaleDeliveryCostHandling =
+  | 'rebilled_client'
+  | 'supplier_billed'
+  | 'supplier_free'
+
+/**
+ * Types d'écriture dans le ledger transport wholesale (migration 062).
+ *   delivery_cost_incurred    : décaissement Mozouna → amount_mad <= 0.
+ *   delivery_rebill_collected : encaissement client  → amount_mad >= 0.
+ */
+export type WholesaleDeliveryLedgerEntryType =
+  | 'delivery_cost_incurred'
+  | 'delivery_rebill_collected'
+
 /** Import progress tracking for wholesale orders (migration 026). */
 export type WholesaleImportStatus =
   | 'awaiting_supplier'
@@ -502,9 +530,61 @@ export interface WholesaleOrder {
   /** Timestamp when admin assigned the supplier to this order. */
   supplier_assigned_at: string | null
 
+  // ── Delivery logistics (migration 062 — LOT 4.1) ─────────────────────────
+  /** Physical routing mode. Null until admin sets it. */
+  logistics_mode: WholesaleLogisticsMode | null
+  /**
+   * Who bears the delivery cost. Null for legacy orders (pre-062).
+   * Business rule: Mozouna never bears a cost without a counterpart.
+   */
+  delivery_cost_handling: WholesaleDeliveryCostHandling | null
+  /**
+   * Real cost paid by Mozouna to the carrier, in MAD. Default 0.
+   * Only meaningful when delivery_cost_handling = 'rebilled_client'.
+   * NOT injected into total_cost_mad (orthogonal to trigger 025).
+   */
+  delivery_cost_mad: number
+  /**
+   * Amount rebilled to the client, in MAD. Default 0.
+   * Invariant: delivery_rebill_mad >= delivery_cost_mad (profit transport allowed).
+   * Only meaningful when delivery_cost_handling = 'rebilled_client'.
+   */
+  delivery_rebill_mad: number
+
   created_at: string
   updated_at: string
 }
+
+/**
+ * Vue acheteur : wholesale_orders_buyer_read (migration 063).
+ * Sous-ensemble de WholesaleOrder sans les 8 colonnes coût/marge internes
+ * exclues pour raison de confidentialité plateforme :
+ *   supplier_cost_mad, transport_customs_cost_mad, additional_cost_mad,
+ *   total_cost_mad, gross_profit_mad, gross_margin_percent,
+ *   delivery_cost_mad, delivery_rebill_mad.
+ * Exclut également les colonnes internes agent/fournisseur :
+ *   agent_id, agent_notes, supplier_id, supplier_response,
+ *   supplier_lead_time_days, supplier_responded_at, supplier_assigned_at.
+ * À utiliser pour toutes les pages acheteur (orders list, detail, dashboard).
+ */
+export type WholesaleOrderBuyerView = Omit<
+  WholesaleOrder,
+  | 'supplier_cost_mad'
+  | 'transport_customs_cost_mad'
+  | 'additional_cost_mad'
+  | 'total_cost_mad'
+  | 'gross_profit_mad'
+  | 'gross_margin_percent'
+  | 'delivery_cost_mad'
+  | 'delivery_rebill_mad'
+  | 'agent_id'
+  | 'agent_notes'
+  | 'supplier_id'
+  | 'supplier_response'
+  | 'supplier_lead_time_days'
+  | 'supplier_responded_at'
+  | 'supplier_assigned_at'
+>
 
 export interface WholesaleOrderItem {
   id: string
@@ -536,6 +616,41 @@ export interface WholesaleOrderPaymentHistory {
   changed_by: string | null
   notes: string | null
   changed_at: string
+}
+
+/**
+ * Ledger append-only dédié aux flux transport wholesale (migration 062 — LOT 4.1).
+ * Écritures SIGNÉES : décaissement Mozouna (< 0) et encaissement client (> 0).
+ * Solde cash transport d'une commande = SUM(amount_mad) WHERE wholesale_order_id = X.
+ * Format idempotency_key : 'wdl:<order_id>:<entry_type>:<event_uuid>'.
+ * Immuable : trigger anti-UPDATE/DELETE/TRUNCATE. Écriture via RPC SECURITY DEFINER (LOT 4.2).
+ */
+export interface WholesaleDeliveryLedger {
+  id: string
+  wholesale_order_id: string
+  /**
+   * Type d'écriture.
+   *   delivery_cost_incurred    : décaissement Mozouna → amount_mad <= 0.
+   *   delivery_rebill_collected : encaissement client  → amount_mad >= 0.
+   */
+  entry_type: WholesaleDeliveryLedgerEntryType
+  /**
+   * Montant SIGNÉ en MAD.
+   * delivery_cost_incurred <= 0 | delivery_rebill_collected >= 0.
+   * SUM(amount_mad) par commande = solde net transport Mozouna.
+   */
+  amount_mad: number
+  /** Devise (toujours 'MAD' à date). */
+  currency: string
+  /**
+   * Identifie l'ÉVÉNEMENT, pas la valeur.
+   * Format : 'wdl:<order_id>:<entry_type>:<event_uuid>'.
+   * Une correction crée une nouvelle écriture (nouvel event_uuid), jamais un UPDATE.
+   */
+  idempotency_key: string
+  /** Profile id de l'utilisateur ayant déclenché l'écriture. Null si non authentifié (service_role). */
+  created_by: string | null
+  created_at: string
 }
 
 /** Single order status transition entry — append-only (migration 057, LOT 1). */
@@ -1285,7 +1400,7 @@ export type Database = {
       >
       wholesale_orders: TableDef<
         WholesaleOrder,
-        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id' | 'supplier_cost_mad' | 'transport_customs_cost_mad' | 'additional_cost_mad' | 'total_cost_mad' | 'gross_profit_mad' | 'gross_margin_percent' | 'import_status' | 'payment_status' | 'deposit_amount' | 'deposit_received_amount' | 'deposit_requested_at' | 'deposit_received_at' | 'fully_paid_at'> & {
+        Omit<WholesaleOrder, 'id' | 'created_at' | 'updated_at' | 'invoice_requested' | 'quote_request_id' | 'supplier_cost_mad' | 'transport_customs_cost_mad' | 'additional_cost_mad' | 'total_cost_mad' | 'gross_profit_mad' | 'gross_margin_percent' | 'import_status' | 'payment_status' | 'deposit_amount' | 'deposit_received_amount' | 'deposit_requested_at' | 'deposit_received_at' | 'fully_paid_at' | 'delivery_cost_mad' | 'delivery_rebill_mad'> & {
           invoice_requested?: boolean
           quote_request_id?: string | null
           supplier_cost_mad?: number
@@ -1298,8 +1413,22 @@ export type Database = {
           deposit_requested_at?: string | null
           deposit_received_at?: string | null
           fully_paid_at?: string | null
+          // migration 062 — defaults appliqués en DB (NOT NULL DEFAULT 0)
+          delivery_cost_mad?: number
+          delivery_rebill_mad?: number
+          // nullable — non renseigné en création (legacy)
+          logistics_mode?: WholesaleLogisticsMode | null
+          delivery_cost_handling?: WholesaleDeliveryCostHandling | null
         },
         Partial<WholesaleOrder>
+      >
+      wholesale_delivery_ledger: TableDef<
+        WholesaleDeliveryLedger,
+        // Append-only : pas d'Insert exposé côté client — l'écriture viendra
+        // exclusivement d'une RPC SECURITY DEFINER (LOT 4.2).
+        // On expose le type Insert minimal pour les tests unitaires.
+        Omit<WholesaleDeliveryLedger, 'id' | 'created_at'> & { created_at?: string },
+        never  // Immuable : aucun Update autorisé
       >
       wholesale_order_items: TableDef<
         WholesaleOrderItem,

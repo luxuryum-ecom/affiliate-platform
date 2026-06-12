@@ -160,9 +160,9 @@ export function buildCodTimeline(order: Order): TimelineStep[] {
 
 // ─── Helper: build wholesale order timeline steps ─────────────────────────────
 
-import type { WholesaleOrder } from '@/types/database'
+import type { WholesaleOrder, WholesaleOrderBuyerView } from '@/types/database'
 
-export function buildWholesaleTimeline(order: WholesaleOrder): TimelineStep[] {
+export function buildWholesaleTimeline(order: WholesaleOrder | WholesaleOrderBuyerView): TimelineStep[] {
   const { status } = order
 
   const isCancelled = status === 'cancelled'
