@@ -6,12 +6,23 @@ import { updateWholesaleOrderStatus } from '@/app/actions/orders'
 import type { WholesaleOrderStatus } from '@/types/database'
 
 const TRANSITIONS: Record<WholesaleOrderStatus, WholesaleOrderStatus[]> = {
-  pending:   ['confirmed', 'cancelled'],
-  confirmed: ['sourcing', 'cancelled'],
-  sourcing:  ['shipped', 'cancelled'],
-  shipped:   ['delivered', 'cancelled'],
-  delivered: [],
-  cancelled: [],
+  // ── Legacy transitions (migration 004) ────────────────────────────────────
+  pending:            ['confirmed', 'assigned', 'cancelled'],
+  confirmed:          ['sourcing', 'assigned', 'cancelled'],
+  sourcing:           ['shipped', 'cancelled'],
+  shipped:            ['delivered', 'cancelled'],
+  // ── New Deliveroo-style transitions (migration 057 — LOT 1) ───────────────
+  // Transition rules will be enforced by server actions in LOT 2.
+  // Frontend table is intentionally permissive here ; server is the authority.
+  assigned:           ['supplier_confirmed', 'cancelled'],
+  supplier_confirmed: ['preparing', 'cancelled'],
+  preparing:          ['ready', 'cancelled'],
+  ready:              ['picked_up', 'cancelled'],
+  picked_up:          ['dispatched', 'cancelled'],
+  dispatched:         ['delivered', 'cancelled'],
+  // ── Terminal states ───────────────────────────────────────────────────────
+  delivered:          [],
+  cancelled:          [],
 }
 
 export function WholesaleOrderStatusForm({

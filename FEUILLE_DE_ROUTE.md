@@ -60,12 +60,33 @@
 - **Diagnostic** : « No intl context found » sous `next dev` = artefact de compilation dev, **pas un
   bug** (prouvé en prod). Aucun fichier app à corriger côté i18n.
 
-## ⭐ PRIORITÉ N°1 — Gestion des commandes style Deliveroo (B2B)
+## ⭐ PRIORITÉ N°1 — Gestion des commandes style Deliveroo (B2B) — **EN COURS** (session 2026-06-12)
 **LE chantier à attaquer en premier.** Déjà détaillé en **SECTION 2bis-A** (plus bas) — s'y référer.
 - Les commandes qui **arrivent** dans le SaaS → **état / statut** clair (reçue → assignée → confirmée fournisseur → en préparation → prête → ramassée/expédiée → livrée).
 - **Notifications multi-rôles** (fournisseur, admin/superviseur, owner).
 - **Intégrer la saisie des devis** pour les **sur-commandes** (raccord au flux devis existant `quote_requests` / `supplier_quote_requests`).
 - ⚠️ **AVANT tout code : audit de l'existant** (`wholesale_orders` : statuts, timestamps, RLS déjà présents ?). Touche aux **rôles/permissions** → **audit @security RLS** ; tout ce qui touche commission/marge → **audit @finance**. **Ne rien reconstruire sans audit.**
+
+### ✅ AUDIT @architect fait (session 2026-06-12) — 3 trous structurants identifiés
+1. `wholesale_orders.agent_id` **existe mais jamais écrit** → aucune assignation réelle.
+2. **Aucune infra de notification** (0 table, 0 worker) → tout à créer.
+3. **Pas de FSM** sur `status` (sauts d'état libres) + **aucun lien commande→fournisseur** → réponse fournisseur dispo/délai impossible.
+- 3 axes de statut existants conservés : `status` / `import_status` / `payment_status`. Trigger marge `compute_wholesale_order_costs` = **INTANGIBLE**. Conversion devis→commande OK (`quote-requests.ts:270-309`).
+
+### 🧭 DÉCISIONS ABDOU (session 2026-06-12)
+- **Rôles d'équipe = table `team_members` dédiée** (owner → superviseurs/membres, permissions granulaires cochables). [1:a]
+- **États cycle = liste complète** `pending → assigned → supplier_confirmed → preparing → ready → picked_up/dispatched → delivered`, `cancelled` à part ; **`blocked`/`delayed` = FLAGS** (`blocked_at`/`due_at`) pour signal rouge, hors FSM. [2:oui]
+- **Notifications = In-app (socle) + Telegram** (fournisseurs pas tech).
+- *(Décidé seul, hors argent/sécurité — @architect recommandé)* : réponse fournisseur = colonnes dédiées + `supplier_id` sur la commande (1 fournisseur principal) ; **FSM stricte** côté serveur (transitions illégales bloquées) ; logistique = `logistics_mode` enum simple (`pickup_by_runner`/`supplier_fleet`), pas de nouveau rôle profil.
+
+### 📦 PLAN PAR LOTS (petits, ordonnés ; aucun lot ne touche commission/marge)
+- **LOT 1** ✅ **FAIT** — DB fondateur, SANS argent : migration `057` (CHECK `status` additif rétro-compat + table `wholesale_order_status_history` append-only + RLS deny + colonnes flags `assigned_at`/`due_at`/`blocked_at`/`blocked_reason`) + types TS + `TRANSITIONS` front étendu (permissif, serveur = autorité au L2). **4 checks verts** (tsc 0 / build / 115 tests / smoke 19/19). Audit `@security` = **GO** (0 critique). ⚠️ **Migration NON appliquée en base** (attente GO Abdou).
+  - 🎫 **Conditions de sortie BLOQUANTES pour le LOT 2** (findings @security I-1/I-2/M-1) : (1) lier RLS `agent_insert`/`agent_read` de l'historique à la commande affectée (`agent_id`/`team_members`) ; (2) **FSM stricte côté serveur** dans `updateWholesaleOrderStatus` (`orders.ts:733-807`) — rejeter transitions illégales + blocage des états terminaux `delivered`/`cancelled`. (M-2 cosmétique : renommer policy `agent_read_insert_status_history` → `agent_read_status_history`.)
+- **LOT 2** — Assignation : table `team_members` + action `assignWholesaleOrder` (FSM stricte) + RLS file superviseur + UI. **+ traiter les conditions de sortie ci-dessus.** `@backend-db`+`@frontend` → audit `@security`.
+- **LOT 3** — Lien fournisseur : `supplier_id` + réponse dispo/délai (vue redacted, sans PII acheteur) + UI fournisseur. `@backend-db`+`@frontend` → audit `@security`.
+- **LOT 4** — Logistique flexible (`logistics_mode`) + états picked_up/dispatched. ⚠️ si coût-ramassage entre dans la marge → bascule circuit `@finance`.
+- **LOT 5** — Alertes visuelles retard/bloqué (UI, signal rouge, consomme flags du LOT 1).
+- **LOT 6** — Notifications in-app + Telegram (table `notifications` append-only + émission serveur depuis LOTS 1-4). `@backend-db`+`@frontend` → audit `@security`.
 
 ## 2. 🐛 BUG quota produits — la limite ne bloque PAS vraiment
 - **Symptôme constaté** : un fournisseur a **7 produits** alors que le plan **Gratuit en autorise 5** → la limite n'est pas réellement appliquée au moment de l'ajout.

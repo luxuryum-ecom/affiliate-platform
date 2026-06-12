@@ -94,12 +94,25 @@ export type OrderStatus =
 /** How the affiliate captured the order. Null for legacy public-page orders. */
 export type OrderSource = 'whatsapp' | 'phone' | 'manual' | 'sheet_import' | 'api'
 
-/** Simplified 5-state lifecycle for wholesale orders (updated in migration 004). */
+/**
+ * Full lifecycle for wholesale orders.
+ * Legacy states (confirmed, sourcing, shipped) kept for backward compat — migration 004.
+ * New Deliveroo-style states added in migration 057 (LOT 1).
+ */
 export type WholesaleOrderStatus =
+  // ── Legacy states (migration 004) ────────────────────────────────────────
   | 'pending'
   | 'confirmed'
   | 'sourcing'
   | 'shipped'
+  // ── New states — Deliveroo-style lifecycle (migration 057) ────────────────
+  | 'assigned'
+  | 'supplier_confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'picked_up'
+  | 'dispatched'
+  // ── Terminal states (unchanged) ───────────────────────────────────────────
   | 'delivered'
   | 'cancelled'
 
@@ -401,6 +414,16 @@ export interface WholesaleOrder {
   delivered_at: string | null
   cancelled_at: string | null
 
+  // ── Lifecycle flags (added migration 057 — LOT 1) ─────────────────────────
+  /** Timestamp when the order was assigned to a field agent. */
+  assigned_at: string | null
+  /** Expected delivery deadline. Order is late if this is past and status != 'delivered'. */
+  due_at: string | null
+  /** Set when the order is blocked (red signal). Not a status — a flag. */
+  blocked_at: string | null
+  /** Human-readable reason for the block. Null when not blocked. */
+  blocked_reason: string | null
+
   // ── Invoice request (added migration 018) ────────────────────────────────
   /** True when buyer has submitted an invoice request. */
   invoice_requested: boolean
@@ -493,6 +516,19 @@ export interface WholesaleOrderPaymentHistory {
   changed_by: string | null
   notes: string | null
   changed_at: string
+}
+
+/** Single order status transition entry — append-only (migration 057, LOT 1). */
+export interface WholesaleOrderStatusHistory {
+  id: string
+  order_id: string
+  /** Previous status. Null for the first entry (order creation). */
+  from_status: WholesaleOrderStatus | null
+  to_status: WholesaleOrderStatus
+  /** Profile id of the user who triggered the transition. */
+  changed_by: string | null
+  note: string | null
+  created_at: string
 }
 
 export interface Commission {
