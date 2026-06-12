@@ -1471,6 +1471,9 @@
       "phoneLabel": "Phone",
       "phonePlaceholder": "+212600000000",
       "phoneHelp": "International format with country code. Used to reach you by call or WhatsApp.",
+      "countryLabel": "Country",
+      "countryPlaceholder": "Select your country",
+      "countryHelp": "Your country determines the currency you enter your prices in. It cannot be changed afterwards.",
       "phoneRequired": "Phone number is required.",
       "phoneInvalid": "Invalid number. International format expected, e.g. +212600000000."
     },

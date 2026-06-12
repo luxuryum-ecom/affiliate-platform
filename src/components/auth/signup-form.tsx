@@ -52,7 +52,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
       {defaultRole === 'supplier' && (
         <div>
           <label htmlFor="country_code" className="block text-sm font-medium text-muted mb-1">
-            Pays <span className="text-danger">*</span>
+            {ts('countryLabel')} <span className="text-danger">*</span>
           </label>
           <select
             id="country_code"
@@ -61,7 +61,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
             disabled={isPending}
             className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
           >
-            <option value="" disabled>Sélectionnez votre pays</option>
+            <option value="" disabled>{ts('countryPlaceholder')}</option>
             {SUPPLIER_COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.flag} {c.label} ({c.currency})
@@ -69,7 +69,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
             ))}
           </select>
           <p className="mt-1 text-xs text-muted">
-            Votre pays détermine la devise de saisie de vos prix. Il ne pourra plus être modifié ensuite.
+            {ts('countryHelp')}
           </p>
         </div>
       )}
