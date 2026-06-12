@@ -6,6 +6,8 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { QuoteRequestStatusForm } from '@/components/admin/quote-request-status-form'
 import { ConvertQuoteButton } from '@/components/admin/convert-quote-button'
 import { PrepareQuoteForm } from '@/components/admin/prepare-quote-form'
+import { getActiveTariff } from '@/app/actions/tariffs'
+import type { ImportShippingMode } from '@/types/database'
 import type { QuoteRequestWithDetails, QuoteRequestStatus, WholesaleOrder } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
@@ -40,7 +42,7 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
   const [quoteRes, linkedOrderRes] = await Promise.all([
     supabase
       .from('quote_requests')
-      .select('*, buyer:profiles!buyer_id(id,full_name,phone,company_name), product:products!product_id(id,name,origin_country,availability_type)')
+      .select('*, buyer:profiles!buyer_id(id,full_name,phone,company_name), product:products!product_id(id,name,origin_country,availability_type,import_shipping_mode)')
       .eq('id', id)
       .single(),
     supabase
@@ -66,6 +68,22 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
     rates[r.quote_code] = typeof r.rate_vs_mad === 'string' ? parseFloat(r.rate_vs_mad) : r.rate_vs_mad
   }
   const displayCurrency = (clientCurrencyRes.data as string | null) ?? 'MAD'
+
+  // ── T3:b — Hint read-only : tarif transport paramétré par pays (indicatif). ──
+  // L'admin saisit TOUJOURS le total transport lui-même ; on ne fait qu'AFFICHER
+  // le tarif pays actif (aucun calcul ni écriture d'argent — RÈGLE D'OR n°5).
+  let tariffHint: { country: string; rateMad: number; unit: 'kg' | 'cbm' } | null = null
+  const hintProduct = req.product as { origin_country?: string | null; import_shipping_mode?: string | null } | null
+  if (hintProduct?.origin_country && hintProduct?.import_shipping_mode) {
+    const tariff = await getActiveTariff(hintProduct.origin_country, hintProduct.import_shipping_mode as ImportShippingMode)
+    if (tariff) {
+      tariffHint = {
+        country: hintProduct.origin_country,
+        rateMad: Number(tariff.transport_customs_price_mad),
+        unit: tariff.unit as 'kg' | 'cbm',
+      }
+    }
+  }
 
   function statusLabel(status: QuoteRequestStatus): string {
     const map: Record<QuoteRequestStatus, string> = {
@@ -222,6 +240,7 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
                   quantityRequested={req.quantity_requested}
                   rates={rates}
                   displayCurrency={displayCurrency}
+                  tariffHint={tariffHint}
                   currentQuote={{
                     quoted_unit_price_mad:     req.quoted_unit_price_mad,
                     quoted_unit_price_source:  req.quoted_unit_price_source,

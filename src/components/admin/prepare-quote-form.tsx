@@ -26,6 +26,8 @@ interface Props {
   rates: Record<string, number>
   /** Devise d'affichage du client (= devise du pays destination), pour information. */
   displayCurrency: string
+  /** T3:b — tarif transport paramétré par pays, INDICATIF (read-only). L'admin saisit le total. */
+  tariffHint?: { country: string; rateMad: number; unit: 'kg' | 'cbm' } | null
 }
 
 const initialState = { error: null }
@@ -36,6 +38,7 @@ export function PrepareQuoteForm({
   currentQuote,
   rates,
   displayCurrency,
+  tariffHint,
 }: Props) {
   const t = useTranslations('admin.prepareQuoteForm')
   const [state, action, isPending] = useActionState(prepareQuote, initialState)
@@ -159,6 +162,17 @@ export function PrepareQuoteForm({
           placeholder="0.00"
           className={inputCls}
         />
+        {/* T3:b — tarif pays indicatif (read-only). L'admin reste maître du total saisi. */}
+        {tariffHint && (
+          <p className="text-xs text-faint mt-1">
+            {t('tariffHintLabel', { country: tariffHint.country })}{' '}
+            <span className="font-medium text-foreground">
+              {formatCurrency(tariffHint.rateMad, 'MAD')}{' '}
+              {t(tariffHint.unit === 'cbm' ? 'tariffPerCbm' : 'tariffPerKg')}
+            </span>
+            {' — '}{t('tariffHintNote')}
+          </p>
+        )}
       </div>
 
       <div>
