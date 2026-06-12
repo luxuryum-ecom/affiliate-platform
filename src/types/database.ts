@@ -204,6 +204,9 @@ export interface Profile {
   /** Pays du compte (FK countries). Pour role=supplier : devise de saisie des
    *  prix via countries.operational_currency. Choisi au signup, figé (mig 054/055). */
   country_code: string | null
+  /** Fournisseur sans country_code ayant demandé sa configuration à l'admin
+   *  (migration 066). Signal d'onboarding, hors chaîne devise. */
+  country_setup_requested: boolean
 
   // ── Wholesaler billing fields (migration 017) ─────────────────────────────
   /** Optional company name for wholesale invoices. */

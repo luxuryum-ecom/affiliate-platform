@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WholesaleAccessToggle } from '@/components/admin/wholesale-access-toggle'
+import { SupplierCountrySelect } from '@/components/admin/supplier-country-select'
+import { SUPPLIER_COUNTRIES } from '@/lib/supplier-countries'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTranslations, getLocale } from 'next-intl/server'
 import type { Profile } from '@/types/database'
@@ -65,6 +67,8 @@ export default async function AdminUserDetailPage({ params }: Params) {
   const roleCls    = ROLE_BADGE_CLS[profile.role] ?? ROLE_BADGE_CLS.affiliate
   const isAffiliate  = profile.role === 'affiliate'
   const isWholesaler = profile.role === 'wholesaler'
+  const isSupplier   = profile.role === 'supplier'
+  const countryLabel = SUPPLIER_COUNTRIES.find((c) => c.code === profile.country_code)
 
   function statusLabel(s: string) {
     if (s === 'pending')  return t('statusPending')
@@ -189,6 +193,30 @@ export default async function AdminUserDetailPage({ params }: Params) {
               />
             )}
           </div>
+
+          {/* Supplier country — editable (débloque l'onboarding, pays figé admin-only) */}
+          {isSupplier && (
+            <div className="pt-3 border-t border-line">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t('supplierCountryLabel')}</p>
+                  <p className="text-xs text-faint mt-0.5">{t('supplierCountryDesc')}</p>
+                </div>
+                <span className={`text-xs px-3 py-1 rounded-full font-medium border shrink-0 ${
+                  profile.country_code
+                    ? 'bg-success-soft text-success-fg border-success'
+                    : 'bg-warning-soft text-warning-fg border-warning'
+                }`}>
+                  {countryLabel ? `${countryLabel.flag} ${countryLabel.label}` : t('supplierCountryNone')}
+                </span>
+              </div>
+              <SupplierCountrySelect
+                profileId={profile.id}
+                currentCountry={profile.country_code}
+                requested={profile.country_setup_requested ?? false}
+              />
+            </div>
+          )}
         </div>
 
         {/* ── Billing info (if any) ── */}

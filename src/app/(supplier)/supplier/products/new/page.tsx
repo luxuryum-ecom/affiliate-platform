@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { SubmitProductForm } from '@/components/supplier/submit-product-form'
+import { CountrySetupRequest } from '@/components/supplier/country-setup-request'
 import { getProductLimitStatus } from '@/app/actions/premium'
 import { resolveSupplierCurrency } from '@/lib/supplier-pricing'
 import type { Profile } from '@/types/database'
@@ -19,12 +20,12 @@ export default async function SupplierProductNewPage() {
   if (!user) redirect('/login')
 
   const [profileResult, limitStatus, currency] = await Promise.all([
-    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, country_setup_requested').eq('id', user.id).single(),
     getProductLimitStatus(user.id),
     resolveSupplierCurrency(supabase, user.id),
   ])
 
-  const profile = profileResult.data as Pick<Profile, 'full_name'> | null
+  const profile = profileResult.data as Pick<Profile, 'full_name' | 'country_setup_requested'> | null
 
   const t = await getTranslations('supplier.productNew')
   const tc = await getTranslations('supplier.common')
@@ -84,10 +85,7 @@ export default async function SupplierProductNewPage() {
 
             <div className="bg-surface rounded-xl border border-line p-6">
               {currency === null ? (
-                <div className="bg-warning-soft border border-warning rounded-xl p-5 space-y-1">
-                  <p className="text-sm font-semibold text-warning-fg">{t('noCountryTitle')}</p>
-                  <p className="text-sm text-warning-fg">{t('noCountryBody')}</p>
-                </div>
+                <CountrySetupRequest alreadyRequested={profile?.country_setup_requested ?? false} />
               ) : (
                 <SubmitProductForm currency={currency} />
               )}
