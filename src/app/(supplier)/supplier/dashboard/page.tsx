@@ -229,6 +229,16 @@ export default async function SupplierDashboardPage() {
             </div>
           </Link>
           <Link
+            href="/supplier/orders"
+            className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
+          >
+            <span className="text-2xl">📋</span>
+            <div>
+              <p className="font-medium text-sm text-foreground">{t('navOrdersTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('navOrdersDesc')}</p>
+            </div>
+          </Link>
+          <Link
             href="/supplier/products/import"
             className="flex items-center gap-3 bg-surface rounded-xl border border-line p-5 hover:shadow-sm transition-shadow"
           >

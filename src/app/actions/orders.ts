@@ -1356,6 +1356,6 @@ export async function respondToWholesaleOrder(
   }
 
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
-  // Fournisseur n'a pas de route propre pour l'instant (LOT 3b UI)
+  revalidatePath('/supplier/orders')
   return ok
 }

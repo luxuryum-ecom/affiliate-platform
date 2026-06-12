@@ -48,6 +48,7 @@ export const ROLES: Role[] = [
   makeRole('supplier', 'SMOKE_SUPPLIER', [
     '/supplier/dashboard',
     '/supplier/products',
+    '/supplier/orders',
   ]),
   makeRole('admin', 'SMOKE_ADMIN', [
     '/admin/dashboard',
