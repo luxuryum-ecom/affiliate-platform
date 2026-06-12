@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { TelegramLinkCard } from '@/components/supplier/telegram-link-card'
+import { getTelegramLinkStatus } from '@/app/actions/telegram-link'
+import { getProductLimitStatus } from '@/app/actions/premium'
 import type { Profile, SupplierProduct, SupplierQuoteRequest, SupplierPayoutStatus } from '@/types/database'
 
 export async function generateMetadata() {
@@ -46,13 +49,15 @@ export default async function SupplierDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileResult, productsResult] = await Promise.all([
+  const [profileResult, productsResult, telegramStatus, limitStatus] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
       .from('supplier_products')
       .select('id, product_name, approval_status, created_at')
       .eq('supplier_id', user.id)
       .order('created_at', { ascending: false }),
+    getTelegramLinkStatus(),
+    getProductLimitStatus(user.id),
   ])
 
   // RFQ match counters
@@ -148,6 +153,16 @@ export default async function SupplierDashboardPage() {
           <h1 className="text-lg font-semibold text-foreground">{t('greeting', { name: profile?.full_name ?? '' })}</h1>
           <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
+
+        {/* Liaison Telegram — canal principal des fournisseurs, visible dès l'accueil */}
+        <TelegramLinkCard
+          initialStatus={telegramStatus}
+          quota={{
+            current: limitStatus.currentCount,
+            max: limitStatus.maxAllowed,
+            isUnlimited: limitStatus.isUnlimited,
+          }}
+        />
 
         {/* Product stats */}
         <div className="grid grid-cols-3 gap-4">
