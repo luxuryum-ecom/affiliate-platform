@@ -276,7 +276,9 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                       qtyMin: t('directQtyMin', { min: product.min_quantity }),
                       unitPrice: t('directUnitPrice'),
                       subtotal: t('directSubtotal'),
-                      stockAvailable: (count: number, unit: string) => t('directStockAvailable', { count: count.toLocaleString(numLocale), unit }),
+                      stockAvailable: directStock != null && directStock > 0
+                        ? t('directStockAvailable', { count: directStock.toLocaleString(numLocale), unit: product.unit })
+                        : '',
                       outOfStock: t('directOutOfStock'),
                       stockOk: t('directStockOk'),
                       addToCart: t('directAddToCart'),

@@ -13,7 +13,7 @@ interface TDirect {
   qtyMin: string
   unitPrice: string
   subtotal: string
-  stockAvailable: (count: number, unit: string) => string
+  stockAvailable: string
   outOfStock: string
   stockOk: string
   addToCart: string
@@ -107,7 +107,7 @@ export function MarketplaceDirectOrderForm({
           </div>
           <p className="text-xs text-faint">
             {hasKnownStock
-              ? tDirect.stockAvailable(stockCount!, unit)
+              ? tDirect.stockAvailable
               : isOutOfStock
               ? tDirect.outOfStock
               : tDirect.stockOk
