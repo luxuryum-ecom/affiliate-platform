@@ -5,6 +5,11 @@ import { updateWholesalerBilling } from '@/app/actions/profile'
 import type { Profile } from '@/types/database'
 
 interface BillingFormLabels {
+  fieldPhone: string
+  fieldCity: string
+  phonePlaceholder: string
+  cityPlaceholder: string
+  phoneHelp: string
   fieldCompany: string
   fieldIce: string
   fieldRc: string
@@ -24,6 +29,11 @@ interface Props {
 }
 
 const defaultLabels: BillingFormLabels = {
+  fieldPhone: 'Téléphone',
+  fieldCity: 'Ville',
+  phonePlaceholder: '+212600000000',
+  cityPlaceholder: 'Ex : Casablanca',
+  phoneHelp: 'Format international avec indicatif pays.',
   fieldCompany: 'Raison sociale / Nom de la société',
   fieldIce: "ICE (Identifiant Commun de l'Entreprise)",
   fieldRc: 'Registre de commerce (RC)',
@@ -57,6 +67,38 @@ export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-muted mb-1" htmlFor="phone">
+            {labels.fieldPhone}
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            dir="ltr"
+            inputMode="tel"
+            autoComplete="tel"
+            defaultValue={profile?.phone ?? ''}
+            placeholder={labels.phonePlaceholder}
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint text-start"
+          />
+          <p className="mt-1 text-xs text-faint">{labels.phoneHelp}</p>
+        </div>
+
+        <div>
+          <label className="block text-xs text-muted mb-1" htmlFor="city">
+            {labels.fieldCity}
+          </label>
+          <input
+            id="city"
+            name="city"
+            type="text"
+            defaultValue={profile?.city ?? ''}
+            placeholder={labels.cityPlaceholder}
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint"
+          />
+        </div>
+
         <div className="sm:col-span-2">
           <label className="block text-xs text-muted mb-1" htmlFor="company_name">
             {labels.fieldCompany}

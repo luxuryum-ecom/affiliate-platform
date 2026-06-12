@@ -45,14 +45,6 @@ export default async function WholesalerAccountPage() {
               <dd className="text-foreground font-medium">{profile?.full_name}</dd>
             </div>
             <div>
-              <dt className="text-xs text-faint">{t('fieldPhone')}</dt>
-              <dd className="text-foreground">{profile?.phone ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-faint">{t('fieldCity')}</dt>
-              <dd className="text-foreground">{profile?.city ?? '—'}</dd>
-            </div>
-            <div>
               <dt className="text-xs text-faint">{t('fieldStatus')}</dt>
               <dd className="text-foreground capitalize">{profile?.status}</dd>
             </div>
@@ -68,6 +60,11 @@ export default async function WholesalerAccountPage() {
           <WholesalerBillingForm
             profile={profile}
             labels={{
+              fieldPhone: t('fieldPhone'),
+              fieldCity: t('fieldCity'),
+              phonePlaceholder: t('phonePlaceholder'),
+              cityPlaceholder: t('cityPlaceholder'),
+              phoneHelp: t('phoneHelp'),
               fieldCompany: t('fieldCompany'),
               fieldIce: t('fieldIce'),
               fieldRc: t('fieldRc'),
