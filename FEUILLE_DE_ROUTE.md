@@ -8,6 +8,11 @@
 > Liste de tête à attaquer en début de prochaine session. Ordre = priorité décroissante.
 > Chaque point : `@architect` plan d'abord → validation Abdou → implémentation. **Rien n'est codé ici.**
 
+## 🚀 CHANTIER PRIORITAIRE — JUSTE APRÈS LE LOT 4 : DÉPLOIEMENT STAGING (Vercel)
+> **L'app doit être EN LIGNE sur une URL fixe, toujours accessible, en build de PRODUCTION (rapide), déployée AUTOMATIQUEMENT à chaque push GitHub.**
+> **Objectif** : fin du `localhost` qui s'éteint et de la lenteur du mode dev — **Abdou supervise depuis n'importe quel appareil**.
+> Cadrage `@architect` d'abord (variables d'env Supabase/secrets côté Vercel, build prod, branche → preview vs prod, domaine fixe). Aucun secret `service_role` exposé côté client. À attaquer **dès le Lot 4 terminé**.
+
 ## ✅ BLOQUEUR P0 — RÉGRESSIONS DESIGN — **RÉSOLU** (session 2026-06-12)
 **Le chantier design (lots 3x) a CASSÉ des pages qui marchaient avant**, non détecté par les tests.
 1. ✅ **`/wholesale/marketplace/[id]`** — `stockAvailable` passé **comme fonction** à un Client
