@@ -8,6 +8,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
 import { WholesaleOrderAssignForm } from '@/components/admin/wholesale-order-assign-form'
+import { WholesaleSupplierAssignForm } from '@/components/admin/wholesale-supplier-assign-form'
 import { WholesaleImportStatusForm } from '@/components/admin/wholesale-import-status-form'
 import { WholesalePaymentForm } from '@/components/admin/wholesale-payment-form'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
@@ -65,6 +66,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const t  = await getTranslations('admin.wholesaleOrderDetail')
   const tc = await getTranslations('admin.common')
   const tAssign = await getTranslations('admin.wholesaleAssign')
+  const tSupplier = await getTranslations('admin.wholesaleSupplierAssign')
   const locale = await getLocale()
   const isRtl = locale === 'ar'
   const dateLocale = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-MA'
@@ -135,6 +137,21 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       })
       .filter((m): m is MemberJoin => m != null)
       .map((m) => ({ id: m.id, name: m.full_name ?? m.id.slice(0, 8) }))
+  }
+
+  // Fournisseurs approuvés assignables
+  let assignSuppliers: { id: string; name: string }[] = []
+  const { data: supplierRows } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('role', 'supplier')
+    .eq('status', 'approved')
+  if (supplierRows && supplierRows.length > 0) {
+    type SupplierRow = { id: string; full_name: string | null }
+    assignSuppliers = (supplierRows as SupplierRow[]).map((s) => ({
+      id: s.id,
+      name: s.full_name ?? s.id.slice(0, 8),
+    }))
   }
 
   const isLocalStockOrder =
@@ -389,6 +406,55 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
                 members={assignMembers}
                 currentAgentId={order.agent?.id ?? null}
               />
+            </div>
+
+            {/* Assignation fournisseur */}
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{tSupplier('heading')}</h2>
+              {order.supplier_id && (
+                <p className="text-xs text-faint mb-3">
+                  {tSupplier('currentlyAssigned')}{' '}
+                  <span className="text-foreground font-medium">
+                    {assignSuppliers.find((s) => s.id === order.supplier_id)?.name ?? order.supplier_id.slice(0, 8)}
+                  </span>
+                </p>
+              )}
+              <WholesaleSupplierAssignForm
+                orderId={order.id}
+                suppliers={assignSuppliers}
+                currentSupplierId={order.supplier_id ?? null}
+              />
+              {/* Réponse fournisseur */}
+              <div className="mt-4 pt-4 border-t border-line">
+                {order.supplier_response ? (
+                  <div className="space-y-1.5 text-xs">
+                    <p className="text-faint">
+                      {tSupplier('responseLabel')}{' '}
+                      <span className="text-foreground font-medium">
+                        {order.supplier_response === 'available'
+                          ? tSupplier('responseAvailable')
+                          : order.supplier_response === 'preparing'
+                          ? tSupplier('responsePreparing')
+                          : tSupplier('responseOnOrder')}
+                      </span>
+                    </p>
+                    {order.supplier_lead_time_days != null && (
+                      <p className="text-faint">
+                        {tSupplier('leadTimeDays', { count: order.supplier_lead_time_days })}
+                      </p>
+                    )}
+                    {order.supplier_responded_at && (
+                      <p className="text-faint">
+                        {tSupplier('respondedAt', {
+                          date: new Date(order.supplier_responded_at).toLocaleDateString(dateLocale),
+                        })}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-faint italic">{tSupplier('responsePending')}</p>
+                )}
+              </div>
             </div>
 
             {/* Invoice request */}

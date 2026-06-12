@@ -2651,6 +2651,22 @@
       "currentlyAssigned": "Assignée à",
       "noMembers": "Aucun membre d'équipe disponible."
     },
+    "wholesaleSupplierAssign": {
+      "heading": "Assigner un fournisseur",
+      "selectPlaceholder": "Choisir un fournisseur…",
+      "assign": "Assigner",
+      "assigning": "Assignation…",
+      "noSuppliers": "Aucun fournisseur approuvé disponible.",
+      "currentlyAssigned": "Fournisseur actuel :",
+      "success": "Fournisseur assigné.",
+      "responsePending": "En attente de réponse fournisseur.",
+      "responseLabel": "Réponse fournisseur :",
+      "leadTimeDays": "{count, plural, one {# jour} other {# jours}}",
+      "respondedAt": "Répondu le {date}",
+      "responseAvailable": "Disponible",
+      "responsePreparing": "En préparation",
+      "responseOnOrder": "En commande fournisseur"
+    },
     "wholesaleStatusForm": {
       "statusFinal": "Statut final.",
       "newStatus": "Nouveau statut",

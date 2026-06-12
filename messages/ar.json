@@ -2651,6 +2651,22 @@
       "currentlyAssigned": "مُسندة إلى",
       "noMembers": "لا يوجد أعضاء فريق متاحون."
     },
+    "wholesaleSupplierAssign": {
+      "heading": "إسناد مورّد",
+      "selectPlaceholder": "اختر مورّدًا…",
+      "assign": "إسناد",
+      "assigning": "جارٍ الإسناد…",
+      "noSuppliers": "لا يوجد مورّدون معتمدون متاحون.",
+      "currentlyAssigned": "المورّد الحالي:",
+      "success": "تم إسناد المورّد.",
+      "responsePending": "في انتظار ردّ المورّد.",
+      "responseLabel": "ردّ المورّد:",
+      "leadTimeDays": "{count, plural, one {# يوم} other {# أيام}}",
+      "respondedAt": "أجاب بتاريخ {date}",
+      "responseAvailable": "متوفر",
+      "responsePreparing": "قيد التحضير",
+      "responseOnOrder": "طلب لدى المورّد"
+    },
     "wholesaleStatusForm": {
       "statusFinal": "حالة نهائية.",
       "newStatus": "الحالة الجديدة",
