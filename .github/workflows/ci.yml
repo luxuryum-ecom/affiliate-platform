@@ -1,0 +1,53 @@
+name: CI
+
+# Barrière qualité à chaque push / PR : typecheck + tests + build.
+# Volontairement LITE : pas de secret DB, pas de Playwright ici.
+# Les smoke tests Playwright (qui ont besoin d'identifiants de comptes test) restent une
+# barrière LOCALE (pre-push + `pnpm smoke`). Voir CLAUDE.md › RÈGLES ABSOLUES.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# Annule les runs obsolètes sur la même branche.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: typecheck · tests · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Unit tests (vitest)
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+        env:
+          # Build sans accès DB réel : valeurs factices pour que next build n'échoue pas
+          # sur l'absence d'env. Aucune donnée sensible, aucun appel réseau au build.
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key

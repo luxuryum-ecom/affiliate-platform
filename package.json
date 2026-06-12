@@ -16,7 +16,10 @@
     "safe-check": "bash scripts/safe-check.sh",
     "migrate": "supabase db push",
     "types": "supabase gen types typescript --project-id owvtfzxvirttrbcsiveg --schema public > src/types/supabase-generated.ts",
-    "reset-cache": "rm -rf .next"
+    "reset-cache": "rm -rf .next",
+    "smoke": "playwright test",
+    "smoke:report": "playwright show-report",
+    "prepare": "husky"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",
@@ -33,12 +36,15 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
     "postcss": "^8.5.0",
     "prettier": "^3.5.0",
     "tailwindcss": "^4.0.0",

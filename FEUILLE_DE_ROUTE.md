@@ -8,18 +8,41 @@
 > Liste de tête à attaquer en début de prochaine session. Ordre = priorité décroissante.
 > Chaque point : `@architect` plan d'abord → validation Abdou → implémentation. **Rien n'est codé ici.**
 
-## 🚑 BLOQUEUR P0 — RÉGRESSIONS DESIGN à corriger AVANT toute nouvelle feature
+## ✅ BLOQUEUR P0 — RÉGRESSIONS DESIGN — **RÉSOLU** (session 2026-06-12)
 **Le chantier design (lots 3x) a CASSÉ des pages qui marchaient avant**, non détecté par les tests.
-1. **`/wholesale/marketplace/[id]`** : erreur `Functions cannot be passed directly to Client Components`
-   — `stockAvailable` est passé **comme fonction** au lieu d'une **string résolue via `t()`** avant
-   d'être transmise au Client Component.
-2. **AUDIT COMPLET requis** : vérifier **VISUELLEMENT** (pas seulement `tsc` / tests) **toutes les pages
-   touchées par le design**, surtout **grossiste + marketplace**, pour débusquer d'autres régressions
-   du même type (**objets/fonctions de traduction passés à des Client Components** au lieu de strings résolues).
-3. **Question de fond** : les **115 tests ne détectent PAS** ces erreurs de rendu (RSC → Client). À traiter :
-   **renforcer la couverture** (tests de rendu des pages) **et/ou ajouter une passe de vérif visuelle
-   systématique** après tout gros chantier design.
-> ⛔ **À corriger AVANT d'attaquer de nouvelles features.**
+1. ✅ **`/wholesale/marketplace/[id]`** — `stockAvailable` passé **comme fonction** à un Client
+   Component (`MarketplaceDirectOrderForm`) → `Functions cannot be passed directly to Client
+   Components`. **Corrigé** : string pré-résolue côté serveur (les args sont connus au rendu),
+   type de prop passé de `(c,u)=>string` à `string`. Fichiers :
+   `src/app/(wholesale)/wholesale/marketplace/[id]/page.tsx`,
+   `src/components/wholesale/marketplace-direct-order-form.tsx`.
+2. ✅ **Audit de la même classe de bug** (`=> t(` dans des props) sur tout `src/app` :
+   - `affiliate/products/page.tsx` (`stockUnits`, `priceVsCatalog`) : **investigué, PAS une
+     régression** — fonctions consommées uniquement côté serveur, ne traversent aucune frontière
+     client (`AffiliatePriceForm`/`CopyLinkButton` ne reçoivent que des strings). Laissé tel quel
+     (Règle d'Or n°1).
+   - `admin/cities|logistics|import-tariffs` (`t.rich(..., strong: c=>...)`) : **OK**, rendu
+     server-side, pas de frontière. Non touché.
+   - `tsc --noEmit` **0 erreur** + `next build` **OK** sur tout le projet.
+3. ✅ **Le trou « 115 tests ne voient pas le rendu » est bouché** → smoke tests Playwright (voir
+   ci-dessous). Test négatif effectué : réinjection temporaire d'une fonction-prop sur `/` →
+   l'erreur exacte est bien produite et détectable, puis retirée.
+
+### 🛡️ BLINDAGE QUALITÉ installé (pour que ça ne se reproduise JAMAIS)
+- **CLAUDE.md › « 🛑 RÈGLES ABSOLUES »** (en tête) : design = styles only ; jamais de
+  fonction/objet-callback à un Client Component ; interdit de commit sans tsc+build+tests+smoke ;
+  lots de 3-4 pages max. **+ « 💸 DISCIPLINE TOKENS »**.
+- **Hooks husky** : `pre-commit` (tsc + vitest) bloque physiquement ; `pre-push` (tsc + build +
+  smoke si creds). Ne jamais `--no-verify`.
+- **Smoke Playwright** (`e2e/`, `pnpm smoke`) : chaque route principale doit se RENDRE sans erreur
+  (status, pageerror, overlay). Auth par rôle via comptes test dans `.env.local` (voir
+  `.env.local.example`). Public OK (3/3 verts) ; routes protégées couvertes dès que les
+  `SMOKE_*` sont renseignés.
+- **CI GitHub Actions** (`.github/workflows/ci.yml`, lite) : typecheck + vitest + build à chaque
+  push/PR (pnpm 9 + Node 20, sans secret DB).
+
+> ⚠️ **À FAIRE par Abdou** : renseigner `.env.local` (1 compte test/rôle, cf. `.env.local.example`)
+> pour activer le smoke des routes **protégées** — c'est là qu'était le bug `stockAvailable`.
 
 ## ⭐ PRIORITÉ N°1 — Gestion des commandes style Deliveroo (B2B)
 **LE chantier à attaquer en premier.** Déjà détaillé en **SECTION 2bis-A** (plus bas) — s'y référer.
