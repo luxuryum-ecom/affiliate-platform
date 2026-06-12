@@ -137,6 +137,14 @@ export type DeliveryPreference = 'pickup' | 'delivery'
 export type CommissionStatus = 'pending' | 'approved' | 'paid'
 export type PayoutStatus = 'pending' | 'processing' | 'paid'
 
+/**
+ * Formal response of a supplier assigned to a wholesale order (migration 059).
+ *   available  — stock available immediately
+ *   preparing  — item is being prepared / assembled
+ *   on_order   — item must be ordered from upstream / lead time applies
+ */
+export type SupplierResponse = 'available' | 'preparing' | 'on_order'
+
 /** Commission model for supplier marketplace payouts. */
 export type SupplierCommissionType = 'percent' | 'fixed'
 
@@ -481,6 +489,18 @@ export interface WholesaleOrder {
   deposit_received_at: string | null
   /** Timestamp when order was fully paid. */
   fully_paid_at: string | null
+
+  // ── Supplier link (migration 059 — LOT 3a) ───────────────────────────────
+  /** Profile id of the supplier assigned to fulfil this order. Null until admin assigns. */
+  supplier_id: string | null
+  /** Formal supplier response to the assignment. Null until supplier responds via RPC. */
+  supplier_response: SupplierResponse | null
+  /** Lead time in days announced by the supplier. Null until supplier responds. */
+  supplier_lead_time_days: number | null
+  /** Timestamp of the supplier's last response (via respond_to_wholesale_order RPC). */
+  supplier_responded_at: string | null
+  /** Timestamp when admin assigned the supplier to this order. */
+  supplier_assigned_at: string | null
 
   created_at: string
   updated_at: string

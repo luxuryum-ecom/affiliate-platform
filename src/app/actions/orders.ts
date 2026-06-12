@@ -21,6 +21,7 @@ import type {
   WholesaleImportStatus,
   WholesalePaymentStatus,
   WholesaleCartItemWithProduct,
+  SupplierResponse,
 } from '@/types/database'
 
 import type { ActionState, OrderFormState } from '@/types/orders'
@@ -1215,5 +1216,146 @@ export async function updateWholesaleOrderBuyerNote(
   if (error) return fail(error.message)
 
   revalidatePath(`/wholesale/orders/${orderId}`)
+  return ok
+}
+
+// =============================================================================
+// ADMIN / AGENT — ASSIGN SUPPLIER TO WHOLESALE ORDER (LOT 3a)
+// =============================================================================
+
+/**
+ * Assign a supplier profile to a wholesale order.
+ * Only admin or agent-with-assign_orders permission can call this.
+ *
+ * Guard: requireAdmin({ allowAgent: true }) + can_assign_orders RPC (same as
+ * assignWholesaleOrder). The supplier profile must exist and have role='supplier'.
+ *
+ * Idempotence: re-assigning the same supplier is a no-op (returns ok silently).
+ *
+ * Does NOT touch: status, amounts, agent_id, buyer_id, or any financial column.
+ * Notification (LOT 6) will be added here later.
+ */
+export async function assignSupplierToOrder(
+  orderId: string,
+  supplierId: string,
+): Promise<ActionState> {
+  // ── Input validation ──────────────────────────────────────────────────────
+  if (!orderId?.trim())    return fail('errors.order_id_required')
+  if (!supplierId?.trim()) return fail('errors.supplier_id_required')
+
+  const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
+
+  // ── Permission guard : admin OR team member with assign_orders ────────────
+  const { data: canAssign, error: permErr } = (await supabase.rpc('can_assign_orders', {
+    uid: userId,
+  })) as { data: boolean | null; error: unknown }
+
+  if (permErr || !canAssign) return fail('errors.forbidden_assign_orders')
+
+  // ── Verify supplierId exists AND has role='supplier' ──────────────────────
+  // Sécurité : on n'assigne jamais un non-fournisseur comme supplier_id —
+  // sinon ce profil hériterait de la policy SELECT supplier_read_own sur la
+  // commande, exposant potentiellement des données sensibles.
+  const { data: supplierProfile } = (await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', supplierId)
+    .single()) as { data: { id: string; role: string } | null; error: unknown }
+
+  if (!supplierProfile || supplierProfile.role !== 'supplier')
+    return fail('errors.supplier_not_found')
+
+  // ── Fetch current order state ─────────────────────────────────────────────
+  const { data: order } = (await supabase
+    .from('wholesale_orders')
+    .select('id, supplier_id')
+    .eq('id', orderId)
+    .single()) as { data: { id: string; supplier_id: string | null } | null; error: unknown }
+
+  if (!order) return fail('errors.order_not_found')
+
+  // ── Idempotence : même fournisseur déjà assigné ──────────────────────────
+  if (order.supplier_id === supplierId) {
+    return ok
+  }
+
+  const now = new Date().toISOString()
+
+  const { error: updateErr } = await supabase
+    .from('wholesale_orders')
+    .update({
+      supplier_id:          supplierId,
+      supplier_assigned_at: now,
+    })
+    .eq('id', orderId)
+
+  if (updateErr) return fail('errors.update_failed')
+
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  return ok
+}
+
+// =============================================================================
+// SUPPLIER — RESPOND TO WHOLESALE ORDER (LOT 3a)
+// =============================================================================
+
+/**
+ * Supplier submits their response to an assigned wholesale order.
+ * Delegates to the SECURITY DEFINER RPC respond_to_wholesale_order which
+ * enforces ownership (supplier_id = auth.uid()) and writes ONLY the 3
+ * response columns — never status, amounts, agent_id or any other field.
+ *
+ * The RPC raises named exceptions (errors.*) on validation failure; we
+ * propagate them as-is so the frontend can map them to i18n keys.
+ */
+export async function respondToWholesaleOrder(
+  orderId: string,
+  response: SupplierResponse,
+  leadTimeDays: number,
+): Promise<ActionState> {
+  // ── Input validation (server-side, before RPC) ────────────────────────────
+  if (!orderId?.trim()) return fail('errors.order_id_required')
+
+  const VALID_RESPONSES: SupplierResponse[] = ['available', 'preparing', 'on_order']
+  if (!VALID_RESPONSES.includes(response)) return fail('errors.invalid_supplier_response')
+
+  if (!Number.isInteger(leadTimeDays) || leadTimeDays < 0)
+    return fail('errors.invalid_lead_time')
+
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return fail('errors.unauthenticated')
+
+  // ── Role guard : supplier only ────────────────────────────────────────────
+  const { data: profile } = (await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()) as { data: { role: string } | null; error: unknown }
+
+  if (profile?.role !== 'supplier') return fail('errors.forbidden_supplier_only')
+
+  // ── Delegate to SECURITY DEFINER RPC ─────────────────────────────────────
+  // The RPC re-validates ownership and columns — this is defence in depth.
+  const { error: rpcErr } = await supabase.rpc('respond_to_wholesale_order', {
+    p_order_id:       orderId,
+    p_response:       response,
+    p_lead_time_days: leadTimeDays,
+  })
+
+  if (rpcErr) {
+    // RPC raises named exceptions; surface the message as an i18n key
+    const msg = rpcErr.message ?? 'errors.update_failed'
+    // The message may be the bare key (e.g. 'errors.order_not_found') or
+    // wrapped in Postgres error text — extract the key portion.
+    const key = msg.match(/errors\.[a-z_]+/)?.[0] ?? 'errors.update_failed'
+    return fail(key)
+  }
+
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  // Fournisseur n'a pas de route propre pour l'instant (LOT 3b UI)
   return ok
 }
