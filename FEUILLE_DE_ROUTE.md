@@ -8,7 +8,21 @@
 > Liste de tête à attaquer en début de prochaine session. Ordre = priorité décroissante.
 > Chaque point : `@architect` plan d'abord → validation Abdou → implémentation. **Rien n'est codé ici.**
 
-## 🚀 CHANTIER PRIORITAIRE — JUSTE APRÈS LE LOT 4 : DÉPLOIEMENT STAGING (Vercel)
+## 🧭 ORDRE DE REPRISE (figé avec Abdou, session 2026-06-12)
+> Reprendre EXACTEMENT dans cet ordre. On ne saute pas d'étape. La branche
+> `feat/habillage-premium` est à jour et poussée ; **toute la DETTE UX est résorbée**
+> (cf. section dédiée plus bas). La PR vers `main` n'est PAS faite — volontairement.
+
+1. **Lot 4.2-B / 4.2-C / 4.2-D, puis Lot 4.3 (UI)** — finir le Lot 4 (moteur cash
+   livraison commencé en 4.2-A). 4.3 = la couche UI. Démarrer session fraîche,
+   `@architect` plan d'abord. ⚠️ Lots 4.2 = **financiers** → circuit `@finance` +
+   `@security-reviewer` + validation Abdou avant chaque commit.
+2. **Déploiement staging Vercel** — SEULEMENT une fois le Lot 4 complet (cf. chantier
+   ci-dessous). URL fixe, build prod, auto-deploy sur push.
+3. **PR vers `main`** — SEULEMENT après Lot 4 complet **ET** staging en ligne. C'est
+   le dernier geste : on ne merge pas avant d'avoir vu tourner en staging.
+
+## 🚀 CHANTIER (étape 2 de l'ordre de reprise) — DÉPLOIEMENT STAGING (Vercel)
 > **L'app doit être EN LIGNE sur une URL fixe, toujours accessible, en build de PRODUCTION (rapide), déployée AUTOMATIQUEMENT à chaque push GitHub.**
 > **Objectif** : fin du `localhost` qui s'éteint et de la lenteur du mode dev — **Abdou supervise depuis n'importe quel appareil**.
 > Cadrage `@architect` d'abord (variables d'env Supabase/secrets côté Vercel, build prod, branche → preview vs prod, domaine fixe). Aucun secret `service_role` exposé côté client. À attaquer **dès le Lot 4 terminé**.
