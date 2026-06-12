@@ -45,8 +45,19 @@
 - **CI GitHub Actions** (`.github/workflows/ci.yml`, lite) : typecheck + vitest + build à chaque
   push/PR (pnpm 9 + Node 20, sans secret DB).
 
-> ⚠️ **À FAIRE par Abdou** : renseigner `.env.local` (1 compte test/rôle, cf. `.env.local.example`)
-> pour activer le smoke des routes **protégées** — c'est là qu'était le bug `stockAvailable`.
+> ✅ `.env.local` renseigné (4 rôles, comptes démo `*@affipartner.ma`, gitignored) → smoke des
+> routes protégées **actif** : **19/19 routes vertes en prod**.
+
+### 📓 Journal session 2026-06-12 (branche `feat/habillage-premium`, poussée)
+- `8577c12` fix P0 `stockAvailable` (fonction → Client Component) sur `/wholesale/marketplace/[id]`.
+- `9a227ee` blindage : RÈGLES ABSOLUES + DISCIPLINE TOKENS (CLAUDE.md), husky pre-commit/pre-push,
+  smoke Playwright (`e2e/`), CI GitHub Actions lite.
+- `92c12c5` smoke contre **build prod** (`next start`) au lieu de `next dev` → fin des faux positifs.
+- `97f9734` CLAUDE.md : section **AUTONOMIE DE DÉCISION**.
+- **Décisions prises seul** (hors argent/sécurité) : smoke auth via comptes `.env.local` ; CI lite
+  (sans secret DB) ; pre-commit = tsc+vitest ; comptes démo affilié/grossiste créés (données factices).
+- **Diagnostic** : « No intl context found » sous `next dev` = artefact de compilation dev, **pas un
+  bug** (prouvé en prod). Aucun fichier app à corriger côté i18n.
 
 ## ⭐ PRIORITÉ N°1 — Gestion des commandes style Deliveroo (B2B)
 **LE chantier à attaquer en premier.** Déjà détaillé en **SECTION 2bis-A** (plus bas) — s'y référer.
