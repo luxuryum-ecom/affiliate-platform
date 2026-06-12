@@ -1,4 +1,16 @@
 {
+  "errors": {
+    "unauthenticated": "Session expired, please sign in again.",
+    "order_id_required": "Order not found.",
+    "order_not_found": "Order not found.",
+    "assignee_id_required": "Select a member to assign.",
+    "assignee_not_found": "This member was not found.",
+    "forbidden_assign_orders": "You don't have permission to assign orders.",
+    "fsm_transition_invalid": "This status change is not allowed.",
+    "insufficient_stock": "Insufficient stock to confirm this order.",
+    "status_already_set": "The order is already at this status.",
+    "update_failed": "Update failed, please try again."
+  },
   "common": {
     "login": "Sign in",
     "createAccount": "Create my account",
@@ -1500,7 +1512,13 @@
         "sourcing": "Sourcing",
         "shipped": "Shipped",
         "delivered": "Delivered",
-        "cancelled": "Cancelled"
+        "cancelled": "Cancelled",
+        "assigned": "Assigned",
+        "supplier_confirmed": "Supplier confirmed",
+        "preparing": "Preparing",
+        "ready": "Ready",
+        "picked_up": "Picked up",
+        "dispatched": "Dispatched"
       },
       "importStatusBadge": {
         "awaiting_supplier": "Awaiting supplier",
@@ -2572,6 +2590,16 @@
       "invoiceIce": "ICE",
       "invoiceRc": "RC",
       "invoiceBillingAddress": "Billing address"
+    },
+    "wholesaleAssign": {
+      "heading": "Assign order",
+      "assignTo": "Assign to",
+      "selectMember": "Choose a member…",
+      "assign": "Assign",
+      "assigning": "Assigning…",
+      "assignSuccess": "Order assigned.",
+      "currentlyAssigned": "Assigned to",
+      "noMembers": "No team members available."
     },
     "wholesaleStatusForm": {
       "statusFinal": "Final status.",

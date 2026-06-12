@@ -8,6 +8,7 @@ import { calculateNetAffiliateCommission, getWholesaleTier } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
 import { resolveDeliveryFeeByCity } from './cities'
 import { requireAdmin } from './_guards'
+import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
 import {
   scoreDuplicateOrder,
   scoreFraudOrder,
@@ -722,32 +723,46 @@ export async function updateWholesaleOrderCosts(
   return ok
 }
 
+// FSM — la table de transitions vit dans `@/lib/wholesale-fsm` (module pur).
+// Un fichier « use server » ne peut exporter que des fonctions async, pas une
+// constante objet → la FSM est déportée et importée ici (et réutilisable au front).
+
 // =============================================================================
 // ADMIN — UPDATE WHOLESALE ORDER STATUS
 // =============================================================================
 
 /**
  * Update a wholesale order's status.
- * Handles stock reserve/restore and audit timestamps.
+ * Enforces FSM transitions (server authority — LOT 2 M-1 fix).
+ * Handles stock reserve/restore and audit trail in wholesale_order_status_history.
+ *
+ * On FSM violation the action returns { error: 'errors.fsm_transition_invalid' }
+ * so callers can map the key to their i18n namespace.
  */
 export async function updateWholesaleOrderStatus(
   orderId: string,
   newStatus: WholesaleOrderStatus,
   notes?: string
 ): Promise<ActionState> {
-  const { supabase, error: authError } = await requireAdmin({ allowAgent: true })
-  if (authError) return fail(authError)
+  const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
 
   const { data: order } = (await supabase
     .from('wholesale_orders')
     .select('status')
     .eq('id', orderId)
-    .single()) as { data: { status: string } | null; error: unknown }
+    .single()) as { data: { status: WholesaleOrderStatus } | null; error: unknown }
 
-  if (!order) return fail('Commande introuvable.')
-  if (order.status === newStatus) return fail('Statut déjà à jour.')
+  if (!order) return fail('errors.order_not_found')
+  if (order.status === newStatus) return fail('errors.status_already_set')
+
+  // ── FSM guard (M-1) ───────────────────────────────────────────────────────
+  if (!isFsmTransitionAllowed(order.status, newStatus)) {
+    return fail('errors.fsm_transition_invalid')
+  }
 
   const now = new Date().toISOString()
+  const prev = order.status
 
   const update: Record<string, unknown> = { status: newStatus }
   if (notes) update.agent_notes = notes
@@ -759,8 +774,6 @@ export async function updateWholesaleOrderStatus(
   if (newStatus === 'cancelled')  { update.cancelled_at = now }
 
   // ── Stock: confirmed → reserve all items; cancelled → restore ────────────
-  const prev = order.status as WholesaleOrderStatus
-
   if (newStatus === 'confirmed' && prev === 'pending') {
     const { data: items } = (await supabase
       .from('wholesale_order_items')
@@ -776,7 +789,7 @@ export async function updateWholesaleOrderStatus(
         p_qty: item.quantity,
       })) as { data: boolean; error: unknown }
       if (!reserved) {
-        return fail('Stock insuffisant pour un ou plusieurs articles.')
+        return fail('errors.insufficient_stock')
       }
     }
   }
@@ -798,11 +811,127 @@ export async function updateWholesaleOrderStatus(
   }
 
   const { error } = await supabase.from('wholesale_orders').update(update).eq('id', orderId)
-  if (error) return fail(error.message)
+  if (error) return fail('errors.update_failed')
+
+  // ── Audit trail (append-only) ─────────────────────────────────────────────
+  await supabase.from('wholesale_order_status_history').insert({
+    order_id:   orderId,
+    from_status: prev,
+    to_status:  newStatus,
+    changed_by: userId,
+    note:       notes ?? null,
+  })
 
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
   revalidatePath(`/wholesale/orders`)
+  return ok
+}
+
+// =============================================================================
+// ADMIN / AGENT — ASSIGN WHOLESALE ORDER (LOT 2)
+// =============================================================================
+
+/**
+ * Assign a wholesale order to a field agent (or re-assign).
+ *
+ * Guard: caller must be admin OR a team_members active member with
+ * assign_orders=true (checked via SQL helper can_assign_orders).
+ *
+ * FSM: only transitions to 'assigned' when the current status allows it
+ * (pending, confirmed — see WHOLESALE_ORDER_FSM). If the order is already
+ * 'assigned' to a different agent, the order is re-assigned without FSM
+ * re-transition (agent_id + assigned_at are updated, no duplicate history row
+ * for the status if it's already 'assigned').
+ *
+ * Idempotence: re-assigning the SAME agent is a no-op (returns ok silently).
+ */
+export async function assignWholesaleOrder(
+  orderId: string,
+  assigneeId: string,
+): Promise<ActionState> {
+  // ── Input validation ──────────────────────────────────────────────────────
+  if (!orderId?.trim())    return fail('errors.order_id_required')
+  if (!assigneeId?.trim()) return fail('errors.assignee_id_required')
+
+  const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
+
+  // ── Permission guard : admin OR team member with assign_orders ────────────
+  const { data: canAssign, error: permErr } = (await supabase.rpc('can_assign_orders', {
+    uid: userId,
+  })) as { data: boolean | null; error: unknown }
+
+  if (permErr || !canAssign) return fail('errors.forbidden_assign_orders')
+
+  // ── Verify assignee exists AND is an assignable role (agent/admin) ─────────
+  // Sécurité (IMP-1) : on n'assigne JAMAIS à un wholesaler/affiliate/supplier —
+  // sinon ce profil hériterait, via agent_id, d'un accès lecture/écriture à la
+  // commande (incluant les PII de livraison portées par wholesale_orders).
+  const { data: assignee } = (await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', assigneeId)
+    .single()) as { data: { id: string; role: string } | null; error: unknown }
+
+  if (!assignee || (assignee.role !== 'agent' && assignee.role !== 'admin'))
+    return fail('errors.assignee_not_found')
+
+  // ── Fetch current order state ─────────────────────────────────────────────
+  const { data: order } = (await supabase
+    .from('wholesale_orders')
+    .select('status, agent_id')
+    .eq('id', orderId)
+    .single()) as { data: { status: WholesaleOrderStatus; agent_id: string | null } | null; error: unknown }
+
+  if (!order) return fail('errors.order_not_found')
+
+  // ── Idempotence : même agent déjà assigné ────────────────────────────────
+  if (order.agent_id === assigneeId && order.status === 'assigned') {
+    return ok
+  }
+
+  const now = new Date().toISOString()
+  const prevStatus = order.status
+
+  // ── Determine whether a status transition is needed ───────────────────────
+  // If order is already 'assigned' (different agent), we only update agent_id
+  // without a redundant FSM hop.
+  // Otherwise we check FSM and transition to 'assigned'.
+  const needsStatusChange = prevStatus !== 'assigned'
+
+  if (needsStatusChange && !isFsmTransitionAllowed(prevStatus, 'assigned')) {
+    return fail('errors.fsm_transition_invalid')
+  }
+
+  const updatePayload: Record<string, unknown> = {
+    agent_id:    assigneeId,
+    assigned_at: now,
+  }
+  if (needsStatusChange) {
+    updatePayload.status = 'assigned'
+  }
+
+  const { error: updateErr } = await supabase
+    .from('wholesale_orders')
+    .update(updatePayload)
+    .eq('id', orderId)
+
+  if (updateErr) return fail('errors.update_failed')
+
+  // ── Audit trail ───────────────────────────────────────────────────────────
+  // L'assignataire est tracé par changed_by + from/to_status + agent_id sur la
+  // commande ; pas de note en dur (i18n) ni d'UUID brut dans la note.
+  await supabase.from('wholesale_order_status_history').insert({
+    order_id:    orderId,
+    from_status: needsStatusChange ? prevStatus : 'assigned',
+    to_status:   'assigned',
+    changed_by:  userId,
+    note:        null,
+  })
+
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
   return ok
 }
 

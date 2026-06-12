@@ -1,4 +1,16 @@
 {
+  "errors": {
+    "unauthenticated": "Session expirée, reconnectez-vous.",
+    "order_id_required": "Commande introuvable.",
+    "order_not_found": "Commande introuvable.",
+    "assignee_id_required": "Sélectionnez un membre à assigner.",
+    "assignee_not_found": "Ce membre est introuvable.",
+    "forbidden_assign_orders": "Vous n'avez pas la permission d'assigner des commandes.",
+    "fsm_transition_invalid": "Ce changement de statut n'est pas autorisé.",
+    "insufficient_stock": "Stock insuffisant pour confirmer cette commande.",
+    "status_already_set": "La commande est déjà à ce statut.",
+    "update_failed": "Échec de la mise à jour, réessayez."
+  },
   "common": {
     "login": "Se connecter",
     "createAccount": "Créer mon compte",
@@ -1500,7 +1512,13 @@
         "sourcing": "En sourcing",
         "shipped": "Expédiée",
         "delivered": "Livrée",
-        "cancelled": "Annulée"
+        "cancelled": "Annulée",
+        "assigned": "Assignée",
+        "supplier_confirmed": "Confirmée fournisseur",
+        "preparing": "En préparation",
+        "ready": "Prête",
+        "picked_up": "Ramassée",
+        "dispatched": "Acheminée"
       },
       "importStatusBadge": {
         "awaiting_supplier": "Attente fournisseur",
@@ -2572,6 +2590,16 @@
       "invoiceIce": "ICE",
       "invoiceRc": "RC",
       "invoiceBillingAddress": "Adresse de facturation"
+    },
+    "wholesaleAssign": {
+      "heading": "Assigner la commande",
+      "assignTo": "Assigner à",
+      "selectMember": "Choisir un membre…",
+      "assign": "Assigner",
+      "assigning": "Assignation…",
+      "assignSuccess": "Commande assignée.",
+      "currentlyAssigned": "Assignée à",
+      "noMembers": "Aucun membre d'équipe disponible."
     },
     "wholesaleStatusForm": {
       "statusFinal": "Statut final.",

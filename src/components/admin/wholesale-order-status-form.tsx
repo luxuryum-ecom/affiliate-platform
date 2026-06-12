@@ -32,8 +32,9 @@ export function WholesaleOrderStatusForm({
   orderId: string
   currentStatus: WholesaleOrderStatus
 }) {
-  const t  = useTranslations('admin.wholesaleStatusForm')
-  const tc = useTranslations('admin.common')
+  const t    = useTranslations('admin.wholesaleStatusForm')
+  const tc   = useTranslations('admin.common')
+  const tErr = useTranslations()
   const [isPending, startTransition] = useTransition()
   const [selected, setSelected] = useState<WholesaleOrderStatus | ''>('')
   const [notes, setNotes] = useState('')
@@ -48,7 +49,7 @@ export function WholesaleOrderStatusForm({
     if (!selected) return
     startTransition(async () => {
       const result = await updateWholesaleOrderStatus(orderId, selected as WholesaleOrderStatus, notes || undefined)
-      setMsg({ ok: result.success, text: result.error ?? t('statusUpdated') })
+      setMsg({ ok: result.success, text: result.error ? tErr(result.error) : t('statusUpdated') })
     })
   }
 

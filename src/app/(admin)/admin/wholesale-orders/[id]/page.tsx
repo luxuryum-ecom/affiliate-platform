@@ -7,6 +7,7 @@ import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { WholesaleOrderStatusForm } from '@/components/admin/wholesale-order-status-form'
+import { WholesaleOrderAssignForm } from '@/components/admin/wholesale-order-assign-form'
 import { WholesaleImportStatusForm } from '@/components/admin/wholesale-import-status-form'
 import { WholesalePaymentForm } from '@/components/admin/wholesale-payment-form'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
@@ -63,6 +64,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
 
   const t  = await getTranslations('admin.wholesaleOrderDetail')
   const tc = await getTranslations('admin.common')
+  const tAssign = await getTranslations('admin.wholesaleAssign')
   const locale = await getLocale()
   const isRtl = locale === 'ar'
   const dateLocale = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-MA'
@@ -116,6 +118,33 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   }
 
   if (!order) notFound()
+
+  // Membres assignables : membres actifs de l'équipe de cet owner, sinon repli sur les agents.
+  let assignMembers: { id: string; name: string }[] = []
+  const { data: teamRows } = await supabase
+    .from('team_members')
+    .select('member:profiles!member_id(id,full_name)')
+    .eq('owner_id', user!.id)
+    .eq('active', true)
+  if (teamRows && teamRows.length > 0) {
+    type MemberJoin = { id: string; full_name: string | null }
+    assignMembers = teamRows
+      .map((r) => {
+        const m = (r as unknown as { member: MemberJoin | MemberJoin[] | null }).member
+        return Array.isArray(m) ? m[0] ?? null : m
+      })
+      .filter((m): m is MemberJoin => m != null)
+      .map((m) => ({ id: m.id, name: m.full_name ?? m.id.slice(0, 8) }))
+  } else {
+    const { data: agentRows } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'agent')
+    assignMembers = (agentRows ?? []).map((a) => {
+      const p = a as { id: string; full_name: string | null }
+      return { id: p.id, name: p.full_name ?? p.id.slice(0, 8) }
+    })
+  }
 
   const isLocalStockOrder =
     !linkedQuote &&
@@ -355,12 +384,21 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               </div>
             )}
 
-            {order.agent && (
-              <div className="bg-surface rounded-xl border border-line p-4">
-                <p className="text-xs text-faint">{t('assignedAgent')}</p>
-                <p className="text-sm font-medium text-foreground mt-0.5">{order.agent.full_name}</p>
-              </div>
-            )}
+            {/* Assignation à un membre d'équipe */}
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{tAssign('heading')}</h2>
+              {order.agent && (
+                <p className="text-xs text-faint mb-3">
+                  {tAssign('currentlyAssigned')}{' '}
+                  <span className="text-foreground font-medium">{order.agent.full_name}</span>
+                </p>
+              )}
+              <WholesaleOrderAssignForm
+                orderId={order.id}
+                members={assignMembers}
+                currentAgentId={order.agent?.id ?? null}
+              />
+            </div>
 
             {/* Invoice request */}
             {order.invoice_requested && (

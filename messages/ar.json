@@ -1,4 +1,16 @@
 {
+  "errors": {
+    "unauthenticated": "انتهت الجلسة، يرجى تسجيل الدخول من جديد.",
+    "order_id_required": "الطلب غير موجود.",
+    "order_not_found": "الطلب غير موجود.",
+    "assignee_id_required": "اختر عضوًا لإسناد الطلب إليه.",
+    "assignee_not_found": "هذا العضو غير موجود.",
+    "forbidden_assign_orders": "ليست لديك صلاحية إسناد الطلبات.",
+    "fsm_transition_invalid": "هذا التغيير في الحالة غير مسموح به.",
+    "insufficient_stock": "المخزون غير كافٍ لتأكيد هذا الطلب.",
+    "status_already_set": "الطلب موجود بالفعل في هذه الحالة.",
+    "update_failed": "تعذّر التحديث، حاول من جديد."
+  },
   "common": {
     "login": "تسجيل الدخول",
     "createAccount": "إنشاء حساب",
@@ -1500,7 +1512,13 @@
         "sourcing": "قيد التوريد",
         "shipped": "مشحونة",
         "delivered": "مُسلَّمة",
-        "cancelled": "ملغاة"
+        "cancelled": "ملغاة",
+        "assigned": "مُسندة",
+        "supplier_confirmed": "مؤكَّدة من المورّد",
+        "preparing": "قيد التحضير",
+        "ready": "جاهزة",
+        "picked_up": "تم الاستلام",
+        "dispatched": "قيد التوصيل"
       },
       "importStatusBadge": {
         "awaiting_supplier": "بانتظار المورّد",
@@ -2572,6 +2590,16 @@
       "invoiceIce": "ICE",
       "invoiceRc": "RC",
       "invoiceBillingAddress": "عنوان الفوترة"
+    },
+    "wholesaleAssign": {
+      "heading": "إسناد الطلب",
+      "assignTo": "إسناد إلى",
+      "selectMember": "اختر عضوًا…",
+      "assign": "إسناد",
+      "assigning": "جارٍ الإسناد…",
+      "assignSuccess": "تم إسناد الطلب.",
+      "currentlyAssigned": "مُسندة إلى",
+      "noMembers": "لا يوجد أعضاء فريق متاحون."
     },
     "wholesaleStatusForm": {
       "statusFinal": "حالة نهائية.",
