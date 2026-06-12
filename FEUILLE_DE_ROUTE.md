@@ -13,6 +13,24 @@
 > **Objectif** : fin du `localhost` qui s'éteint et de la lenteur du mode dev — **Abdou supervise depuis n'importe quel appareil**.
 > Cadrage `@architect` d'abord (variables d'env Supabase/secrets côté Vercel, build prod, branche → preview vs prod, domaine fixe). Aucun secret `service_role` exposé côté client. À attaquer **dès le Lot 4 terminé**.
 
+## 🧹 DETTE UX — parcours incomplets (murs sans issue, contradictions, features à moitié branchées)
+> Audit `@architect` lancé en supervision (2026-06-12) sur les 4 rôles. **But : ne plus découvrir ces bugs un par un en test visuel.**
+> Pattern chassé : l'UI propose une action (bouton/CTA/form) que la server action correspondante rejette, OU un message d'erreur affiché comme état permanent sans porte de sortie.
+> Format : `[Pxx] Titre` — Rôle. `Fichier`. Symptôme → cause racine → correctif. **Toujours `@architect` plan d'abord pour les non triviaux.**
+
+### ✅ Corrigés en supervision (session 2026-06-12) — commits `feat/habillage-premium`
+- **[P0] Crash upload justificatif >1 Mo** — Grossiste. `next.config.ts`, `wholesale-proof-form.tsx`. La form promettait « max 10 Mo » mais `serverActions.bodySizeLimit` Next valait 1 Mo → crash sur photo de téléphone. **Fix LOT UX-1** : bodySizeLimit 12 Mo + compression image client (canvas) + garde de taille + message i18n.
+- **[P0] Contradiction stock / commande directe** — Grossiste. `marketplace/[id]/page.tsx`, `marketplace/page.tsx`, `cart.ts`. CTA « Commander » affiché d'après le stock fournisseur, mais le panier exigeait un miroir catalogue `products` absent → « pas encore disponible ». **Fix LOT UX-2** : helper unique `lib/wholesale-catalog-link.ts` partagé page+action ; CTA → 'rfq' sans miroir ; seuils réels affichés.
+- **[P0] Mur « Pays non configuré » sans issue** — Fournisseur. `supplier/products/new`, `users.ts`, migration 066. Fournisseurs pré-054 sans `country_code`, pays figé admin-only, aucune notif. **Fix LOT UX-3a/3b** : flag `country_setup_requested`, action admin `setSupplierCountry`, mur → demande actionnable, surface admin « Fournisseurs sans pays ».
+
+### ⏳ À traiter (vérifiés dans le code, non corrigés)
+- **[P1] Fournisseur « no_rate » : produit créé sans prix, sans feedback ni alerte admin** — Fournisseur/Admin. `lib/supplier-pricing.ts` (`composePricing`, reason `no_rate`, `canSubmit:true`), `actions/supplier-products.ts`. Si le pays existe mais la devise n'a pas de taux FX, le produit est inséré avec `suggested_wholesale_price_mad = NULL` (« Sur devis ») **sans aucun message** au fournisseur ni alerte admin « taux manquant ». Seul `canSubmit=false` est traité ; `reason='no_rate'` est silencieux. → Bandeau fournisseur + flag/alerte admin (réutiliser le canal de la dette pays). **⚠️ adjacent devise → circuit `@finance`/`@security` léger.**
+- **[P1] `addToCart` (catalogue interne) accepte un `import_on_demand`** — Grossiste. `actions/cart.ts` (`addToCart`, ne filtre PAS `availability_type`) vs `submitWholesaleOrder` (`actions/orders.ts`) qui le refuse. Un produit `import_on_demand` peut être ajouté au panier puis bloqué au checkout. → Aligner la garde `availability_type === 'local_stock'` sur `addToCart`, ou bon CTA en amont sur `/wholesale/products/[id]`.
+- **[P1] État vide « Opportunités RFQ » sans CTA** — Fournisseur. `supplier/opportunities/page.tsx`. « Aucune opportunité » sans indiquer qu'il faut remplir/élargir le profil de matching pour recevoir des RFQ. → Conditionner le message + ancre vers le form de profil selon que `matchingProfile` est absent/incomplet.
+- **[P2] Compte grossiste : Ville/Téléphone « — » non renseignables** — Grossiste. `wholesale/account/page.tsx` + `WholesalerBillingForm` (édite seulement company/ice/rc/billing). Téléphone et ville affichés « — » en lecture seule, aucun form pour les remplir. → Ajouter phone/city au form, ou retirer les lignes lecture seule.
+- **[P2] Bloc Telegram absent du dashboard fournisseur** — Fournisseur. `TelegramLinkCard` n'est rendu que sur `/supplier/products`, pas sur `/supplier/dashboard` (page d'atterrissage). Un fournisseur non lié ne trouve pas l'onboarding Telegram. L'état « non lié » est aussi volontairement minimal (générer code) vs le guide complet en état « lié ». → Décision produit Abdou : exposer la carte sur le dashboard ?
+- **[P2] i18n en dur dans l'inscription fournisseur** — Auth. `components/auth/signup-form.tsx` (champ Pays : « Pays », « Sélectionnez votre pays », texte d'aide tous en FR dur). Viole la règle i18n FR/AR/EN. → Câbler `auth.signup.country*`.
+
 ## ✅ BLOQUEUR P0 — RÉGRESSIONS DESIGN — **RÉSOLU** (session 2026-06-12)
 **Le chantier design (lots 3x) a CASSÉ des pages qui marchaient avant**, non détecté par les tests.
 1. ✅ **`/wholesale/marketplace/[id]`** — `stockAvailable` passé **comme fonction** à un Client
