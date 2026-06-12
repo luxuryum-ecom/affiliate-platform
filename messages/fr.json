@@ -709,6 +709,8 @@
       "importBadgeGlobal": "Tarif global",
       "importTitle": "Frais transport & douane",
       "importSubtitle": "Non inclus dans le prix — calculé au devis selon la quantité et le mode (maritime/aérien)",
+      "importSubtitleTextile": "Tarif transport fixe au kg — connu d'avance, multiplié par la quantité au devis",
+      "importRateFixed": "Tarif fixe",
       "importOrigin": "Pays d'origine",
       "importShippingMode": "Mode de transport",
       "importCost": "Frais transport & douane estimés",

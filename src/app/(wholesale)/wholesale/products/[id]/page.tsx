@@ -238,7 +238,8 @@ function ImportInfoBlock({
             {t('importTitle')}
           </p>
           <p className="text-xs text-faint mt-0.5">
-            {t('importSubtitle')}
+            {/* Exception textile maritime : tarif au kg fixe, connu d'avance (vs estimation au devis) */}
+            {shippingMode === 'sea_textile_kg' ? t('importSubtitleTextile') : t('importSubtitle')}
           </p>
         </div>
         {product.tariff_mode === 'global' && globalTariff && (
@@ -271,6 +272,11 @@ function ImportInfoBlock({
             {unit && (
               <span className="text-muted font-normal">
                 / {unit === 'cbm' ? t('importUnitCbm') : t('importUnitKg')}
+              </span>
+            )}
+            {shippingMode === 'sea_textile_kg' && (
+              <span className="ms-2 text-xs font-medium text-success-fg bg-success-soft px-1.5 py-0.5 rounded">
+                {t('importRateFixed')}
               </span>
             )}
           </span>

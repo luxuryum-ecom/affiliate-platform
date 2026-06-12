@@ -709,6 +709,8 @@
       "importBadgeGlobal": "تعريفة عالمية",
       "importTitle": "رسوم الشحن والجمارك",
       "importSubtitle": "غير مشمولة في السعر — تُحتسب في عرض السعر حسب الكمية ونوع النقل (بحري/جوي)",
+      "importSubtitleTextile": "تعرفة شحن ثابتة للكيلوغرام — معروفة مسبقًا وتُضرب في الكمية عند عرض السعر",
+      "importRateFixed": "تعرفة ثابتة",
       "importOrigin": "بلد المنشأ",
       "importShippingMode": "وسيلة الشحن",
       "importCost": "رسوم الشحن والجمارك التقديرية",

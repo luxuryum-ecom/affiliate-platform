@@ -709,6 +709,8 @@
       "importBadgeGlobal": "Global tariff",
       "importTitle": "Shipping & customs fees",
       "importSubtitle": "Not included in the price — calculated in the quote based on quantity and mode (sea/air)",
+      "importSubtitleTextile": "Fixed shipping rate per kg — known upfront, multiplied by quantity in the quote",
+      "importRateFixed": "Fixed rate",
       "importOrigin": "Country of origin",
       "importShippingMode": "Shipping mode",
       "importCost": "Estimated shipping & customs fees",
