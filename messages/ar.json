@@ -998,6 +998,7 @@
       "proofTypeOther": "أخرى",
       "proofFileLabel": "الملف",
       "proofFileHint": "(PDF، صورة — الحد الأقصى 10 ميجابايت)",
+      "proofFileTooLarge": "الملف كبير جدًا (الحد الأقصى {max} ميجابايت). قلّل الحجم أو أرسل صورة بدقة أقل.",
       "proofUrlLabel": "أو رابط خارجي",
       "proofUrlHint": "(إن لم يكن لديك ملف)",
       "proofNoteLabel": "ملاحظة (اختياري)",

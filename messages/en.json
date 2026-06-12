@@ -998,6 +998,7 @@
       "proofTypeOther": "Other",
       "proofFileLabel": "File",
       "proofFileHint": "(PDF, image — max 10 MB)",
+      "proofFileTooLarge": "File too large (max {max} MB). Reduce the size or upload a lower-resolution photo.",
       "proofUrlLabel": "Or external URL",
       "proofUrlHint": "(if no file)",
       "proofNoteLabel": "Note (optional)",

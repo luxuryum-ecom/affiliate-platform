@@ -4,6 +4,15 @@ import createNextIntlPlugin from 'next-intl/plugin'
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
 const nextConfig: NextConfig = {
+  // Justificatifs de paiement (photos de téléphone) transitent par une Server
+  // Action. La limite Next par défaut (1 Mo) faisait crasher l'upload d'une
+  // simple photo. Les images sont compressées côté client (cf. WholesaleProofForm)
+  // mais on garde une marge serveur cohérente avec le hint UI "max 10 Mo".
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '12mb',
+    },
+  },
   images: {
     remotePatterns: [
       {
