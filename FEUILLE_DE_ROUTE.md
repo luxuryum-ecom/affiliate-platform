@@ -91,6 +91,38 @@
 - **LOT 5** — Alertes visuelles retard/bloqué (UI, signal rouge, consomme flags du LOT 1).
 - **LOT 6** — Notifications in-app + Telegram (table `notifications` append-only + émission serveur depuis LOTS 1-4). `@backend-db`+`@frontend` → audit `@security`.
 
+### 🤖 VISION ABDOU — AUTOMATISATION TOTALE des notifications (zéro intervention manuelle)
+> **Objectif fondateur** : la plateforme doit tourner **SANS supervision manuelle**. Aucune commande oubliée, aucune perte de temps ni d'argent. Le système surveille, alerte et **escalade tout seul**.
+- **Alertes automatiques sur commande bloquée trop longtemps sur un statut** (seuils par étape, à affiner) :
+  - ex. **24h sans réponse fournisseur** (statut `assigned`/`supplier_confirmed` non avancé) → alerte.
+  - ex. **48h sans ramassage/expédition** (statut `ready` non passé `picked_up`/`dispatched`) → alerte.
+  - S'appuie sur les **flags du LOT 1** (`due_at`, `blocked_at`, `assigned_at`) + horodatage des transitions (`wholesale_order_status_history`).
+- **Escalade hiérarchique automatique** : si le **membre assigné ne réagit pas** dans le délai → notif **au responsable/superviseur** (chaîne owner → superviseur → membre via `team_members`). Le silence d'un échelon **remonte automatiquement** à l'échelon supérieur.
+- **Mécanisme** : un **worker planifié** (cron / Edge Function Supabase) scanne périodiquement les commandes actives, calcule les retards par rapport aux seuils, émet les notifs in-app + Telegram et **journalise** (pas de double envoi → idempotence par `notification` clé `order_id+rule+threshold`).
+- **Seuils configurables** (pas en dur) : par étape du cycle, ajustables par l'admin. **i18n FR/AR/EN** obligatoire sur tous les messages.
+- 🔗 Recoupe **LOT 5** (signal rouge visuel = la même donnée de retard, vue côté UI) et la **SECTION 2bis-A** (alertes admin, commande non traitée, fournisseur qui ne répond pas). À cadrer `@architect` avant code ; touche rôles/escalade → **audit `@security`**.
+
+## ⭐ CHANTIER TRANSPORT DDP — Prix hors transport + devis (validé Abdou 2026-06-12) — **ACTIF**
+> ⏸️ **Le Lot 3 Deliveroo est EN PAUSE** tant que ce chantier transport n'est pas fini. **On ne mélange pas deux chantiers** (règle Abdou). Reprise Deliveroo Lot 3 (lien fournisseur) APRÈS.
+
+### 🔎 Diagnostic (audit lecture seule — l'existant est INTACT, on ne reconstruit rien)
+- **Logique transport intacte** (vérifié git) : migrations `021`/`022` (1 seul commit chacune, jamais retouchées) — 3 modes dont **2 maritimes** (`sea_textile_kg`, `sea_volume_cbm`) + aérien (`air_door_to_door_kg`), `transport_customs_price_mad` (transport **+ douane** = DDP), unité kg/cbm, **prix par pays**, `delivery_days`. `tariff-utils.ts` = labels+unité (créé 2026-05-30, avant les chantiers). `tariffs.ts` = CRUD tarif. **Design/i18n/Lots 1-2 n'ont rien cassé** (les pages d'affichage ont reçu du style/i18n, la logique a survécu).
+- **Affichage aujourd'hui** : fiche produit grossiste → panneau `ImportInfoBlock` (mode, coût/kg-cbm, délais) **MAIS uniquement si `availability_type='import_on_demand'`** ; produits `local_stock` → pas de panneau. Devis (`prepare-quote-form`) → admin saisit `quoted_quantity` + `quoted_transport_total_mad` (**transport au devis déjà modifiable**). Doc devis → ligne « Transport & Douane ».
+- **Le problème** : la note `importPriceNote` (« Transport et douane inclus ») est **trompeuse** vs la règle Abdou — elle suggère transport *inclus dans le prix* alors qu'il est **calculé à part au devis**.
+
+### 🧭 Règle business Abdou
+- Prix produit affiché = **HORS transport, toujours**.
+- Sur chaque fiche produit importé : mention claire « Transport calculé dans le devis selon quantité et mode (maritime/aérien) » — zéro surprise.
+- **Exception textile maritime** (`sea_textile_kg`) : tarif au kg fixe → **affichable directement**.
+- Transport communiqué **dans le devis après validation des quantités**, **modifiable admin** (tarif paramétrable par pays, changé rarement).
+
+### 📦 Plan par lots (ordre imposé ; ⚠️ ARGENT → circuits complets)
+- **LOT T0** ✅ **FAIT** — Audit `@finance` (gate) : **invariante « prix HORS transport » CONFIRMÉE** au niveau données + logique. `sell_price` = coût usine + marge plateforme seulement (jamais de transport) ; devis décompose marchandise + transport sans double comptage (`quote-document.tsx`) ; commande/ledger tracent le transport en COÛT séparé (trigger `025`, ledger COD intact). **Seule contamination = le WORDING UI** (3 textes contradictoires). GO T1.
+- **LOT T1** ✅ **FAIT** — Recadrage message prix (i18n/affichage SEUL, RÈGLE ABSOLUE 1, zéro logique). 3 clés harmonisées FR/AR/EN (parité 2657) : `home.countries.trust2`, `marketplaceDetail.importPriceNote`, `productDetail.importSubtitle` → « **hors transport — calculé au devis selon quantité et mode (maritime/aérien)** ». **Wording recommandé/signé `@finance`**. 4 checks verts (tsc/build/115 tests/smoke 19/19). *(Échec smoke transitoire = conflit port 3000 avec le serveur dev, pas une régression — résolu en stoppant le dev.)*
+- **LOT T2** — Exception textile maritime : afficher le tarif fixe au kg directement (`sea_textile_kg`), présenté comme le seul cas prévisible d'avance.
+- **LOT T3** — Transport au devis (déjà là → vérifier/fluidifier) : flux admin saisit après quantités, modifiable, tarif par pays paramétrable. *Option à cadrer* : pré-remplir une suggestion `tarif_pays × poids/volume estimé`, toujours éditable. ⚠️ Calcul = argent → **circuit `@finance` + `@security` + validation Abdou AVANT commit** (RÈGLE D'OR n°5).
+- **Garde-fous** : T0→T1→T2→T3. T1/T2 = affichage (wording signé finance). T3 = argent, circuit complet.
+
 ## 2. 🐛 BUG quota produits — la limite ne bloque PAS vraiment
 - **Symptôme constaté** : un fournisseur a **7 produits** alors que le plan **Gratuit en autorise 5** → la limite n'est pas réellement appliquée au moment de l'ajout.
 - **Diagnostiquer les 3 voies d'ajout** : **web** (formulaire / server action), **Telegram** (worker bot), **import CSV** (`publishBulkImport`). Identifier laquelle (ou lesquelles) contourne(nt) le contrôle de limite.
@@ -205,6 +237,9 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
 6. **Stock multi-entrepôt par pays** — rattacher le stock aux pays `has_warehouse` ; notions réservé / provisoire / en transit / retour (aujourd'hui : `stock_count` scalaire mono-pays).
 7. **Commande sourcing 2 lignes** — marchandise + transport séparés, pays_source + pays_destination, suivi paiement/échéances (mini-compta sur le ledger Phase 2).
 8. **Branchement transport / courier (API)** — activer les champs `courier_*` préparés (table `cities`, migr. 015) + `logistics_settings.api_config` ; sync transporteur.
+   - 🚢 **DEMANDE ABDOU — Transport DDP variable (volume/quantité, maritime/aérien)** — *captée le 2026-06-12*.
+     **CE QUI EXISTE DÉJÀ (ne pas reconstruire)** : moteur `import_tariffs` (migr. `021`/`022`) avec `shipping_mode` = `air_door_to_door_kg` (aérien DDP porte-à-porte/kg), `sea_textile_kg` (maritime/kg), `sea_volume_cbm` (maritime au **volume/CBM**), `transport_customs_price_mad` (transport **+ douane** = DDP), `unit` kg/cbm, `delivery_days`, **par pays** (Chine/Turquie/Égypte/Dubai/Autre). Produits : `import_shipping_mode` + `tariff_mode` (global/custom). Calcul dans `src/lib/tariff-utils.ts`, branché au flux **devis** (`quote-requests`). → Le tarif **varie déjà** selon mode (air/mer) et selon poids **ou** volume (kg/cbm).
+     **CE QUI MANQUE / À CADRER** : (a) **tarif dégressif par paliers de volume/quantité** (aujourd'hui = un tarif unitaire plat par pays+mode, pas de remise au volume — cf. `VOLUME_TIER_LABELS` qui n'est qu'un libellé d'affichage) ; (b) **raccord de ce moteur DDP au cycle de commande B2B Deliveroo** (LOT 4 logistique) — aujourd'hui le DDP vit côté devis/sourcing, pas sur `wholesale_orders`. ⚠️ Touche l'**ARGENT** (transport entre dans la marge) → **audit `@finance` + `@security` AVANT tout code**. `@architect` cadre d'abord.
 9. **Features métier (backlog)** — cadrer puis construire B1–B5 (voir plus bas) + secteur « grossistes locaux Maroc » ; fil rouge = simplicité maximale (utilisateurs pas tech).
 10. **Durcissement final + push GitHub + prod** — rate limiting, audit complet `@security-reviewer`, puis push/merge des branches et go-live (sur GO d'Abdou).
 
@@ -317,6 +352,7 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
 - 🔑 **Dette préexistante — confiance `metadata.role` au signup** : `handle_new_user` lit `role` depuis `raw_user_meta_data` → un appel direct à `auth.signUp` avec `role:'admin'` créerait un profil admin (mitigé par `status='pending'` + validation admin obligatoire). Signalée Phase 4, **non introduite** par le lot multi-devise. À durcir (rôle non auto-déclaré au signup).
 - 🧽 **MÉNAGE TEST — secrets temporaires à RETIRER** (posés pour les tests multi-devise Telegram, à nettoyer) :
   - `supplier-morocco-03@affipartner.ma` : mot de passe temporaire **`TelegramTest2026!`** → réinitialiser ou retirer.
+  - `agent-demo@affipartner.ma` : compte **agent de démo** (mot de passe **`AgentDemo2026!`**, créé le 2026-06-12 pour tester l'assignation LOT 2) → retirer ou réinitialiser avant prod.
   - `admin@affipartner.ma` : mot de passe temporaire **`AdminTest2026!`** (posé pour corriger le pays via session admin) → réinitialiser ou retirer.
   - **authtoken ngrok** passé en clair dans la conversation de dev → **régénérer** sur https://dashboard.ngrok.com/get-started/your-authtoken.
 - 🚚 **Dette — Logistique B2B grossiste** : frais de livraison gérés **MANUELLEMENT** par commande (soit **OFFERT = 0**, soit ajouté dans les **frais additionnels**). **Pas de moteur automatique** — le B2C/Ozone existant ne change pas. Vérifier que le champ existe déjà sur la commande grossiste avant d'en ajouter un.

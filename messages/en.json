@@ -51,7 +51,7 @@
       "emirats": "UAE",
       "emiratsTag": "Logistics hub",
       "trust1": "Secure platform payment",
-      "trust2": "Shipping & customs included",
+      "trust2": "Shipping & customs quoted separately",
       "trust3": "Verified suppliers"
     },
     "finalCta": {
@@ -708,7 +708,7 @@
       "publicPrice": "Public price:",
       "importBadgeGlobal": "Global tariff",
       "importTitle": "Shipping & customs fees",
-      "importSubtitle": "Not included in the product price",
+      "importSubtitle": "Not included in the price — calculated in the quote based on quantity and mode (sea/air)",
       "importOrigin": "Country of origin",
       "importShippingMode": "Shipping mode",
       "importCost": "Estimated shipping & customs fees",
@@ -1109,7 +1109,7 @@
       "infoPriceMorocco": "Wholesale price",
       "infoPriceImport": "Total price incl. tax",
       "infoOnQuote": "On quote",
-      "importPriceNote": "Price set by the platform. Shipping and customs included. Payment via Mozouna Group only.",
+      "importPriceNote": "Price set by the platform, excluding shipping. Shipping and customs are calculated in the quote based on quantity and mode (sea/air). Payment via Mozouna Group only.",
       "directOrderTitle": "Bulk order",
       "directOrderSubtitle": "Listed price, stock and MOQ known — add to cart then confirm your order.",
       "sampleTitle": "Request a sample / document",

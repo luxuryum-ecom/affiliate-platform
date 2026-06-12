@@ -51,7 +51,7 @@
       "emirats": "Émirats",
       "emiratsTag": "Hub logistique",
       "trust1": "Paiement sécurisé plateforme",
-      "trust2": "Transport & douane inclus",
+      "trust2": "Transport & douane calculés au devis",
       "trust3": "Fournisseurs vérifiés"
     },
     "finalCta": {
@@ -708,7 +708,7 @@
       "publicPrice": "Prix public :",
       "importBadgeGlobal": "Tarif global",
       "importTitle": "Frais transport & douane",
-      "importSubtitle": "Non inclus dans le prix produit",
+      "importSubtitle": "Non inclus dans le prix — calculé au devis selon la quantité et le mode (maritime/aérien)",
       "importOrigin": "Pays d'origine",
       "importShippingMode": "Mode de transport",
       "importCost": "Frais transport & douane estimés",
@@ -1109,7 +1109,7 @@
       "infoPriceMorocco": "Prix de gros",
       "infoPriceImport": "Prix final TTC",
       "infoOnQuote": "Sur devis",
-      "importPriceNote": "Prix défini par la plateforme. Transport et douane inclus. Paiement via Mozouna Group uniquement.",
+      "importPriceNote": "Prix défini par la plateforme, hors transport. Transport et douane calculés dans le devis selon la quantité et le mode (maritime/aérien). Paiement via Mozouna Group uniquement.",
       "directOrderTitle": "Commander en gros",
       "directOrderSubtitle": "Prix affiché, stock et MOQ connus — ajout au panier puis validation de commande.",
       "sampleTitle": "Demander un échantillon / document",
