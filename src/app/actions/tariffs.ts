@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './_guards'
+import { parseMoneyInput } from '@/lib/money'
 import type { ImportTariff, TariffCountry, ImportShippingMode } from '@/types/database'
 import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
 
@@ -56,7 +57,8 @@ export async function upsertTariff(
   const country = (formData.get('country') as string)?.trim() as TariffCountry
   const shipping_mode = (formData.get('shipping_mode') as string) as ImportShippingMode
   const price_raw = formData.get('transport_customs_price_mad') as string
-  const transport_customs_price_mad = parseFloat(price_raw)
+  // RÈGLE ARGENT n°4 — prix validé en chaîne décimale stricte (money.ts), verbatim.
+  const priceResult = parseMoneyInput(price_raw)
   const delivery_days_raw = formData.get('delivery_days') as string
   const delivery_days = delivery_days_raw ? parseInt(delivery_days_raw) || null : null
   const notes_raw = (formData.get('notes') as string)?.trim()
@@ -67,8 +69,11 @@ export async function upsertTariff(
     return { error: 'Pays invalide.' }
   if (!VALID_MODES.includes(shipping_mode))
     return { error: 'Mode de transport invalide.' }
-  if (isNaN(transport_customs_price_mad) || transport_customs_price_mad < 0)
+  // Vide rejeté (champ requis, comme avant : parseFloat('')=NaN) ; négatif rejeté
+  // par la regex ; 0 explicite accepté (≥ 0). Chaîne stockée verbatim.
+  if (!priceResult.ok || !price_raw?.trim())
     return { error: 'Le prix transport & douane doit être un nombre positif.' }
+  const transport_customs_price_mad = priceResult.value
 
   // Unit is auto-derived from shipping mode
   const unit = unitFromShippingMode(shipping_mode)
