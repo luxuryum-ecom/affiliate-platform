@@ -450,6 +450,19 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
 
 > 🔗 **Liens & garde-fous** : A (rôles/permissions/données sensibles) recoupe la SECTION 2 → même exigence **audit @security RLS**. B (commission/marge/fidélité) touche l'**ARGENT** → **plan + audit @finance + @security AVANT commit**, jamais dans la précipitation (RÈGLE D'OR n°5/argent). Réutiliser l'existant (`wholesale_orders`, ledger, commissions) — **ne rien reconstruire sans audit préalable**.
 
+## WMS — Traçabilité stock par scan QR (chantier majeur post-lancement)
+
+Vision : un seul stock dépôt central. TOUTE sortie est scannée (QR) quel que soit le canal — e-commerce local COD, affilié, gros. Objectif : traçabilité complète des flux + comptabilisation automatique, zéro perte de stock.
+
+Périmètre à cadrer plus tard (`@architect` + `@finance`, gros chantier) :
+- Mouvements de stock : entrées dépôt (réappro), sorties par canal, transferts, retours COD (colis refusé qui revient au stock).
+- Scan QR à la sortie qui décrémente automatiquement le bon stock du bon canal.
+- Traçabilité : qui a sorti quoi, quand, pour quelle commande.
+- Mode partenaire : offrir le système aux partenaires (fournisseurs/grossistes) pour tracer LEURS flux, avec isolation stricte des données (un partenaire ne voit jamais le stock d'un autre — même règle anti-deals que les agents sourcing). Source de valeur ajoutée / revenu potentiel (abonnement).
+- Deux usages QR complémentaires : (a) QR par COMMANDE = page de suivi Deliveroo ; (b) QR de SORTIE dépôt = traçabilité stock.
+
+Règle : à construire APRÈS le lancement, sur des flux réels observés, pas devinés. Au lancement, gestion de stock manuelle via l'admin existant.
+
 ## SECTION 3 — DETTES & SUJETS EN ATTENTE (consolidation)
 
 - 🧾 **i18n contenu DB** : noms/descriptions produits (et libellés saisis) non traduisibles par i18n → stratégie à cadrer (**colonnes `name_ar`/`name_en`** ou **table de traductions**, ou traduction à la saisie/IA).
