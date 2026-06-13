@@ -1002,6 +1002,48 @@ export async function updateWholesalePaymentStatus(
     notes,
   })
 
+  // ── [LOT 4.2-C] Raccord paiement → collecte cash livraison ─────────────────
+  // E1-bis : collecte AUTO sur seuil, sans clic de confirmation. Le RPC (065)
+  // décide SEUL en SQL si le seuil deposit >= total_amount + delivery_rebill_mad
+  // est atteint (C-B1 : aucun calcul de seuil en JS). Il est idempotent (EXISTS
+  // + index partiel + EXCEPTION) → chaque mise à jour paiement le re-tente.
+  //
+  // C-A2 / E5 — NON-FATAL : la mise à jour paiement est DÉJÀ persistée ci-dessus ;
+  // un échec de collecte ne doit JAMAIS la faire échouer. On log côté serveur,
+  // on n'expose rien à l'UI, on ne `return` pas. Le prochain appel rejoue.
+  try {
+    const { error: collectErr } = await supabase
+      .rpc('try_collect_wholesale_delivery_rebill', { p_order_id: orderId })
+    if (collectErr) {
+      console.error('[4.2-C] try_collect_wholesale_delivery_rebill failed', {
+        orderId, message: collectErr.message,
+      })
+    }
+  } catch (e) {
+    console.error('[4.2-C] try_collect_wholesale_delivery_rebill threw', {
+      orderId, error: e instanceof Error ? e.message : String(e),
+    })
+  }
+
+  // ── [LOT 4.2-C / E3-bis] Détection sous-collatéralisation post-collecte ────
+  // Si l'admin baisse deposit_received_amount SOUS le seuil APRÈS une collecte :
+  // pas de dé-collecte (ledger append-only), on ALERTE seulement. En 4.2 = log
+  // serveur best-effort ; l'alerting réel (in-app + Telegram) arrive au LOT 6.
+  // Le seuil est comparé EN SQL par la fonction 067 (C-B1, jamais en JS).
+  try {
+    const { data: under } = await supabase
+      .rpc('is_wholesale_delivery_undercollateralized', { p_order_id: orderId })
+    if (under === true) {
+      console.warn('[4.2-C][E3-bis] under-collateralized after collection', {
+        orderId, changedBy: userId,
+      })
+    }
+  } catch (e) {
+    console.error('[4.2-C][E3-bis] detection failed', {
+      orderId, error: e instanceof Error ? e.message : String(e),
+    })
+  }
+
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/wholesale/orders/${orderId}`)
