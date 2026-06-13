@@ -75,7 +75,10 @@ export function calculateNetAffiliateCommission(params: {
     params.confirmationFee -
     params.packagingFee
 
-  return parseFloat((netPerUnit * params.quantity).toFixed(2))
+  // Commission arrondie au centime sans parseFloat : Math.round sur la valeur
+  // mise à l'échelle ×100 absorbe l'erreur flottante du calcul (netPerUnit est
+  // fractionnaire — la marge en % produit des décimales arbitraires).
+  return Math.round(netPerUnit * params.quantity * 100) / 100
 }
 
 /**
