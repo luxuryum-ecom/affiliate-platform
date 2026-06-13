@@ -144,7 +144,10 @@ export async function placeOrder(
     ? Number(logisticsSettings.return_fee_mad)
     : 10
 
-  const totalAmount = parseFloat((unitPrice * quantity).toFixed(2))
+  // Total = prix × quantité en CENTIMES ENTIERS (zéro flottant) → chaîne pour numeric.
+  // unitPrice vient de la DB (numeric ≤ 2 décimales), donc Math.round(prix*100) est exact.
+  const totalAmountCents = Math.round(unitPrice * 100) * quantity
+  const totalAmount = (totalAmountCents / 100).toFixed(2)
   const commissionAmount = validatedAffiliateId
     ? calculateNetAffiliateCommission({
         affiliateSellPrice: unitPrice,
@@ -528,22 +531,24 @@ export async function createWholesaleOrderFromCart(
   if (!cartItems?.length) return fail('Le panier de cet acheteur est vide.')
 
   // ── Calculate total with tier pricing ─────────────────────────────────────
-  let total = 0
+  // Accumulation en CENTIMES ENTIERS (zéro flottant), conversion en chaîne une
+  // seule fois à la fin (invariant @finance pour les sommes multi-lignes).
+  let totalCents = 0
   const lineItems = cartItems.map((item) => {
-    const tier       = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
-    const unitPrice  = tier ? tier.price_per_unit : item.product.sell_price
-    const subtotal   = parseFloat((unitPrice * item.quantity).toFixed(2))
-    total           += subtotal
+    const tier          = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
+    const unitPrice     = tier ? tier.price_per_unit : item.product.sell_price
+    const subtotalCents = Math.round(unitPrice * 100) * item.quantity
+    totalCents         += subtotalCents
     return {
       product_id:          item.product_id,
       quantity:            item.quantity,
       unit_price_snapshot: unitPrice,
-      subtotal,
+      subtotal:            (subtotalCents / 100).toFixed(2),
       tier_label_snapshot: tier ? tier.label : 'Prix standard',
     }
   })
 
-  total = parseFloat(total.toFixed(2))
+  const total = (totalCents / 100).toFixed(2)
 
   // ── Create wholesale_order ─────────────────────────────────────────────────
   const { data: newOrder, error: orderErr } = (await supabase
@@ -643,22 +648,24 @@ export async function submitWholesaleOrder(
     }
   }
 
-  let total = 0
+  // Accumulation en CENTIMES ENTIERS (zéro flottant), conversion en chaîne une
+  // seule fois à la fin (invariant @finance pour les sommes multi-lignes).
+  let totalCents = 0
   const lineItems = cartItems.map((item) => {
     const tier = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
     const unitPrice = tier ? tier.price_per_unit : item.product.sell_price
-    const subtotal = parseFloat((unitPrice * item.quantity).toFixed(2))
-    total += subtotal
+    const subtotalCents = Math.round(unitPrice * 100) * item.quantity
+    totalCents += subtotalCents
     return {
       product_id: item.product_id,
       quantity: item.quantity,
       unit_price_snapshot: unitPrice,
-      subtotal,
+      subtotal: (subtotalCents / 100).toFixed(2),
       tier_label_snapshot: tier ? tier.label : 'Prix standard',
     }
   })
 
-  total = parseFloat(total.toFixed(2))
+  const total = (totalCents / 100).toFixed(2)
 
   const city         = ((formData.get('city') as string)?.trim()) || null
   const address      = ((formData.get('address') as string)?.trim()) || null
@@ -714,13 +721,20 @@ export async function updateWholesaleOrderCosts(
   const orderId = (formData.get('orderId') as string)?.trim()
   if (!orderId) return fail('Commande non spécifiée.')
 
-  const supplier_cost_mad          = Math.max(0, parseFloat((formData.get('supplier_cost_mad') as string) || '0'))
-  const transport_customs_cost_mad = Math.max(0, parseFloat((formData.get('transport_customs_cost_mad') as string) || '0'))
-  const additional_cost_mad        = Math.max(0, parseFloat((formData.get('additional_cost_mad') as string) || '0'))
+  // RÈGLE ARGENT n°4 — coûts validés en CHAÎNE décimale stricte (money.ts), passés
+  // verbatim aux colonnes numeric ; le trigger 025 recalcule la marge en SQL.
+  // parseMoneyInput rejette les négatifs (vs l'ancien Math.max(0,…) qui les masquait).
+  const supplierCostR  = parseMoneyInput(formData.get('supplier_cost_mad'))
+  const transportR     = parseMoneyInput(formData.get('transport_customs_cost_mad'))
+  const additionalR    = parseMoneyInput(formData.get('additional_cost_mad'))
 
-  if (isNaN(supplier_cost_mad) || isNaN(transport_customs_cost_mad) || isNaN(additional_cost_mad)) {
+  if (!supplierCostR.ok || !transportR.ok || !additionalR.ok) {
     return fail('Valeurs invalides — saisir des montants numériques.')
   }
+
+  const supplier_cost_mad          = supplierCostR.value
+  const transport_customs_cost_mad = transportR.value
+  const additional_cost_mad        = additionalR.value
 
   const { error } = await supabase
     .from('wholesale_orders')
