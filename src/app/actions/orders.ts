@@ -922,15 +922,28 @@ export async function updateWholesalePaymentStatus(
     return { error: 'Statut de paiement invalide.' }
   }
 
-  const depositAmountRaw       = formData.get('deposit_amount') as string
-  const depositReceivedRaw     = formData.get('deposit_received_amount') as string
-  const notes                  = (formData.get('notes') as string)?.trim() || null
+  const notes = (formData.get('notes') as string)?.trim() || null
 
-  const deposit_amount          = depositAmountRaw ? Math.max(0, parseFloat(depositAmountRaw)) : null
-  const deposit_received_amount = depositReceivedRaw ? Math.max(0, parseFloat(depositReceivedRaw)) : 0
+  // RÈGLE ARGENT n°4 — ZÉRO parseFloat sur de l'argent. Les montants sont validés
+  // en CHAÎNE décimale stricte (money.ts) et passés VERBATIM aux colonnes numeric
+  // (exactitude décimale, aucun arrondi flottant). Cf. LOT 4.2-B.
+  //
+  // deposit_amount (acompte DEMANDÉ) reste nullable : champ vide → null (pas '0',
+  // car « aucun acompte demandé » ≠ « acompte de 0 »).
+  const depositAmountRaw = (formData.get('deposit_amount') as string)?.trim() ?? ''
+  let deposit_amount: string | null
+  if (depositAmountRaw === '') {
+    deposit_amount = null
+  } else {
+    const parsed = parseMoneyInput(depositAmountRaw)
+    if (!parsed.ok) return { error: 'Montant de l\'acompte invalide.' }
+    deposit_amount = parsed.value
+  }
 
-  if (deposit_amount !== null && isNaN(deposit_amount)) return { error: 'Montant de l\'acompte invalide.' }
-  if (isNaN(deposit_received_amount)) return { error: 'Montant reçu invalide.' }
+  // deposit_received_amount (montant REÇU) : champ vide → '0' (reçu nul par défaut).
+  const receivedParsed = parseMoneyInput(formData.get('deposit_received_amount'))
+  if (!receivedParsed.ok) return { error: 'Montant reçu invalide.' }
+  const deposit_received_amount = receivedParsed.value
 
   const now = new Date().toISOString()
   const update: Record<string, unknown> = {
