@@ -268,7 +268,7 @@ export async function createAffiliateOrder(
 
   const productId      = (formData.get('product_id') as string)?.trim()
   const quantity       = parseInt(formData.get('quantity') as string, 10)
-  const sellPriceRaw   = parseFloat(formData.get('sell_price') as string)
+  const sellPriceResult = parseMoneyInput(formData.get('sell_price'))
   const customerName   = (formData.get('customer_name') as string)?.trim()
   const customerPhone  = (formData.get('customer_phone') as string)?.trim()
   const customerCity   = (formData.get('customer_city') as string)?.trim()
@@ -278,7 +278,14 @@ export async function createAffiliateOrder(
 
   if (!productId)                     return { error: 'Produit requis.', success: false, orderId: null }
   if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.', success: false, orderId: null }
-  if (isNaN(sellPriceRaw) || sellPriceRaw <= 0)
+  if (!sellPriceResult.ok)
+    return { error: 'Prix de vente invalide.', success: false, orderId: null }
+  // RÈGLE ARGENT n°4 — montant validé en CHAÎNE décimale exacte (money.ts), stockée
+  // verbatim ; on dérive un `number` UNIQUEMENT pour les comparaisons/calculs — exact
+  // car MONEY_REGEX garantit ≤ 2 décimales (jamais un parseFloat sur entrée libre).
+  const sellPrice = sellPriceResult.value
+  const sellPriceNum = Number(sellPrice)
+  if (sellPriceNum <= 0)
     return { error: 'Prix de vente invalide.', success: false, orderId: null }
   if (!customerName)   return { error: 'Nom du client requis.', success: false, orderId: null }
   if (!customerPhone)  return { error: 'Téléphone du client requis.', success: false, orderId: null }
@@ -321,7 +328,7 @@ export async function createAffiliateOrder(
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
   if (product.stock_count < quantity)
     return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
-  if (sellPriceRaw < product.sell_price)
+  if (sellPriceNum < product.sell_price)
     return {
       error: `Le prix de vente doit être ≥ ${product.sell_price} MAD (prix de base).`,
       success: false,
@@ -334,9 +341,12 @@ export async function createAffiliateOrder(
   ])
   const returnFeeResolved = logisticsSettings ? Number(logisticsSettings.return_fee_mad) : 10
 
-  const totalAmount = parseFloat((sellPriceRaw * quantity).toFixed(2))
+  // Total = prix × quantité en CENTIMES ENTIERS (arithmétique exacte, zéro flottant),
+  // puis chaîne décimale pour la colonne numeric (cf. stratégie B chantier money).
+  const totalAmountCents = Math.round(sellPriceNum * 100) * quantity
+  const totalAmount = (totalAmountCents / 100).toFixed(2)
   const commissionAmount = calculateNetAffiliateCommission({
-    affiliateSellPrice: sellPriceRaw,
+    affiliateSellPrice: sellPriceNum,
     factoryCostMad: product.factory_cost_mad ?? 0,
     marginType: product.platform_margin_type,
     marginValue: product.platform_margin_value ?? 0,
@@ -368,7 +378,7 @@ export async function createAffiliateOrder(
       quantity,
       total_amount:          totalAmount,
       commission_amount:     Math.max(0, commissionAmount),
-      product_price_snapshot: sellPriceRaw,
+      product_price_snapshot: sellPrice,
       affiliate_commission_mad_snapshot: Math.max(0, commissionAmount),
       delivery_fee_snapshot:   deliveryFeeResolved,
       packaging_fee_snapshot:  product.packaging_fee_mad ?? 10,
