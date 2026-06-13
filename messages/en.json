@@ -2743,6 +2743,30 @@
       "updated": "Payment updated.",
       "submit": "Update payment"
     },
+    "wholesaleDeliveryForm": {
+      "heading": "Delivery configuration",
+      "logisticsModeLabel": "Logistics mode",
+      "logisticsModeNone": "Not set",
+      "mode": {
+        "pickup_by_runner": "Pickup by runner",
+        "supplier_fleet": "Supplier fleet"
+      },
+      "handlingLabel": "Cost handling",
+      "handlingPlaceholder": "Choose…",
+      "handling": {
+        "rebilled_client": "Rebilled to client",
+        "supplier_billed": "Billed by supplier",
+        "supplier_free": "Free from supplier"
+      },
+      "deliveryCostLabel": "Delivery cost (MAD)",
+      "deliveryRebillLabel": "Client rebill (MAD)",
+      "deliveryRebillHint": "Must be greater than or equal to the delivery cost.",
+      "supplierBearsCost": "The supplier covers delivery — no cost or rebill on Mozouna's side.",
+      "rebillCollected": "Transport rebill collected: {amount}",
+      "rebillNotCollected": "Transport rebill not yet collected.",
+      "saved": "Delivery configuration saved.",
+      "submit": "Save delivery"
+    },
     "wholesaleCostForm": {
       "headingLocal": "Local costs",
       "headingImport": "Import costs",

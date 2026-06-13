@@ -13,6 +13,7 @@ import { WholesaleImportStatusForm } from '@/components/admin/wholesale-import-s
 import { WholesalePaymentForm } from '@/components/admin/wholesale-payment-form'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
 import { WholesaleCostForm } from '@/components/admin/wholesale-cost-form'
+import { WholesaleDeliveryConfigForm } from '@/components/admin/wholesale-delivery-config-form'
 import type { WholesaleOrder, WholesaleOrderItem, Profile, Product, WholesaleOrderStatus, WholesaleImportStatus, WholesaleOrderImportHistory, WholesaleOrderPaymentHistory, WholesalePaymentStatus, QuoteRequest, OrderProof } from '@/types/database'
 
 interface Params { params: Promise<{ id: string }> }
@@ -75,7 +76,7 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const adminProfileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = adminProfileRes.data as { full_name: string } | null
 
-  const [orderRes, itemsRes, importHistoryRes, paymentHistoryRes, proofsRes] = await Promise.all([
+  const [orderRes, itemsRes, importHistoryRes, paymentHistoryRes, proofsRes, deliveryCollectRes] = await Promise.all([
     supabase
       .from('wholesale_orders')
       .select('*, buyer:profiles!buyer_id(id,full_name,phone,city), agent:profiles!agent_id(id,full_name)')
@@ -100,6 +101,15 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
       .select('*')
       .eq('related_wholesale_order_id', id)
       .order('uploaded_at', { ascending: false }),
+    // État de collecte du rebill livraison (ledger admin-only, lecture serveur).
+    // On ne sélectionne QUE amount_mad du seul enregistrement de collecte — aucune
+    // colonne de marge/coût fournisseur exposée. Au plus 1 ligne (index partiel).
+    supabase
+      .from('wholesale_delivery_ledger')
+      .select('amount_mad')
+      .eq('wholesale_order_id', id)
+      .eq('entry_type', 'delivery_rebill_collected')
+      .maybeSingle(),
   ])
 
   const order = orderRes.data as unknown as OrderDetail | null
@@ -107,6 +117,11 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
   const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
   const proofs = (proofsRes.data ?? []) as unknown as OrderProof[]
+
+  // État de collecte du rebill livraison (dérivé serveur, pour affichage lecture seule).
+  const deliveryCollect = deliveryCollectRes.data as { amount_mad: number } | null
+  const rebillCollected = deliveryCollect != null
+  const collectedAmount = deliveryCollect?.amount_mad ?? null
 
   // Fetch linked quote if this order was created from a quote
   let linkedQuote: LinkedQuote | null = null
@@ -368,6 +383,17 @@ export default async function AdminWholesaleOrderDetailPage({ params }: Params) 
               additionalCost={order.additional_cost_mad ?? 0}
               totalAmount={order.total_amount}
               isLocalStock={isLocalStockOrder}
+            />
+
+            {/* Delivery cost configuration (LOT 4.3) */}
+            <WholesaleDeliveryConfigForm
+              orderId={order.id}
+              currentHandling={order.delivery_cost_handling}
+              currentLogisticsMode={order.logistics_mode}
+              deliveryCost={order.delivery_cost_mad ?? 0}
+              deliveryRebill={order.delivery_rebill_mad ?? 0}
+              rebillCollected={rebillCollected}
+              collectedAmount={collectedAmount}
             />
 
             {/* Payment management */}

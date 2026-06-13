@@ -2743,6 +2743,30 @@
       "updated": "تم تحديث الدفع.",
       "submit": "تحديث الدفع"
     },
+    "wholesaleDeliveryForm": {
+      "heading": "إعداد التوصيل",
+      "logisticsModeLabel": "نمط التوصيل",
+      "logisticsModeNone": "غير محدّد",
+      "mode": {
+        "pickup_by_runner": "الاستلام بواسطة مندوب",
+        "supplier_fleet": "أسطول المورّد"
+      },
+      "handlingLabel": "تحمّل التكلفة",
+      "handlingPlaceholder": "اختر…",
+      "handling": {
+        "rebilled_client": "إعادة الفوترة على الزبون",
+        "supplier_billed": "يفوترها المورّد",
+        "supplier_free": "مجّانية من المورّد"
+      },
+      "deliveryCostLabel": "تكلفة التوصيل (درهم)",
+      "deliveryRebillLabel": "إعادة الفوترة على الزبون (درهم)",
+      "deliveryRebillHint": "يجب أن تكون أكبر من أو تساوي تكلفة التوصيل.",
+      "supplierBearsCost": "يتحمّل المورّد تكلفة التوصيل — لا تكلفة ولا إعادة فوترة على موزونة.",
+      "rebillCollected": "تمّ تحصيل إعادة فوترة النقل: {amount}",
+      "rebillNotCollected": "لم يتمّ بعد تحصيل إعادة فوترة النقل.",
+      "saved": "تمّ حفظ إعداد التوصيل.",
+      "submit": "حفظ التوصيل"
+    },
     "wholesaleCostForm": {
       "headingLocal": "التكاليف المحلية",
       "headingImport": "تكاليف الاستيراد",

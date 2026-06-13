@@ -2743,6 +2743,30 @@
       "updated": "Paiement mis à jour.",
       "submit": "Mettre à jour le paiement"
     },
+    "wholesaleDeliveryForm": {
+      "heading": "Configuration de la livraison",
+      "logisticsModeLabel": "Mode logistique",
+      "logisticsModeNone": "Non défini",
+      "mode": {
+        "pickup_by_runner": "Enlèvement par coursier",
+        "supplier_fleet": "Flotte du fournisseur"
+      },
+      "handlingLabel": "Prise en charge du coût",
+      "handlingPlaceholder": "Choisir…",
+      "handling": {
+        "rebilled_client": "Refacturé au client",
+        "supplier_billed": "Facturé par le fournisseur",
+        "supplier_free": "Offert par le fournisseur"
+      },
+      "deliveryCostLabel": "Coût de livraison (MAD)",
+      "deliveryRebillLabel": "Refacturation au client (MAD)",
+      "deliveryRebillHint": "Doit être supérieure ou égale au coût de livraison.",
+      "supplierBearsCost": "Le fournisseur prend en charge la livraison — aucun coût ni refacturation côté Mozouna.",
+      "rebillCollected": "Refacturation transport encaissée : {amount}",
+      "rebillNotCollected": "Refacturation transport non encore encaissée.",
+      "saved": "Configuration de livraison enregistrée.",
+      "submit": "Enregistrer la livraison"
+    },
     "wholesaleCostForm": {
       "headingLocal": "Coûts locaux",
       "headingImport": "Coûts d’import",
