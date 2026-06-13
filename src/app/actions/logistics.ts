@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
 import { MIN_DELIVERY_FEE_MAD, MIN_DELIVERY_FEE_CASABLANCA_MAD } from '@/lib/utils'
+import { parseMoneyInput } from '@/lib/money'
 import type { ActionState } from '@/types/orders'
 import type { LogisticsSettings } from '@/types/database'
 
@@ -60,16 +61,22 @@ export async function updateLogisticsSettings(
   const { supabase, error: authError } = await requireAdmin()
   if (authError) return fail(authError)
 
-  const casablancaFee = parseFloat(formData.get('casablanca_delivery_fee_mad') as string)
-  const defaultFee    = parseFloat(formData.get('default_delivery_fee_mad') as string)
-  const returnFee     = parseFloat(formData.get('return_fee_mad') as string)
+  // RÈGLE ARGENT n°4 — frais validés en chaîne décimale stricte (money.ts), passés
+  // verbatim aux colonnes numeric. Livraison jamais ≤ 0 ; frais de retour ≥ 0.
+  const casablancaR = parseMoneyInput(formData.get('casablanca_delivery_fee_mad'))
+  const defaultR    = parseMoneyInput(formData.get('default_delivery_fee_mad'))
+  const returnR     = parseMoneyInput(formData.get('return_fee_mad'))
 
-  if (isNaN(casablancaFee) || casablancaFee <= 0)
+  if (!casablancaR.ok || Number(casablancaR.value) <= 0)
     return fail('Frais Casablanca invalide — la livraison doit être supérieure à 0 MAD.')
-  if (isNaN(defaultFee) || defaultFee <= 0)
+  if (!defaultR.ok || Number(defaultR.value) <= 0)
     return fail('Frais livraison par défaut invalide — la livraison doit être supérieure à 0 MAD.')
-  if (isNaN(returnFee) || returnFee < 0)
+  if (!returnR.ok)
     return fail('Frais de retour invalide.')
+
+  const casablancaFee = casablancaR.value
+  const defaultFee    = defaultR.value
+  const returnFee     = returnR.value
 
   const {
     data: { user },
