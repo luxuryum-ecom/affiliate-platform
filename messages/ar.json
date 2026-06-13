@@ -14,7 +14,13 @@
     "supplier_id_required": "معرّف المورّد مطلوب.",
     "forbidden_supplier_only": "هذا الإجراء مخصّص للمورّدين فقط.",
     "invalid_supplier_response": "ردّ المورّد غير صالح.",
-    "invalid_lead_time": "مدّة التحضير غير صالحة."
+    "invalid_lead_time": "مدّة التحضير غير صالحة.",
+    "invalid_amount": "مبلغ غير صالح — أدخل رقمًا بخانتين عشريتين على الأكثر.",
+    "invalid_delivery_handling": "طريقة تحمّل تكلفة التوصيل غير صالحة.",
+    "invalid_logistics_mode": "نمط التوصيل غير صالح.",
+    "rebill_below_cost": "يجب أن تكون إعادة الفوترة على الزبون أكبر من أو تساوي تكلفة التوصيل.",
+    "rebill_locked_after_collection": "تمّ تحصيل إعادة الفوترة مسبقًا: لم يعد بالإمكان تعديل مبلغها.",
+    "delivery_cost_required": "أدخل تكلفة التوصيل قبل إغلاق الطلب."
   },
   "common": {
     "login": "تسجيل الدخول",

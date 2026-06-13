@@ -9,6 +9,7 @@ import { getLogisticsSettings } from './logistics'
 import { resolveDeliveryFeeByCity } from './cities'
 import { requireAdmin } from './_guards'
 import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
+import { parseMoneyInput } from '@/lib/money'
 import {
   scoreDuplicateOrder,
   scoreFraudOrder,
@@ -993,6 +994,107 @@ export async function updateWholesalePaymentStatus(
   revalidatePath(`/wholesale/orders/${orderId}`)
   revalidatePath('/admin/analytics')
   return { error: null, success: true }
+}
+
+// =============================================================================
+// ADMIN — CONFIGURER LA LIVRAISON D'UNE COMMANDE WHOLESALE (LOT 4.2-B)
+// =============================================================================
+
+// Valeurs autorisées — répliquent les CHECK de la migration 062.
+const WHOLESALE_LOGISTICS_MODES = ['pickup_by_runner', 'supplier_fleet'] as const
+const WHOLESALE_DELIVERY_HANDLINGS = ['rebilled_client', 'supplier_billed', 'supplier_free'] as const
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Mappe le message d'erreur d'un RPC livraison vers une clé i18n `errors.*`.
+ * Les RPC (065) lèvent déjà des `errors.<clé>` ; le CHECK 062
+ * (`wholesale_delivery_no_mozouna_loss`) lève un nom de contrainte qu'on traduit.
+ */
+function mapDeliveryRpcError(message: string | undefined): string {
+  const msg = message ?? ''
+  const key = msg.match(/errors\.[a-z_]+/)?.[0]
+  if (key) return key
+  if (msg.includes('wholesale_delivery_no_mozouna_loss')) return 'errors.rebill_below_cost'
+  return 'errors.update_failed'
+}
+
+/**
+ * Admin — configure le mode logistique, le traitement du coût livraison et les
+ * montants (coût / refacturation) d'une commande grossiste.
+ *
+ * Délègue intégralement l'écriture au RPC `set_wholesale_delivery_config` (065,
+ * audité @finance/@security) : config + maintien du ledger cash par DELTA, le
+ * tout atomique et idempotent. AUCUNE colonne de marge touchée (trigger 025
+ * intangible). Cette action n'est qu'un adaptateur typé/validé au-dessus du RPC.
+ *
+ * RÈGLE ARGENT : les montants sont validés en CHAÎNE décimale stricte
+ * (`parseMoneyInput`, zéro `parseFloat`, condition @finance C-Z1/C4) et passés
+ * verbatim au paramètre `numeric` du RPC.
+ *
+ * Garde : admin seul (contrat 4.2-A — config/collecte cash réservées admin). Le
+ * RPC re-vérifie `my_role()='admin'` côté DB (SECURITY DEFINER bypasse RLS).
+ */
+export async function setWholesaleDeliveryConfig(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
+
+  const orderId = (formData.get('orderId') as string)?.trim()
+  if (!orderId) return fail('errors.order_id_required')
+
+  // ── Traitement du coût livraison (enum 062) ───────────────────────────────
+  const handling = (formData.get('delivery_cost_handling') as string)?.trim()
+  if (!(WHOLESALE_DELIVERY_HANDLINGS as readonly string[]).includes(handling)) {
+    return fail('errors.invalid_delivery_handling')
+  }
+
+  // ── Mode logistique : optionnel, mais s'il est fourni il doit être valide ──
+  const logisticsRaw = (formData.get('logistics_mode') as string)?.trim() || null
+  if (logisticsRaw !== null && !(WHOLESALE_LOGISTICS_MODES as readonly string[]).includes(logisticsRaw)) {
+    return fail('errors.invalid_logistics_mode')
+  }
+
+  // ── Montants — validation décimale stricte, ZÉRO parseFloat (C-Z1/C4) ──────
+  let cost = '0'
+  let rebill = '0'
+  if (handling === 'rebilled_client') {
+    const c = parseMoneyInput(formData.get('delivery_cost_mad'))
+    if (!c.ok) return fail(c.error)
+    const r = parseMoneyInput(formData.get('delivery_rebill_mad'))
+    if (!r.ok) return fail(r.error)
+    cost = c.value
+    rebill = r.value
+  }
+  // supplier_billed / supplier_free : Mozouna ne paie rien et ne refacture rien.
+  // On force 0/0 (le CHECK 062 l'impose) — un form obsolète ne peut pas glisser
+  // un montant sous ces traitements. L'invariant rebill ≥ cost reste validé par
+  // le CHECK côté DB pour le cas rebilled_client (→ errors.rebill_below_cost).
+
+  // ── Clé d'événement (idempotence DELTA) ───────────────────────────────────
+  // Neuf par soumission, STABLE au retry : si l'UI fournit un uuid caché (re-submit
+  // du même formulaire) on le réutilise → ON CONFLICT DO NOTHING dédoublonne ;
+  // sinon l'action en génère un frais (contrat 4.2-A).
+  const eventRaw = (formData.get('cost_event_uuid') as string)?.trim() ?? ''
+  const costEventUuid = UUID_RE.test(eventRaw) ? eventRaw : crypto.randomUUID()
+
+  const { error: rpcErr } = await supabase.rpc('set_wholesale_delivery_config', {
+    p_order_id:        orderId,
+    p_logistics_mode:  logisticsRaw,
+    p_handling:        handling,
+    p_cost_mad:        cost,    // chaîne décimale exacte → numeric Postgres
+    p_rebill_mad:      rebill,  // idem
+    p_cost_event_uuid: costEventUuid,
+  })
+
+  if (rpcErr) return fail(mapDeliveryRpcError(rpcErr.message))
+
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath('/admin/analytics')
+  return ok
 }
 
 // =============================================================================

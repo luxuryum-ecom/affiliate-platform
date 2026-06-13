@@ -14,7 +14,13 @@
     "supplier_id_required": "Supplier ID is required.",
     "forbidden_supplier_only": "This action is reserved for suppliers.",
     "invalid_supplier_response": "Invalid supplier response.",
-    "invalid_lead_time": "Invalid lead time."
+    "invalid_lead_time": "Invalid lead time.",
+    "invalid_amount": "Invalid amount — enter a number with at most 2 decimals.",
+    "invalid_delivery_handling": "Invalid delivery cost handling.",
+    "invalid_logistics_mode": "Invalid logistics mode.",
+    "rebill_below_cost": "The client rebill must be greater than or equal to the delivery cost.",
+    "rebill_locked_after_collection": "The rebill has already been collected: its amount can no longer be changed.",
+    "delivery_cost_required": "Enter the delivery cost before closing the order."
   },
   "common": {
     "login": "Sign in",

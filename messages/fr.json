@@ -14,7 +14,13 @@
     "supplier_id_required": "Identifiant fournisseur requis.",
     "forbidden_supplier_only": "Action réservée aux fournisseurs.",
     "invalid_supplier_response": "Réponse fournisseur invalide.",
-    "invalid_lead_time": "Délai de préparation invalide."
+    "invalid_lead_time": "Délai de préparation invalide.",
+    "invalid_amount": "Montant invalide — saisissez un nombre avec au plus 2 décimales.",
+    "invalid_delivery_handling": "Mode de prise en charge de la livraison invalide.",
+    "invalid_logistics_mode": "Mode logistique invalide.",
+    "rebill_below_cost": "La refacturation au client doit être supérieure ou égale au coût de livraison.",
+    "rebill_locked_after_collection": "La refacturation a déjà été encaissée : son montant ne peut plus être modifié.",
+    "delivery_cost_required": "Renseignez le coût de livraison avant de clôturer la commande."
   },
   "common": {
     "login": "Se connecter",
