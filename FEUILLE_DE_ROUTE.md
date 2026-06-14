@@ -469,6 +469,22 @@ Périmètre à cadrer plus tard (`@architect` + `@finance`, gros chantier) :
 
 Règle : à construire APRÈS le lancement, sur des flux réels observés, pas devinés. Au lancement, gestion de stock manuelle via l'admin existant.
 
+## Relevés & Rapports partenaires (PDF + QR de vérification) — post-lancement
+
+But : relevés exportables/imprimables par partenaire, pour audit manuel et envoi.
+- AFFILIÉ : relevé complet (commandes, dates, montants, commissions, statuts) — pour audit si soupçon de fraude. QR de vérification.
+- GROSSISTE : relevé commandes/paiements.
+- FOURNISSEUR : rapport d'activité + info de paiement (date prévue + moyen de paiement), à lui envoyer.
+- QR = vérification d'authenticité : pointe vers la vraie donnée serveur, relevé infalsifiable.
+- PRÉREQUIS STRICT : à construire APRÈS la purge money complète — un relevé d'audit doit afficher des chiffres exacts, donc tous les calculs doivent être fiabilisés d'abord.
+- Données déjà calculées existantes (commissions/paiements/marges) → mises en PDF + QR.
+
+## Choix code-barres vs QR (à trancher au moment du WMS)
+
+- Suivi commande Deliveroo → QR (ouvre la page de suivi au téléphone). DÉCIDÉ.
+- Relevés/rapports d'audit → QR (vérification authenticité). DÉCIDÉ.
+- Sortie stock dépôt (WMS) → code-barres 1D (douchette entrepôt rapide) OU QR (scan téléphone) — à trancher selon le matériel choisi, au cadrage WMS.
+
 ## SECTION 3 — DETTES & SUJETS EN ATTENTE (consolidation)
 
 - 🧾 **i18n contenu DB** : noms/descriptions produits (et libellés saisis) non traduisibles par i18n → stratégie à cadrer (**colonnes `name_ar`/`name_en`** ou **table de traductions**, ou traduction à la saisie/IA).
