@@ -4,6 +4,18 @@
 > Définit le contexte, les règles et les rôles.
 > La stack exacte et le schéma DB seront complétés par l'audit de la PHASE 0.
 
+## 🗺️ AVANT TOUT CHANTIER — CARTOGRAPHIER L'EXISTANT D'ABORD
+> Issue d'une régression réelle (2026-06-14) : on a failli construire une 2ᵉ marge fournisseur
+> alors que l'achat direct route par le **miroir catalogue** qui capte DÉJÀ la marge → doublon
+> évité de justesse en lisant le flux **de bout en bout** (panier → checkout), pas juste le champ.
+
+**RÈGLE PERMANENTE.** Si Abdou dit qu'une fonctionnalité a **déjà été faite** (Cursor ou autre),
+**AVANT de planifier**, `@architect` cartographie l'**EXISTANT COMPLET du flux concerné de bout en
+bout** — d'où vient le **prix réellement facturé**, quels mécanismes **captent déjà la marge**, par
+quels chemins (direct vs devis vs miroir), quelles tables/vues/server actions sont impliquées — **pas
+juste le champ** mentionné. **On ne planifie qu'APRÈS cette carte.** Objectif : **ne jamais
+reconstruire ni doublonner l'existant**.
+
 ## 🛑 RÈGLES ABSOLUES — JAMAIS D'EXCEPTION
 > En tête volontairement. Ces règles priment sur tout le reste. Issues d'une régression réelle :
 > le chantier design a passé une **fonction** à un Client Component (`stockAvailable`), cassant
