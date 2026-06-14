@@ -280,6 +280,7 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
                 publicDescription={product.public_description}
                 platformMarginType={product.platform_margin_type}
                 platformMarginValue={product.platform_margin_value}
+                applyPlatformMargin={product.apply_platform_margin}
                 adminNotes={product.admin_notes}
               />
             </div>

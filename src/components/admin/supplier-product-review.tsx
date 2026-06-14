@@ -16,6 +16,7 @@ interface ApproveFormProps {
   publicDescription: string | null
   platformMarginType: string
   platformMarginValue: number | null
+  applyPlatformMargin: boolean
   adminNotes: string | null
 }
 
@@ -25,6 +26,7 @@ export function ApproveSupplierProductForm({
   publicDescription,
   platformMarginType,
   platformMarginValue,
+  applyPlatformMargin,
   adminNotes,
 }: ApproveFormProps) {
   const t = useTranslations('admin.supplierProductReview')
@@ -85,12 +87,29 @@ export function ApproveSupplierProductForm({
             type="number"
             min={0}
             step="0.01"
-            defaultValue={platformMarginValue ?? ''}
+            defaultValue={platformMarginValue ?? 15}
             disabled={isPending}
             className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent disabled:bg-surface-2 disabled:text-muted"
             placeholder={t('marginValuePlaceholder')}
           />
         </div>
+      </div>
+
+      {/* Toggle marge — AFFICHAGE VITRINE UNIQUEMENT (jamais le prix facturé). */}
+      <div className="rounded-lg border border-line bg-surface-2 p-3">
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="apply_platform_margin"
+            defaultChecked={applyPlatformMargin}
+            disabled={isPending}
+            className="mt-0.5 h-4 w-4 rounded border-line text-gold-500 focus:ring-gold-400"
+          />
+          <span className="text-sm">
+            <span className="block font-medium text-foreground">{t('applyMarginLabel')}</span>
+            <span className="block text-xs text-muted mt-0.5">{t('applyMarginHint')}</span>
+          </span>
+        </label>
       </div>
 
       <div>
