@@ -121,12 +121,13 @@ export async function upsertProduct(
   let marginInvalid = false
   let platform_margin_value_str: string
   if (marginRawStr === '') {
-    platform_margin_value_str = '30'
+    platform_margin_value_str = '20' // défaut marge plateforme affilié (stratégie acquisition lancement)
   } else if (!marginParse.ok) {
-    platform_margin_value_str = '30'
+    platform_margin_value_str = '20'
     marginInvalid = true
   } else {
-    platform_margin_value_str = Number(marginParse.value) !== 0 ? marginParse.value : '30'
+    // NB : le comportement « 0 → défaut » (piège connu) reste inchangé — dette séparée.
+    platform_margin_value_str = Number(marginParse.value) !== 0 ? marginParse.value : '20'
   }
   const platform_margin_value = Number(platform_margin_value_str)
 

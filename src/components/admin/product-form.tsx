@@ -162,7 +162,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
     setExchangeRate(String(centralRateFor(code)))
   }
   const [margin, setMargin] = useState<string>(
-    String(product?.margin_percentage ?? 30)
+    String(product?.margin_percentage ?? 20)
   )
 
   // ── Platform margin type & value (migration 013) ──────────────────────────
@@ -170,7 +170,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
     product?.platform_margin_type ?? 'percentage'
   )
   const [platformMarginValue, setPlatformMarginValue] = useState<string>(
-    product?.platform_margin_value != null ? String(product.platform_margin_value) : '30'
+    product?.platform_margin_value != null ? String(product.platform_margin_value) : '20'
   )
 
   // ── Factory cost (migration 016) ───────────────────────────────────────────
@@ -1023,7 +1023,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                 if (platformMarginType === 'percentage') setMargin(e.target.value)
               }}
               className={INPUT}
-              placeholder={platformMarginType === 'percentage' ? '30' : '0.00'}
+              placeholder={platformMarginType === 'percentage' ? '20' : '0.00'}
             />
           </div>
         </div>
