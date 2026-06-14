@@ -112,7 +112,7 @@ export async function upsertProduct(
     formData.get('platform_margin_value') ?? formData.get('margin_percentage')
   // MARGE — % (rate.ts, 0–100) si type 'percentage' ; MONTANT (money.ts) si 'fixed'.
   // Chaîne verbatim stockée ; Number() pour le calcul (= ancien parseFloat pour saisie
-  // valide). Défaut historique 30 préservé (vide / 0 → 30). Hors bornes → erreur.
+  // valide). VIDE → défaut 20 ; 0 explicite CONSERVÉ ; hors bornes/invalide → erreur.
   const marginRawStr = typeof margin_value_raw === 'string' ? margin_value_raw.trim() : ''
   const marginParse =
     platform_margin_type === 'percentage'
@@ -126,8 +126,10 @@ export async function upsertProduct(
     platform_margin_value_str = '20'
     marginInvalid = true
   } else {
-    // NB : le comportement « 0 → défaut » (piège connu) reste inchangé — dette séparée.
-    platform_margin_value_str = Number(marginParse.value) !== 0 ? marginParse.value : '20'
+    // Saisie valide (0 inclus) → conservée VERBATIM. Correctif du piège « 0 → défaut » :
+    // un admin qui saisit explicitement 0 % (produit d'appel, vente au coût) obtient
+    // bien 0, plus le défaut. Seul le champ VIDE retombe sur le défaut (branche ci-dessus).
+    platform_margin_value_str = marginParse.value
   }
   const platform_margin_value = Number(platform_margin_value_str)
 
@@ -136,11 +138,14 @@ export async function upsertProduct(
     platform_margin_type === 'percentage' ? platform_margin_value_str : '0'
 
   // FEES — montants validés (money.ts), chaîne verbatim stockée ; Number() pour la
-  // commission préview. Défaut historique préservé (vide / 0 / invalide → défaut,
-  // réplique l'ancien `parseFloat(x) || def`).
+  // commission préview. Correctif du piège « 0 → défaut » : VIDE → défaut, mais un 0
+  // explicite est CONSERVÉ (ex. confirmation gérée par l'affilié → frais 0). Invalide
+  // → défaut (comportement inchangé).
   const moneyOrDefault = (raw: FormDataEntryValue | null, def: string): string => {
-    const r = parseMoneyInput(raw)
-    return r.ok && Number(r.value) !== 0 ? r.value : def
+    const s = typeof raw === 'string' ? raw.trim() : ''
+    if (s === '') return def
+    const r = parseMoneyInput(s)
+    return r.ok ? r.value : def
   }
   const confirmation_fee_mad = moneyOrDefault(formData.get('confirmation_fee_mad'), '10')
   const packaging_fee_mad = moneyOrDefault(formData.get('packaging_fee_mad'), '10')
@@ -335,9 +340,41 @@ export async function upsertProduct(
 
   // ── Parse JSON fields ─────────────────────────────────────────────────────
 
+  // VALIDATION SERVEUR des paliers (défense en profondeur) : le client sérialise les
+  // paliers en JSON dans un champ caché ; on ne fait JAMAIS confiance au prix client
+  // (un POST direct pourrait injecter un prix négatif, NaN, >2 déc ou aberrant). Chaque
+  // palier doit avoir min_qty entier ≥ 1 et price_per_unit fini, > 0, à ≤ 2 décimales
+  // (RÈGLE ARGENT n°4). Un palier malformé est ÉCARTÉ (même filtre que le client rowToTier).
   let wholesale_tiers: WholesaleTier[] = []
   try {
-    wholesale_tiers = JSON.parse((formData.get('wholesale_tiers') as string) || '[]')
+    const rawTiers = JSON.parse((formData.get('wholesale_tiers') as string) || '[]')
+    if (!Array.isArray(rawTiers)) return { error: 'Format des paliers de prix invalide.' }
+    if (rawTiers.length > 20) return { error: 'Trop de paliers de prix (maximum 20).' }
+    wholesale_tiers = rawTiers
+      .filter((t: unknown): t is WholesaleTier => {
+        if (typeof t !== 'object' || t === null) return false
+        const { min_qty: minQty, max_qty: maxQty, price_per_unit: price } = t as Record<string, unknown>
+        if (typeof minQty !== 'number' || !Number.isInteger(minQty) || minQty < 1) return false
+        if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return false
+        if (Number(price.toFixed(2)) !== price) return false // > 2 décimales → rejet
+        if (maxQty != null && (typeof maxQty !== 'number' || !Number.isInteger(maxQty) || maxQty < minQty)) return false
+        return true
+      })
+      .map((t) => ({
+        min_qty: t.min_qty,
+        max_qty: t.max_qty ?? undefined,
+        price_per_unit: t.price_per_unit,
+      }))
+    // Cohérence inter-paliers : tri croissant par min_qty + rejet des doublons et
+    // chevauchements. getWholesaleTier prend le PREMIER match (.find) → sans cet ordre,
+    // un chevauchement rendrait le prix facturé dépendant de l'ordre du tableau (manipulable).
+    wholesale_tiers.sort((a, b) => a.min_qty - b.min_qty)
+    for (let i = 1; i < wholesale_tiers.length; i++) {
+      const prev = wholesale_tiers[i - 1]
+      const cur = wholesale_tiers[i]
+      if (cur.min_qty <= prev.min_qty) return { error: 'Paliers de prix en doublon ou mal ordonnés.' }
+      if (prev.max_qty != null && prev.max_qty >= cur.min_qty) return { error: 'Paliers de prix qui se chevauchent.' }
+    }
   } catch {
     return { error: 'Format des paliers de prix invalide.' }
   }
