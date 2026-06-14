@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { convertToMad, composePricing, buildSupplierPricing, isAwaitingFxRate } from '@/lib/supplier-pricing'
+import { convertToMad, composePricing, buildSupplierPricing, isAwaitingFxRate, applyPlatformMargin } from '@/lib/supplier-pricing'
 
 // Faux client Supabase minimal pour tester l'orchestration sans DB réelle.
 // Chaîne .from(table).select().eq().maybeSingle() + .rpc('fx_rate_to_mad').
@@ -203,5 +203,39 @@ describe('isAwaitingFxRate', () => {
       source_currency: p.source_currency,
       fx_rate_source_to_mad: p.fx_rate_source_to_mad,
     })).toBe(false)
+  })
+})
+
+// ─── applyPlatformMargin — marge plateforme fournisseur (canal direct) ───────
+// @finance : miroir de calculatePlatformPrice, arrondi MAD entier sur % ET fixe.
+// Toggle OFF (défaut) = identité stricte avec la base. Jamais exposé au grossiste.
+describe('applyPlatformMargin', () => {
+  it('toggle OFF → prix INCHANGÉ (identité, même avec décimales)', () => {
+    expect(applyPlatformMargin(200, false, 'percentage', 15)).toBe(200)
+    expect(applyPlatformMargin(247.5, false, 'percentage', 15)).toBe(247.5)
+    expect(applyPlatformMargin(1000, false, 'fixed', 50)).toBe(1000)
+  })
+
+  it('toggle ON % 15 → Math.round(base × 1.15), MAD entier', () => {
+    expect(applyPlatformMargin(200, true, 'percentage', 15)).toBe(230)
+    expect(applyPlatformMargin(247.5, true, 'percentage', 15)).toBe(285) // round(284.625)
+    expect(applyPlatformMargin(1000, true, 'percentage', 15)).toBe(1150)
+  })
+
+  it('toggle ON fixe → Math.round(base + montant), entier sur les DEUX branches', () => {
+    expect(applyPlatformMargin(200, true, 'fixed', 50)).toBe(250)
+    expect(applyPlatformMargin(247.5, true, 'fixed', 50)).toBe(298) // round(297.5) half-up
+    expect(applyPlatformMargin(1000, true, 'fixed', 50)).toBe(1050)
+  })
+
+  it('valeur null / ≤ 0 → pas de marge fabriquée (= base)', () => {
+    expect(applyPlatformMargin(200, true, 'percentage', null)).toBe(200)
+    expect(applyPlatformMargin(200, true, 'percentage', 0)).toBe(200)
+    expect(applyPlatformMargin(200, true, 'fixed', -5)).toBe(200)
+  })
+
+  it('base null → null', () => {
+    expect(applyPlatformMargin(null, true, 'percentage', 15)).toBeNull()
+    expect(applyPlatformMargin(null, false, 'fixed', 50)).toBeNull()
   })
 })

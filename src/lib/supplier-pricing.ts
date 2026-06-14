@@ -4,6 +4,7 @@
 // Devise sans taux / prix absent / conversion absurde → suggested_*_mad = NULL.
 
 import type { createClient } from '@/lib/supabase/server'
+import type { PlatformMarginType } from '@/types/database'
 import { getRateToMad } from '@/lib/fx'
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>
@@ -59,6 +60,41 @@ export function convertToMad(priceSource: number | null, rate: number | null): n
   if (!Number.isFinite(mad) || mad <= 0) return null
   if (mad > MAX_PRICE_MAD) return null // débordement / absurde → null + flag, jamais tronquer
   return mad
+}
+
+/**
+ * Prix marketplace FINAL du canal fournisseur DIRECT = prix converti (`base`) +
+ * marge plateforme Mozouna, SI le toggle `apply` du produit est activé.
+ *
+ * Miroir EXACT de `calculatePlatformPrice` (affilié) : arrondi MAD entier via
+ * `Math.round` sur les DEUX branches (%, fixe) → granularité cohérente entre les
+ * deux moteurs de marge. NE réutilise PAS `convertToMad` (qui garde 2 décimales et
+ * porte un biais demi-centime tagué hors-ledger).
+ *
+ * RÈGLE ANTI-COURT-CIRCUIT : calcul SERVEUR uniquement, jamais exposé au grossiste
+ * (il ne voit que le nombre final, ni la base, ni le taux de marge).
+ *
+ * - `apply = false` (défaut produit) → prix INCHANGÉ (= base, conserve les 2 déc
+ *   éventuelles : identité stricte avec l'ancien `suggested_wholesale_price_mad`).
+ * - `value` null / ≤ 0 → prix inchangé (pas de marge fabriquée).
+ * - `base` null → null (pas de prix → pas de marge).
+ *
+ * @param base prix converti MAD (`suggested_wholesale_price_mad`)
+ * @param apply toggle `apply_platform_margin` du produit
+ * @param type  'percentage' (value = %) | 'fixed' (value = montant MAD)
+ * @param value valeur de marge
+ * @returns prix final (MAD entier si marge appliquée), ou `base`/`null` sinon
+ */
+export function applyPlatformMargin(
+  base: number | null,
+  apply: boolean,
+  type: PlatformMarginType,
+  value: number | null,
+): number | null {
+  if (base == null) return null
+  if (!apply || value == null || value <= 0) return base
+  const raw = type === 'percentage' ? base * (1 + value / 100) : base + value
+  return Math.round(raw)
 }
 
 /**
