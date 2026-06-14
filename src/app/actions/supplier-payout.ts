@@ -1,6 +1,7 @@
 'use server'
 
 import { requireAdmin } from './_guards'
+import { parseMoneyInput } from '@/lib/money'
 import type { SupplierCommissionType, SupplierPayoutStatus, SupplierQuoteRequest } from '@/types/database'
 
 export type SupplierPayoutState = { error: string | null; success?: boolean }
@@ -15,7 +16,18 @@ export async function updateSupplierFinancials(
   if (authError || !userId) return { error: authError ?? 'Non authentifié.' }
 
   const id = formData.get('id') as string
-  const supplier_cost_mad = parseFloat(formData.get('supplier_cost_mad') as string)
+  // RÈGLE ARGENT n°4 — coût fournisseur validé en CHAÎNE décimale stricte (money.ts),
+  // passé verbatim à la colonne numeric : zéro parseFloat. Vide = non saisi → NULL
+  // (comportement inchangé) ; saisie invalide → erreur explicite (l'ancien parseFloat
+  // masquait une saisie invalide en NULL silencieux).
+  const supplierCostRaw = formData.get('supplier_cost_mad')
+  const supplierCostStr = typeof supplierCostRaw === 'string' ? supplierCostRaw.trim() : ''
+  let supplier_cost_mad: string | null = null
+  if (supplierCostStr !== '') {
+    const r = parseMoneyInput(supplierCostStr)
+    if (!r.ok) return { error: 'Coût fournisseur invalide.' }
+    supplier_cost_mad = r.value
+  }
   const platform_commission_type = (formData.get('platform_commission_type') as string) || 'percent'
   const platform_commission_value = parseFloat(formData.get('platform_commission_value') as string)
   const transport_customs_cost_mad = parseFloat(formData.get('transport_customs_cost_mad') as string) || 0
@@ -50,7 +62,7 @@ export async function updateSupplierFinancials(
   const { error } = await supabase
     .from('supplier_quote_requests')
     .update({
-      supplier_cost_mad: isNaN(supplier_cost_mad) ? null : supplier_cost_mad,
+      supplier_cost_mad,
       platform_commission_type: platform_commission_type as SupplierCommissionType,
       platform_commission_value: isNaN(platform_commission_value) ? null : platform_commission_value,
       platform_commission_amount_mad: commissionAmount,

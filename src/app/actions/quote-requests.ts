@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './_guards'
 import { getWholesaleTier } from '@/lib/utils'
 import { getRateToMad, getClientCurrency } from '@/lib/fx'
+import { parseMoneyInput } from '@/lib/money'
 import type { QuoteRequest, Product, QuoteRequestStatus } from '@/types/database'
 
 export type QuoteRequestFormState = { error: string | null; success?: boolean }
@@ -101,14 +102,19 @@ export async function prepareQuote(
   const sourceCurrency = (formData.get('source_currency') as string)?.trim().toUpperCase() || 'MAD'
   const sourceUnitPrice = parseFloat(formData.get('quoted_unit_price_source') as string)
   const quantity = parseInt(formData.get('quoted_quantity') as string, 10)
-  const transportTotal = parseFloat(formData.get('quoted_transport_total_mad') as string)
+  // RÈGLE ARGENT n°4 — frais de transport (MAD) validés en CHAÎNE décimale stricte
+  // (money.ts), passés verbatim à la colonne numeric : zéro parseFloat. Vide ou
+  // négatif reste rejeté comme avant (l'ancien `isNaN || < 0`).
+  const transportRaw = formData.get('quoted_transport_total_mad')
+  const transportStr = typeof transportRaw === 'string' ? transportRaw.trim() : ''
+  const transportTotalR = parseMoneyInput(transportStr)
 
   const fxOverrideRaw = formData.get('fx_rate_override') as string | null
   const fxOverride = fxOverrideRaw && fxOverrideRaw.trim() !== '' ? parseFloat(fxOverrideRaw) : null
 
   if (isNaN(sourceUnitPrice) || sourceUnitPrice <= 0) return { error: 'Prix unitaire invalide.' }
   if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.' }
-  if (isNaN(transportTotal) || transportTotal < 0) return { error: 'Frais de transport invalides.' }
+  if (transportStr === '' || !transportTotalR.ok) return { error: 'Frais de transport invalides.' }
   if (fxOverride !== null && (isNaN(fxOverride) || fxOverride <= 0)) {
     return { error: 'Taux de change override invalide (doit être > 0).' }
   }
@@ -157,7 +163,7 @@ export async function prepareQuote(
       display_currency:           displayCurrency,
       fx_rate_display_vs_mad:     displayRate,
       quoted_quantity:            quantity,
-      quoted_transport_total_mad: transportTotal,
+      quoted_transport_total_mad: transportTotalR.value,
       quoted_shipping_mode:       shippingMode,
       quoted_delivery_delay:      deliveryDelay,
       quote_validity_date:        validityDate || null,
