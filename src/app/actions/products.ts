@@ -76,8 +76,14 @@ export async function upsertProduct(
 
   // ── Cost & margin ─────────────────────────────────────────────────────────
 
-  const purchase_price_raw = formData.get('purchase_price') as string
-  const purchase_price = purchase_price_raw ? parseFloat(purchase_price_raw) : null
+  // PRIX D'ACHAT (devise source) — validé en CHAÎNE décimale stricte (money.ts),
+  // chaîne verbatim stockée : zéro parseFloat. Vide → null (inchangé). Number()
+  // dérivé (purchasePriceNum) alimente la conversion FX (= ancien parseFloat).
+  const purchasePriceRaw = formData.get('purchase_price')
+  const purchasePriceStr = typeof purchasePriceRaw === 'string' ? purchasePriceRaw.trim() : ''
+  const purchasePriceR = purchasePriceStr !== '' ? parseMoneyInput(purchasePriceStr) : null
+  const purchase_price = purchasePriceR && purchasePriceR.ok ? purchasePriceR.value : null
+  const purchasePriceNum = purchasePriceR && purchasePriceR.ok ? Number(purchasePriceR.value) : null
 
   const purchase_currency = (formData.get('purchase_currency') as string) || 'MAD'
   // Réconciliation Étape 2 : exchange_rate_to_mad devient un OVERRIDE manuel.
@@ -104,14 +110,42 @@ export async function upsertProduct(
   // platform_margin_value: preferred new field; fall back to legacy margin_percentage
   const margin_value_raw =
     formData.get('platform_margin_value') ?? formData.get('margin_percentage')
-  const platform_margin_value = parseFloat(margin_value_raw as string) || 30
+  // MARGE — % (rate.ts, 0–100) si type 'percentage' ; MONTANT (money.ts) si 'fixed'.
+  // Chaîne verbatim stockée ; Number() pour le calcul (= ancien parseFloat pour saisie
+  // valide). Défaut historique 30 préservé (vide / 0 → 30). Hors bornes → erreur.
+  const marginRawStr = typeof margin_value_raw === 'string' ? margin_value_raw.trim() : ''
+  const marginParse =
+    platform_margin_type === 'percentage'
+      ? parsePercentInput(marginRawStr)
+      : parseMoneyInput(marginRawStr)
+  let marginInvalid = false
+  let platform_margin_value_str: string
+  if (marginRawStr === '') {
+    platform_margin_value_str = '30'
+  } else if (!marginParse.ok) {
+    platform_margin_value_str = '30'
+    marginInvalid = true
+  } else {
+    platform_margin_value_str = Number(marginParse.value) !== 0 ? marginParse.value : '30'
+  }
+  const platform_margin_value = Number(platform_margin_value_str)
 
   // Keep margin_percentage in sync for backward compat with any legacy reads
-  const margin_percentage = platform_margin_type === 'percentage' ? platform_margin_value : 0
+  const margin_percentage =
+    platform_margin_type === 'percentage' ? platform_margin_value_str : '0'
 
-  const confirmation_fee_mad = parseFloat(formData.get('confirmation_fee_mad') as string) || 10
-  const packaging_fee_mad = parseFloat(formData.get('packaging_fee_mad') as string) || 10
-  const delivery_fee_mad = parseFloat(formData.get('delivery_fee_mad') as string) || 0
+  // FEES — montants validés (money.ts), chaîne verbatim stockée ; Number() pour la
+  // commission préview. Défaut historique préservé (vide / 0 / invalide → défaut,
+  // réplique l'ancien `parseFloat(x) || def`).
+  const moneyOrDefault = (raw: FormDataEntryValue | null, def: string): string => {
+    const r = parseMoneyInput(raw)
+    return r.ok && Number(r.value) !== 0 ? r.value : def
+  }
+  const confirmation_fee_mad = moneyOrDefault(formData.get('confirmation_fee_mad'), '10')
+  const packaging_fee_mad = moneyOrDefault(formData.get('packaging_fee_mad'), '10')
+  const delivery_fee_mad = moneyOrDefault(formData.get('delivery_fee_mad'), '0')
+  const confFeeNum = Number(confirmation_fee_mad)
+  const packFeeNum = Number(packaging_fee_mad)
 
   // ── Computed pricing ──────────────────────────────────────────────────────
   // locally_produced → price is already in MAD
@@ -124,13 +158,14 @@ export async function upsertProduct(
   let purchase_price_mad: number | null = null
   let calculated_sale_price_mad: number | null = null
 
-  if (purchase_price !== null && !isNaN(purchase_price)) {
-    // FX — arrondi à trancher au lot FX (parseRateInput) — bascule half-up prévue pour cohérence audit.
-    // GELÉ : ce parseFloat est `montant × taux` (site FX, pas un montant simple) ; le toucher
-    // changerait factory_cost_mad de ±1 ct sur ~0,3 % des imports → décision @finance + GO Abdou au lot FX.
+  if (purchasePriceNum !== null) {
+    // CONVERSION FX — half-up centimes `Math.round(montant × taux × 100) / 100`
+    // (validé @finance + GO Abdou, lot FX). Bascule depuis `toFixed(2)` : ±1 ct sur
+    // ~0,1 % des imports tombant pile sur une demi-centime, aux nouveaux/re-saves
+    // uniquement (le passé figé n'est jamais re-converti). Convention unique = cohérence audit.
     purchase_price_mad = needsConversion
-      ? parseFloat((purchase_price * exchange_rate_to_mad).toFixed(2))
-      : purchase_price
+      ? Math.round(purchasePriceNum * exchange_rate_to_mad * 100) / 100
+      : purchasePriceNum
 
     calculated_sale_price_mad = calculatePlatformPrice(
       purchase_price_mad,
@@ -195,11 +230,11 @@ export async function upsertProduct(
       factoryCostMad: factoryCostNum,
       marginType: platform_margin_type,
       marginValue: platform_margin_value,
-      packagingFee: packaging_fee_mad,
+      packagingFee: packFeeNum,
       // La livraison n'est jamais 0 ; on utilise le défaut logistique planché
       // (et non delivery_fee_mad du produit) pour rester cohérent avec page.tsx.
       deliveryFee: previewDeliveryFee,
-      confirmationFee: confirmation_fee_mad,
+      confirmationFee: confFeeNum,
       quantity: 1,
     })
     return Math.max(0, raw)
@@ -294,8 +329,8 @@ export async function upsertProduct(
     return { error: "Le taux de change doit être supérieur à 0." }
   if (!['percentage', 'fixed'].includes(platform_margin_type))
     return { error: 'Type de marge invalide. Utilisez percentage ou fixed.' }
-  if (platform_margin_value < 0) return { error: 'La marge ne peut pas être négative.' }
-  if (margin_percentage < 0) return { error: 'La marge ne peut pas être négative.' }
+  if (marginInvalid)
+    return { error: 'La marge est invalide (pourcentage 0–100, ou montant ≥ 0 si marge fixe).' }
 
   // ── Parse JSON fields ─────────────────────────────────────────────────────
 
@@ -342,7 +377,7 @@ export async function upsertProduct(
     margin_percentage,
     calculated_sale_price_mad,
     platform_margin_type,
-    platform_margin_value,
+    platform_margin_value: platform_margin_value_str,
     factory_cost_mad,
     confirmation_fee_mad,
     packaging_fee_mad,

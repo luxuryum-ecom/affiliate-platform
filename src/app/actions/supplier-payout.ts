@@ -2,6 +2,7 @@
 
 import { requireAdmin } from './_guards'
 import { parseMoneyInput } from '@/lib/money'
+import { parsePercentInput } from '@/lib/rate'
 import type { SupplierCommissionType, SupplierPayoutStatus, SupplierQuoteRequest } from '@/types/database'
 
 export type SupplierPayoutState = { error: string | null; success?: boolean }
@@ -29,8 +30,25 @@ export async function updateSupplierFinancials(
     supplier_cost_mad = r.value
   }
   const platform_commission_type = (formData.get('platform_commission_type') as string) || 'percent'
-  const platform_commission_value = parseFloat(formData.get('platform_commission_value') as string)
-  const transport_customs_cost_mad = parseFloat(formData.get('transport_customs_cost_mad') as string) || 0
+  // COMMISSION — % (rate.ts, 0–100) si 'percent' ; MONTANT (money.ts) si 'fixed'. Vide →
+  // null (inchangé, comme l'ancien `isNaN?null`) ; invalide → erreur. Number() pour le calcul.
+  const commRawRaw = formData.get('platform_commission_value')
+  const commRawStr = typeof commRawRaw === 'string' ? commRawRaw.trim() : ''
+  let platform_commission_value: string | null = null
+  let commissionValueNum: number | null = null
+  if (commRawStr !== '') {
+    const r =
+      platform_commission_type === 'percent'
+        ? parsePercentInput(commRawStr)
+        : parseMoneyInput(commRawStr)
+    if (!r.ok) return { error: 'Commission invalide (pourcentage 0–100, ou montant ≥ 0 si fixe).' }
+    platform_commission_value = r.value
+    commissionValueNum = Number(r.value)
+  }
+  // TRANSPORT — montant (money.ts), chaîne verbatim ; défaut 0 (ancien `parseFloat||0`).
+  const transportR = parseMoneyInput(formData.get('transport_customs_cost_mad'))
+  const transport_customs_cost_mad = transportR.ok ? transportR.value : '0'
+  const transportNum = Number(transport_customs_cost_mad)
 
   if (!id) return { error: 'Identifiant manquant.' }
 
@@ -46,17 +64,17 @@ export async function updateSupplierFinancials(
   const totalClientAmount = (qr.quoted_unit_price_mad ?? 0) * qr.quantity_requested
 
   let commissionAmount: number | null = null
-  if (!isNaN(platform_commission_value)) {
+  if (commissionValueNum !== null) {
     if (platform_commission_type === 'percent') {
-      commissionAmount = Math.round((totalClientAmount * platform_commission_value) / 100 * 100) / 100
+      commissionAmount = Math.round((totalClientAmount * commissionValueNum) / 100 * 100) / 100
     } else {
-      commissionAmount = platform_commission_value
+      commissionAmount = commissionValueNum
     }
   }
 
   const payoutAmount =
     commissionAmount !== null
-      ? Math.round((totalClientAmount - commissionAmount - transport_customs_cost_mad) * 100) / 100
+      ? Math.round((totalClientAmount - commissionAmount - transportNum) * 100) / 100
       : null
 
   const { error } = await supabase
@@ -64,7 +82,7 @@ export async function updateSupplierFinancials(
     .update({
       supplier_cost_mad,
       platform_commission_type: platform_commission_type as SupplierCommissionType,
-      platform_commission_value: isNaN(platform_commission_value) ? null : platform_commission_value,
+      platform_commission_value,
       platform_commission_amount_mad: commissionAmount,
       transport_customs_cost_mad,
       supplier_payout_amount_mad: payoutAmount,

@@ -8,6 +8,7 @@ import { requireAdmin } from './_guards'
 import { buildSupplierPricing } from '@/lib/supplier-pricing'
 import { checkProductLimit } from '@/lib/product-limit'
 import { parseMoneyInput } from '@/lib/money'
+import { parsePercentInput } from '@/lib/rate'
 import type {
   SupplierProduct,
   SupplierProductStatus,
@@ -85,11 +86,14 @@ export async function submitSupplierProduct(
   const availability_type = (formData.get('availability_type') as string) || 'local_stock'
   const target_buyer_type = (formData.get('target_buyer_type') as string) || 'wholesaler'
   // Prix saisi = montant dans la DEVISE du fournisseur (pas MAD). Converti serveur.
-  // @finance : arrondi 2 décimales À LA SOURCE (comme CSV/Telegram) — sinon un prix
-  // MAD à >2 déc. violerait l'invariant DB sp_mad_identity (mad === price_source)
-  // et l'insert échouerait silencieusement (perte de produit).
-  const priceSourceRaw = parseFloat(formData.get('price_source') as string)
-  const priceSource = Number.isFinite(priceSourceRaw) ? Math.round(priceSourceRaw * 100) / 100 : null
+  // RÈGLE ARGENT n°4 — validé en CHAÎNE décimale stricte (money.ts, ≤2 déc) : zéro
+  // parseFloat. Le ≤2 déc garantit l'invariant DB sp_mad_identity (mad === price_source).
+  // Vide → null (inchangé, « pas de prix »). Saisie >2 déc / invalide → null (au lieu
+  // d'un arrondi silencieux). Number() pour buildSupplierPricing (= ancienne valeur ≤2 déc).
+  const priceSourceStrRaw = formData.get('price_source')
+  const priceSourceStr = typeof priceSourceStrRaw === 'string' ? priceSourceStrRaw.trim() : ''
+  const priceSourceR = priceSourceStr !== '' ? parseMoneyInput(priceSourceStr) : null
+  const priceSource = priceSourceR && priceSourceR.ok ? Number(priceSourceR.value) : null
   const supplier_private_notes = (formData.get('supplier_private_notes') as string)?.trim() || null
   const stockRaw = parseInt(formData.get('stock_quantity') as string, 10)
   const leadRaw = parseInt(formData.get('lead_time_days') as string, 10)
@@ -191,7 +195,19 @@ export async function approveSupplierProduct(
   const public_name = (formData.get('public_name') as string)?.trim() || null
   const public_description = (formData.get('public_description') as string)?.trim() || null
   const platform_margin_type = (formData.get('platform_margin_type') as string) || 'percentage'
-  const platform_margin_value = parseFloat(formData.get('platform_margin_value') as string)
+  // MARGE — % (rate.ts, 0–100) si 'percentage' ; MONTANT (money.ts) si 'fixed'. Vide →
+  // null (inchangé) ; invalide → erreur (au lieu d'un NULL silencieux). Chaîne verbatim.
+  const marginRawRaw = formData.get('platform_margin_value')
+  const marginRawStr = typeof marginRawRaw === 'string' ? marginRawRaw.trim() : ''
+  let platform_margin_value: string | null = null
+  if (marginRawStr !== '') {
+    const r =
+      platform_margin_type === 'percentage'
+        ? parsePercentInput(marginRawStr)
+        : parseMoneyInput(marginRawStr)
+    if (!r.ok) return { error: 'Marge invalide (pourcentage 0–100, ou montant ≥ 0 si fixe).' }
+    platform_margin_value = r.value
+  }
   const admin_notes = (formData.get('admin_notes') as string)?.trim() || null
 
   const { error } = await supabase
@@ -202,7 +218,7 @@ export async function approveSupplierProduct(
       public_name,
       public_description,
       platform_margin_type: platform_margin_type as PlatformMarginType,
-      platform_margin_value: isNaN(platform_margin_value) ? null : platform_margin_value,
+      platform_margin_value,
       admin_notes,
       approved_by: userId,
       approved_at: new Date().toISOString(),
