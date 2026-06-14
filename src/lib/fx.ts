@@ -22,6 +22,9 @@ export async function getRateToMad(
     error: unknown
   }
   if (error || data === null || data === undefined) return null
+  // Lecture d'un TAUX depuis la DB (numeric(18,8) renvoyé en string par PostgREST) →
+  // number pour la multiplication aval. PAS une violation money : la règle vise les
+  // montants SAISIS ; la précision du taux est absorbée à l'arrondi de conversion.
   const rate = typeof data === 'string' ? parseFloat(data) : data
   return Number.isFinite(rate) && rate > 0 ? rate : null
 }
@@ -39,6 +42,7 @@ export async function getRatesMap(supabase: ServerClient): Promise<Record<string
   }
   const rates: Record<string, number> = { MAD: 1 }
   for (const r of data ?? []) {
+    // Lecture de taux DB → number (cf. note getRateToMad) ; pas de parseFloat sur un montant saisi.
     rates[r.quote_code] = typeof r.rate_vs_mad === 'string' ? parseFloat(r.rate_vs_mad) : r.rate_vs_mad
   }
   return rates

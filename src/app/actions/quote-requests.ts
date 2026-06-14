@@ -7,6 +7,7 @@ import { requireAdmin } from './_guards'
 import { getWholesaleTier } from '@/lib/utils'
 import { getRateToMad, getClientCurrency } from '@/lib/fx'
 import { parseMoneyInput } from '@/lib/money'
+import { parseRateInput } from '@/lib/rate'
 import type { QuoteRequest, Product, QuoteRequestStatus } from '@/types/database'
 
 export type QuoteRequestFormState = { error: string | null; success?: boolean }
@@ -109,13 +110,18 @@ export async function prepareQuote(
   const transportStr = typeof transportRaw === 'string' ? transportRaw.trim() : ''
   const transportTotalR = parseMoneyInput(transportStr)
 
-  const fxOverrideRaw = formData.get('fx_rate_override') as string | null
-  const fxOverride = fxOverrideRaw && fxOverrideRaw.trim() !== '' ? parseFloat(fxOverrideRaw) : null
+  // TAUX override — validé en CHAÎNE décimale stricte (rate.ts, ≤8 déc, > 0) ; valeur
+  // numérique dérivée (Number) pour la résolution fxRate. Vide → null (repli central) ;
+  // fourni mais invalide → erreur (comme l'ancien `isNaN || <= 0`).
+  const fxOverrideRaw = formData.get('fx_rate_override')
+  const fxOverrideStr = typeof fxOverrideRaw === 'string' ? fxOverrideRaw.trim() : ''
+  const fxOverrideR = fxOverrideStr !== '' ? parseRateInput(fxOverrideStr) : null
+  const fxOverride = fxOverrideR && fxOverrideR.ok ? Number(fxOverrideR.value) : null
 
   if (isNaN(sourceUnitPrice) || sourceUnitPrice <= 0) return { error: 'Prix unitaire invalide.' }
   if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.' }
   if (transportStr === '' || !transportTotalR.ok) return { error: 'Frais de transport invalides.' }
-  if (fxOverride !== null && (isNaN(fxOverride) || fxOverride <= 0)) {
+  if (fxOverrideR !== null && !fxOverrideR.ok) {
     return { error: 'Taux de change override invalide (doit être > 0).' }
   }
 

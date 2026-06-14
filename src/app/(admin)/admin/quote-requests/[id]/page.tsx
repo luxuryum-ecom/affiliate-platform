@@ -65,6 +65,7 @@ export default async function AdminQuoteRequestDetailPage({ params }: Params) {
   ])
   const rates: Record<string, number> = { MAD: 1 }
   for (const r of (ratesRes.data ?? []) as { quote_code: string; rate_vs_mad: number | string }[]) {
+    // Lecture de taux DB → number (cf. note fx.ts getRateToMad) ; pas un montant saisi.
     rates[r.quote_code] = typeof r.rate_vs_mad === 'string' ? parseFloat(r.rate_vs_mad) : r.rate_vs_mad
   }
   const displayCurrency = (clientCurrencyRes.data as string | null) ?? 'MAD'

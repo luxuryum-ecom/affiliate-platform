@@ -25,6 +25,7 @@ import { calculatePlatformPrice, calculateNetAffiliateCommission, MIN_DELIVERY_F
 import { getLogisticsSettings } from './logistics'
 import { getRateToMad } from '@/lib/fx'
 import { parseMoneyInput } from '@/lib/money'
+import { parseRateInput, parsePercentInput } from '@/lib/rate'
 
 export type ProductFormState = { error: string | null }
 
@@ -82,9 +83,11 @@ export async function upsertProduct(
   // Réconciliation Étape 2 : exchange_rate_to_mad devient un OVERRIDE manuel.
   // S'il est fourni (> 0) on le respecte ; sinon, pour une devise ≠ MAD on prend le
   // taux central (current_exchange_rates) ; MAD ⇒ 1. Le calcul aval est inchangé.
-  const exchange_rate_raw = formData.get('exchange_rate_to_mad') as string
-  const exchange_rate_explicit =
-    exchange_rate_raw && !isNaN(parseFloat(exchange_rate_raw)) ? parseFloat(exchange_rate_raw) : null
+  // TAUX override — validé en CHAÎNE décimale stricte (rate.ts, ≤8 déc, > 0) ; la
+  // valeur numérique dérivée (Number) alimente la conversion (identique à l'ancien
+  // parseFloat). Vide/invalide → null → repli sur le taux central (inchangé).
+  const exrR = parseRateInput(formData.get('exchange_rate_to_mad'))
+  const exchange_rate_explicit = exrR.ok ? Number(exrR.value) : null
   const exchange_rate_to_mad =
     exchange_rate_explicit !== null && exchange_rate_explicit > 0
       ? exchange_rate_explicit
