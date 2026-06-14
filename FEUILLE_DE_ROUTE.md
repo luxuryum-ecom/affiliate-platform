@@ -35,6 +35,15 @@
      - **🔵 R2 résiduel (affichage, hors money)** : le preview commission product-form utilise la livraison saisie ; le serveur utilise le plancher logistique. Câbler le plancher via prop pour un miroir 100 % exact.
    - ⚠️ Chaque lot money = `@finance` par site, validation Abdou si un calcul **change de résultat**. Cf. [[project-money-no-parsefloat]].
    ▶️ **PURGE MONEY quasi-COMPLÈTE** : serveur 100 % purgé + audité. Avant staging : (1) GATE marge >100 % ci-dessus ; (2) lot `wholesale_tiers` (@finance+@security). M5-M8 + FX/% poussés jusqu'à `9518053`.
+2bis. 🟢 **CHANTIER MARGE PLATEFORME FOURNISSEUR — DESIGN VALIDÉ ABDOU (2026-06-14), à CADRER prochaine session (`@architect` + `@finance`, AUCUN code encore)**
+   > Né de l'audit lecture seule « moteur de bénéfice » (session 2026-06-14). Constat : `supplier_products.platform_margin_value` est **exigé/stocké/affiché mais ORPHELIN** — jamais appliqué à un prix (`composePricing` = conversion FX pure). La marge fournisseur réelle n'est captée que sur le flux devis via `platform_commission_value` (actif). Pas de défaut (la croyance « 5% » n'existe pas dans le code). Le moteur affilié, lui, est **INTACT** et applique **30%** par défaut (codé), pas 20%.
+   - **DESIGN VALIDÉ** : marge plateforme fournisseur **PAR PRODUIT**, au choix **POURCENTAGE ou MONTANT FIXE** (même logique que la marge affilié `percentage`/`fixed`).
+   - **Défaut pré-rempli ajustable produit par produit** — valeur défaut **À TRANCHER** : Abdou penche **5%**, Claude suggère **10–15%** sur du B2B. → décision Abdou.
+   - **Appliquée CÔTÉ SERVEUR au prix, JAMAIS visible au grossiste** (anti-court-circuit : le grossiste ne voit que le prix final, pas la marge ni le coût source).
+   - **Cohérence 2 canaux à cadrer** : (a) **achat direct stock Maroc** = marge appliquée au prix affiché/transigé ; (b) **devis / sourcing** = `platform_commission_value` (déjà fonctionnel) → **éviter le doublon** entre `platform_margin_value` (orphelin) et `platform_commission_value` (actif) : unifier ou délimiter clairement les rôles.
+   - **À CONFIRMER aussi** : défaut **marge affilié 30% (codé)** vs **20% (Abdou pensait)** → Abdou tranche.
+   - **Circuit** : cadrage `@architect` (design d'application serveur, anti-court-circuit, RLS vue redacted si besoin) + audit `@finance` (formule, arrondi, idempotence) AVANT tout code. Référence preuves audit : commits `5fad423` (parsing bit-identique), `composePricing` `supplier-pricing.ts:88-104`, gate `supplier-product-moderation.ts:56-58`.
+
 3. **Déploiement staging Vercel** — SEULEMENT une fois le Lot 4 complet **ET** la purge money COMPLÈTE (M5-M8 + FX/%). URL fixe, build prod, auto-deploy sur push.
 4. **PR vers `main`** — SEULEMENT après Lot 4 complet, purge money complète **ET** staging en ligne. C'est
    le dernier geste : on ne merge pas avant d'avoir vu tourner en staging.
