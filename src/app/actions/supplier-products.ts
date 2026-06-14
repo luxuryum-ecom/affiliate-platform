@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
-import { buildSupplierPricing } from '@/lib/supplier-pricing'
+import { buildSupplierPricing, applyPlatformMargin } from '@/lib/supplier-pricing'
 import { checkProductLimit } from '@/lib/product-limit'
 import { parseMoneyInput } from '@/lib/money'
 import { parsePercentInput } from '@/lib/rate'
@@ -210,6 +210,25 @@ export async function approveSupplierProduct(
   }
   const admin_notes = (formData.get('admin_notes') as string)?.trim() || null
 
+  // ── Marge plateforme fournisseur (canal DIRECT) — prix FINAL calculé serveur ──
+  // Toggle par produit (OFF par défaut tant que l'UI ne l'envoie pas). On lit le prix
+  // converti (base) déjà figé à la soumission et on applique la marge si le toggle est ON.
+  // `applyPlatformMargin` = miroir half-up de calculatePlatformPrice ; OFF → base inchangée.
+  const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
+  const { data: existing } = (await supabase
+    .from('supplier_products')
+    .select('suggested_wholesale_price_mad')
+    .eq('id', id)
+    .single()) as { data: { suggested_wholesale_price_mad: number | null } | null; error: unknown }
+  const suggested = existing?.suggested_wholesale_price_mad ?? null
+  const marginValueNum = platform_margin_value != null ? Number(platform_margin_value) : null
+  const final_wholesale_price_mad = applyPlatformMargin(
+    suggested,
+    apply_platform_margin,
+    platform_margin_type as PlatformMarginType,
+    marginValueNum,
+  )
+
   const { error } = await supabase
     .from('supplier_products')
     .update({
@@ -219,6 +238,8 @@ export async function approveSupplierProduct(
       public_description,
       platform_margin_type: platform_margin_type as PlatformMarginType,
       platform_margin_value,
+      apply_platform_margin,
+      final_wholesale_price_mad,
       admin_notes,
       approved_by: userId,
       approved_at: new Date().toISOString(),

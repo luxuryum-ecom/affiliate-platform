@@ -892,6 +892,10 @@ export interface SupplierProduct {
   // Platform margin (admin-set)
   platform_margin_type: PlatformMarginType
   platform_margin_value: number | null
+  // Marge plateforme fournisseur — canal DIRECT (migration 056). Toggle par produit +
+  // prix final (marge incluse si ON). Calcul serveur, jamais exposé au grossiste.
+  apply_platform_margin: boolean
+  final_wholesale_price_mad: number | null
 
   // Devise source + taux figé → MAD (migration 054). source_currency='MAD' ⇒ taux 1.
   // fx_rate NULL avec devise étrangère = « no_rate » : prix MAD non calculé (Sur devis).

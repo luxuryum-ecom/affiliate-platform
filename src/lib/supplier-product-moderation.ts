@@ -15,6 +15,8 @@ const FORBIDDEN_IN_SUPPLIER_SELECT = [
   'supplier_private_notes',
   'platform_margin_type',
   'platform_margin_value',
+  'apply_platform_margin',
+  'final_wholesale_price_mad',
   'approved_by',
 ] as const
 
