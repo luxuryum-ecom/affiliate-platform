@@ -425,7 +425,8 @@ export async function updateOrderStatus(
     deliveryCompany?: string
     trackingNumber?: string
     notes?: string
-    codReceived?: number
+    /** Montant COD encaissé — CHAÎNE brute validée serveur (parseMoneyInput). */
+    codReceived?: string
     returnReason?: string
   }
 ): Promise<ActionState> {
@@ -451,6 +452,16 @@ export async function updateOrderStatus(
 
   const prev = order.status as OrderStatus
   if (prev === newStatus) return fail('Le statut est déjà à jour.')
+
+  // RÈGLE ARGENT n°4 — cash COD encaissé validé en CHAÎNE décimale stricte (money.ts),
+  // passé verbatim à la colonne numeric : zéro parseFloat. Validé AVANT toute écriture
+  // ou opération de stock (pas d'effet de bord sur une saisie invalide).
+  let codReceivedValue: string | undefined
+  if (options?.codReceived != null) {
+    const r = parseMoneyInput(options.codReceived)
+    if (!r.ok) return fail('Montant COD encaissé invalide.')
+    codReceivedValue = r.value
+  }
 
   // ── Stock logic ───────────────────────────────────────────────────────────
   const wasStockReserved = ['confirmed', 'shipped', 'delivered'].includes(prev)
@@ -482,7 +493,7 @@ export async function updateOrderStatus(
 
   if (options?.deliveryCompany) update.delivery_company = options.deliveryCompany
   if (options?.trackingNumber)  update.tracking_number  = options.trackingNumber
-  if (options?.codReceived != null) update.cod_received = options.codReceived
+  if (codReceivedValue != null) update.cod_received = codReceivedValue
   if (options?.returnReason)    update.return_reason    = options.returnReason
 
   if (newStatus === 'confirmed')  update.confirmed_at  = now

@@ -46,7 +46,9 @@ export function OrderStatusForm({ orderId, currentStatus }: OrderStatusFormProps
         deliveryCompany: deliveryCompany || undefined,
         trackingNumber: trackingNumber || undefined,
         notes: notes || undefined,
-        codReceived: codReceived ? parseFloat(codReceived) : undefined,
+        // Cash COD encaissé — transmis en CHAÎNE brute ; validé serveur (parseMoneyInput,
+        // zéro parseFloat client) avant écriture dans orders.cod_received.
+        codReceived: codReceived.trim() || undefined,
         returnReason: returnReason || undefined,
       })
       setMessage({ ok: result.success, text: result.error ?? t('orders.statusUpdated') })
