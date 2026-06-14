@@ -24,6 +24,7 @@ function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
 import { calculatePlatformPrice, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
 import { getRateToMad } from '@/lib/fx'
+import { parseMoneyInput } from '@/lib/money'
 
 export type ProductFormState = { error: string | null }
 
@@ -121,6 +122,9 @@ export async function upsertProduct(
   let calculated_sale_price_mad: number | null = null
 
   if (purchase_price !== null && !isNaN(purchase_price)) {
+    // FX — arrondi à trancher au lot FX (parseRateInput) — bascule half-up prévue pour cohérence audit.
+    // GELÉ : ce parseFloat est `montant × taux` (site FX, pas un montant simple) ; le toucher
+    // changerait factory_cost_mad de ±1 ct sur ~0,3 % des imports → décision @finance + GO Abdou au lot FX.
     purchase_price_mad = needsConversion
       ? parseFloat((purchase_price * exchange_rate_to_mad).toFixed(2))
       : purchase_price
@@ -134,16 +138,38 @@ export async function upsertProduct(
 
   // ── Factory cost (migration 016) — explicit MAD cost set by admin ────────
 
+  // RÈGLE ARGENT n°4 — coût usine explicite validé en CHAÎNE décimale stricte (money.ts),
+  // passé verbatim à la colonne numeric : zéro parseFloat. Absent → repli sur le
+  // purchase_price_mad calculé (inchangé). Saisie invalide (négatif, >2 déc., non
+  // numérique) → erreur explicite au lieu d'un repli/arrondi silencieux.
+  // `factoryCostNum` (Number d'une chaîne déjà validée ≤2 déc.) ne sert qu'au calcul
+  // de la commission préview et à la validation — valeur identique à l'ancien parseFloat.
   const factory_cost_mad_raw = formData.get('factory_cost_mad') as string
-  // Fall back to computed purchase_price_mad when not explicitly set
-  const factory_cost_mad: number | null =
-    factory_cost_mad_raw && !isNaN(parseFloat(factory_cost_mad_raw))
-      ? parseFloat(factory_cost_mad_raw)
-      : purchase_price_mad
+  const factoryCostStr =
+    typeof factory_cost_mad_raw === 'string' ? factory_cost_mad_raw.trim() : ''
+  let factory_cost_mad: string | number | null
+  let factoryCostInvalid = false
+  if (factoryCostStr !== '') {
+    const r = parseMoneyInput(factoryCostStr)
+    if (r.ok) factory_cost_mad = r.value
+    else {
+      factory_cost_mad = null
+      factoryCostInvalid = true
+    }
+  } else {
+    factory_cost_mad = purchase_price_mad
+  }
+  const factoryCostNum = factory_cost_mad === null ? null : Number(factory_cost_mad)
 
   // ── Sales fields ──────────────────────────────────────────────────────────
 
-  const sell_price = parseFloat(formData.get('sell_price') as string)
+  // RÈGLE ARGENT n°4 — prix de vente validé en CHAÎNE décimale stricte (money.ts),
+  // stocké verbatim : zéro parseFloat. `sellPriceNum` (Number d'une chaîne validée
+  // ≤2 déc.) ne sert qu'au calcul de la commission préview et à la validation > 0 —
+  // valeur identique à l'ancien parseFloat (commission bit-identique).
+  const sellPriceR = parseMoneyInput(formData.get('sell_price'))
+  const sell_price: string | null = sellPriceR.ok ? sellPriceR.value : null
+  const sellPriceNum = sellPriceR.ok ? Number(sellPriceR.value) : NaN
   const wholesale_min_qty = parseInt(formData.get('wholesale_min_qty') as string) || 1
   const stock_count = parseInt(formData.get('stock_count') as string) || 0
 
@@ -160,10 +186,10 @@ export async function upsertProduct(
   )
 
   const commission_amount: number = (() => {
-    if (!affiliate_enabled || factory_cost_mad === null) return 0
+    if (!affiliate_enabled || factoryCostNum === null) return 0
     const raw = calculateNetAffiliateCommission({
-      affiliateSellPrice: sell_price,
-      factoryCostMad: factory_cost_mad,
+      affiliateSellPrice: sellPriceNum,
+      factoryCostMad: factoryCostNum,
       marginType: platform_margin_type,
       marginValue: platform_margin_value,
       packagingFee: packaging_fee_mad,
@@ -203,10 +229,16 @@ export async function upsertProduct(
       : null
 
   // ── Migration 020 — import cost model (legacy fields kept for backward compat) ──
+  // RÈGLE ARGENT n°4 — prix d'import estimé validé en CHAÎNE décimale stricte (money.ts),
+  // passé verbatim : zéro parseFloat. Affichage seul, aucun calcul. Vide/zéro/invalide → null.
   const estimated_import_price_mad_raw = formData.get('estimated_import_price_mad') as string
-  const estimated_import_price_mad: number | null =
+  const estimatedImportR =
     availability_type === 'import_on_demand' && estimated_import_price_mad_raw
-      ? parseFloat(estimated_import_price_mad_raw) || null
+      ? parseMoneyInput(estimated_import_price_mad_raw)
+      : null
+  const estimated_import_price_mad: string | null =
+    estimatedImportR && estimatedImportR.ok && !/^0+(\.0+)?$/.test(estimatedImportR.value)
+      ? estimatedImportR.value
       : null
 
   // Unit auto-derived from shipping mode
@@ -220,7 +252,7 @@ export async function upsertProduct(
     availability_type === 'import_on_demand' && import_notes_raw ? import_notes_raw : null
 
   // Keep estimated_cost_mad in sync with estimated_import_price_mad for backward compat
-  const estimated_cost_mad: number | null = estimated_import_price_mad
+  const estimated_cost_mad: string | null = estimated_import_price_mad
 
   // ── Approval ──────────────────────────────────────────────────────────────
 
@@ -247,9 +279,11 @@ export async function upsertProduct(
     return { error: 'Canal de soumission invalide.' }
   if (!['MAD', 'USD', 'AED'].includes(purchase_currency))
     return { error: 'Devise invalide. Utilisez MAD, USD ou AED.' }
-  if (isNaN(sell_price) || sell_price <= 0)
+  if (!sellPriceR.ok || sellPriceNum <= 0)
     return { error: 'Le prix de vente doit être supérieur à 0 MAD.' }
-  if (factory_cost_mad !== null && factory_cost_mad < 0)
+  if (factoryCostInvalid)
+    return { error: 'Le coût usine doit être un montant valide (max 2 décimales).' }
+  if (factoryCostNum !== null && factoryCostNum < 0)
     return { error: 'Le coût usine ne peut pas être négatif.' }
   if (wholesale_min_qty < 1) return { error: 'La quantité minimale doit être ≥ 1.' }
   if (stock_count < 0) return { error: 'Le stock ne peut pas être négatif.' }
