@@ -8,8 +8,10 @@ import { ProductCoverUpload } from '@/components/admin/product-cover-upload'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { uploadProductImage, formatProductImageUploadError } from '@/lib/product-image-upload'
 import { isValidMediaUrl } from '@/lib/product-media'
-import { formatMAD } from '@/lib/utils'
-import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportTariff, TariffMode, ImportShippingMode } from '@/types/database'
+import { formatMAD, calculatePlatformPrice, calculateNetAffiliateCommission } from '@/lib/utils'
+import { parseMoneyInput } from '@/lib/money'
+import { parseRateInput, parsePercentInput } from '@/lib/rate'
+import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportTariff, TariffMode, ImportShippingMode, PlatformMarginType } from '@/types/database'
 import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
 import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
 
@@ -215,9 +217,25 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   // ── Live pricing calculation ──────────────────────────────────────────────
-  const pp = parseFloat(purchasePrice)
-  const er = parseFloat(exchangeRate) || 1
-  const mg = parseFloat(margin) || 0
+  // Preview client = MIROIR EXACT du serveur : mêmes helpers (calculatePlatformPrice,
+  // calculateNetAffiliateCommission) + même arrondi half-up. Zéro parseFloat : les
+  // saisies live sont validées (money/rate/percent) → NaN tant qu'incomplètes.
+  const numMoney = (s: string): number => {
+    const r = parseMoneyInput(s)
+    return r.ok ? Number(r.value) : NaN
+  }
+  const numRate = (s: string): number => {
+    const r = parseRateInput(s)
+    return r.ok ? Number(r.value) : 1
+  }
+  const numPct = (s: string): number => {
+    const r = parsePercentInput(s)
+    return r.ok ? Number(r.value) : 0
+  }
+
+  const pp = numMoney(purchasePrice)
+  const er = numRate(exchangeRate)
+  const mg = numPct(margin)
 
   const needsConversion =
     originDetail === 'imported_but_in_morocco_stock' ||
@@ -226,46 +244,48 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
   const purchasePriceMad =
     !isNaN(pp) && pp > 0
       ? needsConversion
-        ? parseFloat((pp * er).toFixed(2))
+        ? Math.round(pp * er * 100) / 100 // half-up, miroir serveur
         : pp
       : null
 
   const suggestedSellPrice =
-    purchasePriceMad !== null
-      ? parseFloat((purchasePriceMad * (1 + mg / 100)).toFixed(2))
-      : null
+    purchasePriceMad !== null ? Math.round(purchasePriceMad * (1 + mg / 100)) : null
 
   // ── Platform cost & commission preview ────────────────────────────────────
-  const fCost = parseFloat(factoryCostMad)
-  const pmType = platformMarginType
-  const pmValue = parseFloat(platformMarginValue) || 0
-  const spVal = parseFloat(sellPrice)
-  const confFeeVal = parseFloat(confirmationFee) || 0
-  const packFeeVal = parseFloat(packagingFee) || 0
-  const delivFeeVal = parseFloat(deliveryFee) || 0
+  const fCost = numMoney(factoryCostMad)
+  const pmType = platformMarginType as PlatformMarginType
+  const pmValue = pmType === 'percentage' ? numPct(platformMarginValue) : numMoney(platformMarginValue)
+  const spVal = numMoney(sellPrice)
+  // NB : le serveur calcule la commission STOCKÉE avec le plancher logistique
+  // (previewDeliveryFee), pas delivery_fee_mad du produit. Le preview affiche ici
+  // la livraison saisie — divergence d'affichage connue, à câbler via une prop (hors money).
+  const confFeeVal = numMoney(confirmationFee)
+  const packFeeVal = numMoney(packagingFee)
+  const delivFeeVal = numMoney(deliveryFee)
+
+  // calculatePlatformPrice = coût plateforme (factory + marge), arrondi MAD entier (serveur).
+  const platformCostMad =
+    !isNaN(fCost) && fCost > 0 ? calculatePlatformPrice(fCost, pmType, pmValue) : null
 
   const platformMarginMad =
-    !isNaN(fCost) && fCost > 0
-      ? pmType === 'percentage'
-        ? parseFloat((fCost * (pmValue / 100)).toFixed(2))
-        : pmValue
-      : null
-
-  const platformCostMad =
-    !isNaN(fCost) && fCost > 0 && platformMarginMad !== null
-      ? parseFloat((fCost + platformMarginMad).toFixed(2))
-      : null
+    platformCostMad !== null ? platformCostMad - fCost : null
 
   const estimatedCommission =
     affiliateEnabled &&
     !isNaN(fCost) && fCost > 0 &&
-    !isNaN(spVal) && spVal > 0 &&
-    platformMarginMad !== null
+    !isNaN(spVal) && spVal > 0
       ? Math.max(
           0,
-          parseFloat(
-            (spVal - fCost - platformMarginMad - delivFeeVal - confFeeVal - packFeeVal).toFixed(2)
-          )
+          calculateNetAffiliateCommission({
+            affiliateSellPrice: spVal,
+            factoryCostMad: fCost,
+            marginType: pmType,
+            marginValue: pmValue,
+            packagingFee: isNaN(packFeeVal) ? 0 : packFeeVal,
+            deliveryFee: isNaN(delivFeeVal) ? 0 : delivFeeVal,
+            confirmationFee: isNaN(confFeeVal) ? 0 : confFeeVal,
+            quantity: 1,
+          }),
         )
       : null
 
@@ -1266,7 +1286,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
             <p className="font-semibold mb-1">{t('tierPreviewTitle')}</p>
             {tiers.map((row, i) => {
               const costBase = !isNaN(fCost) && fCost > 0 ? fCost : (purchasePriceMad ?? 0)
-              const price = parseFloat(row.price_per_unit)
+              const price = numMoney(row.price_per_unit) // affichage marge tier, zéro parseFloat
               const marginPct = costBase > 0 && !isNaN(price)
                 ? (((price - costBase) / costBase) * 100).toFixed(0)
                 : '—'
