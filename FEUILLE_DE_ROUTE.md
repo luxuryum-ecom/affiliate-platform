@@ -49,10 +49,30 @@
 4. **PR vers `main`** — SEULEMENT après Lot 4 complet, purge money complète **ET** staging en ligne. C'est
    le dernier geste : on ne merge pas avant d'avoir vu tourner en staging.
 
-## 🚀 CHANTIER (étape 2 de l'ordre de reprise) — DÉPLOIEMENT STAGING (Vercel)
-> **L'app doit être EN LIGNE sur une URL fixe, toujours accessible, en build de PRODUCTION (rapide), déployée AUTOMATIQUEMENT à chaque push GitHub.**
-> **Objectif** : fin du `localhost` qui s'éteint et de la lenteur du mode dev — **Abdou supervise depuis n'importe quel appareil**.
-> Cadrage `@architect` d'abord (variables d'env Supabase/secrets côté Vercel, build prod, branche → preview vs prod, domaine fixe). Aucun secret `service_role` exposé côté client. À attaquer **dès le Lot 4 terminé**.
+## ✅ DÉPLOIEMENT VERCEL — **FAIT (14/06/2026)**
+> **L'app est EN LIGNE sur une URL fixe, build de PRODUCTION, auto-déployée à chaque push.**
+- **Déployé en PRODUCTION sur Vercel le 14/06/2026**, depuis **`main`** (merge `fb644ab`).
+- **URL officielle** : **https://affiliate-platform-gamma.vercel.app**
+- **18 variables d'environnement** configurées (publiques + secrètes ; aucun secret `service_role` côté client).
+- **Auto-deploy sur push `main` ACTIF** (Production Branch = `main`).
+- **Version mobile responsive vérifiée OK.**
+- `vercel.json` durci ce tour-ci : framework nextjs, région cdg1, **headers de sécurité de base** (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy). CSP volontairement non incluse (à tester à part).
+> ⚠️ **EN LIGNE ≠ DURCI POUR LE GRAND PUBLIC** → voir le bloc « GO-LIVE PUBLIC » ci-dessous avant d'ouvrir à de vrais clients.
+
+## === GO-LIVE PUBLIC — checklist avant vrais clients ===
+> Le SaaS est **en ligne** (Vercel prod), mais **PAS encore durci** pour une ouverture au grand public.
+> Liste **DANS L'ORDRE de priorité** de ce qui reste à régler. ⚠️ **On NE recopie PAS les dettes** :
+> chaque point **RÉFÉRENCE** sa fiche détaillée déjà notée en **SECTION 3** ou **PHASE 5**.
+
+1. **Retirer les secrets / comptes de test** — mots de passe `SMOKE_*`/démo en clair + **authtoken ngrok à régénérer**. → cf. **SECTION 3 « MÉNAGE TEST »** (≈ L535-539).
+2. **Sécurité RLS — `factory_cost_mad` exposé à `anon`** (migr. 012) → vue/colonne masquée. → cf. **SECTION 3** (≈ L528).
+3. **Rate-limiting sur `placeOrder`** (flux **public COD**, exposé à l'abus). → cf. **SECTION 3** (≈ L529).
+4. **Durcir la confiance `metadata.role` au signup** (rôle non auto-déclarable). → cf. **SECTION 3** (≈ L534).
+5. **Signatures webhooks + logs d'audit** (durcissement final). → cf. **PHASE 5 — Durcissement & mise en ligne** (≈ L338).
+6. **Idempotence + reporting de l'import CSV** (`publishBulkImport` : doublons au retry + échecs silencieux). → cf. **SECTION 3** (≈ L532-533).
+7. *(Optionnel, plus tard)* **Nom de domaine perso** + **optimisation images** quand le catalogue devient volumineux.
+
+> **Note** : chantiers à traiter **UN par UN, jamais en parallèle**. **Le SaaS est en ligne mais PAS encore durci pour le grand public.**
 
 ## 🧹 DETTE UX — parcours incomplets (murs sans issue, contradictions, features à moitié branchées)
 > Audit `@architect` lancé en supervision (2026-06-12) sur les 4 rôles. **But : ne plus découvrir ces bugs un par un en test visuel.**
