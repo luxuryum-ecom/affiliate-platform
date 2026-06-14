@@ -7,10 +7,10 @@ import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
 import { buildSupplierPricing } from '@/lib/supplier-pricing'
 import { checkProductLimit } from '@/lib/product-limit'
+import { parseMoneyInput } from '@/lib/money'
 import type {
   SupplierProduct,
   SupplierProductStatus,
-  SupplierProductMoqTier,
   PlatformMarginType,
   SupplierType,
 } from '@/types/database'
@@ -19,13 +19,19 @@ import { moderateSupplierProduct, type ModerationInput } from '@/lib/supplier-pr
 
 export type SupplierProductState = { error: string | null; success?: boolean }
 
-function parseMoqTiersFromForm(formData: FormData): Array<{ min_quantity: number; unit_price_usd: number }> {
-  const tiers: Array<{ min_quantity: number; unit_price_usd: number }> = []
+// RÈGLE ARGENT n°4 — le prix de palier (devise fournisseur) est validé en CHAÎNE
+// décimale stricte (money.ts) et passé verbatim à la colonne numeric : zéro parseFloat.
+// Un palier sans prix valide (vide, zéro ou non numérique) est ignoré, comme avant
+// (l'ancien `!isNaN(price) && price > 0`).
+function parseMoqTiersFromForm(
+  formData: FormData,
+): Array<{ min_quantity: number; unit_price_usd: string }> {
+  const tiers: Array<{ min_quantity: number; unit_price_usd: string }> = []
   for (let i = 1; i <= 4; i++) {
     const qty = parseInt(formData.get(`tier_${i}_qty`) as string, 10)
-    const price = parseFloat(formData.get(`tier_${i}_price`) as string)
-    if (!isNaN(qty) && qty > 0 && !isNaN(price) && price > 0) {
-      tiers.push({ min_quantity: qty, unit_price_usd: price })
+    const priceR = parseMoneyInput(formData.get(`tier_${i}_price`))
+    if (!isNaN(qty) && qty > 0 && priceR.ok && !/^0+(\.0+)?$/.test(priceR.value)) {
+      tiers.push({ min_quantity: qty, unit_price_usd: priceR.value })
     }
   }
   return tiers.sort((a, b) => a.min_quantity - b.min_quantity)
@@ -143,7 +149,11 @@ export async function submitSupplierProduct(
   const productId = (product as { id: string }).id
 
   if (moqTiers.length > 0) {
-    const tierRows: Omit<SupplierProductMoqTier, 'id' | 'created_at'>[] = moqTiers.map((t) => ({
+    const tierRows: Array<{
+      supplier_product_id: string
+      min_quantity: number
+      unit_price_usd: string
+    }> = moqTiers.map((t) => ({
       supplier_product_id: productId,
       min_quantity: t.min_quantity,
       unit_price_usd: t.unit_price_usd,
