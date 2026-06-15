@@ -2,19 +2,15 @@
 
 import { useTransition } from 'react'
 import { updateCommissionStatus } from '@/app/actions/commissions'
+import { useTranslations } from 'next-intl'
 import type { Commission, CommissionStatus } from '@/types/database'
-
-const STATUS_LABELS: Record<CommissionStatus, string> = {
-  pending: 'En attente',
-  approved: 'Approuvée',
-  paid: 'Payée',
-}
 
 interface CommissionStatusFormProps {
   commission: Commission
 }
 
 export function CommissionStatusForm({ commission }: CommissionStatusFormProps) {
+  const t = useTranslations('admin.commissionStatusForm')
   const [isPending, startTransition] = useTransition()
 
   const handleUpdate = (status: CommissionStatus) => {
@@ -23,20 +19,34 @@ export function CommissionStatusForm({ commission }: CommissionStatusFormProps) 
     })
   }
 
+  function statusLabel(s: CommissionStatus) {
+    if (s === 'pending')  return t('statusPending')
+    if (s === 'approved') return t('statusApproved')
+    return t('statusPaid')
+  }
+
   if (commission.status === 'paid') {
     return (
-      <p className="text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg">
-        Commission payée
-        {commission.paid_at &&
-          ` le ${new Date(commission.paid_at).toLocaleDateString('fr-MA')}`}
+      <p className="text-xs text-success-fg bg-success-soft border border-success px-3 py-2 rounded-lg">
+        {t('paid', {
+          date: commission.paid_at
+            ? t('paidDate', {
+                date: new Date(commission.paid_at).toLocaleDateString(undefined, {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                }),
+              })
+            : '',
+        })}
       </p>
     )
   }
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-gray-500">
-        Statut actuel&nbsp;: <strong>{STATUS_LABELS[commission.status]}</strong>
+      <p className="text-xs text-muted">
+        {t('currentStatus', { status: statusLabel(commission.status) })}
       </p>
       <div className="flex flex-wrap gap-2">
         {commission.status === 'pending' && (
@@ -44,9 +54,9 @@ export function CommissionStatusForm({ commission }: CommissionStatusFormProps) 
             type="button"
             disabled={isPending}
             onClick={() => handleUpdate('approved')}
-            className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gold-400"
           >
-            Approuver commission
+            {t('approve')}
           </button>
         )}
         {(commission.status === 'pending' || commission.status === 'approved') && (
@@ -54,9 +64,9 @@ export function CommissionStatusForm({ commission }: CommissionStatusFormProps) 
             type="button"
             disabled={isPending}
             onClick={() => handleUpdate('paid')}
-            className="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            className="text-xs px-3 py-1.5 bg-success-soft text-success-fg border border-success rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gold-400"
           >
-            Marquer payée
+            {t('markPaid')}
           </button>
         )}
       </div>

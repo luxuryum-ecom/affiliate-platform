@@ -53,4 +53,18 @@ describe('calculateNetAffiliateCommission', () => {
     const avecFloor = calculateNetAffiliateCommission({ ...base, affiliateSellPrice: 200, factoryCostMad: 100, deliveryFee: 35 })
     expect(sansFloor - avecFloor).toBe(35)
   })
+
+  // M-commission (chantier money) — arrondi half-up au centime, zéro parseFloat.
+  // Cas demi-centime exact : marge 15% sur 11.5 → platformMargin 1.725 →
+  // netPerUnit 16.775 → ×3 = 50.325. L'ancien parseFloat(toFixed(2)) renvoyait
+  // 50.32 (biais binaire : 50.325 stocké en 50.32499…) ; Math.round half-up = 50.33.
+  // Arbitrage Abdou : on garde le half-up (comptablement correct, ne sous-paie plus l'affilié).
+  it('arrondit half-up au centime sur un demi-centime exact (50.325 → 50.33)', () => {
+    const c = calculateNetAffiliateCommission({
+      affiliateSellPrice: 50, factoryCostMad: 11.5,
+      marginType: 'percentage', marginValue: 15,
+      deliveryFee: 10, confirmationFee: 0, packagingFee: 10, quantity: 3,
+    })
+    expect(c).toBe(50.33)
+  })
 })

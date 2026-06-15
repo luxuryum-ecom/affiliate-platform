@@ -1,0 +1,18 @@
+# Barrière PHYSIQUE avant chaque commit : typecheck + tests unitaires.
+# Rapide (~20-40s) pour ne pas décourager les commits fréquents.
+# Build + smoke (plus lents) sont dans pre-push. Voir CLAUDE.md › RÈGLES ABSOLUES.
+# Binaires lancés en direct (npx) pour contourner le gotcha pnpm sharp/unrs-resolver.
+
+echo "🔍 pre-commit · typecheck (tsc --noEmit)…"
+npx tsc --noEmit || {
+  echo "❌ Typecheck en échec — commit BLOQUÉ. Corrige les erreurs TS."
+  exit 1
+}
+
+echo "🧪 pre-commit · tests (vitest run)…"
+npx vitest run || {
+  echo "❌ Tests en échec — commit BLOQUÉ."
+  exit 1
+}
+
+echo "✅ pre-commit OK (typecheck + tests verts)."

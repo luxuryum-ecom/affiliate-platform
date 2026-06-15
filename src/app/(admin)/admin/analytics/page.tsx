@@ -1,16 +1,20 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { formatMAD } from '@/lib/utils'
 import type { Profile, Product } from '@/types/database'
 
-export const metadata = { title: 'Analytiques — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.analytics')
+  return { title: t('metaTitle') }
+}
 
 const PERIODS = [
-  { key: '7d',  label: '7 jours' },
-  { key: '30d', label: '30 jours' },
-  { key: '90d', label: '90 jours' },
-  { key: 'all', label: 'Tout' },
+  { key: '7d',  labelKey: 'period7d' },
+  { key: '30d', labelKey: 'period30d' },
+  { key: '90d', labelKey: 'period90d' },
+  { key: 'all', labelKey: 'periodAll' },
 ] as const
 
 type PeriodKey = '7d' | '30d' | '90d' | 'all'
@@ -60,6 +64,9 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     : '30d'
 
   const since = periodStart(period)
+
+  const t  = await getTranslations('admin.analytics')
+  const tc = await getTranslations('admin.common')
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -156,7 +163,6 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
   // ── Wholesale payment analytics ───────────────────────────────────────────
   const wsActiveOrders   = wholesaleOrders.filter((o) => o.status !== 'cancelled')
   const wsFullyPaid      = wsActiveOrders.filter((o) => o.payment_status === 'fully_paid')
-  const wsDepositReceived = wsActiveOrders.filter((o) => o.payment_status === 'deposit_received')
   const wsTotalDepositsReceived = wsActiveOrders.reduce(
     (s, o) => s + (o.deposit_received_amount ?? 0), 0
   )
@@ -165,6 +171,7 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
   )
   const wsFullyPaidRevenue = wsFullyPaid.reduce((s, o) => s + o.total_amount, 0)
   const wsWithDeposit      = wsActiveOrders.filter((o) => (o.deposit_received_amount ?? 0) > 0)
+  const wsUnpaidCount      = wsActiveOrders.filter((o) => o.payment_status !== 'fully_paid').length
 
   const productMap   = new Map(products.map((p) => [p.id, p.name]))
   const affiliateMap = new Map(affiliates.map((a) => [a.id, a.full_name]))
@@ -246,26 +253,15 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
     .map(([id, s]) => ({ id, name: affiliateMap.get(id) ?? id.slice(0, 8), ...s }))
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm shrink-0">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300 shrink-0">/</span>
-            <span className="font-semibold text-gray-900 text-sm truncate">Analytiques</span>
-          </div>
-          <div className="flex items-center gap-4 shrink-0">
-            <span className="text-sm text-gray-500 hidden sm:block">{profileRes.data?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg text-foreground">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={t('backLabel')}
+        userName={profileRes.data?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
@@ -277,65 +273,65 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
               href={`/admin/analytics?period=${p.key}`}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 period === p.key
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-surface border-line text-muted hover:bg-surface-2'
               }`}
             >
-              {p.label}
+              {t(p.labelKey)}
             </Link>
           ))}
-          <span className="text-xs text-gray-400 ml-1">
-            {total} commande{total !== 1 ? 's' : ''} sur cette période
+          <span className="text-xs text-faint ms-1">
+            {t('ordersInPeriod', { count: total })}
           </span>
         </div>
 
         {/* Revenue */}
         <section>
-          <SectionLabel>Revenus (commandes livrées)</SectionLabel>
+          <SectionLabel>{t('sectionRevenue')}</SectionLabel>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatCard
-              label="COD réconcilié"
+              label={t('codReconciled')}
               value={formatMAD(codReconciled)}
-              sub={`Attendu : ${formatMAD(codExpected)}`}
+              sub={t('codExpectedSub', { amount: formatMAD(codExpected) })}
               variant="default"
             />
             <StatCard
-              label="En attente réconciliation"
+              label={t('codPending')}
               value={formatMAD(codPendingAmount)}
-              sub={`${codPendingOrders.length} commande${codPendingOrders.length !== 1 ? 's' : ''} sans COD reçu`}
+              sub={t('codPendingSub', { count: codPendingOrders.length })}
               variant={codPendingOrders.length > 0 ? 'warning' : 'muted'}
             />
             <StatCard
-              label="Profit brut plateforme"
+              label={t('grossProfit')}
               value={formatMAD(totalGrossProfit)}
-              sub="COD − commissions − frais"
+              sub={t('grossProfitSub')}
               variant={totalGrossProfit > 0 ? 'success' : 'warning'}
             />
             <StatCard
-              label="Commissions affiliés"
+              label={t('affiliateCommissions')}
               value={formatMAD(totalCommissions)}
-              sub={`dont ${formatMAD(commissionsPaid)} payées`}
+              sub={t('affiliateCommissionsSub', { amount: formatMAD(commissionsPaid) })}
               variant="muted"
             />
             <StatCard
-              label="Frais opérationnels"
+              label={t('opsFees')}
               value={formatMAD(totalOpsFees)}
-              sub="Confirm. + emball. + livr."
+              sub={t('opsFeesSub')}
               variant="muted"
             />
           </div>
 
           {/* Commission split */}
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="text-xs text-amber-700">Commissions dues (non payées)</p>
-              <p className="mt-1 text-xl font-bold text-amber-800 tabular-nums">
+            <div className="bg-warning-soft border border-warning rounded-xl p-4">
+              <p className="text-xs text-warning-fg">{t('commissionsDue')}</p>
+              <p className="mt-1 text-xl font-bold text-warning-fg tabular-nums">
                 {formatMAD(commissionsPending)}
               </p>
             </div>
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <p className="text-xs text-green-700">Commissions versées</p>
-              <p className="mt-1 text-xl font-bold text-green-800 tabular-nums">
+            <div className="bg-success-soft border border-success rounded-xl p-4">
+              <p className="text-xs text-success-fg">{t('commissionsPaidLabel')}</p>
+              <p className="mt-1 text-xl font-bold text-success-fg tabular-nums">
                 {formatMAD(commissionsPaid)}
               </p>
             </div>
@@ -344,25 +340,25 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
 
         {/* Orders */}
         <section>
-          <SectionLabel>Commandes COD</SectionLabel>
+          <SectionLabel>{t('sectionOrders')}</SectionLabel>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            <StatCard label="Total"          value={String(total)}     variant="default" />
-            <StatCard label="Confirmées"     value={String(confirmed)} variant="default" />
-            <StatCard label="Expédiées"      value={String(shipped)}   variant="default" />
+            <StatCard label={t('orderTotal')}     value={String(total)}     variant="default" />
+            <StatCard label={t('orderConfirmed')} value={String(confirmed)} variant="default" />
+            <StatCard label={t('orderShipped')}   value={String(shipped)}   variant="default" />
             <StatCard
-              label="Livrées"
+              label={t('orderDelivered')}
               value={String(delivered)}
-              sub={`${deliveryRate}% du total`}
+              sub={t('deliveredSub', { rate: deliveryRate })}
               variant={delivered > 0 ? 'success' : 'default'}
             />
             <StatCard
-              label="Retournées"
+              label={t('orderReturned')}
               value={String(returned)}
-              sub={`${returnRate}% des livrées`}
+              sub={t('returnedSub', { rate: returnRate })}
               variant={returned > 0 ? 'warning' : 'muted'}
             />
             <StatCard
-              label="Annulées"
+              label={t('orderCancelled')}
               value={String(cancelled)}
               variant={cancelled > 0 ? 'warning' : 'muted'}
             />
@@ -371,48 +367,48 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
 
         {/* Wholesale P&L */}
         <section>
-          <SectionLabel>Grossiste — Revenus & profit (commandes livrées)</SectionLabel>
+          <SectionLabel>{t('sectionWholesale')}</SectionLabel>
           {wsDelivered.length === 0 ? (
-            <EmptyState label="Aucune commande grossiste livrée sur cette période." />
+            <EmptyState label={t('wsEmpty')} />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
-                label="Chiffre d'affaires"
+                label={t('wsRevenue')}
                 value={formatMAD(wsTotalRevenue)}
-                sub={`${wsDelivered.length} commande${wsDelivered.length !== 1 ? 's' : ''} livrée${wsDelivered.length !== 1 ? 's' : ''}`}
+                sub={t('wsRevenueSub', { count: wsDelivered.length })}
                 variant="default"
               />
               <StatCard
-                label="Coût total import"
+                label={t('wsCost')}
                 value={formatMAD(wsTotalCost)}
-                sub={wsTotalCost === 0 ? 'Coûts non saisis' : 'Fournisseur + transport + divers'}
+                sub={wsTotalCost === 0 ? t('wsCostSubEmpty') : t('wsCostSub')}
                 variant="muted"
               />
               <StatCard
-                label="Profit brut"
+                label={t('wsProfit')}
                 value={formatMAD(wsTotalProfit)}
-                sub="CA − coût total"
+                sub={t('wsProfitSub')}
                 variant={wsTotalProfit > 0 ? 'success' : 'warning'}
               />
               <StatCard
-                label="Marge moyenne"
+                label={t('wsMargin')}
                 value={`${wsAvgMargin.toFixed(1)}%`}
-                sub="Sur commandes livrées"
+                sub={t('wsMarginSub')}
                 variant={wsAvgMargin > 0 ? 'success' : 'warning'}
               />
             </div>
           )}
           {wsAllActive.length > 0 && (
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-xs text-blue-700">Commandes actives (non annulées)</p>
-                <p className="mt-1 text-xl font-bold text-blue-800 tabular-nums">
+              <div className="bg-accent-soft border border-accent rounded-xl p-4">
+                <p className="text-xs text-accent-fg">{t('wsActive')}</p>
+                <p className="mt-1 text-xl font-bold text-accent-fg tabular-nums">
                   {wsAllActive.length}
                 </p>
               </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <p className="text-xs text-gray-500">CA actif non livré</p>
-                <p className="mt-1 text-xl font-bold text-gray-700 tabular-nums">
+              <div className="bg-surface-2 border border-line rounded-xl p-4">
+                <p className="text-xs text-muted">{t('wsActiveRevenue')}</p>
+                <p className="mt-1 text-xl font-bold text-foreground tabular-nums">
                   {formatMAD(wsAllActive.filter((o) => o.status !== 'delivered').reduce((s, o) => s + o.total_amount, 0))}
                 </p>
               </div>
@@ -423,22 +419,22 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
         {/* Import status breakdown */}
         {wsWithImportStatus > 0 && (
           <section>
-            <SectionLabel>Grossiste — Suivi import (par statut)</SectionLabel>
+            <SectionLabel>{t('sectionImport')}</SectionLabel>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { key: 'awaiting_supplier', label: 'Attente fournisseur' },
-                { key: 'purchased',         label: 'Acheté' },
-                { key: 'in_production',     label: 'En production' },
-                { key: 'ready_to_ship',     label: 'Prêt à expédier' },
-                { key: 'shipped',           label: 'Expédié' },
-                { key: 'customs_clearance', label: 'Dédouanement' },
-                { key: 'delivered',         label: 'Livré (import)' },
-              ].map(({ key, label }) => {
+                'awaiting_supplier',
+                'purchased',
+                'in_production',
+                'ready_to_ship',
+                'shipped',
+                'customs_clearance',
+                'delivered',
+              ].map((key) => {
                 const cnt = importStatusCounts.get(key) ?? 0
                 return (
                   <StatCard
                     key={key}
-                    label={label}
+                    label={tc(`importStatusBadge.${key}`)}
                     value={String(cnt)}
                     variant={cnt > 0 ? 'default' : 'muted'}
                   />
@@ -451,39 +447,39 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
         {/* Payment analytics */}
         {wsActiveOrders.length > 0 && (
           <section>
-            <SectionLabel>Grossiste — Paiements</SectionLabel>
+            <SectionLabel>{t('sectionPayments')}</SectionLabel>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <StatCard
-                label="Acomptes reçus"
+                label={t('depositsReceived')}
                 value={formatMAD(wsTotalDepositsReceived)}
-                sub={`${wsWithDeposit.length} cmde${wsWithDeposit.length !== 1 ? 's' : ''} avec acompte`}
+                sub={t('depositsReceivedSub', { count: wsWithDeposit.length })}
                 variant="success"
               />
               <StatCard
-                label="Soldes en attente"
+                label={t('balancePending')}
                 value={formatMAD(wsOutstandingBalance)}
-                sub={`${wsActiveOrders.filter((o) => o.payment_status !== 'fully_paid').length} cmde${wsActiveOrders.filter((o) => o.payment_status !== 'fully_paid').length !== 1 ? 's' : ''} non soldées`}
+                sub={t('balancePendingSub', { count: wsUnpaidCount })}
                 variant={wsOutstandingBalance > 0 ? 'warning' : 'muted'}
               />
               <StatCard
-                label="Entièrement réglé"
+                label={t('fullyPaidLabel')}
                 value={formatMAD(wsFullyPaidRevenue)}
-                sub={`${wsFullyPaid.length} commande${wsFullyPaid.length !== 1 ? 's' : ''}`}
+                sub={t('fullyPaidSub', { count: wsFullyPaid.length })}
                 variant={wsFullyPaid.length > 0 ? 'success' : 'muted'}
               />
             </div>
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { key: 'no_deposit',        label: 'Aucun acompte' },
-                { key: 'deposit_requested', label: 'Acompte demandé' },
-                { key: 'deposit_received',  label: 'Acompte reçu' },
-                { key: 'fully_paid',        label: 'Entièrement réglé' },
-              ].map(({ key, label }) => {
+                'no_deposit',
+                'deposit_requested',
+                'deposit_received',
+                'fully_paid',
+              ].map((key) => {
                 const cnt = wsActiveOrders.filter((o) => o.payment_status === key).length
                 return (
                   <StatCard
                     key={key}
-                    label={label}
+                    label={tc(`paymentStatus.${key}`)}
                     value={String(cnt)}
                     variant={key === 'fully_paid' && cnt > 0 ? 'success' : key === 'deposit_requested' && cnt > 0 ? 'warning' : 'muted'}
                   />
@@ -498,28 +494,28 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
 
           {/* Top products */}
           <section>
-            <SectionLabel>Top produits (par revenus)</SectionLabel>
+            <SectionLabel>{t('sectionTopProducts')}</SectionLabel>
             {topProducts.length === 0 ? (
-              <EmptyState label="Aucune commande livrée sur cette période." />
+              <EmptyState label={t('topEmptyProducts')} />
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500">
-                  <span className="col-span-2">Produit</span>
-                  <span className="text-right">Revenus</span>
-                  <span className="text-right">Profit</span>
+              <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-hidden">
+                <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-surface-2 text-xs font-medium text-muted">
+                  <span className="col-span-2">{t('colProduct')}</span>
+                  <span className="text-end">{t('colRevenue')}</span>
+                  <span className="text-end">{t('colProfit')}</span>
                 </div>
                 {topProducts.map((p) => (
                   <div key={p.id} className="grid grid-cols-4 gap-2 px-4 py-3 items-center">
                     <div className="col-span-2 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {p.orders} cmd{p.orders !== 1 ? 's' : ''} · {p.delivered} livrée{p.delivered !== 1 ? 's' : ''}
+                      <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
+                      <p className="text-xs text-faint mt-0.5">
+                        {t('productMeta', { orders: p.orders, delivered: p.delivered })}
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 tabular-nums text-right">
+                    <p className="text-sm font-semibold text-foreground tabular-nums text-end">
                       {formatMAD(p.revenue)}
                     </p>
-                    <p className={`text-sm font-semibold tabular-nums text-right ${p.profit > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <p className={`text-sm font-semibold tabular-nums text-end ${p.profit > 0 ? 'text-success-fg' : 'text-danger-fg'}`}>
                       {formatMAD(p.profit)}
                     </p>
                   </div>
@@ -530,28 +526,28 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
 
           {/* Top affiliates */}
           <section>
-            <SectionLabel>Top affiliés (par livraisons)</SectionLabel>
+            <SectionLabel>{t('sectionTopAffiliates')}</SectionLabel>
             {topAffiliates.length === 0 ? (
-              <EmptyState label="Aucune commande affiliée sur cette période." />
+              <EmptyState label={t('topEmptyAffiliates')} />
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500">
-                  <span className="col-span-2">Affilié</span>
-                  <span className="text-right">Livrées</span>
-                  <span className="text-right">Commissions</span>
+              <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-hidden">
+                <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-surface-2 text-xs font-medium text-muted">
+                  <span className="col-span-2">{t('colAffiliate')}</span>
+                  <span className="text-end">{t('colDelivered')}</span>
+                  <span className="text-end">{t('colCommissions')}</span>
                 </div>
                 {topAffiliates.map((a) => (
                   <div key={a.id} className="grid grid-cols-4 gap-2 px-4 py-3 items-center">
                     <div className="col-span-2 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{a.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {a.orders} cmd{a.orders !== 1 ? 's' : ''} passées
+                      <p className="text-sm font-medium text-foreground truncate">{a.name}</p>
+                      <p className="text-xs text-faint mt-0.5">
+                        {t('affiliateMeta', { orders: a.orders })}
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 tabular-nums text-right">
+                    <p className="text-sm font-semibold text-foreground tabular-nums text-end">
                       {a.delivered}
                     </p>
-                    <p className="text-sm font-semibold text-green-600 tabular-nums text-right">
+                    <p className="text-sm font-semibold text-success-fg tabular-nums text-end">
                       {formatMAD(a.commissions)}
                     </p>
                   </div>
@@ -570,7 +566,7 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+    <p className="text-xs font-semibold text-gold-500 uppercase tracking-wide mb-3">
       {children}
     </p>
   )
@@ -588,32 +584,32 @@ function StatCard({
   variant?: 'default' | 'success' | 'warning' | 'muted'
 }) {
   const bg = {
-    default: 'bg-white border-gray-200',
-    success: 'bg-green-50 border-green-200',
-    warning: 'bg-amber-50 border-amber-200',
-    muted:   'bg-gray-50 border-gray-200',
+    default: 'bg-surface border-line',
+    success: 'bg-success-soft border-success',
+    warning: 'bg-warning-soft border-warning',
+    muted:   'bg-surface-2 border-line',
   }[variant]
 
   const text = {
-    default: 'text-gray-900',
-    success: 'text-green-700',
-    warning: 'text-amber-700',
-    muted:   'text-gray-400',
+    default: 'text-foreground',
+    success: 'text-success-fg',
+    warning: 'text-warning-fg',
+    muted:   'text-faint',
   }[variant]
 
   return (
     <div className={`rounded-xl border p-4 ${bg}`}>
-      <p className="text-xs text-gray-500 leading-tight">{label}</p>
+      <p className="text-xs text-muted leading-tight">{label}</p>
       <p className={`mt-1.5 text-xl font-bold tabular-nums ${text}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-faint mt-0.5">{sub}</p>}
     </div>
   )
 }
 
 function EmptyState({ label }: { label: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-      <p className="text-sm text-gray-400">{label}</p>
+    <div className="bg-surface rounded-xl border border-line p-10 text-center">
+      <p className="text-sm text-faint">{label}</p>
     </div>
   )
 }

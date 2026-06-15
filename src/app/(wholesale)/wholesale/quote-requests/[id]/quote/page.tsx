@@ -78,20 +78,20 @@ export default async function WholesaleQuotePage({ params }: Params) {
   const isRtl = locale === 'ar'
 
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-bg print:bg-white" dir={isRtl ? 'rtl' : 'ltr'}>
 
       {/* ── Toolbar (hidden on print) ── */}
-      <div className="print:hidden bg-white border-b border-gray-200">
+      <div className="print:hidden bg-surface border-b border-line">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href={`/wholesale/quote-requests/${id}`}
-              className="text-gray-400 hover:text-gray-600 text-sm"
+              className="text-faint hover:text-muted text-sm transition-colors"
             >
               {t('breadcrumbParent')}
             </Link>
-            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
-            <span className="text-sm text-gray-700 font-medium">{t('breadcrumbCurrent')}</span>
+            <span className="text-line">/</span>
+            <span className="text-sm text-foreground font-medium">{t('breadcrumbCurrent')}</span>
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
@@ -104,14 +104,14 @@ export default async function WholesaleQuotePage({ params }: Params) {
 
         {/* ── Acceptance banner ── */}
         {isAccepted && (
-          <div className="print:hidden mb-6 flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
-            <span className="text-green-500 text-lg leading-none mt-0.5">✓</span>
+          <div className="print:hidden mb-6 flex items-start gap-3 bg-success-soft border border-success rounded-xl p-4">
+            <span className="text-success-fg text-lg leading-none mt-0.5">✓</span>
             <div>
-              <p className="text-sm font-semibold text-green-800">
+              <p className="text-sm font-semibold text-success-fg">
                 {t('bannerAcceptedTitle')}
               </p>
               {req.client_decision_at && (
-                <p className="text-xs text-green-600 mt-0.5">
+                <p className="text-xs text-success-fg mt-0.5">
                   {t('bannerAcceptedOn', { date: formatDate(req.client_decision_at) })}
                 </p>
               )}
@@ -121,12 +121,12 @@ export default async function WholesaleQuotePage({ params }: Params) {
 
         {/* ── Rejection notice ── */}
         {isRejected && (
-          <div className="print:hidden mb-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
-            <span className="text-red-400 text-lg leading-none mt-0.5">✕</span>
+          <div className="print:hidden mb-6 flex items-start gap-3 bg-danger-soft border border-danger rounded-xl p-4">
+            <span className="text-danger-fg text-lg leading-none mt-0.5">✕</span>
             <div>
-              <p className="text-sm font-semibold text-red-800">{t('bannerRejectedTitle')}</p>
+              <p className="text-sm font-semibold text-danger-fg">{t('bannerRejectedTitle')}</p>
               {req.client_decision_at && (
-                <p className="text-xs text-red-600 mt-0.5">
+                <p className="text-xs text-danger-fg mt-0.5">
                   {t('bannerRejectedOn', { date: formatDate(req.client_decision_at) })}
                 </p>
               )}
@@ -176,11 +176,11 @@ export default async function WholesaleQuotePage({ params }: Params) {
 
         {/* ── Accept / Reject buttons — only when pending decision ── */}
         {isPending && (
-          <div className="print:hidden mt-8 bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-1">
+          <div className="print:hidden mt-8 bg-surface rounded-xl border border-line p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-1">
               {t('decisionTitle')}
             </h2>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-muted mb-4">
               {t('decisionSubtitle')}
             </p>
             <QuoteDecisionButtons
@@ -204,7 +204,7 @@ export default async function WholesaleQuotePage({ params }: Params) {
         <div className="print:hidden mt-8 text-center">
           <Link
             href="/wholesale/quote-requests"
-            className="text-xs text-gray-500 hover:text-gray-800 transition-colors"
+            className="text-xs text-muted hover:text-foreground transition-colors"
           >
             {t('backToList')}
           </Link>

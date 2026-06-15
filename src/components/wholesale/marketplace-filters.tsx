@@ -37,11 +37,11 @@ export function MarketplaceFilters({
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+        className="flex items-center gap-2 px-4 py-2 bg-surface border border-line rounded-lg text-sm font-medium text-muted hover:bg-surface-2 transition-colors shadow-sm"
         aria-expanded={open}
       >
         🔍 {filterTitle}
-        <span className="text-gray-400 text-xs" aria-hidden>{open ? '▲' : '▼'}</span>
+        <span className="text-faint text-xs" aria-hidden>{open ? '▲' : '▼'}</span>
       </button>
       {open ? <div className="mt-3">{children}</div> : null}
     </div>

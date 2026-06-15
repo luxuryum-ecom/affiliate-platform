@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from 'react'
 import { createPayout, type CreatePayoutState } from '@/app/actions/payouts'
 import { formatMAD } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 interface Affiliate {
   id: string
@@ -18,9 +19,10 @@ interface CreatePayoutFormProps {
 const initial: CreatePayoutState = { error: null, success: false, payoutId: null, amount: null }
 
 const INPUT =
-  'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50'
+  'w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:bg-surface-2'
 
 export function CreatePayoutForm({ affiliates }: CreatePayoutFormProps) {
+  const t = useTranslations('admin.createPayoutForm')
   const [state, action, isPending] = useActionState(createPayout, initial)
   const [selectedId, setSelectedId] = useState('')
 
@@ -37,20 +39,21 @@ export function CreatePayoutForm({ affiliates }: CreatePayoutFormProps) {
 
   if (state.success) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl p-5">
-        <p className="text-sm font-semibold text-green-800">Paiement enregistré</p>
-        <p className="text-xs text-green-700 mt-1">
-          Montant versé&nbsp;: <span className="font-bold">{formatMAD(state.amount ?? 0)}</span>
+      <div className="bg-success-soft border border-success rounded-xl p-5">
+        <p className="text-sm font-semibold text-success-fg">{t('successTitle')}</p>
+        {/* ARGENT: formatMAD inchangé */}
+        <p className="text-xs text-success-fg mt-1">
+          {t('successAmount', { amount: formatMAD(state.amount ?? 0) })}
         </p>
-        <p className="text-xs text-green-700 mt-0.5">
-          Référence&nbsp;: <span className="font-mono font-bold">{state.payoutId?.slice(0, 8).toUpperCase()}</span>
+        <p className="text-xs text-success-fg mt-0.5">
+          {t('successRef', { ref: state.payoutId?.slice(0, 8).toUpperCase() ?? '' })}
         </p>
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-3 text-xs text-green-700 underline hover:no-underline"
+          className="mt-3 text-xs text-success-fg underline hover:no-underline"
         >
-          Créer un autre paiement
+          {t('successCreateAnother')}
         </button>
       </div>
     )
@@ -62,8 +65,8 @@ export function CreatePayoutForm({ affiliates }: CreatePayoutFormProps) {
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-          Affilié <span className="text-red-500">*</span>
+        <label className="block text-xs font-medium text-muted mb-1.5">
+          {t('affiliateLabel')} <span className="text-danger-fg">{t('affiliateRequired')}</span>
         </label>
         <select
           name="affiliateId"
@@ -73,79 +76,80 @@ export function CreatePayoutForm({ affiliates }: CreatePayoutFormProps) {
           onChange={(e) => setSelectedId(e.target.value)}
           className={INPUT}
         >
-          <option value="">Sélectionner un affilié…</option>
+          <option value="">{t('affiliatePlaceholder')}</option>
           {eligibleAffiliates.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.full_name} — {formatMAD(a.approvedCommissionTotal)} approuvé
-              ({a.approvedCommissionCount} commission{a.approvedCommissionCount !== 1 ? 's' : ''})
+              {/* ARGENT: formatMAD inchangé — option text ne supporte pas JSX, interpolation string */}
+              {`${a.full_name} — ${formatMAD(a.approvedCommissionTotal)}`}
             </option>
           ))}
         </select>
         {eligibleAffiliates.length === 0 && (
-          <p className="text-xs text-amber-600 mt-1">
-            Aucune commission approuvée en attente de paiement.
+          <p className="text-xs text-warning-fg mt-1">
+            {t('noEligible')}
           </p>
         )}
       </div>
 
       {/* Montant DÉRIVÉ — lecture seule. L'admin ne saisit rien, il valide. */}
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-          Montant à verser (calculé automatiquement)
+        <label className="block text-xs font-medium text-muted mb-1.5">
+          {t('amountLabel')}
         </label>
-        <div className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 tabular-nums font-semibold text-gray-900">
+        {/* ARGENT: formatMAD inchangé — affichage lecture seule */}
+        <div className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface-2 tabular-nums font-semibold text-foreground">
           {selected ? formatMAD(selected.approvedCommissionTotal) : '—'}
         </div>
-        <p className="text-xs text-gray-400 mt-1">
-          Somme exacte des commissions approuvées de l&apos;affilié. Non modifiable :
-          le montant ne peut pas diverger des commissions soldées.
+        <p className="text-xs text-faint mt-1">
+          {t('amountNote')}
         </p>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-          Référence de virement
+        <label className="block text-xs font-medium text-muted mb-1.5">
+          {t('referenceLabel')}
         </label>
         <input
           name="reference"
           type="text"
           disabled={isPending}
-          placeholder="N° virement, CCP, CIH…"
+          placeholder={t('referencePlaceholder')}
           className={INPUT}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1.5">Notes</label>
+        <label className="block text-xs font-medium text-muted mb-1.5">{t('notesLabel')}</label>
         <input
           name="notes"
           type="text"
           disabled={isPending}
-          placeholder="Remarques optionnelles"
+          placeholder={t('notesPlaceholder')}
           className={INPUT}
         />
       </div>
 
       {state.error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+        <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
           {state.error}
         </p>
       )}
 
-      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-        ⚠ Vérifiez manuellement les preuves de paiement avant de valider. La validation est toujours humaine — aucune approbation automatique.
+      <p className="text-xs text-warning-fg bg-warning-soft border border-warning rounded-lg px-3 py-2">
+        {t('warning')}
       </p>
 
       <button
         type="submit"
         disabled={isPending || !selected || !idempotencyKey}
-        className="w-full py-2.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
       >
         {isPending
-          ? 'Enregistrement…'
+          ? t('submitting')
           : selected
-            ? `Valider le versement de ${formatMAD(selected.approvedCommissionTotal)}`
-            : 'Valider le versement'}
+            /* ARGENT: formatMAD inchangé */
+            ? t('submitWithAmount', { amount: formatMAD(selected.approvedCommissionTotal) })
+            : t('submit')}
       </button>
     </form>
   )

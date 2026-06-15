@@ -47,12 +47,12 @@ export default function BulkImportClient() {
 
   if (publishState.success) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
-        <p className="text-sm font-semibold text-green-800 mb-1">{t('successTitle')}</p>
-        <p className="text-xs text-green-600">
+      <div className="bg-success-soft border border-success rounded-xl p-8 text-center">
+        <p className="text-sm font-semibold text-success-fg mb-1">{t('successTitle')}</p>
+        <p className="text-xs text-success-fg">
           {t('successBody')}
         </p>
-        <a href="/supplier/products" className="mt-4 inline-block text-xs px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors">
+        <a href="/supplier/products" className="mt-4 inline-block text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
           {t('ctaViewProducts')}
         </a>
       </div>
@@ -62,13 +62,13 @@ export default function BulkImportClient() {
   return (
     <div className="space-y-6">
       {/* Template download */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <p className="text-xs font-semibold text-blue-800 mb-1">{t('csvFormatTitle')}</p>
-        <p className="text-xs text-blue-600 mb-3">
-          {t('csvFormatBody')} <code className="bg-blue-100 px-1 rounded">product_name</code>, <code className="bg-blue-100 px-1 rounded">category</code>, <code className="bg-blue-100 px-1 rounded">moq</code>, <code className="bg-blue-100 px-1 rounded">unit</code>, <code className="bg-blue-100 px-1 rounded">price</code> (votre devise), <code className="bg-blue-100 px-1 rounded">export_country</code>
+      <div className="bg-surface-2 border border-line rounded-xl p-4">
+        <p className="text-xs font-semibold text-foreground mb-1">{t('csvFormatTitle')}</p>
+        <p className="text-xs text-muted mb-3">
+          {t('csvFormatBody')} <code className="bg-surface px-1 rounded border border-line">product_name</code>, <code className="bg-surface px-1 rounded border border-line">category</code>, <code className="bg-surface px-1 rounded border border-line">moq</code>, <code className="bg-surface px-1 rounded border border-line">unit</code>, <code className="bg-surface px-1 rounded border border-line">price</code> (votre devise), <code className="bg-surface px-1 rounded border border-line">export_country</code>
         </p>
-        <p className="text-xs text-blue-500 mb-3">
-          {t('csvVariantsNote')} <code className="bg-blue-100 px-1 rounded">100:2.5,500:2.2,1000:1.9</code>
+        <p className="text-xs text-muted mb-3">
+          {t('csvVariantsNote')} <code className="bg-surface px-1 rounded border border-line">100:2.5,500:2.2,1000:1.9</code>
         </p>
         <button
           type="button"
@@ -80,23 +80,23 @@ export default function BulkImportClient() {
             a.download = 'template_import_produits.csv'
             a.click()
           }}
-          className="text-xs px-3 py-1.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
+          className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
         >
           {t('ctaDownloadTemplate')}
         </button>
       </div>
 
       {/* Upload form */}
-      <form action={validateAction} className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('step1Title')}</h2>
+      <form action={validateAction} className="bg-surface rounded-xl border border-line p-6">
+        <h2 className="text-sm font-semibold text-foreground mb-4">{t('step1Title')}</h2>
 
         {validateState.error && (
-          <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+          <div className="text-xs text-danger-fg bg-danger-soft border border-danger rounded-lg px-4 py-3 mb-4">
             {validateState.error}
           </div>
         )}
 
-        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-gray-400 transition-colors">
+        <div className="border-2 border-dashed border-line rounded-xl p-8 text-center hover:border-muted transition-colors">
           <input
             ref={fileRef}
             name="file"
@@ -110,13 +110,13 @@ export default function BulkImportClient() {
           <label htmlFor="file-input" className="cursor-pointer">
             {filename ? (
               <div>
-                <p className="text-sm font-medium text-gray-900">{filename}</p>
-                <p className="text-xs text-gray-500 mt-1">{t('dropzoneActive')}</p>
+                <p className="text-sm font-medium text-foreground">{filename}</p>
+                <p className="text-xs text-muted mt-1">{t('dropzoneActive')}</p>
               </div>
             ) : (
               <div>
-                <p className="text-sm text-gray-500">{t('dropzoneEmpty')}</p>
-                <p className="text-xs text-gray-400 mt-1">{t('dropzoneHint')}</p>
+                <p className="text-sm text-muted">{t('dropzoneEmpty')}</p>
+                <p className="text-xs text-faint mt-1">{t('dropzoneHint')}</p>
               </div>
             )}
           </label>
@@ -125,7 +125,7 @@ export default function BulkImportClient() {
         <button
           type="submit"
           disabled={isValidating || !filename}
-          className="mt-4 px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="mt-4 px-5 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {isValidating ? t('validating') : t('ctaValidate')}
         </button>
@@ -136,33 +136,33 @@ export default function BulkImportClient() {
         <div className="space-y-4">
           {/* Summary */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-              <p className="text-xs text-gray-500">{t('summaryTotal')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{validateState.rowsTotal}</p>
+            <div className="bg-surface rounded-xl border border-line p-4 text-center">
+              <p className="text-xs text-muted">{t('summaryTotal')}</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{validateState.rowsTotal}</p>
             </div>
-            <div className="bg-green-50 rounded-xl border border-green-200 p-4 text-center">
-              <p className="text-xs text-gray-500">{t('summaryValidRows')}</p>
-              <p className="text-2xl font-bold text-green-700 mt-1">{validateState.rowsValid}</p>
+            <div className="bg-success-soft rounded-xl border border-success p-4 text-center">
+              <p className="text-xs text-muted">{t('summaryValidRows')}</p>
+              <p className="text-2xl font-bold text-success-fg mt-1">{validateState.rowsValid}</p>
             </div>
-            <div className="bg-red-50 rounded-xl border border-red-200 p-4 text-center">
-              <p className="text-xs text-gray-500">{t('summaryInvalidRows')}</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{validateState.rowsInvalid}</p>
+            <div className="bg-danger-soft rounded-xl border border-danger p-4 text-center">
+              <p className="text-xs text-muted">{t('summaryInvalidRows')}</p>
+              <p className="text-2xl font-bold text-danger-fg mt-1">{validateState.rowsInvalid}</p>
             </div>
           </div>
 
           {/* Invalid rows detail */}
           {invalidRows.length > 0 && (
-            <div className="bg-white rounded-xl border border-red-200 overflow-hidden">
-              <div className="px-4 py-3 bg-red-50 border-b border-red-200">
-                <p className="text-xs font-semibold text-red-700">{t('invalidSectionTitle')}</p>
+            <div className="bg-surface rounded-xl border border-danger overflow-hidden">
+              <div className="px-4 py-3 bg-danger-soft border-b border-danger">
+                <p className="text-xs font-semibold text-danger-fg">{t('invalidSectionTitle')}</p>
               </div>
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-line">
                 {invalidRows.map((r) => (
                   <div key={r.row} className="px-4 py-3">
-                    <p className="text-xs font-medium text-gray-800">{t('rowLabel', { row: r.row, name: r.product_name })}</p>
+                    <p className="text-xs font-medium text-foreground">{t('rowLabel', { row: r.row, name: r.product_name })}</p>
                     <ul className="mt-1 space-y-0.5">
                       {r.errors.map((e, i) => (
-                        <li key={i} className="text-xs text-red-600">• {e}</li>
+                        <li key={i} className="text-xs text-danger-fg">• {e}</li>
                       ))}
                     </ul>
                   </div>
@@ -173,17 +173,17 @@ export default function BulkImportClient() {
 
           {/* Valid rows preview */}
           {validRows.length > 0 && (
-            <div className="bg-white rounded-xl border border-green-200 overflow-hidden">
-              <div className="px-4 py-3 bg-green-50 border-b border-green-200">
-                <p className="text-xs font-semibold text-green-700">{t('validSectionTitle')}</p>
+            <div className="bg-surface rounded-xl border border-success overflow-hidden">
+              <div className="px-4 py-3 bg-success-soft border-b border-success">
+                <p className="text-xs font-semibold text-success-fg">{t('validSectionTitle')}</p>
               </div>
-              <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+              <div className="divide-y divide-line max-h-64 overflow-y-auto">
                 {validRows.map((r) => (
                   <div key={r.row} className="px-4 py-2.5 flex items-center gap-3">
-                    <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-green-600 text-xs">✓</span>
+                    <span className="w-4 h-4 rounded-full bg-success-soft flex items-center justify-center flex-shrink-0">
+                      <span className="text-success-fg text-xs">✓</span>
                     </span>
-                    <p className="text-xs text-gray-800">{t('rowLabel', { row: r.row, name: r.product_name })}</p>
+                    <p className="text-xs text-foreground">{t('rowLabel', { row: r.row, name: r.product_name })}</p>
                   </div>
                 ))}
               </div>
@@ -192,15 +192,15 @@ export default function BulkImportClient() {
 
           {/* Publish */}
           {validRows.length > 0 && validateState.importId && (
-            <form action={publishAction} className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">
+            <form action={publishAction} className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-3">
                 {t('step2Title', { count: validRows.length })}
               </h2>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-muted mb-4">
                 {t('step2Body')}
               </p>
               {publishState.error && (
-                <p className="text-xs text-red-600 mb-3">{publishState.error}</p>
+                <p className="text-xs text-danger-fg mb-3">{publishState.error}</p>
               )}
               <input type="hidden" name="import_id" value={validateState.importId} />
               <input type="hidden" name="csv_text" value={csvText} />
@@ -208,7 +208,7 @@ export default function BulkImportClient() {
               <button
                 type="submit"
                 disabled={isPublishing}
-                className="px-5 py-2.5 bg-green-700 text-white text-sm font-medium rounded-lg hover:bg-green-800 disabled:opacity-50 transition-colors"
+                className="px-5 py-2.5 bg-success text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
               >
                 {isPublishing ? t('publishing') : t('ctaPublish', { count: validRows.length })}
               </button>

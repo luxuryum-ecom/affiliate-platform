@@ -2,35 +2,19 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface ProductFiltersProps {
   countries: string[]
 }
 
-const APPROVAL_OPTIONS = [
-  { value: '', label: 'Tous les statuts' },
-  { value: 'draft', label: 'Brouillon' },
-  { value: 'pending_review', label: 'En révision' },
-  { value: 'approved', label: 'Approuvé' },
-  { value: 'rejected', label: 'Rejeté' },
-]
-
-const AVAILABILITY_OPTIONS = [
-  { value: '', label: 'Toutes disponibilités' },
-  { value: 'local_stock', label: 'Stock local Maroc' },
-  { value: 'import_on_demand', label: 'Import sur demande' },
-]
-
-const ACTIVE_OPTIONS = [
-  { value: '', label: 'Tous' },
-  { value: 'true', label: 'Actif' },
-  { value: 'false', label: 'Inactif' },
-]
-
 const SELECT =
-  'text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-gray-900 text-gray-700'
+  'text-xs px-2.5 py-1.5 border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-gold-400 text-foreground'
 
 export function ProductFilters({ countries }: ProductFiltersProps) {
+  const t = useTranslations('admin.productFilters')
+  const tc = useTranslations('admin.common')
+
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -78,15 +62,15 @@ export function ProductFilters({ countries }: ProductFiltersProps) {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
-            placeholder="Rechercher par nom, fournisseur, pays…"
-            className="flex-1 text-xs px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-gray-900 min-w-0"
+            placeholder={t('searchPlaceholder')}
+            className="flex-1 text-xs px-3 py-1.5 border border-line rounded-lg bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400 min-w-0"
           />
           <button
             type="button"
             onClick={submitSearch}
-            className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors shrink-0"
+            className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity shrink-0"
           >
-            OK
+            {tc('ok')}
           </button>
         </div>
 
@@ -96,31 +80,39 @@ export function ProductFilters({ countries }: ProductFiltersProps) {
           onClick={() => set('low_stock', isLowStock ? '' : 'true')}
           className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors shrink-0 ${
             isLowStock
-              ? 'bg-amber-500 text-white border-amber-500'
-              : 'bg-white border-amber-200 text-amber-600 hover:bg-amber-50'
+              ? 'bg-warning-fg text-white border-warning-fg'
+              : 'bg-surface border-warning text-warning-fg hover:bg-warning-soft'
           }`}
         >
-          ⚠ Stock bas
+          {t('lowStock')}
         </button>
       </div>
 
       {/* Filter dropdowns */}
       <div className="flex flex-wrap items-center gap-2">
         <select value={current('availability_type')} onChange={(e) => set('availability_type', e.target.value)} className={SELECT}>
-          {AVAILABILITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          <option value="">{t('allAvailabilities')}</option>
+          <option value="local_stock">{t('availLocalStock')}</option>
+          <option value="import_on_demand">{t('availImportOnDemand')}</option>
         </select>
 
         <select value={current('approval_status')} onChange={(e) => set('approval_status', e.target.value)} className={SELECT}>
-          {APPROVAL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          <option value="">{t('allStatuses')}</option>
+          <option value="draft">{t('statusDraft')}</option>
+          <option value="pending_review">{t('statusPendingReview')}</option>
+          <option value="approved">{t('statusApproved')}</option>
+          <option value="rejected">{t('statusRejected')}</option>
         </select>
 
         <select value={current('active')} onChange={(e) => set('active', e.target.value)} className={SELECT}>
-          {ACTIVE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          <option value="">{tc('all')}</option>
+          <option value="true">{t('activeTrue')}</option>
+          <option value="false">{t('activeFalse')}</option>
         </select>
 
         {countries.length > 0 && (
           <select value={current('country')} onChange={(e) => set('country', e.target.value)} className={SELECT}>
-            <option value="">Tous les pays</option>
+            <option value="">{t('allCountries')}</option>
             {countries.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
@@ -129,9 +121,9 @@ export function ProductFilters({ countries }: ProductFiltersProps) {
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs px-2.5 py-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+            className="text-xs px-2.5 py-1.5 border border-danger-soft text-danger-fg rounded-lg hover:bg-danger-soft transition-colors"
           >
-            Effacer ×
+            {tc('clear')}
           </button>
         )}
       </div>

@@ -4,7 +4,7 @@ export type ModerationFlag = 'approved' | 'review_required' | 'blocked'
 
 /** Columns safe for supplier-facing reads — excludes moderation and admin-internal fields. */
 export const SUPPLIER_PRODUCT_SELECT =
-  'id, product_name, category, origin_country, min_quantity, suggested_wholesale_price_mad, supplier_type, approval_status, created_at'
+  'id, product_name, category, origin_country, min_quantity, suggested_wholesale_price_mad, source_currency, fx_rate_source_to_mad, supplier_type, approval_status, created_at'
 
 const FORBIDDEN_IN_SUPPLIER_SELECT = [
   'ai_risk_score',
@@ -15,6 +15,8 @@ const FORBIDDEN_IN_SUPPLIER_SELECT = [
   'supplier_private_notes',
   'platform_margin_type',
   'platform_margin_value',
+  'apply_platform_margin',
+  'final_wholesale_price_mad',
   'approved_by',
 ] as const
 
@@ -201,9 +203,9 @@ export const SUPPLIER_PRODUCT_STATUS_BADGES: Record<
   SupplierProductStatus,
   { label: string; cls: string }
 > = {
-  pending_review: { label: 'En attente de validation', cls: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Approuvé', cls: 'bg-green-100 text-green-700' },
-  blocked: { label: 'Bloqué', cls: 'bg-red-100 text-red-600' },
+  pending_review: { label: 'En attente de validation', cls: 'bg-warning-soft text-warning-fg' },
+  approved: { label: 'Approuvé', cls: 'bg-success-soft text-success-fg' },
+  blocked: { label: 'Bloqué', cls: 'bg-danger-soft text-danger-fg' },
 }
 
 export const MODERATION_SIGNAL_LABELS: Record<ModerationSignal, string> = {

@@ -29,7 +29,7 @@ export function QuoteDecisionButtons({ requestId, labels }: Props) {
 
   if (state.success) {
     return (
-      <p className="text-xs text-green-700 font-medium py-2">
+      <p className="text-xs text-success-fg font-medium py-2">
         {labels.decisionSaved}
       </p>
     )
@@ -42,14 +42,14 @@ export function QuoteDecisionButtons({ requestId, labels }: Props) {
           <button
             type="button"
             onClick={() => setConfirmAction('accepted_by_client')}
-            className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
           >
             {labels.acceptBtn}
           </button>
           <button
             type="button"
             onClick={() => setConfirmAction('rejected_by_client')}
-            className="flex-1 py-2.5 border border-red-300 text-red-600 hover:bg-red-50 text-sm font-medium rounded-lg transition-colors"
+            className="flex-1 py-2.5 border border-danger text-danger-fg hover:bg-danger-soft text-sm font-medium rounded-lg transition-colors"
           >
             {labels.rejectBtn}
           </button>
@@ -58,13 +58,13 @@ export function QuoteDecisionButtons({ requestId, labels }: Props) {
 
       {confirmAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h2 className="text-base font-semibold text-gray-900 mb-2">
+          <div className="bg-surface rounded-2xl p-6 max-w-sm w-full shadow-xl border border-line">
+            <h2 className="text-base font-semibold text-foreground mb-2">
               {confirmAction === 'accepted_by_client'
                 ? labels.confirmAcceptTitle
                 : labels.confirmRejectTitle}
             </h2>
-            <p className="text-sm text-gray-500 mb-5">
+            <p className="text-sm text-muted mb-5">
               {confirmAction === 'accepted_by_client'
                 ? labels.confirmAcceptBody
                 : labels.confirmRejectBody}
@@ -77,17 +77,17 @@ export function QuoteDecisionButtons({ requestId, labels }: Props) {
                   type="button"
                   onClick={() => setConfirmAction(null)}
                   disabled={isPending}
-                  className="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="flex-1 py-2.5 border border-line text-muted text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors disabled:opacity-50"
                 >
                   {labels.cancelBtn}
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className={`flex-1 py-2.5 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
+                  className={`flex-1 py-2.5 text-primary-foreground text-sm font-medium rounded-lg transition-opacity disabled:opacity-50 hover:opacity-90 ${
                     confirmAction === 'accepted_by_client'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-red-600 hover:bg-red-700'
+                      ? 'bg-primary'
+                      : 'bg-danger-fg'
                   }`}
                 >
                   {isPending ? labels.pendingBtn : labels.confirmBtn}
@@ -95,7 +95,7 @@ export function QuoteDecisionButtons({ requestId, labels }: Props) {
               </div>
             </form>
             {state.error && (
-              <p className="mt-3 text-xs text-red-600">{state.error}</p>
+              <p className="mt-3 text-xs text-danger-fg">{state.error}</p>
             )}
           </div>
         </div>

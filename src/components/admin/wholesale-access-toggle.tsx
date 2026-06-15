@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { toggleWholesaleAccess } from '@/app/actions/users'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function WholesaleAccessToggle({ profileId, initialValue }: Props) {
+  const t = useTranslations('admin.wholesaleAccessToggle')
   const [enabled, setEnabled] = useState(initialValue)
   const [isPending, startTransition] = useTransition()
 
@@ -29,8 +31,8 @@ export function WholesaleAccessToggle({ profileId, initialValue }: Props) {
         aria-checked={enabled}
         onClick={handleToggle}
         disabled={isPending}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-          enabled ? 'bg-gray-900' : 'bg-gray-200'
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+          enabled ? 'bg-primary' : 'bg-line'
         }`}
       >
         <span
@@ -39,8 +41,8 @@ export function WholesaleAccessToggle({ profileId, initialValue }: Props) {
           }`}
         />
       </button>
-      <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-400'}`}>
-        {isPending ? 'Mise à jour…' : enabled ? 'Activé' : 'Désactivé'}
+      <span className={`text-sm font-medium ${enabled ? 'text-foreground' : 'text-faint'}`}>
+        {isPending ? t('updating') : enabled ? t('enabled') : t('disabled')}
       </span>
     </div>
   )

@@ -8,6 +8,8 @@ import { calculateNetAffiliateCommission, getWholesaleTier } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
 import { resolveDeliveryFeeByCity } from './cities'
 import { requireAdmin } from './_guards'
+import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
+import { parseMoneyInput } from '@/lib/money'
 import {
   scoreDuplicateOrder,
   scoreFraudOrder,
@@ -20,6 +22,7 @@ import type {
   WholesaleImportStatus,
   WholesalePaymentStatus,
   WholesaleCartItemWithProduct,
+  SupplierResponse,
 } from '@/types/database'
 
 import type { ActionState, OrderFormState } from '@/types/orders'
@@ -141,7 +144,10 @@ export async function placeOrder(
     ? Number(logisticsSettings.return_fee_mad)
     : 10
 
-  const totalAmount = parseFloat((unitPrice * quantity).toFixed(2))
+  // Total = prix × quantité en CENTIMES ENTIERS (zéro flottant) → chaîne pour numeric.
+  // unitPrice vient de la DB (numeric ≤ 2 décimales), donc Math.round(prix*100) est exact.
+  const totalAmountCents = Math.round(unitPrice * 100) * quantity
+  const totalAmount = (totalAmountCents / 100).toFixed(2)
   const commissionAmount = validatedAffiliateId
     ? calculateNetAffiliateCommission({
         affiliateSellPrice: unitPrice,
@@ -265,7 +271,7 @@ export async function createAffiliateOrder(
 
   const productId      = (formData.get('product_id') as string)?.trim()
   const quantity       = parseInt(formData.get('quantity') as string, 10)
-  const sellPriceRaw   = parseFloat(formData.get('sell_price') as string)
+  const sellPriceResult = parseMoneyInput(formData.get('sell_price'))
   const customerName   = (formData.get('customer_name') as string)?.trim()
   const customerPhone  = (formData.get('customer_phone') as string)?.trim()
   const customerCity   = (formData.get('customer_city') as string)?.trim()
@@ -275,7 +281,14 @@ export async function createAffiliateOrder(
 
   if (!productId)                     return { error: 'Produit requis.', success: false, orderId: null }
   if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.', success: false, orderId: null }
-  if (isNaN(sellPriceRaw) || sellPriceRaw <= 0)
+  if (!sellPriceResult.ok)
+    return { error: 'Prix de vente invalide.', success: false, orderId: null }
+  // RÈGLE ARGENT n°4 — montant validé en CHAÎNE décimale exacte (money.ts), stockée
+  // verbatim ; on dérive un `number` UNIQUEMENT pour les comparaisons/calculs — exact
+  // car MONEY_REGEX garantit ≤ 2 décimales (jamais un parseFloat sur entrée libre).
+  const sellPrice = sellPriceResult.value
+  const sellPriceNum = Number(sellPrice)
+  if (sellPriceNum <= 0)
     return { error: 'Prix de vente invalide.', success: false, orderId: null }
   if (!customerName)   return { error: 'Nom du client requis.', success: false, orderId: null }
   if (!customerPhone)  return { error: 'Téléphone du client requis.', success: false, orderId: null }
@@ -318,7 +331,7 @@ export async function createAffiliateOrder(
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
   if (product.stock_count < quantity)
     return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
-  if (sellPriceRaw < product.sell_price)
+  if (sellPriceNum < product.sell_price)
     return {
       error: `Le prix de vente doit être ≥ ${product.sell_price} MAD (prix de base).`,
       success: false,
@@ -331,9 +344,12 @@ export async function createAffiliateOrder(
   ])
   const returnFeeResolved = logisticsSettings ? Number(logisticsSettings.return_fee_mad) : 10
 
-  const totalAmount = parseFloat((sellPriceRaw * quantity).toFixed(2))
+  // Total = prix × quantité en CENTIMES ENTIERS (arithmétique exacte, zéro flottant),
+  // puis chaîne décimale pour la colonne numeric (cf. stratégie B chantier money).
+  const totalAmountCents = Math.round(sellPriceNum * 100) * quantity
+  const totalAmount = (totalAmountCents / 100).toFixed(2)
   const commissionAmount = calculateNetAffiliateCommission({
-    affiliateSellPrice: sellPriceRaw,
+    affiliateSellPrice: sellPriceNum,
     factoryCostMad: product.factory_cost_mad ?? 0,
     marginType: product.platform_margin_type,
     marginValue: product.platform_margin_value ?? 0,
@@ -365,7 +381,7 @@ export async function createAffiliateOrder(
       quantity,
       total_amount:          totalAmount,
       commission_amount:     Math.max(0, commissionAmount),
-      product_price_snapshot: sellPriceRaw,
+      product_price_snapshot: sellPrice,
       affiliate_commission_mad_snapshot: Math.max(0, commissionAmount),
       delivery_fee_snapshot:   deliveryFeeResolved,
       packaging_fee_snapshot:  product.packaging_fee_mad ?? 10,
@@ -409,7 +425,8 @@ export async function updateOrderStatus(
     deliveryCompany?: string
     trackingNumber?: string
     notes?: string
-    codReceived?: number
+    /** Montant COD encaissé — CHAÎNE brute validée serveur (parseMoneyInput). */
+    codReceived?: string
     returnReason?: string
   }
 ): Promise<ActionState> {
@@ -435,6 +452,16 @@ export async function updateOrderStatus(
 
   const prev = order.status as OrderStatus
   if (prev === newStatus) return fail('Le statut est déjà à jour.')
+
+  // RÈGLE ARGENT n°4 — cash COD encaissé validé en CHAÎNE décimale stricte (money.ts),
+  // passé verbatim à la colonne numeric : zéro parseFloat. Validé AVANT toute écriture
+  // ou opération de stock (pas d'effet de bord sur une saisie invalide).
+  let codReceivedValue: string | undefined
+  if (options?.codReceived != null) {
+    const r = parseMoneyInput(options.codReceived)
+    if (!r.ok) return fail('Montant COD encaissé invalide.')
+    codReceivedValue = r.value
+  }
 
   // ── Stock logic ───────────────────────────────────────────────────────────
   const wasStockReserved = ['confirmed', 'shipped', 'delivered'].includes(prev)
@@ -466,7 +493,7 @@ export async function updateOrderStatus(
 
   if (options?.deliveryCompany) update.delivery_company = options.deliveryCompany
   if (options?.trackingNumber)  update.tracking_number  = options.trackingNumber
-  if (options?.codReceived != null) update.cod_received = options.codReceived
+  if (codReceivedValue != null) update.cod_received = codReceivedValue
   if (options?.returnReason)    update.return_reason    = options.returnReason
 
   if (newStatus === 'confirmed')  update.confirmed_at  = now
@@ -515,22 +542,24 @@ export async function createWholesaleOrderFromCart(
   if (!cartItems?.length) return fail('Le panier de cet acheteur est vide.')
 
   // ── Calculate total with tier pricing ─────────────────────────────────────
-  let total = 0
+  // Accumulation en CENTIMES ENTIERS (zéro flottant), conversion en chaîne une
+  // seule fois à la fin (invariant @finance pour les sommes multi-lignes).
+  let totalCents = 0
   const lineItems = cartItems.map((item) => {
-    const tier       = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
-    const unitPrice  = tier ? tier.price_per_unit : item.product.sell_price
-    const subtotal   = parseFloat((unitPrice * item.quantity).toFixed(2))
-    total           += subtotal
+    const tier          = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
+    const unitPrice     = tier ? tier.price_per_unit : item.product.sell_price
+    const subtotalCents = Math.round(unitPrice * 100) * item.quantity
+    totalCents         += subtotalCents
     return {
       product_id:          item.product_id,
       quantity:            item.quantity,
       unit_price_snapshot: unitPrice,
-      subtotal,
+      subtotal:            (subtotalCents / 100).toFixed(2),
       tier_label_snapshot: tier ? tier.label : 'Prix standard',
     }
   })
 
-  total = parseFloat(total.toFixed(2))
+  const total = (totalCents / 100).toFixed(2)
 
   // ── Create wholesale_order ─────────────────────────────────────────────────
   const { data: newOrder, error: orderErr } = (await supabase
@@ -630,22 +659,24 @@ export async function submitWholesaleOrder(
     }
   }
 
-  let total = 0
+  // Accumulation en CENTIMES ENTIERS (zéro flottant), conversion en chaîne une
+  // seule fois à la fin (invariant @finance pour les sommes multi-lignes).
+  let totalCents = 0
   const lineItems = cartItems.map((item) => {
     const tier = getWholesaleTier(item.product.wholesale_tiers, item.quantity)
     const unitPrice = tier ? tier.price_per_unit : item.product.sell_price
-    const subtotal = parseFloat((unitPrice * item.quantity).toFixed(2))
-    total += subtotal
+    const subtotalCents = Math.round(unitPrice * 100) * item.quantity
+    totalCents += subtotalCents
     return {
       product_id: item.product_id,
       quantity: item.quantity,
       unit_price_snapshot: unitPrice,
-      subtotal,
+      subtotal: (subtotalCents / 100).toFixed(2),
       tier_label_snapshot: tier ? tier.label : 'Prix standard',
     }
   })
 
-  total = parseFloat(total.toFixed(2))
+  const total = (totalCents / 100).toFixed(2)
 
   const city         = ((formData.get('city') as string)?.trim()) || null
   const address      = ((formData.get('address') as string)?.trim()) || null
@@ -701,13 +732,20 @@ export async function updateWholesaleOrderCosts(
   const orderId = (formData.get('orderId') as string)?.trim()
   if (!orderId) return fail('Commande non spécifiée.')
 
-  const supplier_cost_mad          = Math.max(0, parseFloat((formData.get('supplier_cost_mad') as string) || '0'))
-  const transport_customs_cost_mad = Math.max(0, parseFloat((formData.get('transport_customs_cost_mad') as string) || '0'))
-  const additional_cost_mad        = Math.max(0, parseFloat((formData.get('additional_cost_mad') as string) || '0'))
+  // RÈGLE ARGENT n°4 — coûts validés en CHAÎNE décimale stricte (money.ts), passés
+  // verbatim aux colonnes numeric ; le trigger 025 recalcule la marge en SQL.
+  // parseMoneyInput rejette les négatifs (vs l'ancien Math.max(0,…) qui les masquait).
+  const supplierCostR  = parseMoneyInput(formData.get('supplier_cost_mad'))
+  const transportR     = parseMoneyInput(formData.get('transport_customs_cost_mad'))
+  const additionalR    = parseMoneyInput(formData.get('additional_cost_mad'))
 
-  if (isNaN(supplier_cost_mad) || isNaN(transport_customs_cost_mad) || isNaN(additional_cost_mad)) {
+  if (!supplierCostR.ok || !transportR.ok || !additionalR.ok) {
     return fail('Valeurs invalides — saisir des montants numériques.')
   }
+
+  const supplier_cost_mad          = supplierCostR.value
+  const transport_customs_cost_mad = transportR.value
+  const additional_cost_mad        = additionalR.value
 
   const { error } = await supabase
     .from('wholesale_orders')
@@ -722,87 +760,133 @@ export async function updateWholesaleOrderCosts(
   return ok
 }
 
+// FSM — la table de transitions vit dans `@/lib/wholesale-fsm` (module pur).
+// Un fichier « use server » ne peut exporter que des fonctions async, pas une
+// constante objet → la FSM est déportée et importée ici (et réutilisable au front).
+
 // =============================================================================
 // ADMIN — UPDATE WHOLESALE ORDER STATUS
 // =============================================================================
 
 /**
  * Update a wholesale order's status.
- * Handles stock reserve/restore and audit timestamps.
+ * Enforces FSM transitions (server authority — LOT 2 M-1 fix).
+ * Handles stock reserve/restore and audit trail in wholesale_order_status_history.
+ *
+ * On FSM violation the action returns { error: 'errors.fsm_transition_invalid' }
+ * so callers can map the key to their i18n namespace.
  */
 export async function updateWholesaleOrderStatus(
   orderId: string,
   newStatus: WholesaleOrderStatus,
   notes?: string
 ): Promise<ActionState> {
-  const { supabase, error: authError } = await requireAdmin({ allowAgent: true })
-  if (authError) return fail(authError)
+  const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
 
+  // ── FSM guard côté action (fail-fast UX) — le RPC re-valide côté DB ──────
+  // On lit le statut courant pour fournir un retour rapide avant le round-trip RPC.
   const { data: order } = (await supabase
     .from('wholesale_orders')
     .select('status')
     .eq('id', orderId)
-    .single()) as { data: { status: string } | null; error: unknown }
+    .single()) as { data: { status: WholesaleOrderStatus } | null; error: unknown }
 
-  if (!order) return fail('Commande introuvable.')
-  if (order.status === newStatus) return fail('Statut déjà à jour.')
+  if (!order) return fail('errors.order_not_found')
+  if (order.status === newStatus) return fail('errors.status_already_set')
 
-  const now = new Date().toISOString()
-
-  const update: Record<string, unknown> = { status: newStatus }
-  if (notes) update.agent_notes = notes
-
-  if (newStatus === 'confirmed')  { update.confirmed_at = now }
-  if (newStatus === 'sourcing')   { update.sourcing_at  = now }
-  if (newStatus === 'shipped')    { update.shipped_at   = now }
-  if (newStatus === 'delivered')  { update.delivered_at = now }
-  if (newStatus === 'cancelled')  { update.cancelled_at = now }
-
-  // ── Stock: confirmed → reserve all items; cancelled → restore ────────────
-  const prev = order.status as WholesaleOrderStatus
-
-  if (newStatus === 'confirmed' && prev === 'pending') {
-    const { data: items } = (await supabase
-      .from('wholesale_order_items')
-      .select('product_id, quantity')
-      .eq('order_id', orderId)) as {
-      data: { product_id: string; quantity: number }[] | null
-      error: unknown
-    }
-
-    for (const item of items ?? []) {
-      const { data: reserved } = (await supabase.rpc('reserve_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })) as { data: boolean; error: unknown }
-      if (!reserved) {
-        return fail('Stock insuffisant pour un ou plusieurs articles.')
-      }
-    }
+  // ── FSM guard (M-1) — validé côté action ET côté RPC (defence in depth) ──
+  if (!isFsmTransitionAllowed(order.status, newStatus)) {
+    return fail('errors.fsm_transition_invalid')
   }
 
-  if (newStatus === 'cancelled' && ['confirmed', 'sourcing', 'shipped'].includes(prev)) {
-    const { data: items } = (await supabase
-      .from('wholesale_order_items')
-      .select('product_id, quantity')
-      .eq('order_id', orderId)) as {
-      data: { product_id: string; quantity: number }[] | null
-      error: unknown
-    }
-    for (const item of items ?? []) {
-      await supabase.rpc('restore_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })
-    }
-  }
+  // ── Délégation atomique au RPC Postgres (migration 061) ───────────────────
+  // Le RPC exécute en une seule transaction : verrou FOR UPDATE, stock
+  // reserve/restore, UPDATE commande (timestamps inclus), INSERT history.
+  // AUCUNE colonne financière touchée — trigger compute_wholesale_order_costs intangible.
+  const { error: rpcErr } = await supabase.rpc('transition_wholesale_order_status', {
+    p_order_id:   orderId,
+    p_new_status: newStatus,
+    p_notes:      notes ?? null,
+  })
 
-  const { error } = await supabase.from('wholesale_orders').update(update).eq('id', orderId)
-  if (error) return fail(error.message)
+  if (rpcErr) {
+    const msg = rpcErr.message ?? 'errors.update_failed'
+    const key = msg.match(/errors\.[a-z_]+/)?.[0] ?? 'errors.update_failed'
+    return fail(key)
+  }
 
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
   revalidatePath(`/wholesale/orders`)
+  return ok
+}
+
+// =============================================================================
+// ADMIN / AGENT — ASSIGN WHOLESALE ORDER (LOT 2)
+// =============================================================================
+
+/**
+ * Assign a wholesale order to a field agent (or re-assign).
+ *
+ * Guard: caller must be admin OR a team_members active member with
+ * assign_orders=true (checked via SQL helper can_assign_orders).
+ *
+ * FSM: only transitions to 'assigned' when the current status allows it
+ * (pending, confirmed — see WHOLESALE_ORDER_FSM). If the order is already
+ * 'assigned' to a different agent, the order is re-assigned without FSM
+ * re-transition (agent_id + assigned_at are updated, no duplicate history row
+ * for the status if it's already 'assigned').
+ *
+ * Idempotence: re-assigning the SAME agent is a no-op (returns ok silently).
+ */
+export async function assignWholesaleOrder(
+  orderId: string,
+  assigneeId: string,
+): Promise<ActionState> {
+  // ── Input validation ──────────────────────────────────────────────────────
+  if (!orderId?.trim())    return fail('errors.order_id_required')
+  if (!assigneeId?.trim()) return fail('errors.assignee_id_required')
+
+  const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
+
+  // ── FSM guard côté action (fail-fast UX) — le RPC re-valide côté DB ──────
+  // Lecture anticipée pour un retour rapide avant le round-trip RPC.
+  const { data: order } = (await supabase
+    .from('wholesale_orders')
+    .select('status, agent_id')
+    .eq('id', orderId)
+    .single()) as { data: { status: WholesaleOrderStatus; agent_id: string | null } | null; error: unknown }
+
+  if (!order) return fail('errors.order_not_found')
+
+  // Idempotence côté action (évite un aller-retour RPC inutile)
+  if (order.agent_id === assigneeId && order.status === 'assigned') {
+    return ok
+  }
+
+  if (order.status !== 'assigned' && !isFsmTransitionAllowed(order.status, 'assigned')) {
+    return fail('errors.fsm_transition_invalid')
+  }
+
+  // ── Délégation atomique au RPC Postgres (migration 061) ───────────────────
+  // Le RPC exécute en une seule transaction : garde can_assign_orders,
+  // vérification rôle assignee (IMP-1), verrou FOR UPDATE, FSM, UPDATE, INSERT history.
+  const { error: rpcErr } = await supabase.rpc('assign_wholesale_order_atomic', {
+    p_order_id: orderId,
+    p_assignee: assigneeId,
+    p_notes:    null,
+  })
+
+  if (rpcErr) {
+    const msg = rpcErr.message ?? 'errors.update_failed'
+    const key = msg.match(/errors\.[a-z_]+/)?.[0] ?? 'errors.update_failed'
+    return fail(key)
+  }
+
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
   return ok
 }
 
@@ -873,15 +957,28 @@ export async function updateWholesalePaymentStatus(
     return { error: 'Statut de paiement invalide.' }
   }
 
-  const depositAmountRaw       = formData.get('deposit_amount') as string
-  const depositReceivedRaw     = formData.get('deposit_received_amount') as string
-  const notes                  = (formData.get('notes') as string)?.trim() || null
+  const notes = (formData.get('notes') as string)?.trim() || null
 
-  const deposit_amount          = depositAmountRaw ? Math.max(0, parseFloat(depositAmountRaw)) : null
-  const deposit_received_amount = depositReceivedRaw ? Math.max(0, parseFloat(depositReceivedRaw)) : 0
+  // RÈGLE ARGENT n°4 — ZÉRO parseFloat sur de l'argent. Les montants sont validés
+  // en CHAÎNE décimale stricte (money.ts) et passés VERBATIM aux colonnes numeric
+  // (exactitude décimale, aucun arrondi flottant). Cf. LOT 4.2-B.
+  //
+  // deposit_amount (acompte DEMANDÉ) reste nullable : champ vide → null (pas '0',
+  // car « aucun acompte demandé » ≠ « acompte de 0 »).
+  const depositAmountRaw = (formData.get('deposit_amount') as string)?.trim() ?? ''
+  let deposit_amount: string | null
+  if (depositAmountRaw === '') {
+    deposit_amount = null
+  } else {
+    const parsed = parseMoneyInput(depositAmountRaw)
+    if (!parsed.ok) return { error: 'Montant de l\'acompte invalide.' }
+    deposit_amount = parsed.value
+  }
 
-  if (deposit_amount !== null && isNaN(deposit_amount)) return { error: 'Montant de l\'acompte invalide.' }
-  if (isNaN(deposit_received_amount)) return { error: 'Montant reçu invalide.' }
+  // deposit_received_amount (montant REÇU) : champ vide → '0' (reçu nul par défaut).
+  const receivedParsed = parseMoneyInput(formData.get('deposit_received_amount'))
+  if (!receivedParsed.ok) return { error: 'Montant reçu invalide.' }
+  const deposit_received_amount = receivedParsed.value
 
   const now = new Date().toISOString()
   const update: Record<string, unknown> = {
@@ -940,11 +1037,154 @@ export async function updateWholesalePaymentStatus(
     notes,
   })
 
+  // ── [LOT 4.2-C] Raccord paiement → collecte cash livraison ─────────────────
+  // E1-bis : collecte AUTO sur seuil, sans clic de confirmation. Le RPC (065)
+  // décide SEUL en SQL si le seuil deposit >= total_amount + delivery_rebill_mad
+  // est atteint (C-B1 : aucun calcul de seuil en JS). Il est idempotent (EXISTS
+  // + index partiel + EXCEPTION) → chaque mise à jour paiement le re-tente.
+  //
+  // C-A2 / E5 — NON-FATAL : la mise à jour paiement est DÉJÀ persistée ci-dessus ;
+  // un échec de collecte ne doit JAMAIS la faire échouer. On log côté serveur,
+  // on n'expose rien à l'UI, on ne `return` pas. Le prochain appel rejoue.
+  try {
+    const { error: collectErr } = await supabase
+      .rpc('try_collect_wholesale_delivery_rebill', { p_order_id: orderId })
+    if (collectErr) {
+      console.error('[4.2-C] try_collect_wholesale_delivery_rebill failed', {
+        orderId, message: collectErr.message,
+      })
+    }
+  } catch (e) {
+    console.error('[4.2-C] try_collect_wholesale_delivery_rebill threw', {
+      orderId, error: e instanceof Error ? e.message : String(e),
+    })
+  }
+
+  // ── [LOT 4.2-C / E3-bis] Détection sous-collatéralisation post-collecte ────
+  // Si l'admin baisse deposit_received_amount SOUS le seuil APRÈS une collecte :
+  // pas de dé-collecte (ledger append-only), on ALERTE seulement. En 4.2 = log
+  // serveur best-effort ; l'alerting réel (in-app + Telegram) arrive au LOT 6.
+  // Le seuil est comparé EN SQL par la fonction 067 (C-B1, jamais en JS).
+  try {
+    const { data: under } = await supabase
+      .rpc('is_wholesale_delivery_undercollateralized', { p_order_id: orderId })
+    if (under === true) {
+      console.warn('[4.2-C][E3-bis] under-collateralized after collection', {
+        orderId, changedBy: userId,
+      })
+    }
+  } catch (e) {
+    console.error('[4.2-C][E3-bis] detection failed', {
+      orderId, error: e instanceof Error ? e.message : String(e),
+    })
+  }
+
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/wholesale/orders/${orderId}`)
   revalidatePath('/admin/analytics')
   return { error: null, success: true }
+}
+
+// =============================================================================
+// ADMIN — CONFIGURER LA LIVRAISON D'UNE COMMANDE WHOLESALE (LOT 4.2-B)
+// =============================================================================
+
+// Valeurs autorisées — répliquent les CHECK de la migration 062.
+const WHOLESALE_LOGISTICS_MODES = ['pickup_by_runner', 'supplier_fleet'] as const
+const WHOLESALE_DELIVERY_HANDLINGS = ['rebilled_client', 'supplier_billed', 'supplier_free'] as const
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Mappe le message d'erreur d'un RPC livraison vers une clé i18n `errors.*`.
+ * Les RPC (065) lèvent déjà des `errors.<clé>` ; le CHECK 062
+ * (`wholesale_delivery_no_mozouna_loss`) lève un nom de contrainte qu'on traduit.
+ */
+function mapDeliveryRpcError(message: string | undefined): string {
+  const msg = message ?? ''
+  const key = msg.match(/errors\.[a-z_]+/)?.[0]
+  if (key) return key
+  if (msg.includes('wholesale_delivery_no_mozouna_loss')) return 'errors.rebill_below_cost'
+  return 'errors.update_failed'
+}
+
+/**
+ * Admin — configure le mode logistique, le traitement du coût livraison et les
+ * montants (coût / refacturation) d'une commande grossiste.
+ *
+ * Délègue intégralement l'écriture au RPC `set_wholesale_delivery_config` (065,
+ * audité @finance/@security) : config + maintien du ledger cash par DELTA, le
+ * tout atomique et idempotent. AUCUNE colonne de marge touchée (trigger 025
+ * intangible). Cette action n'est qu'un adaptateur typé/validé au-dessus du RPC.
+ *
+ * RÈGLE ARGENT : les montants sont validés en CHAÎNE décimale stricte
+ * (`parseMoneyInput`, zéro `parseFloat`, condition @finance C-Z1/C4) et passés
+ * verbatim au paramètre `numeric` du RPC.
+ *
+ * Garde : admin seul (contrat 4.2-A — config/collecte cash réservées admin). Le
+ * RPC re-vérifie `my_role()='admin'` côté DB (SECURITY DEFINER bypasse RLS).
+ */
+export async function setWholesaleDeliveryConfig(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase, error: authError, userId } = await requireAdmin()
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
+
+  const orderId = (formData.get('orderId') as string)?.trim()
+  if (!orderId) return fail('errors.order_id_required')
+
+  // ── Traitement du coût livraison (enum 062) ───────────────────────────────
+  const handling = (formData.get('delivery_cost_handling') as string)?.trim()
+  if (!(WHOLESALE_DELIVERY_HANDLINGS as readonly string[]).includes(handling)) {
+    return fail('errors.invalid_delivery_handling')
+  }
+
+  // ── Mode logistique : optionnel, mais s'il est fourni il doit être valide ──
+  const logisticsRaw = (formData.get('logistics_mode') as string)?.trim() || null
+  if (logisticsRaw !== null && !(WHOLESALE_LOGISTICS_MODES as readonly string[]).includes(logisticsRaw)) {
+    return fail('errors.invalid_logistics_mode')
+  }
+
+  // ── Montants — validation décimale stricte, ZÉRO parseFloat (C-Z1/C4) ──────
+  let cost = '0'
+  let rebill = '0'
+  if (handling === 'rebilled_client') {
+    const c = parseMoneyInput(formData.get('delivery_cost_mad'))
+    if (!c.ok) return fail(c.error)
+    const r = parseMoneyInput(formData.get('delivery_rebill_mad'))
+    if (!r.ok) return fail(r.error)
+    cost = c.value
+    rebill = r.value
+  }
+  // supplier_billed / supplier_free : Mozouna ne paie rien et ne refacture rien.
+  // On force 0/0 (le CHECK 062 l'impose) — un form obsolète ne peut pas glisser
+  // un montant sous ces traitements. L'invariant rebill ≥ cost reste validé par
+  // le CHECK côté DB pour le cas rebilled_client (→ errors.rebill_below_cost).
+
+  // ── Clé d'événement (idempotence DELTA) ───────────────────────────────────
+  // Neuf par soumission, STABLE au retry : si l'UI fournit un uuid caché (re-submit
+  // du même formulaire) on le réutilise → ON CONFLICT DO NOTHING dédoublonne ;
+  // sinon l'action en génère un frais (contrat 4.2-A).
+  const eventRaw = (formData.get('cost_event_uuid') as string)?.trim() ?? ''
+  const costEventUuid = UUID_RE.test(eventRaw) ? eventRaw : crypto.randomUUID()
+
+  const { error: rpcErr } = await supabase.rpc('set_wholesale_delivery_config', {
+    p_order_id:        orderId,
+    p_logistics_mode:  logisticsRaw,
+    p_handling:        handling,
+    p_cost_mad:        cost,    // chaîne décimale exacte → numeric Postgres
+    p_rebill_mad:      rebill,  // idem
+    p_cost_event_uuid: costEventUuid,
+  })
+
+  if (rpcErr) return fail(mapDeliveryRpcError(rpcErr.message))
+
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath('/admin/analytics')
+  return ok
 }
 
 // =============================================================================
@@ -1086,5 +1326,146 @@ export async function updateWholesaleOrderBuyerNote(
   if (error) return fail(error.message)
 
   revalidatePath(`/wholesale/orders/${orderId}`)
+  return ok
+}
+
+// =============================================================================
+// ADMIN / AGENT — ASSIGN SUPPLIER TO WHOLESALE ORDER (LOT 3a)
+// =============================================================================
+
+/**
+ * Assign a supplier profile to a wholesale order.
+ * Only admin or agent-with-assign_orders permission can call this.
+ *
+ * Guard: requireAdmin({ allowAgent: true }) + can_assign_orders RPC (same as
+ * assignWholesaleOrder). The supplier profile must exist and have role='supplier'.
+ *
+ * Idempotence: re-assigning the same supplier is a no-op (returns ok silently).
+ *
+ * Does NOT touch: status, amounts, agent_id, buyer_id, or any financial column.
+ * Notification (LOT 6) will be added here later.
+ */
+export async function assignSupplierToOrder(
+  orderId: string,
+  supplierId: string,
+): Promise<ActionState> {
+  // ── Input validation ──────────────────────────────────────────────────────
+  if (!orderId?.trim())    return fail('errors.order_id_required')
+  if (!supplierId?.trim()) return fail('errors.supplier_id_required')
+
+  const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
+  if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
+
+  // ── Permission guard : admin OR team member with assign_orders ────────────
+  const { data: canAssign, error: permErr } = (await supabase.rpc('can_assign_orders', {
+    uid: userId,
+  })) as { data: boolean | null; error: unknown }
+
+  if (permErr || !canAssign) return fail('errors.forbidden_assign_orders')
+
+  // ── Verify supplierId exists AND has role='supplier' ──────────────────────
+  // Sécurité : on n'assigne jamais un non-fournisseur comme supplier_id —
+  // sinon ce profil hériterait de la policy SELECT supplier_read_own sur la
+  // commande, exposant potentiellement des données sensibles.
+  const { data: supplierProfile } = (await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', supplierId)
+    .single()) as { data: { id: string; role: string } | null; error: unknown }
+
+  if (!supplierProfile || supplierProfile.role !== 'supplier')
+    return fail('errors.supplier_not_found')
+
+  // ── Fetch current order state ─────────────────────────────────────────────
+  const { data: order } = (await supabase
+    .from('wholesale_orders')
+    .select('id, supplier_id')
+    .eq('id', orderId)
+    .single()) as { data: { id: string; supplier_id: string | null } | null; error: unknown }
+
+  if (!order) return fail('errors.order_not_found')
+
+  // ── Idempotence : même fournisseur déjà assigné ──────────────────────────
+  if (order.supplier_id === supplierId) {
+    return ok
+  }
+
+  const now = new Date().toISOString()
+
+  const { error: updateErr } = await supabase
+    .from('wholesale_orders')
+    .update({
+      supplier_id:          supplierId,
+      supplier_assigned_at: now,
+    })
+    .eq('id', orderId)
+
+  if (updateErr) return fail('errors.update_failed')
+
+  revalidatePath('/admin/wholesale-orders')
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  return ok
+}
+
+// =============================================================================
+// SUPPLIER — RESPOND TO WHOLESALE ORDER (LOT 3a)
+// =============================================================================
+
+/**
+ * Supplier submits their response to an assigned wholesale order.
+ * Delegates to the SECURITY DEFINER RPC respond_to_wholesale_order which
+ * enforces ownership (supplier_id = auth.uid()) and writes ONLY the 3
+ * response columns — never status, amounts, agent_id or any other field.
+ *
+ * The RPC raises named exceptions (errors.*) on validation failure; we
+ * propagate them as-is so the frontend can map them to i18n keys.
+ */
+export async function respondToWholesaleOrder(
+  orderId: string,
+  response: SupplierResponse,
+  leadTimeDays: number,
+): Promise<ActionState> {
+  // ── Input validation (server-side, before RPC) ────────────────────────────
+  if (!orderId?.trim()) return fail('errors.order_id_required')
+
+  const VALID_RESPONSES: SupplierResponse[] = ['available', 'preparing', 'on_order']
+  if (!VALID_RESPONSES.includes(response)) return fail('errors.invalid_supplier_response')
+
+  if (!Number.isInteger(leadTimeDays) || leadTimeDays < 0)
+    return fail('errors.invalid_lead_time')
+
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return fail('errors.unauthenticated')
+
+  // ── Role guard : supplier only ────────────────────────────────────────────
+  const { data: profile } = (await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()) as { data: { role: string } | null; error: unknown }
+
+  if (profile?.role !== 'supplier') return fail('errors.forbidden_supplier_only')
+
+  // ── Delegate to SECURITY DEFINER RPC ─────────────────────────────────────
+  // The RPC re-validates ownership and columns — this is defence in depth.
+  const { error: rpcErr } = await supabase.rpc('respond_to_wholesale_order', {
+    p_order_id:       orderId,
+    p_response:       response,
+    p_lead_time_days: leadTimeDays,
+  })
+
+  if (rpcErr) {
+    // RPC raises named exceptions; surface the message as an i18n key
+    const msg = rpcErr.message ?? 'errors.update_failed'
+    // The message may be the bare key (e.g. 'errors.order_not_found') or
+    // wrapped in Postgres error text — extract the key portion.
+    const key = msg.match(/errors\.[a-z_]+/)?.[0] ?? 'errors.update_failed'
+    return fail(key)
+  }
+
+  revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  revalidatePath('/supplier/orders')
   return ok
 }

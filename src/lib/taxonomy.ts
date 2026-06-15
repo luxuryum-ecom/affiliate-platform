@@ -81,14 +81,19 @@ export interface OriginConfig {
   textCls: string
 }
 
+// Chips PAYS neutralisés (plus d'arc-en-ciel) : drapeau + label, fond neutre.
+// La distinction visuelle se fait par le drapeau, pas par une couleur sauvage.
+const ORIGIN_BADGE_CLS = 'bg-surface-2 border border-line'
+const ORIGIN_TEXT_CLS = 'text-muted'
+
 export const ORIGIN_CONFIG: Record<OriginCountry, OriginConfig> = {
-  'Maroc':   { flag: '🇲🇦', label: 'Maroc',   badgeCls: 'bg-emerald-50 border border-emerald-200', textCls: 'text-emerald-700' },
-  'Turquie': { flag: '🇹🇷', label: 'Turquie', badgeCls: 'bg-red-50 border border-red-200',         textCls: 'text-red-700'     },
-  'Chine':   { flag: '🇨🇳', label: 'Chine',   badgeCls: 'bg-rose-50 border border-rose-200',       textCls: 'text-rose-700'    },
-  'Égypte':  { flag: '🇪🇬', label: 'Égypte',  badgeCls: 'bg-amber-50 border border-amber-200',     textCls: 'text-amber-700'   },
-  'Dubai':   { flag: '🇦🇪', label: 'Dubai',   badgeCls: 'bg-sky-50 border border-sky-200',         textCls: 'text-sky-700'     },
-  'Autre':   { flag: '🌍',  label: 'Autre',   badgeCls: 'bg-gray-100 border border-gray-200',      textCls: 'text-gray-600'    },
-  'Mixte':   { flag: '🌐',  label: 'Mixte',   badgeCls: 'bg-purple-50 border border-purple-200',   textCls: 'text-purple-700'  },
+  'Maroc':   { flag: '🇲🇦', label: 'Maroc',   badgeCls: ORIGIN_BADGE_CLS, textCls: ORIGIN_TEXT_CLS },
+  'Turquie': { flag: '🇹🇷', label: 'Turquie', badgeCls: ORIGIN_BADGE_CLS, textCls: ORIGIN_TEXT_CLS },
+  'Chine':   { flag: '🇨🇳', label: 'Chine',   badgeCls: ORIGIN_BADGE_CLS, textCls: ORIGIN_TEXT_CLS },
+  'Égypte':  { flag: '🇪🇬', label: 'Égypte',  badgeCls: ORIGIN_BADGE_CLS, textCls: ORIGIN_TEXT_CLS },
+  'Dubai':   { flag: '🇦🇪', label: 'Dubai',   badgeCls: ORIGIN_BADGE_CLS, textCls: ORIGIN_TEXT_CLS },
+  'Autre':   { flag: '🌍',  label: 'Autre',   badgeCls: ORIGIN_BADGE_CLS, textCls: ORIGIN_TEXT_CLS },
+  'Mixte':   { flag: '🌐',  label: 'Mixte',   badgeCls: ORIGIN_BADGE_CLS, textCls: ORIGIN_TEXT_CLS },
 }
 
 export function getOriginConfig(country: string): OriginConfig {
@@ -96,49 +101,23 @@ export function getOriginConfig(country: string): OriginConfig {
     (ORIGIN_CONFIG as Record<string, OriginConfig>)[country] ?? {
       flag: '🌍',
       label: country,
-      badgeCls: 'bg-gray-100 border border-gray-200',
-      textCls: 'text-gray-600',
+      badgeCls: ORIGIN_BADGE_CLS,
+      textCls: ORIGIN_TEXT_CLS,
     }
   )
 }
 
 // ─── Trust badges ──────────────────────────────────────────────────────────────
 
+// Trust badges = réassurance premium → accent OR unifié (signature), plus de
+// bleu/indigo/slate décoratifs.
+const TRUST_BADGE_CLS = 'bg-accent-soft text-accent-fg border border-gold-300'
+
 export const TRUST_BADGES = [
-  {
-    id: 'verified_supplier',
-    label: 'Fournisseur vérifié',
-    icon: '✓',
-    cls: 'bg-amber-50 text-amber-700 border border-amber-200',
-  },
-  {
-    id: 'local_stock',
-    label: 'Stock local Maroc',
-    icon: '🏭',
-    cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  },
-  {
-    id: 'international',
-    label: 'Fournisseur international',
-    icon: '🌍',
-    cls: 'bg-blue-50 text-blue-700 border border-blue-200',
-  },
-  {
-    id: 'transport_included',
-    label: 'Transport & douane inclus',
-    icon: '🚢',
-    cls: 'bg-sky-50 text-sky-700 border border-sky-200',
-  },
-  {
-    id: 'platform_payment',
-    label: 'Paiement via plateforme',
-    icon: '🔒',
-    cls: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
-  },
-  {
-    id: 'identity_protected',
-    label: 'Identité fournisseur protégée',
-    icon: '🛡',
-    cls: 'bg-slate-50 text-slate-700 border border-slate-200',
-  },
+  { id: 'verified_supplier',  label: 'Fournisseur vérifié',           icon: '✓',  cls: TRUST_BADGE_CLS },
+  { id: 'local_stock',        label: 'Stock local Maroc',             icon: '🏭', cls: TRUST_BADGE_CLS },
+  { id: 'international',       label: 'Fournisseur international',      icon: '🌍', cls: TRUST_BADGE_CLS },
+  { id: 'transport_included', label: 'Transport & douane inclus',     icon: '🚢', cls: TRUST_BADGE_CLS },
+  { id: 'platform_payment',   label: 'Paiement via plateforme',       icon: '🔒', cls: TRUST_BADGE_CLS },
+  { id: 'identity_protected', label: 'Identité fournisseur protégée', icon: '🛡', cls: TRUST_BADGE_CLS },
 ] as const

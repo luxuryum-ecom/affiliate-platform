@@ -1,9 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
-import { MozounaLogo } from '@/components/shared/branding'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTranslations, getLocale } from 'next-intl/server'
 import type { Commission, CommissionStatus, Payout } from '@/types/database'
 
@@ -80,9 +78,9 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
   }
 
   const STATUS_CLS: Record<CommissionStatus, string> = {
-    pending:  'bg-amber-100 text-amber-700',
-    approved: 'bg-blue-100 text-blue-700',
-    paid:     'bg-green-100 text-green-700',
+    pending:  'bg-warning-soft text-warning-fg border-warning',
+    approved: 'bg-surface-2 text-muted border-line',
+    paid:     'bg-success-soft text-success-fg border-success',
   }
 
   const PAYOUT_LABEL: Record<string, string> = {
@@ -92,9 +90,9 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
   }
 
   const PAYOUT_CLS: Record<string, string> = {
-    pending:    'bg-amber-100 text-amber-700',
-    processing: 'bg-blue-100 text-blue-700',
-    paid:       'bg-green-100 text-green-700',
+    pending:    'bg-warning-soft text-warning-fg border-warning',
+    processing: 'bg-surface-2 text-muted border-line',
+    paid:       'bg-success-soft text-success-fg border-success',
   }
 
   function buildHref(params: { status?: string }) {
@@ -120,59 +118,47 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/affiliate/dashboard"><MozounaLogo size="sm" /></Link>
-            <span className="text-gray-300 shrink-0">{tCommon('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm truncate">{t('pageTitle')}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                {tCommon('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        userName={profile?.full_name}
+        signOutLabel={tCommon('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
 
         {/* Balance highlight */}
         <div className={`rounded-xl border p-5 ${
           pendingBalance > 0
-            ? 'bg-amber-50 border-amber-200'
-            : 'bg-white border-gray-200'
+            ? 'bg-warning-soft border-warning'
+            : 'bg-surface border-line'
         }`}>
-          <p className="text-xs text-gray-500">{t('pendingBalanceLabel')}</p>
+          <p className="text-xs text-muted">{t('pendingBalanceLabel')}</p>
           <p className={`text-3xl font-bold tabular-nums mt-1 ${
-            pendingBalance > 0 ? 'text-amber-700' : 'text-gray-400'
+            pendingBalance > 0 ? 'text-warning-fg' : 'text-faint'
           }`}>
             {formatMAD(pendingBalance)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">{t('pendingBalanceNote')}</p>
+          <p className="text-xs text-faint mt-1">{t('pendingBalanceNote')}</p>
         </div>
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-xs text-amber-700">{t('statPending')}</p>
-            <p className="mt-1 text-xl font-bold text-amber-800 tabular-nums">{formatMAD(totalPending)}</p>
-            <p className="text-xs text-amber-600 mt-0.5">{t('statPendingCount', { count: countByStatus.pending ?? 0 })}</p>
+          <div className="bg-warning-soft border border-warning rounded-xl p-4">
+            <p className="text-xs text-warning-fg">{t('statPending')}</p>
+            <p className="mt-1 text-xl font-bold text-warning-fg tabular-nums">{formatMAD(totalPending)}</p>
+            <p className="text-xs text-warning-fg mt-0.5 opacity-80">{t('statPendingCount', { count: countByStatus.pending ?? 0 })}</p>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-xs text-blue-700">{t('statApproved')}</p>
-            <p className="mt-1 text-xl font-bold text-blue-800 tabular-nums">{formatMAD(totalApproved)}</p>
-            <p className="text-xs text-blue-600 mt-0.5">{t('statApprovedCount', { count: countByStatus.approved ?? 0 })}</p>
+          <div className="bg-surface-2 border border-line rounded-xl p-4">
+            <p className="text-xs text-muted">{t('statApproved')}</p>
+            <p className="mt-1 text-xl font-bold text-foreground tabular-nums">{formatMAD(totalApproved)}</p>
+            <p className="text-xs text-muted mt-0.5">{t('statApprovedCount', { count: countByStatus.approved ?? 0 })}</p>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <p className="text-xs text-green-700">{t('statPaid')}</p>
-            <p className="mt-1 text-xl font-bold text-green-800 tabular-nums">{formatMAD(totalPaid)}</p>
-            <p className="text-xs text-green-600 mt-0.5">{t('statPaidCount', { count: countByStatus.paid ?? 0 })}</p>
+          <div className="bg-success-soft border border-success rounded-xl p-4">
+            <p className="text-xs text-success-fg">{t('statPaid')}</p>
+            <p className="mt-1 text-xl font-bold text-success-fg tabular-nums">{formatMAD(totalPaid)}</p>
+            <p className="text-xs text-success-fg mt-0.5 opacity-80">{t('statPaidCount', { count: countByStatus.paid ?? 0 })}</p>
           </div>
         </div>
 
@@ -183,8 +169,8 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
               href={buildHref({})}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 !filterStatus
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-surface border-line text-muted hover:bg-surface-2'
               }`}
             >
               {t('filterAll', { count: allCommissions.length })}
@@ -195,8 +181,8 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                 href={buildHref({ status: s })}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                   filterStatus === s
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-surface border-line text-muted hover:bg-surface-2'
                 }`}
               >
                 {t('filterLabel', { label: STATUS_LABEL[s], count: countByStatus[s] ?? 0 })}
@@ -205,30 +191,30 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
           </div>
 
           {filtered.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-              <p className="text-sm text-gray-400">{t('emptyFilter')}</p>
+            <div className="bg-surface rounded-xl border border-line p-10 text-center">
+              <p className="text-sm text-faint">{t('emptyFilter')}</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {filtered.map((commission) => {
                 const order = commission.order
                 return (
                   <div key={commission.id} className="p-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-mono text-gray-400">
+                        <span className="text-xs font-mono text-faint">
                           #{commission.id.slice(0, 8).toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_CLS[commission.status]}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_CLS[commission.status]}`}>
                           {STATUS_LABEL[commission.status]}
                         </span>
                       </div>
                       {order && (
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm text-foreground">
                           {order.customer_name} · {order.customer_city} · ×{order.quantity}
                         </p>
                       )}
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-faint mt-0.5">
                         {fmtDate(commission.created_at)}
                         {commission.paid_at && (
                           <> · {t('paidOn', { date: fmtDate(commission.paid_at) })}</>
@@ -236,7 +222,7 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                       </p>
                     </div>
                     <div className="shrink-0 text-end">
-                      <p className="text-base font-bold text-gray-900 tabular-nums">
+                      <p className="text-base font-bold text-foreground tabular-nums">
                         {formatMAD(Number(commission.amount))}
                       </p>
                     </div>
@@ -250,25 +236,25 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
         {/* Payout history */}
         {payouts.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">
+            <h2 className="text-sm font-semibold text-foreground mb-3">
               {t('payoutsTitle', { count: payouts.length })}
             </h2>
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {payouts.map((payout) => {
-                const cls = PAYOUT_CLS[payout.status] ?? 'bg-gray-100 text-gray-600'
+                const cls = PAYOUT_CLS[payout.status] ?? 'bg-surface-2 text-muted border-line'
                 const label = PAYOUT_LABEL[payout.status] ?? payout.status
                 return (
                   <div key={payout.id} className="p-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-mono text-gray-400">
+                        <span className="text-xs font-mono text-faint">
                           #{payout.id.slice(0, 8).toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}>
                           {label}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-faint">
                         {fmtDate(payout.created_at)}
                         {payout.reference && (
                           <> · {t('payoutRef', { ref: payout.reference })}</>
@@ -277,11 +263,11 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
                       </p>
                     </div>
                     <div className="shrink-0 text-end">
-                      <p className="text-base font-bold text-green-700 tabular-nums">
+                      <p className="text-base font-bold text-success-fg tabular-nums">
                         +{formatMAD(Number(payout.amount))}
                       </p>
                       {payout.paid_at && (
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-faint mt-0.5">
                           {t('payoutPaidOn', { date: fmtDateShort(payout.paid_at) })}
                         </p>
                       )}

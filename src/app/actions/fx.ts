@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
+import { parseRateInput } from '@/lib/rate'
 
 export type UpsertRateFormState = { error: string | null; success?: boolean }
 
@@ -19,10 +20,12 @@ export async function upsertExchangeRate(
   if (error || !userId) return { error: error ?? 'Erreur.' }
 
   const quoteCode = (formData.get('quote_code') as string)?.trim().toUpperCase()
-  const rate = parseFloat(formData.get('rate_vs_mad') as string)
+  // TAUX — validé en CHAÎNE décimale stricte (rate.ts, ≤8 déc, > 0), passé verbatim
+  // à la colonne numeric(18,8) : zéro parseFloat. Précision DB native conservée.
+  const rateR = parseRateInput(formData.get('rate_vs_mad'))
 
   if (!quoteCode) return { error: 'Devise requise.' }
-  if (isNaN(rate) || rate <= 0) return { error: 'Taux invalide (doit être > 0).' }
+  if (!rateR.ok) return { error: 'Taux invalide (doit être > 0).' }
 
   // La devise doit exister et être active dans le référentiel.
   const { data: currency } = (await supabase
@@ -36,7 +39,7 @@ export async function upsertExchangeRate(
 
   const { error: dbError } = await supabase.from('exchange_rates').insert({
     quote_code: quoteCode,
-    rate_vs_mad: rate,
+    rate_vs_mad: rateR.value,
     source: 'manual',
     created_by: userId,
   })

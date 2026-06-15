@@ -29,7 +29,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
 
       {/* Role badge */}
       <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-2 rounded-full text-xs font-medium text-muted">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+        <span className="w-1.5 h-1.5 rounded-full bg-success" />
         {roleLabel}
       </div>
 
@@ -52,7 +52,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
       {defaultRole === 'supplier' && (
         <div>
           <label htmlFor="country_code" className="block text-sm font-medium text-muted mb-1">
-            Pays <span className="text-red-500">*</span>
+            {ts('countryLabel')} <span className="text-danger">*</span>
           </label>
           <select
             id="country_code"
@@ -61,7 +61,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
             disabled={isPending}
             className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
           >
-            <option value="" disabled>Sélectionnez votre pays</option>
+            <option value="" disabled>{ts('countryPlaceholder')}</option>
             {SUPPLIER_COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.flag} {c.label} ({c.currency})
@@ -69,8 +69,29 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
             ))}
           </select>
           <p className="mt-1 text-xs text-muted">
-            Votre pays détermine la devise de saisie de vos prix. Il ne pourra plus être modifié ensuite.
+            {ts('countryHelp')}
           </p>
+        </div>
+      )}
+
+      {(defaultRole === 'supplier' || defaultRole === 'wholesaler') && (
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-muted mb-1">
+            {ts('phoneLabel')} <span className="text-danger">*</span>
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            required
+            dir="ltr"
+            inputMode="tel"
+            autoComplete="tel"
+            disabled={isPending}
+            className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint text-start"
+            placeholder={ts('phonePlaceholder')}
+          />
+          <p className="mt-1 text-xs text-muted">{ts('phoneHelp')}</p>
         </div>
       )}
 
@@ -108,7 +129,7 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
       </div>
 
       {state?.error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+        <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
           {state.error}
         </p>
       )}

@@ -2,15 +2,17 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface OrderFiltersProps {
   affiliates: { id: string; full_name: string }[]
 }
 
 const SELECT =
-  'text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-gray-900 text-gray-700'
+  'text-xs px-2.5 py-1.5 border border-line rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-gold-400 text-foreground'
 
 export function OrderFilters({ affiliates }: OrderFiltersProps) {
+  const t = useTranslations('admin')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -42,15 +44,15 @@ export function OrderFilters({ affiliates }: OrderFiltersProps) {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
-          placeholder="Nom, téléphone, réf…"
-          className="flex-1 min-w-0 text-xs px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
+          placeholder={t('orders.searchPlaceholder')}
+          className="flex-1 min-w-0 text-xs px-3 py-1.5 border border-line rounded-lg bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
         />
         <button
           type="button"
           onClick={submitSearch}
-          className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 shrink-0"
+          className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity shrink-0"
         >
-          OK
+          {t('common.ok')}
         </button>
       </div>
 
@@ -61,7 +63,7 @@ export function OrderFilters({ affiliates }: OrderFiltersProps) {
           onChange={(e) => set('affiliate_id', e.target.value)}
           className={SELECT}
         >
-          <option value="">Tous les affiliés</option>
+          <option value="">{t('orders.allAffiliates')}</option>
           {affiliates.map((a) => (
             <option key={a.id} value={a.id}>{a.full_name}</option>
           ))}
@@ -76,9 +78,9 @@ export function OrderFilters({ affiliates }: OrderFiltersProps) {
             setSearchInput('')
             router.push('/admin/orders')
           }}
-          className="text-xs px-2.5 py-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50"
+          className="text-xs px-2.5 py-1.5 border border-danger text-danger-fg rounded-lg hover:bg-danger-soft transition-colors"
         >
-          Effacer ×
+          {t('common.clear')}
         </button>
       )}
     </div>

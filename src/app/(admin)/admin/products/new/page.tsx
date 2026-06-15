@@ -1,13 +1,14 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { signOut } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/server'
 import { ProductForm } from '@/components/admin/product-form'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTariffs } from '@/app/actions/tariffs'
 import { getRatesMap } from '@/lib/fx'
+import { getTranslations } from 'next-intl/server'
 
-export const metadata = {
-  title: 'Nouveau produit — Administration',
+export async function generateMetadata() {
+  const t = await getTranslations('admin.productNew')
+  return { title: t('metaTitle') }
 }
 
 export default async function NewProductPage() {
@@ -18,6 +19,9 @@ export default async function NewProductPage() {
 
   if (!user) redirect('/login')
 
+  const t = await getTranslations('admin.productNew')
+  const tc = await getTranslations('admin.common')
+
   const [profileResult, tariffs, rates] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     getTariffs(),
@@ -27,37 +31,19 @@ export default async function NewProductPage() {
   const profile = profileResult.data as { full_name: string } | null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/admin/products"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              ← Produits
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Nouveau produit</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/products"
+        backLabel={tc('product')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-lg font-semibold text-gray-900 mb-6">Créer un produit</h1>
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h1 className="text-lg font-semibold text-foreground mb-6">{t('formTitle')}</h1>
+        <div className="bg-surface rounded-xl border border-line p-6">
           <ProductForm tariffs={tariffs} rates={rates} />
         </div>
       </main>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   upsertTariff,
   toggleTariffActive,
@@ -11,54 +12,49 @@ import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
 import type { ImportTariff, TariffCountry, ImportShippingMode } from '@/types/database'
 
 const INPUT =
-  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent'
+  'w-full px-3 py-2 border border-line bg-surface text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent'
 
-const COUNTRIES: { value: TariffCountry; label: string }[] = [
-  { value: 'Turquie', label: 'Turquie' },
-  { value: 'Chine', label: 'Chine' },
-  { value: 'Égypte', label: 'Égypte' },
-  { value: 'Dubai', label: 'Dubai' },
-  { value: 'Autre', label: 'Autre' },
-]
+const COUNTRIES: TariffCountry[] = ['Turquie', 'Chine', 'Égypte', 'Dubai', 'Autre']
 
-const SHIPPING_MODES: { value: ImportShippingMode; label: string }[] = (
-  Object.entries(SHIPPING_MODE_LABELS) as [ImportShippingMode, string][]
-).map(([value, label]) => ({ value, label }))
+const SHIPPING_MODES = Object.keys(SHIPPING_MODE_LABELS) as ImportShippingMode[]
 
 // ─── Add form ─────────────────────────────────────────────────────────────────
 
 const initialState: TariffFormState = { error: null }
 
 export function AddTariffForm() {
+  const t  = useTranslations('admin.tariffActions')
+  const ti = useTranslations('admin.importTariffs')
   const [state, action, isPending] = useActionState(upsertTariff, initialState)
   const [shippingMode, setShippingMode] = useState<ImportShippingMode>('air_door_to_door_kg')
 
   const unit = unitFromShippingMode(shippingMode)
+  const unitLabel = unit === 'cbm' ? 'CBM' : 'kg'
 
   return (
     <form action={action} className="space-y-4">
       {state?.error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+        <div className="bg-danger-soft border border-danger text-danger-fg text-sm px-4 py-3 rounded-lg">
           {state.error}
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Pays <span className="text-red-500">*</span>
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('countryLabel')} <span className="text-danger">*</span>
           </label>
           <select name="country" required disabled={isPending} className={INPUT}>
-            <option value="">— Sélectionner —</option>
-            {COUNTRIES.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
+            <option value="">{t('selectCountry')}</option>
+            {COUNTRIES.map((value) => (
+              <option key={value} value={value}>{ti(`country.${value}`)}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Mode de transport <span className="text-red-500">*</span>
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('modeLabel')} <span className="text-danger">*</span>
           </label>
           <select
             name="shipping_mode"
@@ -68,16 +64,16 @@ export function AddTariffForm() {
             onChange={(e) => setShippingMode(e.target.value as ImportShippingMode)}
             className={INPUT}
           >
-            {SHIPPING_MODES.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
+            {SHIPPING_MODES.map((value) => (
+              <option key={value} value={value}>{ti(`shippingMode.${value}`)}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Frais transport & douane (MAD / {unit === 'cbm' ? 'CBM' : 'kg'})
-            <span className="text-red-500"> *</span>
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('feeLabel', { unit: unitLabel })}
+            <span className="text-danger"> *</span>
           </label>
           <input
             name="transport_customs_price_mad"
@@ -89,14 +85,14 @@ export function AddTariffForm() {
             placeholder="0.00"
             className={INPUT}
           />
-          <p className="text-xs text-gray-400 mt-1">
-            Unité auto : <strong>{unit === 'cbm' ? 'CBM' : 'kg'}</strong> — ne pas inclure le coût produit
+          <p className="text-xs text-faint mt-1">
+            {t('unitAuto', { unit: unitLabel })}
           </p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Délai de livraison (jours)
+          <label className="block text-xs font-medium text-muted mb-1">
+            {t('delayLabel')}
           </label>
           <input
             name="delivery_days"
@@ -104,19 +100,19 @@ export function AddTariffForm() {
             step="1"
             min="1"
             disabled={isPending}
-            placeholder="Ex : 14"
+            placeholder={t('delayPlaceholder')}
             className={INPUT}
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+        <label className="block text-xs font-medium text-muted mb-1">{t('notesLabel')}</label>
         <textarea
           name="notes"
           rows={2}
           disabled={isPending}
-          placeholder="Conditions douanières, remarques, délais variables…"
+          placeholder={t('notesPlaceholder')}
           className={INPUT + ' resize-none'}
         />
       </div>
@@ -125,12 +121,12 @@ export function AddTariffForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {isPending ? 'Ajout…' : '+ Ajouter le tarif'}
+          {isPending ? t('adding') : t('addButton')}
         </button>
-        <p className="text-xs text-amber-600">
-          Un seul tarif actif par pays + mode de transport.
+        <p className="text-xs text-warning-fg">
+          {t('oneActiveHint')}
         </p>
       </div>
     </form>
@@ -140,6 +136,9 @@ export function AddTariffForm() {
 // ─── Row actions (toggle + delete + inline edit) ──────────────────────────────
 
 export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
+  const t  = useTranslations('admin.tariffActions')
+  const ti = useTranslations('admin.importTariffs')
+  const tc = useTranslations('admin.common')
   const [editing, setEditing] = useState(false)
   const [editState, editAction, isPendingEdit] = useActionState(upsertTariff, initialState)
   const [pendingToggle, setPendingToggle] = useState(false)
@@ -156,7 +155,7 @@ export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
   }
 
   const handleDelete = async () => {
-    if (!confirm(`Supprimer ce tarif (${tariff.country} — ${SHIPPING_MODE_LABELS[tariff.shipping_mode]}) ?`)) return
+    if (!confirm(t('confirmDelete', { country: ti(`country.${tariff.country}`), mode: ti(`shippingMode.${tariff.shipping_mode}`) }))) return
     setPendingDelete(true)
     await deleteTariff(tariff.id)
     setPendingDelete(false)
@@ -164,27 +163,27 @@ export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
 
   if (editing) {
     return (
-      <td colSpan={7} className="px-4 py-4 bg-blue-50">
+      <td colSpan={7} className="px-4 py-4 bg-surface-2">
         <form action={editAction} className="space-y-3">
           <input type="hidden" name="id" value={tariff.id} />
           <input type="hidden" name="active" value={String(tariff.active)} />
 
           {editState?.error && (
-            <p className="text-xs text-red-600">{editState.error}</p>
+            <p className="text-xs text-danger-fg">{editState.error}</p>
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Pays</label>
+              <label className="block text-xs font-medium text-muted mb-1">{t('countryLabel')}</label>
               <select name="country" defaultValue={tariff.country} disabled={isPendingEdit} className={INPUT}>
-                {COUNTRIES.map(({ value, label }) => (
-                  <option key={value} value={value}>{label}</option>
+                {COUNTRIES.map((value) => (
+                  <option key={value} value={value}>{ti(`country.${value}`)}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Mode</label>
+              <label className="block text-xs font-medium text-muted mb-1">{t('modeLabelShort')}</label>
               <select
                 name="shipping_mode"
                 value={editShippingMode}
@@ -192,15 +191,15 @@ export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
                 disabled={isPendingEdit}
                 className={INPUT}
               >
-                {SHIPPING_MODES.map(({ value, label }) => (
-                  <option key={value} value={value}>{label}</option>
+                {SHIPPING_MODES.map((value) => (
+                  <option key={value} value={value}>{ti(`shippingMode.${value}`)}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
-                Frais transport & douane (MAD / {unitFromShippingMode(editShippingMode) === 'cbm' ? 'CBM' : 'kg'})
+              <label className="block text-xs font-medium text-muted mb-1">
+                {t('feeLabel', { unit: unitFromShippingMode(editShippingMode) === 'cbm' ? 'CBM' : 'kg' })}
               </label>
               <input
                 name="transport_customs_price_mad"
@@ -214,7 +213,7 @@ export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Délai (j)</label>
+              <label className="block text-xs font-medium text-muted mb-1">{t('delayShort')}</label>
               <input
                 name="delivery_days"
                 type="number"
@@ -229,7 +228,7 @@ export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
+            <label className="block text-xs font-medium text-muted mb-1">{t('notesLabel')}</label>
             <textarea
               name="notes"
               rows={2}
@@ -243,16 +242,16 @@ export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
             <button
               type="submit"
               disabled={isPendingEdit}
-              className="px-4 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="px-4 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {isPendingEdit ? 'Enregistrement…' : 'Sauvegarder'}
+              {isPendingEdit ? tc('saving') : t('saveEdit')}
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="px-4 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-1.5 border border-line text-muted text-xs rounded-lg hover:bg-surface-2 transition-colors"
             >
-              Annuler
+              {tc('cancel')}
             </button>
           </div>
         </form>
@@ -263,32 +262,32 @@ export function TariffRowActions({ tariff }: { tariff: ImportTariff }) {
   return (
     <div className="space-y-1">
       {toggleError && (
-        <p className="text-xs text-red-600 text-right">{toggleError}</p>
+        <p className="text-xs text-danger-fg text-right">{toggleError}</p>
       )}
       <div className="flex items-center gap-2 justify-end">
         <button
           onClick={() => setEditing(true)}
-          className="text-xs px-2.5 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="text-xs px-2.5 py-1 border border-line rounded-lg hover:bg-surface-2 transition-colors text-muted"
         >
-          Modifier
+          {tc('edit')}
         </button>
         <button
           onClick={handleToggle}
           disabled={pendingToggle}
           className={`text-xs px-2.5 py-1 border rounded-lg transition-colors disabled:opacity-50 ${
             tariff.active
-              ? 'border-amber-300 text-amber-700 hover:bg-amber-50'
-              : 'border-green-300 text-green-700 hover:bg-green-50'
+              ? 'border-warning text-warning-fg hover:bg-warning-soft'
+              : 'border-success text-success-fg hover:bg-success-soft'
           }`}
         >
-          {pendingToggle ? '…' : tariff.active ? 'Désactiver' : 'Activer'}
+          {pendingToggle ? '…' : tariff.active ? tc('deactivate') : tc('activate')}
         </button>
         <button
           onClick={handleDelete}
           disabled={pendingDelete}
-          className="text-xs px-2.5 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+          className="text-xs px-2.5 py-1 border border-danger text-danger-fg rounded-lg hover:bg-danger-soft transition-colors disabled:opacity-50"
         >
-          {pendingDelete ? '…' : 'Supprimer'}
+          {pendingDelete ? '…' : tc('delete')}
         </button>
       </div>
     </div>

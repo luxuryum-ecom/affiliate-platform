@@ -5,6 +5,11 @@ import { updateWholesalerBilling } from '@/app/actions/profile'
 import type { Profile } from '@/types/database'
 
 interface BillingFormLabels {
+  fieldPhone: string
+  fieldCity: string
+  phonePlaceholder: string
+  cityPlaceholder: string
+  phoneHelp: string
   fieldCompany: string
   fieldIce: string
   fieldRc: string
@@ -24,6 +29,11 @@ interface Props {
 }
 
 const defaultLabels: BillingFormLabels = {
+  fieldPhone: 'Téléphone',
+  fieldCity: 'Ville',
+  phonePlaceholder: '+212600000000',
+  cityPlaceholder: 'Ex : Casablanca',
+  phoneHelp: 'Format international avec indicatif pays.',
   fieldCompany: 'Raison sociale / Nom de la société',
   fieldIce: "ICE (Identifiant Commun de l'Entreprise)",
   fieldRc: 'Registre de commerce (RC)',
@@ -46,19 +56,51 @@ export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props
   return (
     <form action={action} className="space-y-4">
       {state.error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+        <div className="bg-danger-soft border border-danger text-danger-fg text-sm rounded-xl px-4 py-3">
           {state.error}
         </div>
       )}
       {state.success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">
+        <div className="bg-success-soft border border-success text-success-fg text-sm rounded-xl px-4 py-3">
           {labels.billingUpdated}
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-muted mb-1" htmlFor="phone">
+            {labels.fieldPhone}
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            dir="ltr"
+            inputMode="tel"
+            autoComplete="tel"
+            defaultValue={profile?.phone ?? ''}
+            placeholder={labels.phonePlaceholder}
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint text-start"
+          />
+          <p className="mt-1 text-xs text-faint">{labels.phoneHelp}</p>
+        </div>
+
+        <div>
+          <label className="block text-xs text-muted mb-1" htmlFor="city">
+            {labels.fieldCity}
+          </label>
+          <input
+            id="city"
+            name="city"
+            type="text"
+            defaultValue={profile?.city ?? ''}
+            placeholder={labels.cityPlaceholder}
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint"
+          />
+        </div>
+
         <div className="sm:col-span-2">
-          <label className="block text-xs text-gray-500 mb-1" htmlFor="company_name">
+          <label className="block text-xs text-muted mb-1" htmlFor="company_name">
             {labels.fieldCompany}
           </label>
           <input
@@ -67,12 +109,12 @@ export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props
             type="text"
             defaultValue={profile?.company_name ?? ''}
             placeholder={labels.companyPlaceholder}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1" htmlFor="ice">
+          <label className="block text-xs text-muted mb-1" htmlFor="ice">
             {labels.fieldIce}
           </label>
           <input
@@ -82,12 +124,12 @@ export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props
             defaultValue={profile?.ice ?? ''}
             placeholder={labels.icePlaceholder}
             maxLength={20}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1" htmlFor="registre_commerce">
+          <label className="block text-xs text-muted mb-1" htmlFor="registre_commerce">
             {labels.fieldRc}
           </label>
           <input
@@ -96,12 +138,12 @@ export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props
             type="text"
             defaultValue={profile?.registre_commerce ?? ''}
             placeholder={labels.rcPlaceholder}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-xs text-gray-500 mb-1" htmlFor="billing_address">
+          <label className="block text-xs text-muted mb-1" htmlFor="billing_address">
             {labels.fieldBillingAddress}
           </label>
           <textarea
@@ -110,7 +152,7 @@ export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props
             rows={2}
             defaultValue={profile?.billing_address ?? ''}
             placeholder={labels.billingAddressPlaceholder}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none bg-surface text-foreground placeholder:text-faint"
           />
         </div>
       </div>
@@ -119,7 +161,7 @@ export function WholesalerBillingForm({ profile, labels = defaultLabels }: Props
         <button
           type="submit"
           disabled={isPending}
-          className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isPending ? labels.savingBilling : labels.saveBilling}
         </button>

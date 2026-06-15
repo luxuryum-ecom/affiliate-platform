@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
@@ -10,9 +9,9 @@ import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buil
 import { InvoiceRequestForm } from '@/components/wholesale/invoice-request-form'
 import { WholesaleProofForm } from '@/components/wholesale/wholesale-proof-form'
 import { WholesalePendingActions } from '@/components/wholesale/wholesale-pending-actions'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import type {
-  WholesaleOrder,
+  WholesaleOrderBuyerView,
   WholesaleOrderItem,
   WholesaleOrderImportHistory,
   WholesaleOrderPaymentHistory,
@@ -40,29 +39,29 @@ type BillingProfile = Pick<
 // ── Status maps (DB enum value → i18n key suffix) ────────────────────────────
 
 const STATUS_KEY: Record<string, { key: string; cls: string }> = {
-  pending:   { key: 'statusPending',   cls: 'bg-amber-100 text-amber-700' },
-  confirmed: { key: 'statusConfirmed', cls: 'bg-blue-100 text-blue-700' },
-  sourcing:  { key: 'statusSourcing',  cls: 'bg-purple-100 text-purple-700' },
-  shipped:   { key: 'statusShipped',   cls: 'bg-indigo-100 text-indigo-700' },
-  delivered: { key: 'statusDelivered', cls: 'bg-green-100 text-green-700' },
-  cancelled: { key: 'statusCancelled', cls: 'bg-gray-100 text-gray-400' },
+  pending:   { key: 'statusPending',   cls: 'bg-warning-soft text-warning-fg' },
+  confirmed: { key: 'statusConfirmed', cls: 'bg-surface-2 text-muted border border-line' },
+  sourcing:  { key: 'statusSourcing',  cls: 'bg-warning-soft text-warning-fg' },
+  shipped:   { key: 'statusShipped',   cls: 'bg-surface-2 text-muted border border-line' },
+  delivered: { key: 'statusDelivered', cls: 'bg-success-soft text-success-fg' },
+  cancelled: { key: 'statusCancelled', cls: 'bg-surface-2 text-faint' },
 }
 
 const IMPORT_STATUS_KEY: Record<WholesaleImportStatus, { key: string; cls: string }> = {
-  awaiting_supplier: { key: 'importAwaitingSupplier', cls: 'bg-gray-100 text-gray-600' },
-  purchased:         { key: 'importPurchased',        cls: 'bg-amber-100 text-amber-700' },
-  in_production:     { key: 'importInProduction',     cls: 'bg-orange-100 text-orange-700' },
-  ready_to_ship:     { key: 'importReadyToShip',      cls: 'bg-yellow-100 text-yellow-700' },
-  shipped:           { key: 'importShipped',          cls: 'bg-blue-100 text-blue-700' },
-  customs_clearance: { key: 'importCustomsClearance', cls: 'bg-purple-100 text-purple-700' },
-  delivered:         { key: 'importDelivered',        cls: 'bg-green-100 text-green-700' },
+  awaiting_supplier: { key: 'importAwaitingSupplier', cls: 'bg-surface-2 text-muted' },
+  purchased:         { key: 'importPurchased',        cls: 'bg-warning-soft text-warning-fg' },
+  in_production:     { key: 'importInProduction',     cls: 'bg-warning-soft text-warning-fg' },
+  ready_to_ship:     { key: 'importReadyToShip',      cls: 'bg-warning-soft text-warning-fg' },
+  shipped:           { key: 'importShipped',          cls: 'bg-surface-2 text-muted border border-line' },
+  customs_clearance: { key: 'importCustomsClearance', cls: 'bg-warning-soft text-warning-fg' },
+  delivered:         { key: 'importDelivered',        cls: 'bg-success-soft text-success-fg' },
 }
 
 const PAYMENT_STATUS_KEY: Record<WholesalePaymentStatus, { key: string; cls: string }> = {
-  no_deposit:        { key: 'paymentNoDeposit',        cls: 'bg-gray-100 text-gray-500' },
-  deposit_requested: { key: 'paymentDepositRequested', cls: 'bg-amber-100 text-amber-700' },
-  deposit_received:  { key: 'paymentDepositReceived',  cls: 'bg-blue-100 text-blue-700' },
-  fully_paid:        { key: 'paymentFullyPaid',        cls: 'bg-green-100 text-green-700' },
+  no_deposit:        { key: 'paymentNoDeposit',        cls: 'bg-surface-2 text-muted' },
+  deposit_requested: { key: 'paymentDepositRequested', cls: 'bg-warning-soft text-warning-fg' },
+  deposit_received:  { key: 'paymentDepositReceived',  cls: 'bg-surface-2 text-muted border border-line' },
+  fully_paid:        { key: 'paymentFullyPaid',        cls: 'bg-success-soft text-success-fg' },
 }
 
 export async function generateMetadata({ params }: Params) {
@@ -92,7 +91,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
       .eq('id', user!.id)
       .single(),
     supabase
-      .from('wholesale_orders')
+      .from('wholesale_orders_buyer_read')
       .select('*')
       .eq('id', id)
       .eq('buyer_id', user!.id)
@@ -119,7 +118,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   ])
 
   const profile = profileRes.data as BillingProfile | null
-  const order = orderRes.data as WholesaleOrder | null
+  const order = orderRes.data as WholesaleOrderBuyerView | null
   const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
   const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
@@ -145,40 +144,26 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   type TKey = Parameters<typeof t>[0]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/wholesale/orders" className="text-gray-400 hover:text-gray-600 text-sm">
-              {tc('backToOrders')}
-            </Link>
-            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
-            <span className="font-mono text-sm text-gray-700">
-              #{id.slice(0, 8).toUpperCase()}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                {tc('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={`#${id.slice(0, 8).toUpperCase()}`}
+        backHref="/wholesale/orders"
+        backLabel={tc('backToOrders')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-4xl"
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-5">
 
         {showSubmittedBanner && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
+          <div className="bg-success-soft border border-success rounded-xl px-4 py-3 text-sm text-success-fg">
             {t('submittedBanner')}
           </div>
         )}
 
         {/* Status header */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-surface rounded-xl border border-line p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -191,7 +176,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                   </span>
                 )}
                 {isDelivered && order.invoice_requested && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-accent-soft text-accent-fg border border-gold-300">
                     {t('badgeInvoiceRequested')}
                   </span>
                 )}
@@ -199,13 +184,13 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                   {t(paymentEntry.key as TKey)}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-1.5">
+              <p className="text-xs text-faint mt-1.5">
                 {t('orderedOn', { date: fmt(order.created_at) })}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xl font-bold text-gray-900">{formatMAD(order.total_amount)}</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xl font-bold text-foreground">{formatMAD(order.total_amount)}</p>
+              <p className="text-xs text-faint">
                 {t('itemCount', { count: items.length })}
               </p>
             </div>
@@ -218,9 +203,9 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
           <div className="lg:col-span-2 space-y-5">
 
             {/* Order items */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionItems')}</h2>
-              <div className="divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{t('sectionItems')}</h2>
+              <div className="divide-y divide-line">
                 {items.map((item) => {
                   const coverUrl = getProductCoverUrl(item.product)
                   return (
@@ -228,50 +213,50 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                       <ProductThumbnail
                         src={coverUrl}
                         name={item.product.name}
-                        className="w-10 h-10 rounded-lg border shrink-0 text-[10px]"
+                        className="w-10 h-10 rounded-lg border border-line shrink-0 text-[10px]"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {item.product.name}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-xs text-muted mt-0.5">
                           {item.tier_label_snapshot} · {item.quantity} × {formatMAD(item.unit_price_snapshot)}
                         </p>
                       </div>
-                      <p className="text-sm font-bold text-gray-900 shrink-0">
+                      <p className="text-sm font-bold text-foreground shrink-0">
                         {formatMAD(item.subtotal)}
                       </p>
                     </div>
                   )
                 })}
               </div>
-              <div className="pt-3 border-t border-gray-100 mt-3 flex justify-between">
-                <span className="text-sm font-semibold text-gray-700">{t('itemTotal')}</span>
-                <span className="text-sm font-bold text-gray-900">{formatMAD(order.total_amount)}</span>
+              <div className="pt-3 border-t border-line mt-3 flex justify-between">
+                <span className="text-sm font-semibold text-muted">{t('itemTotal')}</span>
+                <span className="text-sm font-bold text-foreground">{formatMAD(order.total_amount)}</span>
               </div>
             </div>
 
             {/* Delivery info */}
             {(order.city || order.address || order.buyer_notes) && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-3">{t('sectionDelivery')}</h2>
+              <div className="bg-surface rounded-xl border border-line p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-3">{t('sectionDelivery')}</h2>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                   {order.city && (
                     <div>
-                      <dt className="text-xs text-gray-400">{t('deliveryCity')}</dt>
-                      <dd className="text-gray-800 font-medium">{order.city}</dd>
+                      <dt className="text-xs text-faint">{t('deliveryCity')}</dt>
+                      <dd className="text-foreground font-medium">{order.city}</dd>
                     </div>
                   )}
                   {order.address && (
                     <div className={order.city ? '' : 'col-span-2'}>
-                      <dt className="text-xs text-gray-400">{t('deliveryAddress')}</dt>
-                      <dd className="text-gray-800 font-medium">{order.address}</dd>
+                      <dt className="text-xs text-faint">{t('deliveryAddress')}</dt>
+                      <dd className="text-foreground font-medium">{order.address}</dd>
                     </div>
                   )}
                   {order.buyer_notes && (
                     <div className="col-span-2">
-                      <dt className="text-xs text-gray-400">{t('deliveryNote')}</dt>
-                      <dd className="text-gray-800">{order.buyer_notes}</dd>
+                      <dt className="text-xs text-faint">{t('deliveryNote')}</dt>
+                      <dd className="text-foreground">{order.buyer_notes}</dd>
                     </div>
                   )}
                 </dl>
@@ -280,41 +265,41 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
             {/* Invoice request section */}
             {isDelivered && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-1">{t('sectionInvoice')}</h2>
+              <div className="bg-surface rounded-xl border border-line p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-1">{t('sectionInvoice')}</h2>
                 {order.invoice_requested ? (
                   <div className="space-y-2 mt-3">
-                    <p className="text-sm text-green-700 font-medium">
+                    <p className="text-sm text-success-fg font-medium">
                       {t('invoiceSent')}
                     </p>
                     {order.invoice_requested_at && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-faint">
                         {t('invoiceSentOn', { date: fmt(order.invoice_requested_at) })}
                       </p>
                     )}
                     {(order.invoice_company_name || order.invoice_ice || order.invoice_registre_commerce || order.invoice_billing_address) && (
-                      <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm border-t border-gray-100 pt-3">
+                      <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm border-t border-line pt-3">
                         {order.invoice_company_name && (
                           <div>
-                            <dt className="text-xs text-gray-400">{t('invoiceCompanyName')}</dt>
+                            <dt className="text-xs text-faint">{t('invoiceCompanyName')}</dt>
                             <dd className="font-medium">{order.invoice_company_name}</dd>
                           </div>
                         )}
                         {order.invoice_ice && (
                           <div>
-                            <dt className="text-xs text-gray-400">{t('invoiceIce')}</dt>
+                            <dt className="text-xs text-faint">{t('invoiceIce')}</dt>
                             <dd className="font-medium">{order.invoice_ice}</dd>
                           </div>
                         )}
                         {order.invoice_registre_commerce && (
                           <div>
-                            <dt className="text-xs text-gray-400">{t('invoiceRc')}</dt>
+                            <dt className="text-xs text-faint">{t('invoiceRc')}</dt>
                             <dd className="font-medium">{order.invoice_registre_commerce}</dd>
                           </div>
                         )}
                         {order.invoice_billing_address && (
                           <div className="col-span-2">
-                            <dt className="text-xs text-gray-400">{t('invoiceBillingAddress')}</dt>
+                            <dt className="text-xs text-faint">{t('invoiceBillingAddress')}</dt>
                             <dd className="font-medium">{order.invoice_billing_address}</dd>
                           </div>
                         )}
@@ -323,7 +308,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                   </div>
                 ) : (
                   <>
-                    <p className="text-xs text-gray-400 mb-2">
+                    <p className="text-xs text-faint mb-2">
                       {t('invoiceAvailableAfter')}
                     </p>
                     {profile && <InvoiceRequestForm orderId={order.id} profile={profile} />}
@@ -343,26 +328,26 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
               />
             )}
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionTracking')}</h2>
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">{t('sectionTracking')}</h2>
               <OrderTimeline steps={timeline} />
             </div>
 
             {/* Import progress history */}
             {importTimeline.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionImportHistory')}</h2>
+              <div className="bg-surface rounded-xl border border-line p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-4">{t('sectionImportHistory')}</h2>
                 <OrderTimeline steps={importTimeline} />
               </div>
             )}
 
             {/* Link back to source quote */}
             {order.quote_request_id && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-400 mb-1">{t('quoteSource')}</p>
+              <div className="bg-surface rounded-xl border border-line p-4">
+                <p className="text-xs text-faint mb-1">{t('quoteSource')}</p>
                 <Link
                   href={`/wholesale/quote-requests/${order.quote_request_id}`}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+                  className="text-sm text-muted hover:text-foreground font-medium underline underline-offset-2 transition-colors"
                 >
                   {t('quoteLinkLabel', { ref: order.quote_request_id.slice(0, 8).toUpperCase() })}
                 </Link>
@@ -371,9 +356,9 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
             {/* Payment status */}
             {!['cancelled'].includes(order.status) && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+              <div className="bg-surface rounded-xl border border-line p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-700">{t('sectionPayment')}</p>
+                  <p className="text-xs font-semibold text-muted">{t('sectionPayment')}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentEntry.cls}`}>
                     {t(paymentEntry.key as TKey)}
                   </span>
@@ -382,26 +367,26 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                   <div className="space-y-1.5 text-sm">
                     {order.deposit_amount != null && (
                       <div className="flex justify-between">
-                        <span className="text-xs text-gray-400">{t('paymentDepositAsked')}</span>
-                        <span className="text-xs font-medium text-gray-700">{formatMAD(order.deposit_amount)}</span>
+                        <span className="text-xs text-faint">{t('paymentDepositAsked')}</span>
+                        <span className="text-xs font-medium text-muted">{formatMAD(order.deposit_amount)}</span>
                       </div>
                     )}
                     {order.deposit_received_amount > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-xs text-gray-400">{t('paymentDepositReceivedLabel')}</span>
-                        <span className="text-xs font-medium text-blue-700">{formatMAD(order.deposit_received_amount)}</span>
+                        <span className="text-xs text-faint">{t('paymentDepositReceivedLabel')}</span>
+                        <span className="text-xs font-medium text-success-fg">{formatMAD(order.deposit_received_amount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between border-t border-gray-100 pt-1.5">
-                      <span className="text-xs font-semibold text-gray-600">{t('paymentRemainingBalance')}</span>
-                      <span className={`text-xs font-bold ${remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <div className="flex justify-between border-t border-line pt-1.5">
+                      <span className="text-xs font-semibold text-muted">{t('paymentRemainingBalance')}</span>
+                      <span className={`text-xs font-bold ${remainingBalance > 0 ? 'text-danger-fg' : 'text-success-fg'}`}>
                         {formatMAD(remainingBalance)}
                       </span>
                     </div>
                   </div>
                 )}
                 {order.payment_status === 'no_deposit' && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-faint">
                     {t('paymentContactTeam')}
                   </p>
                 )}
@@ -410,8 +395,8 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
             {/* Payment proof upload */}
             {!['cancelled'].includes(order.status) && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h2 className="text-sm font-semibold text-gray-900 mb-3">
+              <div className="bg-surface rounded-xl border border-line p-4">
+                <h2 className="text-sm font-semibold text-foreground mb-3">
                   {t('sectionProof')}
                 </h2>
                 <WholesaleProofForm orderId={order.id} existingProofs={proofs} />
@@ -420,8 +405,8 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
             {/* Payment timeline */}
             {paymentTimeline.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('sectionPaymentHistory')}</h2>
+              <div className="bg-surface rounded-xl border border-line p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-4">{t('sectionPaymentHistory')}</h2>
                 <OrderTimeline steps={paymentTimeline} />
               </div>
             )}

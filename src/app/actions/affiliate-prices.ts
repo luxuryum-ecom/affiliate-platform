@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { parseMoneyInput } from '@/lib/money'
 
 export interface AffiliatePriceState {
   error: string | null
@@ -57,8 +58,13 @@ export async function saveAffiliateProductPrice(
     return { error: null, success: true, cleared: true }
   }
 
-  const price = parseFloat(priceRaw)
-  if (isNaN(price) || price <= 0) return fail('Prix invalide.')
+  // RÈGLE ARGENT n°4 — prix validé en chaîne décimale stricte (money.ts), stocké
+  // verbatim ; Number() exact dérivé pour la seule comparaison au prix plateforme.
+  // (Le champ vide est déjà géré plus haut → suppression du prix custom.)
+  const priceResult = parseMoneyInput(priceRaw)
+  if (!priceResult.ok || Number(priceResult.value) <= 0) return fail('Prix invalide.')
+  const price = priceResult.value
+  const priceNum = Number(price)
 
   const { data: product } = (await supabase
     .from('products')
@@ -84,7 +90,7 @@ export async function saveAffiliateProductPrice(
   }
 
   const platformPrice = Number(product.sell_price)
-  if (price < platformPrice) {
+  if (priceNum < platformPrice) {
     return fail(`Prix minimum : ${platformPrice} MAD (prix plateforme). Vous ne pouvez pas vendre en dessous.`)
   }
 

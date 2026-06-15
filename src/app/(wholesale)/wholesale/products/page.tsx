@@ -2,12 +2,11 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { Product, WholesaleCartItem } from '@/types/database'
 
 export async function generateMetadata() {
@@ -50,57 +49,28 @@ export default async function WholesaleProductsPage() {
   const cartCount = cartItems.length
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/wholesale/dashboard"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              {tc('backToDashboard')}
-            </Link>
-            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {cartCount > 0 && (
-              <Link
-                href="/wholesale/cart"
-                className="flex items-center gap-1.5 text-sm text-gray-700 font-medium hover:text-gray-900 transition-colors"
-              >
-                🛒
-                <span className="text-xs bg-gray-900 text-white px-1.5 py-0.5 rounded-full">
-                  {cartCount}
-                </span>
-              </Link>
-            )}
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <LanguageSwitcher variant="light" />
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                {tc('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/wholesale/dashboard"
+        backLabel={tc('backToDashboard')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-start justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">{t('pageTitle')}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+            <p className="text-sm text-muted mt-0.5">
               {t('subtitle', { count: products.length })}
             </p>
             <Link
               href="/wholesale/marketplace"
-              className="mt-1.5 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
+              className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
             >
               {t('browseMarketplace')}
             </Link>
@@ -108,7 +78,7 @@ export default async function WholesaleProductsPage() {
           {cartCount > 0 && (
             <Link
               href="/wholesale/cart"
-              className="shrink-0 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              className="shrink-0 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
             >
               {t('viewCart', { count: cartCount })}
             </Link>
@@ -116,8 +86,8 @@ export default async function WholesaleProductsPage() {
         </div>
 
         {products.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">{t('empty')}</p>
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">{t('empty')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -192,7 +162,7 @@ function WholesaleProductCard({
   const isRfq = getCatalogProductCtaMode(product.availability_type) === 'rfq'
 
   return (
-    <div className="group bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+    <div className="group bg-surface rounded-xl border border-line overflow-hidden flex flex-col hover:shadow-premium transition-shadow">
       {/* Thumbnail */}
       <Link href={productUrl} className="aspect-square relative overflow-hidden block">
         <ProductThumbnail
@@ -203,7 +173,7 @@ function WholesaleProductCard({
 
         {/* In-cart badge */}
         {inCartQty != null && (
-          <div className="absolute top-2 end-2 bg-gray-900 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          <div className="absolute top-2 end-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
             {inCartLabel}
           </div>
         )}
@@ -215,28 +185,28 @@ function WholesaleProductCard({
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
               isRfq
-                ? 'bg-purple-100 text-purple-700'
-                : 'bg-green-100 text-green-700'
+                ? 'bg-surface-2 text-muted border border-line'
+                : 'bg-success-soft text-success-fg border border-success'
             }`}
           >
             {isRfq ? badgeImport : badgeStock}
           </span>
           {hasTiers && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning-fg border border-warning">
               {badgeTiers}
             </span>
           )}
         </div>
 
         <Link href={productUrl}>
-          <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2 hover:text-gray-600 transition-colors">
+          <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2 hover:text-muted transition-colors">
             {product.name}
           </h3>
         </Link>
 
-        <div className="mt-auto pt-1.5 border-t border-gray-100">
-          <p className="text-sm font-bold text-gray-900">{formatMAD(displayPrice)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">
+        <div className="mt-auto pt-1.5 border-t border-line">
+          <p className="text-sm font-bold text-foreground">{formatMAD(displayPrice)}</p>
+          <p className="text-xs text-faint mt-0.5">
             {hasTiers ? fromPrice : ''}{minQtyLabel}
           </p>
         </div>
@@ -244,7 +214,7 @@ function WholesaleProductCard({
         {/* CTA */}
         <Link
           href={productUrl}
-          className="block w-full text-center text-xs font-bold py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+          className="block w-full text-center text-xs font-bold py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
         >
           {isRfq ? ctaRfq : ctaOrder}
         </Link>

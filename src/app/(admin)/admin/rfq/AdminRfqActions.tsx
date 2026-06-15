@@ -1,33 +1,36 @@
 'use client'
 
 import { useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { runRfqMatchingForSourcing, notifyMatchedSuppliers, updateMatchStatus } from '@/app/actions/rfq-engine'
 import type { RfqMatchStatus } from '@/types/database'
 
 export function RunMatchingButton({ sourcingId }: { sourcingId: string }) {
+  const t = useTranslations('admin.rfqActions')
   const [isPending, startTransition] = useTransition()
   return (
     <button
       disabled={isPending}
       onClick={() => startTransition(async () => { await runRfqMatchingForSourcing(sourcingId) })}
-      className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+      className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity focus:outline-none focus:ring-2 focus:ring-gold-400"
     >
-      {isPending ? '...' : '⚡ Lancer matching'}
+      {isPending ? t('running') : t('runMatching')}
     </button>
   )
 }
 
 export function NotifyButton({ matchIds, ineligibleCount = 0 }: { matchIds: string[]; ineligibleCount?: number }) {
+  const t = useTranslations('admin.rfqActions')
   const [isPending, startTransition] = useTransition()
   const handleClick = () => {
     const ineligibleNote = ineligibleCount > 0
-      ? `\n⚠ ${ineligibleCount} fournisseur${ineligibleCount > 1 ? 's' : ''} inéligible${ineligibleCount > 1 ? 's' : ''} (aucune catégorie commune) exclu${ineligibleCount > 1 ? 's' : ''} de cette notification.`
+      ? t('confirmIneligible', { count: ineligibleCount })
       : ''
     const confirmed = window.confirm(
-      `Notifier ${matchIds.length} fournisseur${matchIds.length > 1 ? 's' : ''} éligible${matchIds.length > 1 ? 's' : ''} ?${ineligibleNote}\n\n` +
-      `Action : changement de statut interne "nouveau → notifié".\n` +
-      `Aucun email ni WhatsApp n'est envoyé automatiquement.\n\n` +
-      `Les fournisseurs verront l'opportunité sur leur espace /supplier/opportunities.`
+      t('confirmNotify', { count: matchIds.length }) + ineligibleNote + '\n\n' +
+      t('confirmAction') + '\n' +
+      t('confirmNoEmail') + '\n\n' +
+      t('confirmOpportunity')
     )
     if (!confirmed) return
     startTransition(async () => { await notifyMatchedSuppliers(matchIds) })
@@ -36,9 +39,9 @@ export function NotifyButton({ matchIds, ineligibleCount = 0 }: { matchIds: stri
     <button
       disabled={isPending || matchIds.length === 0}
       onClick={handleClick}
-      className="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+      className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity focus:outline-none focus:ring-2 focus:ring-gold-400"
     >
-      {isPending ? '...' : `🔔 Notifier ${matchIds.length} fournisseur${matchIds.length > 1 ? 's' : ''}`}
+      {isPending ? t('notifying') : t('notifyCount', { count: matchIds.length })}
     </button>
   )
 }
@@ -52,14 +55,15 @@ export function MatchStatusButton({
   newStatus: RfqMatchStatus
   label: string
 }) {
+  const t = useTranslations('admin.rfqActions')
   const [isPending, startTransition] = useTransition()
   return (
     <button
       disabled={isPending}
       onClick={() => startTransition(async () => { await updateMatchStatus(matchId, newStatus) })}
-      className="text-xs px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 transition-colors"
+      className="text-xs px-2.5 py-1 bg-surface-2 hover:bg-line text-foreground rounded-lg disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-400"
     >
-      {isPending ? '...' : label}
+      {isPending ? t('actionPending') : label}
     </button>
   )
 }

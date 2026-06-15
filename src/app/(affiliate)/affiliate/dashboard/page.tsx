@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { formatConversionRate, formatReturnRate } from '@/lib/order-analytics'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { signOut } from '@/app/actions/auth'
 import type { Profile, Commission } from '@/types/database'
 
 export async function generateMetadata() {
@@ -26,15 +26,15 @@ function StatCard({
 }) {
   const bg = {
     default: 'bg-surface border-line',
-    success: 'bg-emerald-500/10 border-emerald-500/30',
-    warning: 'bg-amber-500/10 border-amber-500/30',
+    success: 'bg-success-soft border-success',
+    warning: 'bg-warning-soft border-warning',
     muted:   'bg-surface-2 border-line',
   }[variant]
 
   const text = {
     default: 'text-foreground',
-    success: 'text-emerald-300',
-    warning: 'text-amber-300',
+    success: 'text-success-fg',
+    warning: 'text-warning-fg',
     muted:   'text-faint',
   }[variant]
 
@@ -104,7 +104,7 @@ export default async function AffiliateDashboardPage() {
   const returnRate     = formatReturnRate(delivered, returned)
 
   return (
-    <div className="theme-dark bg-bg text-foreground min-h-screen">
+    <div className="bg-bg text-foreground min-h-screen">
       <header className="bg-surface border-b border-line">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -174,12 +174,12 @@ export default async function AffiliateDashboardPage() {
           </p>
 
           <div className={`rounded-xl border p-5 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-            pendingBalance > 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-surface border-line'
+            pendingBalance > 0 ? 'bg-warning-soft border-warning' : 'bg-surface border-line'
           }`}>
             <div>
               <p className="text-xs text-muted">{t('pendingBalance')}</p>
               <p className={`text-3xl font-bold tabular-nums mt-1 ${
-                pendingBalance > 0 ? 'text-amber-300' : 'text-faint'
+                pendingBalance > 0 ? 'text-warning-fg' : 'text-faint'
               }`}>
                 {formatMAD(pendingBalance)}
               </p>

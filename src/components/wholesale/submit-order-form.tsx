@@ -30,6 +30,8 @@ const defaultLabels: SubmitOrderLabels = {
   submittingOrder: 'Envoi de la commande…',
 }
 
+const INPUT = 'w-full border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint'
+
 const initialState: ActionState = { error: null, success: false }
 
 export function SubmitWholesaleOrderForm({ labels = defaultLabels }: { labels?: SubmitOrderLabels }) {
@@ -40,37 +42,37 @@ export function SubmitWholesaleOrderForm({ labels = defaultLabels }: { labels?: 
       <form action={action} className="space-y-4">
         {/* Delivery details */}
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">
             {labels.deliverySection}{' '}
-            <span className="font-normal normal-case text-gray-400">{labels.deliveryOptional}</span>
+            <span className="font-normal normal-case text-faint">{labels.deliveryOptional}</span>
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">{labels.fieldCity}</label>
+              <label className="block text-xs text-muted mb-1">{labels.fieldCity}</label>
               <input
                 name="city"
                 placeholder={labels.fieldCityPlaceholder}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className={INPUT}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">{labels.fieldAddress}</label>
+              <label className="block text-xs text-muted mb-1">{labels.fieldAddress}</label>
               <input
                 name="address"
                 placeholder={labels.fieldAddressPlaceholder}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className={INPUT}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">{labels.fieldNotes}</label>
+            <label className="block text-xs text-muted mb-1">{labels.fieldNotes}</label>
             <textarea
               name="buyer_notes"
               rows={2}
               placeholder={labels.fieldNotesPlaceholder}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+              className={`${INPUT} resize-none`}
             />
           </div>
         </div>
@@ -78,14 +80,14 @@ export function SubmitWholesaleOrderForm({ labels = defaultLabels }: { labels?: 
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? labels.submittingOrder : labels.submitOrder}
         </button>
       </form>
 
       {state.error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+        <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
           {state.error}
         </p>
       )}

@@ -5,11 +5,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
-import { buildSupplierPricing } from '@/lib/supplier-pricing'
+import { buildSupplierPricing, applyPlatformMargin } from '@/lib/supplier-pricing'
+import { checkProductLimit } from '@/lib/product-limit'
+import { parseMoneyInput } from '@/lib/money'
+import { parsePercentInput } from '@/lib/rate'
 import type {
   SupplierProduct,
   SupplierProductStatus,
-  SupplierProductMoqTier,
   PlatformMarginType,
   SupplierType,
 } from '@/types/database'
@@ -18,13 +20,19 @@ import { moderateSupplierProduct, type ModerationInput } from '@/lib/supplier-pr
 
 export type SupplierProductState = { error: string | null; success?: boolean }
 
-function parseMoqTiersFromForm(formData: FormData): Array<{ min_quantity: number; unit_price_usd: number }> {
-  const tiers: Array<{ min_quantity: number; unit_price_usd: number }> = []
+// RÈGLE ARGENT n°4 — le prix de palier (devise fournisseur) est validé en CHAÎNE
+// décimale stricte (money.ts) et passé verbatim à la colonne numeric : zéro parseFloat.
+// Un palier sans prix valide (vide, zéro ou non numérique) est ignoré, comme avant
+// (l'ancien `!isNaN(price) && price > 0`).
+function parseMoqTiersFromForm(
+  formData: FormData,
+): Array<{ min_quantity: number; unit_price_usd: string }> {
+  const tiers: Array<{ min_quantity: number; unit_price_usd: string }> = []
   for (let i = 1; i <= 4; i++) {
     const qty = parseInt(formData.get(`tier_${i}_qty`) as string, 10)
-    const price = parseFloat(formData.get(`tier_${i}_price`) as string)
-    if (!isNaN(qty) && qty > 0 && !isNaN(price) && price > 0) {
-      tiers.push({ min_quantity: qty, unit_price_usd: price })
+    const priceR = parseMoneyInput(formData.get(`tier_${i}_price`))
+    if (!isNaN(qty) && qty > 0 && priceR.ok && !/^0+(\.0+)?$/.test(priceR.value)) {
+      tiers.push({ min_quantity: qty, unit_price_usd: priceR.value })
     }
   }
   return tiers.sort((a, b) => a.min_quantity - b.min_quantity)
@@ -78,11 +86,14 @@ export async function submitSupplierProduct(
   const availability_type = (formData.get('availability_type') as string) || 'local_stock'
   const target_buyer_type = (formData.get('target_buyer_type') as string) || 'wholesaler'
   // Prix saisi = montant dans la DEVISE du fournisseur (pas MAD). Converti serveur.
-  // @finance : arrondi 2 décimales À LA SOURCE (comme CSV/Telegram) — sinon un prix
-  // MAD à >2 déc. violerait l'invariant DB sp_mad_identity (mad === price_source)
-  // et l'insert échouerait silencieusement (perte de produit).
-  const priceSourceRaw = parseFloat(formData.get('price_source') as string)
-  const priceSource = Number.isFinite(priceSourceRaw) ? Math.round(priceSourceRaw * 100) / 100 : null
+  // RÈGLE ARGENT n°4 — validé en CHAÎNE décimale stricte (money.ts, ≤2 déc) : zéro
+  // parseFloat. Le ≤2 déc garantit l'invariant DB sp_mad_identity (mad === price_source).
+  // Vide → null (inchangé, « pas de prix »). Saisie >2 déc / invalide → null (au lieu
+  // d'un arrondi silencieux). Number() pour buildSupplierPricing (= ancienne valeur ≤2 déc).
+  const priceSourceStrRaw = formData.get('price_source')
+  const priceSourceStr = typeof priceSourceStrRaw === 'string' ? priceSourceStrRaw.trim() : ''
+  const priceSourceR = priceSourceStr !== '' ? parseMoneyInput(priceSourceStr) : null
+  const priceSource = priceSourceR && priceSourceR.ok ? Number(priceSourceR.value) : null
   const supplier_private_notes = (formData.get('supplier_private_notes') as string)?.trim() || null
   const stockRaw = parseInt(formData.get('stock_quantity') as string, 10)
   const leadRaw = parseInt(formData.get('lead_time_days') as string, 10)
@@ -95,6 +106,12 @@ export async function submitSupplierProduct(
   // price_source/fx_rate/mad lui-même — verrou DB 055).
   const admin = createAdminClient()
   const db = admin as unknown as Parameters<typeof buildSupplierPricing>[0]
+
+  // Limite de produits (abonnement) — barrière serveur (web). Évite la fuite UI.
+  const limit = await checkProductLimit(db, user.id)
+  if (limit.isAtLimit) {
+    return { error: `Limite de produits atteinte (${limit.currentCount}/${limit.maxAllowed} — plan ${limit.planName}). Passez à un plan supérieur pour en ajouter.` }
+  }
 
   // Conversion devise → MAD via taux admin figé. Pas de pays → soumission BLOQUÉE.
   const pricing = await buildSupplierPricing(db, user.id, priceSource)
@@ -136,7 +153,11 @@ export async function submitSupplierProduct(
   const productId = (product as { id: string }).id
 
   if (moqTiers.length > 0) {
-    const tierRows: Omit<SupplierProductMoqTier, 'id' | 'created_at'>[] = moqTiers.map((t) => ({
+    const tierRows: Array<{
+      supplier_product_id: string
+      min_quantity: number
+      unit_price_usd: string
+    }> = moqTiers.map((t) => ({
       supplier_product_id: productId,
       min_quantity: t.min_quantity,
       unit_price_usd: t.unit_price_usd,
@@ -174,8 +195,39 @@ export async function approveSupplierProduct(
   const public_name = (formData.get('public_name') as string)?.trim() || null
   const public_description = (formData.get('public_description') as string)?.trim() || null
   const platform_margin_type = (formData.get('platform_margin_type') as string) || 'percentage'
-  const platform_margin_value = parseFloat(formData.get('platform_margin_value') as string)
+  // MARGE — % (rate.ts, 0–100) si 'percentage' ; MONTANT (money.ts) si 'fixed'. Vide →
+  // null (inchangé) ; invalide → erreur (au lieu d'un NULL silencieux). Chaîne verbatim.
+  const marginRawRaw = formData.get('platform_margin_value')
+  const marginRawStr = typeof marginRawRaw === 'string' ? marginRawRaw.trim() : ''
+  let platform_margin_value: string | null = null
+  if (marginRawStr !== '') {
+    const r =
+      platform_margin_type === 'percentage'
+        ? parsePercentInput(marginRawStr)
+        : parseMoneyInput(marginRawStr)
+    if (!r.ok) return { error: 'Marge invalide (pourcentage 0–100, ou montant ≥ 0 si fixe).' }
+    platform_margin_value = r.value
+  }
   const admin_notes = (formData.get('admin_notes') as string)?.trim() || null
+
+  // ── Marge plateforme fournisseur (canal DIRECT) — prix FINAL calculé serveur ──
+  // Toggle par produit (OFF par défaut tant que l'UI ne l'envoie pas). On lit le prix
+  // converti (base) déjà figé à la soumission et on applique la marge si le toggle est ON.
+  // `applyPlatformMargin` = miroir half-up de calculatePlatformPrice ; OFF → base inchangée.
+  const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
+  const { data: existing } = (await supabase
+    .from('supplier_products')
+    .select('suggested_wholesale_price_mad')
+    .eq('id', id)
+    .single()) as { data: { suggested_wholesale_price_mad: number | null } | null; error: unknown }
+  const suggested = existing?.suggested_wholesale_price_mad ?? null
+  const marginValueNum = platform_margin_value != null ? Number(platform_margin_value) : null
+  const final_wholesale_price_mad = applyPlatformMargin(
+    suggested,
+    apply_platform_margin,
+    platform_margin_type as PlatformMarginType,
+    marginValueNum,
+  )
 
   const { error } = await supabase
     .from('supplier_products')
@@ -185,7 +237,9 @@ export async function approveSupplierProduct(
       public_name,
       public_description,
       platform_margin_type: platform_margin_type as PlatformMarginType,
-      platform_margin_value: isNaN(platform_margin_value) ? null : platform_margin_value,
+      platform_margin_value,
+      apply_platform_margin,
+      final_wholesale_price_mad,
       admin_notes,
       approved_by: userId,
       approved_at: new Date().toISOString(),

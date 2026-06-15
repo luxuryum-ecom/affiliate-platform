@@ -1,0 +1,22 @@
+# Barrière PHYSIQUE avant chaque push : typecheck + build + smoke des routes.
+# Plus lourd que pre-commit, mais moins fréquent. Voir CLAUDE.md › RÈGLES ABSOLUES.
+# Binaires en direct (npx / .bin) pour contourner le gotcha pnpm sharp/unrs-resolver.
+
+echo "🔍 pre-push · typecheck (tsc --noEmit)…"
+npx tsc --noEmit || { echo "❌ Typecheck en échec — push BLOQUÉ."; exit 1; }
+
+echo "🏗️  pre-push · build (next build)…"
+npx next build || { echo "❌ Build en échec — push BLOQUÉ."; exit 1; }
+
+# Smoke Playwright : ne tourne que si au moins un compte test est configuré (.env.local).
+# Sinon on prévient et on laisse passer (les routes protégées ne sont pas couvertes localement,
+# mais le rendu reste vérifiable manuellement via `pnpm smoke` une fois les creds renseignés).
+if grep -qE '^SMOKE_[A-Z]+_EMAIL=.+' .env.local 2>/dev/null; then
+  echo "💨 pre-push · smoke (playwright test)…"
+  npx playwright test || { echo "❌ Smoke en échec — push BLOQUÉ."; exit 1; }
+else
+  echo "⚠️  pre-push · smoke SKIPPÉ : aucun compte test dans .env.local."
+  echo "   → Renseigne .env.local (voir .env.local.example) pour couvrir les routes protégées."
+fi
+
+echo "✅ pre-push OK."

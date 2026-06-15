@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './_guards'
 import { getWholesaleTier } from '@/lib/utils'
 import { getRateToMad, getClientCurrency } from '@/lib/fx'
+import { parseMoneyInput } from '@/lib/money'
+import { parseRateInput } from '@/lib/rate'
 import type { QuoteRequest, Product, QuoteRequestStatus } from '@/types/database'
 
 export type QuoteRequestFormState = { error: string | null; success?: boolean }
@@ -99,17 +101,31 @@ export async function prepareQuote(
   // ── Multi-devise : prix marchandise saisi en devise SOURCE → converti en MAD ──
   // Pivot interne = MAD. Le taux (central ou override) est FIGÉ sur le devis.
   const sourceCurrency = (formData.get('source_currency') as string)?.trim().toUpperCase() || 'MAD'
-  const sourceUnitPrice = parseFloat(formData.get('quoted_unit_price_source') as string)
+  // PRIX UNITAIRE SOURCE — validé en CHAÎNE décimale stricte (money.ts), chaîne verbatim
+  // stockée : zéro parseFloat. Number() dérivé pour la conversion FX (= ancien parseFloat).
+  const sourceUnitPriceR = parseMoneyInput(formData.get('quoted_unit_price_source'))
+  const sourceUnitPriceStr = sourceUnitPriceR.ok ? sourceUnitPriceR.value : null
+  const sourceUnitPrice = sourceUnitPriceR.ok ? Number(sourceUnitPriceR.value) : NaN
   const quantity = parseInt(formData.get('quoted_quantity') as string, 10)
-  const transportTotal = parseFloat(formData.get('quoted_transport_total_mad') as string)
+  // RÈGLE ARGENT n°4 — frais de transport (MAD) validés en CHAÎNE décimale stricte
+  // (money.ts), passés verbatim à la colonne numeric : zéro parseFloat. Vide ou
+  // négatif reste rejeté comme avant (l'ancien `isNaN || < 0`).
+  const transportRaw = formData.get('quoted_transport_total_mad')
+  const transportStr = typeof transportRaw === 'string' ? transportRaw.trim() : ''
+  const transportTotalR = parseMoneyInput(transportStr)
 
-  const fxOverrideRaw = formData.get('fx_rate_override') as string | null
-  const fxOverride = fxOverrideRaw && fxOverrideRaw.trim() !== '' ? parseFloat(fxOverrideRaw) : null
+  // TAUX override — validé en CHAÎNE décimale stricte (rate.ts, ≤8 déc, > 0) ; valeur
+  // numérique dérivée (Number) pour la résolution fxRate. Vide → null (repli central) ;
+  // fourni mais invalide → erreur (comme l'ancien `isNaN || <= 0`).
+  const fxOverrideRaw = formData.get('fx_rate_override')
+  const fxOverrideStr = typeof fxOverrideRaw === 'string' ? fxOverrideRaw.trim() : ''
+  const fxOverrideR = fxOverrideStr !== '' ? parseRateInput(fxOverrideStr) : null
+  const fxOverride = fxOverrideR && fxOverrideR.ok ? Number(fxOverrideR.value) : null
 
   if (isNaN(sourceUnitPrice) || sourceUnitPrice <= 0) return { error: 'Prix unitaire invalide.' }
   if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.' }
-  if (isNaN(transportTotal) || transportTotal < 0) return { error: 'Frais de transport invalides.' }
-  if (fxOverride !== null && (isNaN(fxOverride) || fxOverride <= 0)) {
+  if (transportStr === '' || !transportTotalR.ok) return { error: 'Frais de transport invalides.' }
+  if (fxOverrideR !== null && !fxOverrideR.ok) {
     return { error: 'Taux de change override invalide (doit être > 0).' }
   }
 
@@ -127,7 +143,9 @@ export async function prepareQuote(
     fxRate = central
   }
 
-  const unitPriceMad = parseFloat((sourceUnitPrice * fxRate).toFixed(2))
+  // CONVERSION FX — half-up centimes (validé @finance + GO Abdou, lot FX). Bascule
+  // depuis toFixed(2) : ±1 ct sur ~0,1 % des devis, à la (re-)préparation uniquement.
+  const unitPriceMad = Math.round(sourceUnitPrice * fxRate * 100) / 100
 
   // Devise d'affichage = devise du pays destination (figée avec son taux).
   const { data: q } = (await supabase
@@ -151,13 +169,13 @@ export async function prepareQuote(
     .update({
       status:                     'quote_prepared',
       quoted_unit_price_mad:      unitPriceMad,
-      quoted_unit_price_source:   sourceUnitPrice,
+      quoted_unit_price_source:   sourceUnitPriceStr,
       source_currency:            sourceCurrency,
       fx_rate_source_to_mad:      fxRate,
       display_currency:           displayCurrency,
       fx_rate_display_vs_mad:     displayRate,
       quoted_quantity:            quantity,
-      quoted_transport_total_mad: transportTotal,
+      quoted_transport_total_mad: transportTotalR.value,
       quoted_shipping_mode:       shippingMode,
       quoted_delivery_delay:      deliveryDelay,
       quote_validity_date:        validityDate || null,
@@ -251,7 +269,9 @@ export async function convertQuoteToOrder(
   const tier = getWholesaleTier(quote.product.wholesale_tiers ?? [], quote.quantity_requested)
   const unitPrice = tier?.price_per_unit ?? 0
   const tierLabel = tier?.label ?? 'Prix à définir'
-  const subtotal = parseFloat((unitPrice * quote.quantity_requested).toFixed(2))
+  // Arrondi half-up centimes (convention unique du chantier). No-op vs l'ancien toFixed
+  // ici (tier MAD 2-déc × qty entier = exact) ; basculé pour la cohérence d'audit.
+  const subtotal = Math.round(unitPrice * quote.quantity_requested * 100) / 100
 
   // Propagation du snapshot de taux figé du devis vers la commande (traçabilité argent).
   // NB : total_amount reste calculé sur les tiers MAD (comportement existant inchangé) ;
@@ -261,9 +281,11 @@ export async function convertQuoteToOrder(
     fx_rate_source_to_mad: number | null
     quoted_unit_price_source: number | null
   }
+  // Montant source de traçabilité — échelle 4 décimales conservée, arrondi half-up
+  // (no-op vs l'ancien toFixed(4) : source × qty entier ; basculé pour cohérence).
   const merchandiseSourceAmount =
     fxQuote.quoted_unit_price_source != null
-      ? parseFloat((fxQuote.quoted_unit_price_source * quote.quantity_requested).toFixed(4))
+      ? Math.round(fxQuote.quoted_unit_price_source * quote.quantity_requested * 10000) / 10000
       : null
 
   const { data: newOrder, error: orderErr } = (await supabase

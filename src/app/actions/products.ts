@@ -24,6 +24,8 @@ function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
 import { calculatePlatformPrice, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
 import { getRateToMad } from '@/lib/fx'
+import { parseMoneyInput } from '@/lib/money'
+import { parseRateInput, parsePercentInput } from '@/lib/rate'
 
 export type ProductFormState = { error: string | null }
 
@@ -74,16 +76,24 @@ export async function upsertProduct(
 
   // ── Cost & margin ─────────────────────────────────────────────────────────
 
-  const purchase_price_raw = formData.get('purchase_price') as string
-  const purchase_price = purchase_price_raw ? parseFloat(purchase_price_raw) : null
+  // PRIX D'ACHAT (devise source) — validé en CHAÎNE décimale stricte (money.ts),
+  // chaîne verbatim stockée : zéro parseFloat. Vide → null (inchangé). Number()
+  // dérivé (purchasePriceNum) alimente la conversion FX (= ancien parseFloat).
+  const purchasePriceRaw = formData.get('purchase_price')
+  const purchasePriceStr = typeof purchasePriceRaw === 'string' ? purchasePriceRaw.trim() : ''
+  const purchasePriceR = purchasePriceStr !== '' ? parseMoneyInput(purchasePriceStr) : null
+  const purchase_price = purchasePriceR && purchasePriceR.ok ? purchasePriceR.value : null
+  const purchasePriceNum = purchasePriceR && purchasePriceR.ok ? Number(purchasePriceR.value) : null
 
   const purchase_currency = (formData.get('purchase_currency') as string) || 'MAD'
   // Réconciliation Étape 2 : exchange_rate_to_mad devient un OVERRIDE manuel.
   // S'il est fourni (> 0) on le respecte ; sinon, pour une devise ≠ MAD on prend le
   // taux central (current_exchange_rates) ; MAD ⇒ 1. Le calcul aval est inchangé.
-  const exchange_rate_raw = formData.get('exchange_rate_to_mad') as string
-  const exchange_rate_explicit =
-    exchange_rate_raw && !isNaN(parseFloat(exchange_rate_raw)) ? parseFloat(exchange_rate_raw) : null
+  // TAUX override — validé en CHAÎNE décimale stricte (rate.ts, ≤8 déc, > 0) ; la
+  // valeur numérique dérivée (Number) alimente la conversion (identique à l'ancien
+  // parseFloat). Vide/invalide → null → repli sur le taux central (inchangé).
+  const exrR = parseRateInput(formData.get('exchange_rate_to_mad'))
+  const exchange_rate_explicit = exrR.ok ? Number(exrR.value) : null
   const exchange_rate_to_mad =
     exchange_rate_explicit !== null && exchange_rate_explicit > 0
       ? exchange_rate_explicit
@@ -100,14 +110,48 @@ export async function upsertProduct(
   // platform_margin_value: preferred new field; fall back to legacy margin_percentage
   const margin_value_raw =
     formData.get('platform_margin_value') ?? formData.get('margin_percentage')
-  const platform_margin_value = parseFloat(margin_value_raw as string) || 30
+  // MARGE — % (rate.ts, 0–100) si type 'percentage' ; MONTANT (money.ts) si 'fixed'.
+  // Chaîne verbatim stockée ; Number() pour le calcul (= ancien parseFloat pour saisie
+  // valide). VIDE → défaut 20 ; 0 explicite CONSERVÉ ; hors bornes/invalide → erreur.
+  const marginRawStr = typeof margin_value_raw === 'string' ? margin_value_raw.trim() : ''
+  const marginParse =
+    platform_margin_type === 'percentage'
+      ? parsePercentInput(marginRawStr)
+      : parseMoneyInput(marginRawStr)
+  let marginInvalid = false
+  let platform_margin_value_str: string
+  if (marginRawStr === '') {
+    platform_margin_value_str = '20' // défaut marge plateforme affilié (stratégie acquisition lancement)
+  } else if (!marginParse.ok) {
+    platform_margin_value_str = '20'
+    marginInvalid = true
+  } else {
+    // Saisie valide (0 inclus) → conservée VERBATIM. Correctif du piège « 0 → défaut » :
+    // un admin qui saisit explicitement 0 % (produit d'appel, vente au coût) obtient
+    // bien 0, plus le défaut. Seul le champ VIDE retombe sur le défaut (branche ci-dessus).
+    platform_margin_value_str = marginParse.value
+  }
+  const platform_margin_value = Number(platform_margin_value_str)
 
   // Keep margin_percentage in sync for backward compat with any legacy reads
-  const margin_percentage = platform_margin_type === 'percentage' ? platform_margin_value : 0
+  const margin_percentage =
+    platform_margin_type === 'percentage' ? platform_margin_value_str : '0'
 
-  const confirmation_fee_mad = parseFloat(formData.get('confirmation_fee_mad') as string) || 10
-  const packaging_fee_mad = parseFloat(formData.get('packaging_fee_mad') as string) || 10
-  const delivery_fee_mad = parseFloat(formData.get('delivery_fee_mad') as string) || 0
+  // FEES — montants validés (money.ts), chaîne verbatim stockée ; Number() pour la
+  // commission préview. Correctif du piège « 0 → défaut » : VIDE → défaut, mais un 0
+  // explicite est CONSERVÉ (ex. confirmation gérée par l'affilié → frais 0). Invalide
+  // → défaut (comportement inchangé).
+  const moneyOrDefault = (raw: FormDataEntryValue | null, def: string): string => {
+    const s = typeof raw === 'string' ? raw.trim() : ''
+    if (s === '') return def
+    const r = parseMoneyInput(s)
+    return r.ok ? r.value : def
+  }
+  const confirmation_fee_mad = moneyOrDefault(formData.get('confirmation_fee_mad'), '10')
+  const packaging_fee_mad = moneyOrDefault(formData.get('packaging_fee_mad'), '10')
+  const delivery_fee_mad = moneyOrDefault(formData.get('delivery_fee_mad'), '0')
+  const confFeeNum = Number(confirmation_fee_mad)
+  const packFeeNum = Number(packaging_fee_mad)
 
   // ── Computed pricing ──────────────────────────────────────────────────────
   // locally_produced → price is already in MAD
@@ -120,10 +164,14 @@ export async function upsertProduct(
   let purchase_price_mad: number | null = null
   let calculated_sale_price_mad: number | null = null
 
-  if (purchase_price !== null && !isNaN(purchase_price)) {
+  if (purchasePriceNum !== null) {
+    // CONVERSION FX — half-up centimes `Math.round(montant × taux × 100) / 100`
+    // (validé @finance + GO Abdou, lot FX). Bascule depuis `toFixed(2)` : ±1 ct sur
+    // ~0,1 % des imports tombant pile sur une demi-centime, aux nouveaux/re-saves
+    // uniquement (le passé figé n'est jamais re-converti). Convention unique = cohérence audit.
     purchase_price_mad = needsConversion
-      ? parseFloat((purchase_price * exchange_rate_to_mad).toFixed(2))
-      : purchase_price
+      ? Math.round(purchasePriceNum * exchange_rate_to_mad * 100) / 100
+      : purchasePriceNum
 
     calculated_sale_price_mad = calculatePlatformPrice(
       purchase_price_mad,
@@ -134,16 +182,38 @@ export async function upsertProduct(
 
   // ── Factory cost (migration 016) — explicit MAD cost set by admin ────────
 
+  // RÈGLE ARGENT n°4 — coût usine explicite validé en CHAÎNE décimale stricte (money.ts),
+  // passé verbatim à la colonne numeric : zéro parseFloat. Absent → repli sur le
+  // purchase_price_mad calculé (inchangé). Saisie invalide (négatif, >2 déc., non
+  // numérique) → erreur explicite au lieu d'un repli/arrondi silencieux.
+  // `factoryCostNum` (Number d'une chaîne déjà validée ≤2 déc.) ne sert qu'au calcul
+  // de la commission préview et à la validation — valeur identique à l'ancien parseFloat.
   const factory_cost_mad_raw = formData.get('factory_cost_mad') as string
-  // Fall back to computed purchase_price_mad when not explicitly set
-  const factory_cost_mad: number | null =
-    factory_cost_mad_raw && !isNaN(parseFloat(factory_cost_mad_raw))
-      ? parseFloat(factory_cost_mad_raw)
-      : purchase_price_mad
+  const factoryCostStr =
+    typeof factory_cost_mad_raw === 'string' ? factory_cost_mad_raw.trim() : ''
+  let factory_cost_mad: string | number | null
+  let factoryCostInvalid = false
+  if (factoryCostStr !== '') {
+    const r = parseMoneyInput(factoryCostStr)
+    if (r.ok) factory_cost_mad = r.value
+    else {
+      factory_cost_mad = null
+      factoryCostInvalid = true
+    }
+  } else {
+    factory_cost_mad = purchase_price_mad
+  }
+  const factoryCostNum = factory_cost_mad === null ? null : Number(factory_cost_mad)
 
   // ── Sales fields ──────────────────────────────────────────────────────────
 
-  const sell_price = parseFloat(formData.get('sell_price') as string)
+  // RÈGLE ARGENT n°4 — prix de vente validé en CHAÎNE décimale stricte (money.ts),
+  // stocké verbatim : zéro parseFloat. `sellPriceNum` (Number d'une chaîne validée
+  // ≤2 déc.) ne sert qu'au calcul de la commission préview et à la validation > 0 —
+  // valeur identique à l'ancien parseFloat (commission bit-identique).
+  const sellPriceR = parseMoneyInput(formData.get('sell_price'))
+  const sell_price: string | null = sellPriceR.ok ? sellPriceR.value : null
+  const sellPriceNum = sellPriceR.ok ? Number(sellPriceR.value) : NaN
   const wholesale_min_qty = parseInt(formData.get('wholesale_min_qty') as string) || 1
   const stock_count = parseInt(formData.get('stock_count') as string) || 0
 
@@ -160,17 +230,17 @@ export async function upsertProduct(
   )
 
   const commission_amount: number = (() => {
-    if (!affiliate_enabled || factory_cost_mad === null) return 0
+    if (!affiliate_enabled || factoryCostNum === null) return 0
     const raw = calculateNetAffiliateCommission({
-      affiliateSellPrice: sell_price,
-      factoryCostMad: factory_cost_mad,
+      affiliateSellPrice: sellPriceNum,
+      factoryCostMad: factoryCostNum,
       marginType: platform_margin_type,
       marginValue: platform_margin_value,
-      packagingFee: packaging_fee_mad,
+      packagingFee: packFeeNum,
       // La livraison n'est jamais 0 ; on utilise le défaut logistique planché
       // (et non delivery_fee_mad du produit) pour rester cohérent avec page.tsx.
       deliveryFee: previewDeliveryFee,
-      confirmationFee: confirmation_fee_mad,
+      confirmationFee: confFeeNum,
       quantity: 1,
     })
     return Math.max(0, raw)
@@ -203,10 +273,16 @@ export async function upsertProduct(
       : null
 
   // ── Migration 020 — import cost model (legacy fields kept for backward compat) ──
+  // RÈGLE ARGENT n°4 — prix d'import estimé validé en CHAÎNE décimale stricte (money.ts),
+  // passé verbatim : zéro parseFloat. Affichage seul, aucun calcul. Vide/zéro/invalide → null.
   const estimated_import_price_mad_raw = formData.get('estimated_import_price_mad') as string
-  const estimated_import_price_mad: number | null =
+  const estimatedImportR =
     availability_type === 'import_on_demand' && estimated_import_price_mad_raw
-      ? parseFloat(estimated_import_price_mad_raw) || null
+      ? parseMoneyInput(estimated_import_price_mad_raw)
+      : null
+  const estimated_import_price_mad: string | null =
+    estimatedImportR && estimatedImportR.ok && !/^0+(\.0+)?$/.test(estimatedImportR.value)
+      ? estimatedImportR.value
       : null
 
   // Unit auto-derived from shipping mode
@@ -220,7 +296,7 @@ export async function upsertProduct(
     availability_type === 'import_on_demand' && import_notes_raw ? import_notes_raw : null
 
   // Keep estimated_cost_mad in sync with estimated_import_price_mad for backward compat
-  const estimated_cost_mad: number | null = estimated_import_price_mad
+  const estimated_cost_mad: string | null = estimated_import_price_mad
 
   // ── Approval ──────────────────────────────────────────────────────────────
 
@@ -247,9 +323,11 @@ export async function upsertProduct(
     return { error: 'Canal de soumission invalide.' }
   if (!['MAD', 'USD', 'AED'].includes(purchase_currency))
     return { error: 'Devise invalide. Utilisez MAD, USD ou AED.' }
-  if (isNaN(sell_price) || sell_price <= 0)
+  if (!sellPriceR.ok || sellPriceNum <= 0)
     return { error: 'Le prix de vente doit être supérieur à 0 MAD.' }
-  if (factory_cost_mad !== null && factory_cost_mad < 0)
+  if (factoryCostInvalid)
+    return { error: 'Le coût usine doit être un montant valide (max 2 décimales).' }
+  if (factoryCostNum !== null && factoryCostNum < 0)
     return { error: 'Le coût usine ne peut pas être négatif.' }
   if (wholesale_min_qty < 1) return { error: 'La quantité minimale doit être ≥ 1.' }
   if (stock_count < 0) return { error: 'Le stock ne peut pas être négatif.' }
@@ -257,14 +335,46 @@ export async function upsertProduct(
     return { error: "Le taux de change doit être supérieur à 0." }
   if (!['percentage', 'fixed'].includes(platform_margin_type))
     return { error: 'Type de marge invalide. Utilisez percentage ou fixed.' }
-  if (platform_margin_value < 0) return { error: 'La marge ne peut pas être négative.' }
-  if (margin_percentage < 0) return { error: 'La marge ne peut pas être négative.' }
+  if (marginInvalid)
+    return { error: 'La marge est invalide (pourcentage 0–100, ou montant ≥ 0 si marge fixe).' }
 
   // ── Parse JSON fields ─────────────────────────────────────────────────────
 
+  // VALIDATION SERVEUR des paliers (défense en profondeur) : le client sérialise les
+  // paliers en JSON dans un champ caché ; on ne fait JAMAIS confiance au prix client
+  // (un POST direct pourrait injecter un prix négatif, NaN, >2 déc ou aberrant). Chaque
+  // palier doit avoir min_qty entier ≥ 1 et price_per_unit fini, > 0, à ≤ 2 décimales
+  // (RÈGLE ARGENT n°4). Un palier malformé est ÉCARTÉ (même filtre que le client rowToTier).
   let wholesale_tiers: WholesaleTier[] = []
   try {
-    wholesale_tiers = JSON.parse((formData.get('wholesale_tiers') as string) || '[]')
+    const rawTiers = JSON.parse((formData.get('wholesale_tiers') as string) || '[]')
+    if (!Array.isArray(rawTiers)) return { error: 'Format des paliers de prix invalide.' }
+    if (rawTiers.length > 20) return { error: 'Trop de paliers de prix (maximum 20).' }
+    wholesale_tiers = rawTiers
+      .filter((t: unknown): t is WholesaleTier => {
+        if (typeof t !== 'object' || t === null) return false
+        const { min_qty: minQty, max_qty: maxQty, price_per_unit: price } = t as Record<string, unknown>
+        if (typeof minQty !== 'number' || !Number.isInteger(minQty) || minQty < 1) return false
+        if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return false
+        if (Number(price.toFixed(2)) !== price) return false // > 2 décimales → rejet
+        if (maxQty != null && (typeof maxQty !== 'number' || !Number.isInteger(maxQty) || maxQty < minQty)) return false
+        return true
+      })
+      .map((t) => ({
+        min_qty: t.min_qty,
+        max_qty: t.max_qty ?? undefined,
+        price_per_unit: t.price_per_unit,
+      }))
+    // Cohérence inter-paliers : tri croissant par min_qty + rejet des doublons et
+    // chevauchements. getWholesaleTier prend le PREMIER match (.find) → sans cet ordre,
+    // un chevauchement rendrait le prix facturé dépendant de l'ordre du tableau (manipulable).
+    wholesale_tiers.sort((a, b) => a.min_qty - b.min_qty)
+    for (let i = 1; i < wholesale_tiers.length; i++) {
+      const prev = wholesale_tiers[i - 1]
+      const cur = wholesale_tiers[i]
+      if (cur.min_qty <= prev.min_qty) return { error: 'Paliers de prix en doublon ou mal ordonnés.' }
+      if (prev.max_qty != null && prev.max_qty >= cur.min_qty) return { error: 'Paliers de prix qui se chevauchent.' }
+    }
   } catch {
     return { error: 'Format des paliers de prix invalide.' }
   }
@@ -305,7 +415,7 @@ export async function upsertProduct(
     margin_percentage,
     calculated_sale_price_mad,
     platform_margin_type,
-    platform_margin_value,
+    platform_margin_value: platform_margin_value_str,
     factory_cost_mad,
     confirmation_fee_mad,
     packaging_fee_mad,

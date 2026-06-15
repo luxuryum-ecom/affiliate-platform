@@ -37,8 +37,8 @@ export function CopyLinkButton({ url, strings }: CopyLinkButtonProps) {
       onClick={handleCopy}
       className={`w-full py-2 px-3 text-xs font-medium rounded-lg border transition-colors ${
         copied
-          ? 'bg-green-50 border-green-200 text-green-700'
-          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+          ? 'bg-success-soft border-success text-success-fg'
+          : 'bg-surface border-line text-muted hover:bg-surface-2'
       }`}
     >
       {copied ? `✓ ${strings.copied}` : strings.copy}

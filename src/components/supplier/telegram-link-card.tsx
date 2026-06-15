@@ -1,69 +1,127 @@
 'use client'
 
 // ─── Carte de liaison Telegram (autoportante) ────────────────────────────────
-// À monter dans n'importe quelle page fournisseur :
 //   import { TelegramLinkCard } from '@/components/supplier/telegram-link-card'
-//   <TelegramLinkCard initialStatus={await getTelegramLinkStatus()} />
+//   <TelegramLinkCard initialStatus={await getTelegramLinkStatus()} quota={...} />
 
 import { useActionState } from 'react'
+import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import {
   generateTelegramLinkCode,
   type TelegramLinkState,
 } from '@/app/actions/telegram-link'
 
-export function TelegramLinkCard({ initialStatus }: { initialStatus?: TelegramLinkState }) {
+type Quota = { current: number; max: number; isUnlimited: boolean }
+
+// Icône couronne (pas de lib d'icônes dans le projet) — couleur via currentColor.
+function CrownIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M3 7.5l4.2 3.3L12 4l4.8 6.8L21 7.5 19.2 17H4.8L3 7.5zM4.8 19h14.4v2H4.8v-2z" />
+    </svg>
+  )
+}
+
+export function TelegramLinkCard({
+  initialStatus,
+  quota,
+}: {
+  initialStatus?: TelegramLinkState
+  quota?: Quota
+}) {
+  const t = useTranslations('supplier.telegramLink')
   const [state, action, isPending] = useActionState(
     generateTelegramLinkCode,
     initialStatus ?? { error: null },
   )
 
   const botUsername = state.botUsername ?? initialStatus?.botUsername ?? null
+  const botLabel = botUsername ? `@${botUsername}` : t('botFallback')
+  const linked = state.linked || initialStatus?.linked
 
-  if (state.linked || initialStatus?.linked) {
-    return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-        <p className="text-sm font-semibold text-emerald-800">Compte Telegram lié ✅</p>
-        <p className="mt-1 text-xs text-emerald-700">
-          Envoyez une photo de produit avec une courte description au bot
-          {botUsername ? ` @${botUsername}` : ''}. Chaque produit est vérifié par un
-          administrateur avant publication.
+  const atLimit = !!quota && !quota.isUnlimited && quota.current >= quota.max
+
+  // ── Section quota / incitation Premium (partagée liée + non liée) ────────────
+  // Compteur X/Y issu de la vraie limite du plan (quota). Numéraux latins forcés
+  // via String() (substitution verbatim, sans formatage numérique localisé).
+  const quotaSection = !quota ? null : quota.isUnlimited ? (
+    <p className="text-xs font-medium text-muted">
+      {t('quotaUnlimited', { current: String(quota.current) })}
+    </p>
+  ) : atLimit ? (
+    // Carte PREMIUM OR (pas rouge) — incitation à l'abonnement.
+    <div className="flex items-start gap-3 rounded-xl border border-[#EF9F27] bg-[#FAEEDA] p-4">
+      <CrownIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent-fg" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-accent-fg">
+          {t('limitReached', { current: String(quota.current), max: String(quota.max) })}
         </p>
+        <p className="mt-0.5 text-xs text-accent-fg/80">{t('limitReachedSub')}</p>
+      </div>
+      <Link
+        href="/supplier/premium"
+        className="shrink-0 rounded-lg bg-[#BA7517] px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+      >
+        {t('goPremium')}
+      </Link>
+    </div>
+  ) : (
+    <p className="text-xs font-medium text-muted">
+      {t('quotaLabel', { current: String(quota.current), max: String(quota.max) })}
+    </p>
+  )
+
+  // ── État LIÉ : en-tête + guide complet + quota / incitation Premium ──────────
+  if (linked) {
+    return (
+      <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <span className="text-success">✅</span> {t('linkedCompact')}
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            {t('linkedGuide', { bot: botLabel })}
+          </p>
+        </div>
+        {quotaSection}
       </div>
     )
   }
 
+  // ── État NON LIÉ : bloc d'action + quota ────────────────────────────────────
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <p className="text-sm font-semibold text-gray-900">Ajouter des produits par Telegram</p>
-      <p className="mt-1 text-xs text-gray-500">
-        Liez votre compte une seule fois, puis envoyez simplement photo + description au bot.
-      </p>
+    <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">{t('title')}</p>
+        <p className="mt-1 text-xs text-muted">{t('subtitle')}</p>
+      </div>
+
+      {quotaSection}
 
       {state.code ? (
-        <div className="mt-4 space-y-2">
-          <p className="text-xs text-gray-500">
-            Ouvrez {botUsername ? `@${botUsername}` : 'le bot'} sur Telegram et envoyez&nbsp;:
-          </p>
-          <code className="block rounded-lg bg-gray-900 px-4 py-3 text-center text-lg font-mono tracking-widest text-white">
+        <div className="space-y-2">
+          <p className="text-xs text-muted">{t('instruction', { bot: botLabel })}</p>
+          <code className="block rounded-lg bg-ink-900 px-4 py-3 text-center text-lg font-mono tracking-widest text-cream">
             /link {state.code}
           </code>
-          <p className="text-xs text-gray-400">
-            Code valable {state.expiresInMinutes ?? 30} minutes, à usage unique.
+          <p className="text-xs text-faint">
+            {t('codeValidity', { minutes: state.expiresInMinutes ?? 30 })}
           </p>
         </div>
       ) : (
-        <form action={action} className="mt-4">
+        <form action={action}>
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {isPending ? 'Génération…' : 'Générer mon code de liaison'}
+            {isPending ? t('generating') : t('generate')}
           </button>
         </form>
       )}
 
-      {state.error && <p className="mt-3 text-xs text-red-600">{state.error}</p>}
+      {state.error && <p className="mt-3 text-xs text-danger-fg">{state.error}</p>}
     </div>
   )
 }

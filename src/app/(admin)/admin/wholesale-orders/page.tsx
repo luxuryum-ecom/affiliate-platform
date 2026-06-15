@@ -1,36 +1,41 @@
 import Link from 'next/link'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { createWholesaleOrderAction } from '@/app/actions/orders'
 import type { WholesaleOrder, Profile, WholesaleCartItemWithProduct, WholesaleImportStatus, WholesalePaymentStatus } from '@/types/database'
 
-export const metadata = { title: 'Commandes grossiste — Administration' }
-
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-amber-100 text-amber-700' },
-  confirmed: { label: 'Confirmée',   cls: 'bg-blue-100 text-blue-700' },
-  sourcing:  { label: 'En sourcing', cls: 'bg-purple-100 text-purple-700' },
-  shipped:   { label: 'Expédiée',    cls: 'bg-indigo-100 text-indigo-700' },
-  delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Annulée',     cls: 'bg-gray-100 text-gray-400' },
+export async function generateMetadata() {
+  const t = await getTranslations('admin.wholesaleOrders')
+  return { title: t('metaTitle') }
 }
 
-const IMPORT_STATUS_BADGE: Record<WholesaleImportStatus, { label: string; cls: string }> = {
-  awaiting_supplier: { label: 'Attente fournisseur', cls: 'bg-gray-100 text-gray-500' },
-  purchased:         { label: 'Acheté',              cls: 'bg-amber-100 text-amber-700' },
-  in_production:     { label: 'En production',       cls: 'bg-orange-100 text-orange-700' },
-  ready_to_ship:     { label: 'Prêt à expédier',     cls: 'bg-yellow-100 text-yellow-700' },
-  shipped:           { label: 'Expédié',             cls: 'bg-blue-100 text-blue-700' },
-  customs_clearance: { label: 'Dédouanement',        cls: 'bg-purple-100 text-purple-700' },
-  delivered:         { label: 'Livré (import)',      cls: 'bg-green-100 text-green-700' },
+// CSS only — labels via t()
+const STATUS_CLS: Record<string, string> = {
+  pending:   'bg-warning-soft text-warning-fg border-warning',
+  confirmed: 'bg-surface-2 text-muted border-line',
+  sourcing:  'bg-accent-soft text-accent-fg border-accent',
+  shipped:   'bg-surface-2 text-muted border-line',
+  delivered: 'bg-success-soft text-success-fg border-success',
+  cancelled: 'bg-surface-2 text-faint border-line',
 }
 
-const PAYMENT_STATUS_BADGE: Record<WholesalePaymentStatus, { label: string; cls: string }> = {
-  no_deposit:        { label: 'Aucun acompte',     cls: 'bg-gray-100 text-gray-500' },
-  deposit_requested: { label: 'Acompte demandé',   cls: 'bg-amber-100 text-amber-700' },
-  deposit_received:  { label: 'Acompte reçu',      cls: 'bg-blue-100 text-blue-700' },
-  fully_paid:        { label: 'Entièrement réglé', cls: 'bg-green-100 text-green-700' },
+const IMPORT_STATUS_CLS: Record<WholesaleImportStatus, string> = {
+  awaiting_supplier: 'bg-surface-2 text-muted border-line',
+  purchased:         'bg-warning-soft text-warning-fg border-warning',
+  in_production:     'bg-warning-soft text-warning-fg border-warning',
+  ready_to_ship:     'bg-warning-soft text-warning-fg border-warning',
+  shipped:           'bg-surface-2 text-muted border-line',
+  customs_clearance: 'bg-accent-soft text-accent-fg border-accent',
+  delivered:         'bg-success-soft text-success-fg border-success',
+}
+
+const PAYMENT_STATUS_CLS: Record<WholesalePaymentStatus, string> = {
+  no_deposit:        'bg-surface-2 text-faint border-line',
+  deposit_requested: 'bg-warning-soft text-warning-fg border-warning',
+  deposit_received:  'bg-surface-2 text-muted border-line',
+  fully_paid:        'bg-success-soft text-success-fg border-success',
 }
 
 type OrderWithBuyer = WholesaleOrder & { buyer: Pick<Profile, 'id' | 'full_name' | 'phone'> }
@@ -41,6 +46,12 @@ export default async function AdminWholesaleOrdersPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const profileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = profileRes.data as { full_name: string } | null
+
+  const t  = await getTranslations('admin.wholesaleOrders')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+  const isRtl = locale === 'ar'
+  const dateLocale = locale === 'ar' ? 'ar-MA' : locale === 'en' ? 'en-GB' : 'fr-MA'
 
   const [ordersRes, cartsRes] = await Promise.all([
     supabase
@@ -89,22 +100,15 @@ export default async function AdminWholesaleOrdersPage() {
   const pendingCarts = [...buyerMap.values()]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">← Dashboard</Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Commandes grossiste</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{adminProfile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">Déconnexion</button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={t('backLabel')}
+        userName={adminProfile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
@@ -112,21 +116,21 @@ export default async function AdminWholesaleOrdersPage() {
         {pendingCarts.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">Paniers en attente de conversion</h2>
-              <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">
+              <h2 className="text-sm font-semibold text-foreground">{t('pendingCartsHeading')}</h2>
+              <span className="text-xs px-2 py-0.5 bg-warning-soft text-warning-fg rounded-full font-bold">
                 {pendingCarts.length}
               </span>
             </div>
-            <div className="bg-white rounded-xl border border-amber-200 divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-warning divide-y divide-line">
               {pendingCarts.map(({ buyer, items, total }) => (
                 <div key={buyer.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm">{buyer.full_name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {items.length} article{items.length !== 1 ? 's' : ''} ·{' '}
-                      Total estimé&nbsp;: <strong>{formatMAD(total)}</strong>
+                    <p className="font-medium text-foreground text-sm">{buyer.full_name}</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      {t('itemsCount', { count: items.length })} ·{' '}
+                      {t('estimatedTotal')}&nbsp;: <strong>{formatMAD(total)}</strong>
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-faint mt-0.5">
                       {items.map((i) => `${i.product.name} ×${i.quantity}`).join(', ')}
                     </p>
                   </div>
@@ -134,9 +138,9 @@ export default async function AdminWholesaleOrdersPage() {
                     <input type="hidden" name="buyerId" value={buyer.id} />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                      className="px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:opacity-90 transition-opacity"
                     >
-                      Créer la commande →
+                      {t('createOrder')} {isRtl ? '←' : '→'}
                     </button>
                   </form>
                 </div>
@@ -147,63 +151,64 @@ export default async function AdminWholesaleOrdersPage() {
 
         {/* ── Orders list ── */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-900 mb-3">
-            Commandes ({orders.length})
+          <h2 className="text-sm font-semibold text-foreground mb-3">
+            {t('ordersHeading')} ({orders.length})
           </h2>
 
           {orders.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-              <p className="text-sm text-gray-400">Aucune commande grossiste pour le moment.</p>
+            <div className="bg-surface rounded-xl border border-line p-12 text-center">
+              <p className="text-sm text-faint">{t('empty')}</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {orders.map((order) => {
-                const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.pending
-                const importBadge = order.import_status
-                  ? IMPORT_STATUS_BADGE[order.import_status]
+                const cls = STATUS_CLS[order.status] ?? STATUS_CLS.pending
+                const importCls = order.import_status
+                  ? IMPORT_STATUS_CLS[order.import_status]
                   : null
-                const paymentBadge = order.payment_status
-                  ? PAYMENT_STATUS_BADGE[order.payment_status as WholesalePaymentStatus]
-                  : PAYMENT_STATUS_BADGE.no_deposit
+                const paymentStatus = (order.payment_status ?? 'no_deposit') as WholesalePaymentStatus
+                const paymentCls = PAYMENT_STATUS_CLS[paymentStatus] ?? PAYMENT_STATUS_CLS.no_deposit
                 return (
-                  <div key={order.id} className="flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors">
+                  <div key={order.id} className="flex items-start gap-3 p-4 hover:bg-surface-2 transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-mono text-gray-400">#{order.id.slice(0,8).toUpperCase()}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
-                        {importBadge && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importBadge.cls}`}>
-                            {importBadge.label}
+                        <span className="text-xs font-mono text-faint">#{order.id.slice(0,8).toUpperCase()}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}>
+                          {tc(`wholesaleStatus.${order.status}`)}
+                        </span>
+                        {importCls && order.import_status && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full border border-dashed ${importCls}`}>
+                            {tc(`importStatusBadge.${order.import_status}`)}
                           </span>
                         )}
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${paymentBadge.cls}`}>
-                          {paymentBadge.label}
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${paymentCls}`}>
+                          {tc(`paymentStatus.${paymentStatus}`)}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-gray-900">{order.buyer?.full_name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Vente&nbsp;: <strong>{formatMAD(order.total_amount)}</strong>
+                      <p className="text-sm font-medium text-foreground">{order.buyer?.full_name}</p>
+                      <p className="text-xs text-muted mt-0.5">
+                        {t('sale')}&nbsp;: <strong>{formatMAD(order.total_amount)}</strong>
                         {order.gross_profit_mad != null && (
                           <>
                             {' · '}
-                            Profit&nbsp;:{' '}
-                            <strong className={order.gross_profit_mad >= 0 ? 'text-green-600' : 'text-red-500'}>
+                            {t('profit')}&nbsp;:{' '}
+                            <strong className={order.gross_profit_mad >= 0 ? 'text-success' : 'text-danger'}>
                               {formatMAD(order.gross_profit_mad)}
                             </strong>
                             {order.gross_margin_percent != null && (
-                              <span className="text-gray-400"> ({order.gross_margin_percent.toFixed(1)}%)</span>
+                              <span className="text-faint"> ({order.gross_margin_percent.toFixed(1)}%)</span>
                             )}
                           </>
                         )}
                         {' · '}
-                        {new Date(order.created_at).toLocaleDateString('fr-MA', { day:'2-digit', month:'short', year:'numeric' })}
+                        {new Date(order.created_at).toLocaleDateString(dateLocale, { day:'2-digit', month:'short', year:'numeric' })}
                       </p>
                     </div>
                     <Link
                       href={`/admin/wholesale-orders/${order.id}`}
-                      className="shrink-0 text-xs text-blue-600 hover:underline"
+                      className="shrink-0 text-xs text-gold-500 hover:text-gold-600 transition-colors"
                     >
-                      Détails →
+                      {isRtl ? tc('details').replace('→', '←') : tc('details')}
                     </Link>
                   </div>
                 )

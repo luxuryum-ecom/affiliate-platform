@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { updateOrderStatus } from '@/app/actions/orders'
 import type { OrderStatus } from '@/types/database'
 
@@ -13,10 +14,10 @@ interface QuickStatusButtonProps {
 }
 
 const VARIANTS = {
-  confirm: 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100',
-  ship:    'text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100',
-  deliver: 'text-green-700 bg-green-50 border-green-200 hover:bg-green-100',
-  cancel:  'text-red-600 bg-red-50 border-red-200 hover:bg-red-100',
+  confirm: 'text-muted bg-surface-2 border-line hover:bg-surface',
+  ship:    'text-muted bg-surface-2 border-line hover:bg-surface',
+  deliver: 'text-success-fg bg-success-soft border-success hover:opacity-80',
+  cancel:  'text-danger-fg bg-danger-soft border-danger hover:opacity-80',
 }
 
 export function QuickStatusButton({
@@ -25,6 +26,7 @@ export function QuickStatusButton({
   label,
   variant = 'confirm',
 }: QuickStatusButtonProps) {
+  const t = useTranslations('admin')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -34,7 +36,7 @@ export function QuickStatusButton({
     startTransition(async () => {
       const result = await updateOrderStatus(orderId, newStatus)
       if (!result.success) {
-        setError(result.error ?? 'Erreur inconnue.')
+        setError(result.error ?? t('common.errorUnknown'))
       } else {
         router.refresh()
       }
@@ -52,7 +54,7 @@ export function QuickStatusButton({
         {isPending ? '…' : label}
       </button>
       {error && (
-        <span className="text-[10px] text-red-600 leading-tight max-w-[160px]">{error}</span>
+        <span className="text-[10px] text-danger-fg leading-tight max-w-[160px]">{error}</span>
       )}
     </span>
   )

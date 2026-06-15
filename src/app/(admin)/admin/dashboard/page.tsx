@@ -1,13 +1,16 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
+import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import type { Profile } from '@/types/database'
 
-export const metadata = {
-  title: 'Tableau de bord — Administration',
+export async function generateMetadata() {
+  const t = await getTranslations('admin.dashboard')
+  return { title: t('metaTitle') }
 }
 
 export default async function AdminDashboardPage() {
@@ -26,6 +29,17 @@ export default async function AdminDashboardPage() {
     .single() as { data: Profile | null; error: unknown }
 
   const isAdmin = profile?.role === 'admin'
+
+  const t  = await getTranslations('admin.dashboard')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
+  const isRtl = locale === 'ar'
+  const arrow = isRtl ? '←' : '→'
+
+  const roleLabel =
+    profile?.role === 'admin' ? t('roleAdmin')
+    : profile?.role === 'agent' ? t('roleAgent')
+    : (profile?.role ?? '')
 
   // Counts — admin sees all via RLS; agent sees only their scope
   const [
@@ -97,63 +111,64 @@ export default async function AdminDashboardPage() {
 
   const platformStats = [
     {
-      label: 'Affiliés actifs',
+      label: t('statAffiliates'),
       value: String(approvedAffiliates ?? 0),
       highlight: false,
     },
     {
-      label: 'Grossistes actifs',
+      label: t('statWholesalers'),
       value: String(approvedWholesalers ?? 0),
       highlight: false,
     },
     {
-      label: 'Inscriptions en attente',
+      label: t('statPending'),
       value: String(pendingUsers ?? 0),
       highlight: (pendingUsers ?? 0) > 0,
     },
     {
-      label: "Commandes aujourd'hui",
+      label: t('statTodayOrders'),
       value: String(todayOrders ?? 0),
       highlight: false,
     },
     {
-      label: 'Commandes COD (total)',
+      label: t('statTotalOrders'),
       value: String(totalOrders ?? 0),
       highlight: false,
     },
     {
-      label: 'Commandes gros à traiter',
+      label: t('statWholesalePending'),
       value: String(pendingWholesaleOrders ?? 0),
       highlight: (pendingWholesaleOrders ?? 0) > 0,
     },
     {
-      label: 'Commissions dues',
+      label: t('statCommissionsDue'),
       value: formatMAD(pendingCommissionTotal),
       highlight: pendingCommissionCount > 0,
     },
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg text-foreground">
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-surface border-b border-line">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <MozounaLogo size="md" />
-            <span className="hidden sm:flex items-center gap-2 text-gray-300">|</span>
-            <span className="hidden sm:block text-sm font-medium text-gray-600">Administration</span>
-            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize hidden sm:block">
-              {profile?.role}
+            <span className="hidden sm:flex items-center gap-2 text-line">|</span>
+            <span className="hidden sm:block text-sm font-medium text-muted">{t('spaceLabel')}</span>
+            <span className="text-xs px-2 py-0.5 bg-surface-2 text-faint rounded-full hidden sm:block">
+              {roleLabel}
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
+            <LanguageSwitcher />
+            <span className="text-sm text-muted hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
+                className="text-sm text-muted hover:text-foreground transition-colors"
               >
-                Déconnexion
+                {tc('signOut')}
               </button>
             </form>
           </div>
@@ -163,11 +178,11 @@ export default async function AdminDashboardPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Welcome */}
         <div className="mb-6">
-          <h1 className="text-lg font-semibold text-gray-900">
-            Tableau de bord
+          <h1 className="text-lg font-semibold text-foreground">
+            {t('pageTitle')}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Vue d&apos;ensemble de la plateforme.
+          <p className="text-sm text-muted mt-0.5">
+            {t('subtitle')}
           </p>
         </div>
 
@@ -178,14 +193,14 @@ export default async function AdminDashboardPage() {
               key={stat.label}
               className={`rounded-xl border p-4 ${
                 stat.highlight
-                  ? 'bg-amber-50 border-amber-200'
-                  : 'bg-white border-gray-200'
+                  ? 'bg-warning-soft border-warning'
+                  : 'bg-surface border-line'
               }`}
             >
-              <p className="text-xs text-gray-500 leading-tight">{stat.label}</p>
+              <p className="text-xs text-muted leading-tight">{stat.label}</p>
               <p
                 className={`mt-1.5 text-2xl font-bold tabular-nums ${
-                  stat.highlight ? 'text-amber-700' : 'text-gray-900'
+                  stat.highlight ? 'text-warning-fg' : 'text-foreground'
                 }`}
               >
                 {stat.value}
@@ -199,122 +214,122 @@ export default async function AdminDashboardPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               {
-                title: 'Approuver les inscriptions',
-                description: 'Valider ou rejeter les nouveaux comptes.',
+                title: t('usersTitle'),
+                description: t('usersDesc'),
                 badge: pendingUsers ?? 0,
                 href: '/admin/users',
               },
               {
-                title: 'Gérer les produits',
-                description: 'Ajouter, modifier ou désactiver des produits.',
+                title: t('productsTitle'),
+                description: t('productsDesc'),
                 badge: null,
                 href: '/admin/products',
               },
               {
-                title: 'Commandes COD',
-                description: 'Suivre et mettre à jour les statuts de livraison.',
+                title: t('ordersTitle'),
+                description: t('ordersDesc'),
                 badge: null,
                 href: '/admin/orders',
               },
               {
-                title: 'Commandes grossiste',
-                description: 'Gérer les commandes B2B et convertir les paniers.',
+                title: t('wholesaleOrdersTitle'),
+                description: t('wholesaleOrdersDesc'),
                 badge: pendingWholesaleOrders ?? 0,
                 href: '/admin/wholesale-orders',
               },
               {
-                title: 'Commissions affiliés',
-                description: 'Approuver et marquer les commissions comme payées.',
+                title: t('commissionsTitle'),
+                description: t('commissionsDesc'),
                 badge: pendingCommissionCount,
                 href: '/admin/commissions',
               },
               {
-                title: 'Paiements affiliés',
-                description: "Enregistrer les virements et suivre l'historique des paiements.",
+                title: t('payoutsTitle'),
+                description: t('payoutsDesc'),
                 badge: null,
                 href: '/admin/payouts',
               },
               {
-                title: 'Demandes de devis',
-                description: 'Devis import-on-demand des grossistes.',
+                title: t('quoteRequestsTitle'),
+                description: t('quoteRequestsDesc'),
                 badge: newQuoteRequests ?? 0,
                 href: '/admin/quote-requests',
               },
               {
-                title: 'Devis marketplace',
-                description: 'RFQ grossistes sur produits fournisseurs.',
+                title: t('supplierQuotesTitle'),
+                description: t('supplierQuotesDesc'),
                 badge: pendingMarketplaceRFQs ?? 0,
                 href: '/admin/supplier-quotes',
               },
               {
-                title: 'Produits fournisseurs',
-                description: 'Examiner et approuver les soumissions des fournisseurs.',
+                title: t('supplierProductsTitle'),
+                description: t('supplierProductsDesc'),
                 badge: pendingSupplierProducts ?? 0,
                 href: '/admin/supplier-products',
               },
               {
-                title: 'Analytiques',
-                description: 'Revenus, profit, top produits et performance affiliés.',
+                title: t('analyticsTitle'),
+                description: t('analyticsDesc'),
                 badge: null,
                 href: '/admin/analytics',
               },
               {
-                title: 'Performance fournisseurs',
-                description: 'Score de fiabilité, incidents et délais par fournisseur.',
+                title: t('supplierPerformanceTitle'),
+                description: t('supplierPerformanceDesc'),
                 badge: null,
                 href: '/admin/supplier-performance',
               },
               {
-                title: 'Sourcing intelligent',
-                description: 'Matching automatique grossiste → fournisseur optimal.',
+                title: t('sourcingTitle'),
+                description: t('sourcingDesc'),
                 badge: pendingSourcingRequests ?? 0,
                 href: '/admin/sourcing',
               },
               {
-                title: 'Médiation échantillons',
-                description: 'Valider fichiers, catalogues et demandes d\'échantillons.',
+                title: t('samplesTitle'),
+                description: t('samplesDesc'),
                 badge: pendingSampleRequests ?? 0,
                 href: '/admin/samples',
               },
               {
-                title: 'Moteur RFQ',
-                description: 'Matching automatique RFQ → fournisseurs. Scores et offres.',
+                title: t('rfqTitle'),
+                description: t('rfqDesc'),
                 badge: null,
                 href: '/admin/rfq',
               },
               {
-                title: 'Monétisation Premium',
-                description: 'Abonnements fournisseurs, badges Vedette/Vérifié, boost RFQ, MRR.',
+                title: t('premiumTitle'),
+                description: t('premiumDesc'),
                 badge: null,
                 href: '/admin/premium',
               },
             ].map((action) => (
               <div
                 key={action.title}
-                className="bg-white rounded-xl border border-gray-200 p-5"
+                className="bg-surface rounded-xl border border-line p-5"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">{action.title}</h3>
+                  <h3 className="text-sm font-semibold text-foreground">{action.title}</h3>
                   {action.badge != null && action.badge > 0 && (
-                    <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                    <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 bg-warning-soft text-warning-fg rounded-full">
                       {action.badge}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mb-4">{action.description}</p>
+                <p className="text-xs text-muted mb-4">{action.description}</p>
                 {action.href ? (
                   <Link
                     href={action.href}
-                    className="inline-block text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    className="inline-block text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
                   >
-                    Ouvrir →
+                    {t('open')} {arrow}
                   </Link>
                 ) : (
                   <button
                     disabled
-                    className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded-lg opacity-40 cursor-not-allowed"
+                    className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg opacity-40 cursor-not-allowed"
                   >
-                    Bientôt →
+                    {t('soon')} {arrow}
                   </button>
                 )}
               </div>

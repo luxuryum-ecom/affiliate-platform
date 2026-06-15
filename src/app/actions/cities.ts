@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
 import { MIN_DELIVERY_FEE_MAD, MIN_DELIVERY_FEE_CASABLANCA_MAD } from '@/lib/utils'
+import { parseMoneyInput } from '@/lib/money'
 import type { ActionState } from '@/types/orders'
 import type { City } from '@/types/database'
 
@@ -73,11 +74,14 @@ export async function addCity(
   if (authError) return fail(authError)
 
   const name = (formData.get('name') as string)?.trim()
-  const fee  = parseFloat(formData.get('delivery_fee_mad') as string)
+  // RÈGLE ARGENT n°4 — frais validé en chaîne décimale stricte (money.ts), stocké
+  // verbatim dans la colonne numeric. La livraison n'est jamais ≤ 0 (règle métier).
+  const feeResult = parseMoneyInput(formData.get('delivery_fee_mad'))
 
   if (!name)               return fail('Nom de la ville requis.')
-  if (isNaN(fee) || fee <= 0)
+  if (!feeResult.ok || Number(feeResult.value) <= 0)
     return fail('Frais de livraison invalide — la livraison doit être supérieure à 0 MAD.')
+  const fee = feeResult.value
 
   const { error } = await supabase
     .from('cities')
@@ -103,13 +107,15 @@ export async function updateCity(
 
   const id        = (formData.get('id') as string)?.trim()
   const name      = (formData.get('name') as string)?.trim()
-  const fee       = parseFloat(formData.get('delivery_fee_mad') as string)
+  // RÈGLE ARGENT n°4 — frais validé en chaîne décimale stricte (money.ts), verbatim.
+  const feeResult = parseMoneyInput(formData.get('delivery_fee_mad'))
   const isActive  = formData.get('is_active') === 'true'
 
   if (!id)                   return fail('ID ville manquant.')
   if (!name)                 return fail('Nom de la ville requis.')
-  if (isNaN(fee) || fee <= 0)
+  if (!feeResult.ok || Number(feeResult.value) <= 0)
     return fail('Frais de livraison invalide — la livraison doit être supérieure à 0 MAD.')
+  const fee = feeResult.value
 
   const { error } = await supabase
     .from('cities')

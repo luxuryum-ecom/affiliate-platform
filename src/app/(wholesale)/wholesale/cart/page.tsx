@@ -1,12 +1,11 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD, getWholesaleTier } from '@/lib/utils'
 import { CartItemRow } from '@/components/wholesale/cart-item-row'
 import { SubmitWholesaleOrderForm } from '@/components/wholesale/submit-order-form'
 import { WhatsAppButton } from '@/components/wholesale/whatsapp-button'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import type { WholesaleCartItemWithProduct } from '@/types/database'
 
 export async function generateMetadata() {
@@ -47,40 +46,22 @@ export default async function WholesaleCartPage() {
     process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000'
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/wholesale/products"
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-            >
-              {tc('backToCatalog')}
-            </Link>
-            <span className="text-gray-300">{tc('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <LanguageSwitcher variant="light" />
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                {tc('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/wholesale/products"
+        backLabel={tc('backToCatalog')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-3xl"
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-lg font-semibold text-gray-900 mb-6">
+        <h1 className="text-lg font-semibold text-foreground mb-6">
           {t('pageTitle')}
           {items.length > 0 && (
-            <span className="ms-2 text-sm font-normal text-gray-400">
+            <span className="ms-2 text-sm font-normal text-faint">
               {t('itemCount', { count: items.length })}
             </span>
           )}
@@ -88,12 +69,12 @@ export default async function WholesaleCartPage() {
 
         {items.length === 0 ? (
           /* Empty cart */
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-4">
+          <div className="bg-surface rounded-2xl border border-line p-12 text-center space-y-4">
             <p className="text-3xl">🛒</p>
-            <p className="text-sm text-gray-500">{t('emptyTitle')}</p>
+            <p className="text-sm text-muted">{t('emptyTitle')}</p>
             <Link
               href="/wholesale/products"
-              className="inline-block px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              className="inline-block px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
             >
               {t('browseCatalog')}
             </Link>
@@ -108,8 +89,8 @@ export default async function WholesaleCartPage() {
             </div>
 
             {/* Order summary */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="font-semibold text-gray-900">{t('summary')}</h2>
+            <div className="bg-surface rounded-2xl border border-line p-5 space-y-4">
+              <h2 className="font-semibold text-foreground">{t('summary')}</h2>
 
               {/* Line items */}
               <ul className="space-y-2">
@@ -119,28 +100,28 @@ export default async function WholesaleCartPage() {
                   const subtotal = unitPrice * item.quantity
                   return (
                     <li key={item.id} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 truncate max-w-[60%]">
+                      <span className="text-muted truncate max-w-[60%]">
                         {/* product.name is DB data */}
                         {item.product.name}{' '}
-                        <span className="text-gray-400">× {item.quantity}</span>
+                        <span className="text-faint">× {item.quantity}</span>
                       </span>
-                      <span className="font-medium text-gray-900">{formatMAD(subtotal)}</span>
+                      <span className="font-medium text-foreground">{formatMAD(subtotal)}</span>
                     </li>
                   )
                 })}
               </ul>
 
               {/* Total */}
-              <div className="border-t border-gray-200 pt-3 flex items-center justify-between">
-                <span className="font-semibold text-gray-900">{t('estimatedTotal')}</span>
-                <span className="text-xl font-bold text-gray-900">{formatMAD(total)}</span>
+              <div className="border-t border-line pt-3 flex items-center justify-between">
+                <span className="font-semibold text-foreground">{t('estimatedTotal')}</span>
+                <span className="text-xl font-bold text-foreground">{formatMAD(total)}</span>
               </div>
 
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-faint">
                 {t('priceNote')}
               </p>
 
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-warning-fg bg-warning-soft border border-warning rounded-lg px-3 py-2">
                 {t('estimateWarning')}
               </p>
 
@@ -161,10 +142,10 @@ export default async function WholesaleCartPage() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
+                  <div className="w-full border-t border-line" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-white px-2 text-gray-400">{t('orWhatsapp')}</span>
+                  <span className="bg-surface px-2 text-faint">{t('orWhatsapp')}</span>
                 </div>
               </div>
 
@@ -177,7 +158,7 @@ export default async function WholesaleCartPage() {
               {/* Continue shopping */}
               <Link
                 href="/wholesale/products"
-                className="block text-center text-sm text-gray-500 hover:text-gray-800 transition-colors"
+                className="block text-center text-sm text-muted hover:text-foreground transition-colors"
               >
                 {t('continueShopping')}
               </Link>

@@ -1,9 +1,7 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { getCities } from '@/app/actions/cities'
 import { CreateOrderForm } from '@/components/affiliate/create-order-form'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTranslations } from 'next-intl/server'
 import type { Product, City } from '@/types/database'
 
@@ -91,38 +89,26 @@ export default async function NewAffiliateOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/affiliate/orders" className="text-gray-400 hover:text-gray-600 text-sm">
-              {t('backLink')}
-            </Link>
-            <span className="text-gray-300">{tCommon('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm">{t('pageTitle')}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800">
-                {tCommon('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/affiliate/orders"
+        backLabel={t('backLink')}
+        userName={profile?.full_name}
+        signOutLabel={tCommon('signOut')}
+        maxWidth="max-w-3xl"
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {products.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <p className="text-sm text-gray-400">{t('emptyProducts')}</p>
-            <Link
+          <div className="bg-surface rounded-xl border border-line p-12 text-center">
+            <p className="text-sm text-faint">{t('emptyProducts')}</p>
+            <a
               href="/affiliate/products"
-              className="mt-3 inline-block text-sm text-blue-600 hover:underline"
+              className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-600 hover:underline"
             >
               {t('viewCatalog')}
-            </Link>
+            </a>
           </div>
         ) : (
           <CreateOrderForm products={products} cities={cities} strings={formStrings} />

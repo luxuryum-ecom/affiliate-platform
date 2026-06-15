@@ -46,6 +46,21 @@
   --color-line:               var(--line);
   --color-primary:            var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
+  /* Sémantiques d'état (bi-contexte). Règle : vert = succès/stock, ambre =
+     en attente, rouge = erreur, or (accent) = marque/CTA/premium. */
+  --color-success:      var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-fg:   var(--success-fg);
+  --color-warning:      var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-fg:   var(--warning-fg);
+  --color-danger:       var(--danger);
+  --color-danger-soft:  var(--danger-soft);
+  --color-danger-fg:    var(--danger-fg);
+  --color-accent:       var(--accent);
+  --color-accent-soft:  var(--accent-soft);
+  --color-accent-fg:    var(--accent-fg);
 }
 
 :root {
@@ -58,6 +73,12 @@
   --line:      #e5e7eb;
   --primary:            #0a0a0a;   /* clair : CTA encre */
   --primary-foreground: #ffffff;
+
+  /* États — contexte CLAIR */
+  --success:      #16a34a;  --success-soft: #dcfce7;  --success-fg: #15803d;
+  --warning:      #d97706;  --warning-soft: #fef3c7;  --warning-fg: #b45309;
+  --danger:       #dc2626;  --danger-soft:  #fee2e2;  --danger-fg:  #b91c1c;
+  --accent:       #a8851c;  --accent-soft:  #fbf8ef;  --accent-fg:  #856914;  /* or */
 }
 
 .theme-dark {
@@ -70,4 +91,10 @@
   --line:      #2a2a2e;
   --primary:            #c9a227;   /* sombre : CTA OR plein */
   --primary-foreground: #0a0a0a;
+
+  /* États — contexte SOMBRE (teintes douces lisibles sur fond noir) */
+  --success:      #4ade80;  --success-soft: #14271c;  --success-fg: #86efac;
+  --warning:      #fbbf24;  --warning-soft: #2a2113;  --warning-fg: #fcd34d;
+  --danger:       #f87171;  --danger-soft:  #2a1518;  --danger-fg:  #fca5a5;
+  --accent:       #cdae4d;  --accent-soft:  #211c0f;  --accent-fg:  #d8be73;  /* or */
 }

@@ -22,6 +22,9 @@ interface TSample {
   trackLink: string
 }
 
+const INPUT = 'w-full border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-surface text-foreground placeholder:text-faint'
+const LABEL = 'block text-xs font-medium text-muted mb-1.5'
+
 export default function SampleRequestClient({
   supplierProductId,
   tSample,
@@ -33,12 +36,12 @@ export default function SampleRequestClient({
 
   if (state.success) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-        <p className="text-sm font-semibold text-green-800">{tSample.success}</p>
-        <p className="text-xs text-green-600 mt-1">{tSample.successSubtitle}</p>
+      <div className="bg-success-soft border border-success rounded-xl p-4 text-center">
+        <p className="text-sm font-semibold text-success-fg">{tSample.success}</p>
+        <p className="text-xs text-success-fg mt-1">{tSample.successSubtitle}</p>
         <Link
           href="/wholesale/samples"
-          className="inline-block mt-3 text-xs text-green-700 underline underline-offset-2 hover:no-underline"
+          className="inline-block mt-3 text-xs text-success-fg underline underline-offset-2 hover:no-underline"
         >
           {tSample.trackLink}
         </Link>
@@ -51,15 +54,15 @@ export default function SampleRequestClient({
       <input type="hidden" name="supplier_product_id" value={supplierProductId} />
 
       {state.error && (
-        <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{state.error}</div>
+        <div className="text-xs text-danger-fg bg-danger-soft border border-danger rounded-lg px-4 py-3">{state.error}</div>
       )}
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1.5">{tSample.typeLabel}</label>
+        <label className={LABEL}>{tSample.typeLabel}</label>
         <select
           name="request_type"
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className={INPUT}
         >
           <option value="">{tSample.typePlaceholder}</option>
           <option value="photos">{tSample.typePhotos}</option>
@@ -70,19 +73,19 @@ export default function SampleRequestClient({
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1.5">{tSample.messageLabel}</label>
+        <label className={LABEL}>{tSample.messageLabel}</label>
         <textarea
           name="message"
           rows={3}
           placeholder={tSample.messagePlaceholder}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+          className={`${INPUT} resize-none`}
         />
       </div>
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+        className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
         {isPending ? tSample.submitting : tSample.submit}
       </button>

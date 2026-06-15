@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
-import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
 import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { findCatalogLink } from '@/lib/wholesale-catalog-link'
 import SampleRequestClient from './SampleRequestClient'
 import type {
   Profile,
@@ -79,9 +79,28 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const displayName = product.public_name || product.product_name
   const displayDesc = product.public_description || product.description
   const isMorocco = product.supplier_type === 'morocco'
-  const ctaMode = getSupplierProductCtaMode(product)
   const directUnitPrice = product.suggested_wholesale_price_mad ?? 0
-  const directStock = product.stock_quantity
+
+  // Commande directe = candidat 'direct' ET miroir catalogue interne commandable.
+  // Sans miroir, le checkout refuserait : on rétrograde donc en 'rfq' AVANT
+  // d'afficher le CTA (source de vérité unique partagée avec addMarketplaceToCart).
+  const catalogLink =
+    getSupplierProductCtaMode(product) === 'direct'
+      ? await findCatalogLink(supabase, product)
+      : null
+  const ctaMode: 'direct' | 'rfq' = catalogLink ? 'direct' : 'rfq'
+
+  // Seuils RÉELLEMENT appliqués au checkout = cumul des gardes fournisseur ET
+  // catalogue (cart.ts). On les affiche pour ne pas « déplacer le mur » : MOQ =
+  // max des deux, stock = min des deux. Sans miroir, valeurs fournisseur brutes.
+  const directMinQty = catalogLink
+    ? Math.max(product.min_quantity, catalogLink.wholesale_min_qty)
+    : product.min_quantity
+  const directStock = catalogLink
+    ? product.stock_quantity == null
+      ? catalogLink.stock_count
+      : Math.min(product.stock_quantity, catalogLink.stock_count)
+    : product.stock_quantity
 
   const hasCatalog = attachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
   const hasVideo   = attachments.some((a) => a.attachment_type === 'video')
@@ -115,27 +134,15 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const numLocale = locale === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-MA'
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/wholesale/marketplace" className="text-gray-400 hover:text-gray-600 text-sm">
-              {tCommon('backToMarketplace')}
-            </Link>
-            <span className="text-gray-300">{tCommon('breadcrumbSep')}</span>
-            <span className="font-semibold text-gray-900 text-sm truncate max-w-[200px]">{displayName}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <LanguageSwitcher variant="light" />
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button type="submit" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-                {tCommon('signOut')}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={displayName}
+        backHref="/wholesale/marketplace"
+        backLabel={tCommon('backToMarketplace')}
+        userName={profile?.full_name}
+        signOutLabel={tCommon('signOut')}
+        maxWidth="max-w-5xl"
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-8">
@@ -154,21 +161,21 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                 ))}
               </div>
             ) : (
-              <div className="w-full aspect-[4/3] bg-gray-100 rounded-xl flex items-center justify-center text-5xl text-gray-300">📦</div>
+              <div className="w-full aspect-[4/3] bg-surface-2 rounded-xl flex items-center justify-center text-5xl text-faint">📦</div>
             )}
 
             {/* Attachments */}
             {attachmentsWithUrls.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-sm font-semibold text-gray-900 mb-3">{t('attachmentsTitle')}</p>
+              <div className="bg-surface rounded-xl border border-line p-4">
+                <p className="text-sm font-semibold text-foreground mb-3">{t('attachmentsTitle')}</p>
                 <div className="space-y-2">
                   {attachmentsWithUrls.map((a) => (
                     <div key={a.id} className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{ATTACHMENT_ICON[a.attachment_type]}</span>
                         <div>
-                          <p className="text-xs font-medium text-gray-800">{attachmentLabel[a.attachment_type]}</p>
-                          <p className="text-xs text-gray-400 truncate max-w-[160px]">{a.filename}</p>
+                          <p className="text-xs font-medium text-foreground">{attachmentLabel[a.attachment_type]}</p>
+                          <p className="text-xs text-faint truncate max-w-[160px]">{a.filename}</p>
                         </div>
                       </div>
                       {a.signedUrl && (
@@ -176,7 +183,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                           href={a.signedUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                          className="text-xs px-3 py-1.5 bg-surface-2 hover:bg-surface border border-line text-muted rounded-lg transition-colors"
                         >
                           {t('attachmentOpen')}
                         </a>
@@ -194,38 +201,38 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
             <div>
               {/* Badges */}
               <div className="flex flex-wrap gap-1.5 mb-3">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isMorocco ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isMorocco ? 'bg-success-soft text-success-fg border border-success' : 'bg-surface-2 text-muted border border-line'}`}>
                   {isMorocco ? `🇲🇦 ${t('badgeMorocco')}` : `🌍 ${t('badgeIntl')}`}
                 </span>
                 {product.category && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{product.category}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">{product.category}</span>
                 )}
                 {hasCatalog && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">📒 {t('badgeCatalog')}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">📒 {t('badgeCatalog')}</span>
                 )}
                 {hasVideo && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">🎥 {t('badgeVideo')}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">🎥 {t('badgeVideo')}</span>
                 )}
                 {hasImages && product.photos.length === 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">🖼️ {t('badgePhotos')}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">🖼️ {t('badgePhotos')}</span>
                 )}
               </div>
 
-              <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
-              {displayDesc && <p className="text-sm text-gray-600 mt-2">{displayDesc}</p>}
+              <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
+              {displayDesc && <p className="text-sm text-muted mt-2">{displayDesc}</p>}
             </div>
 
             {/* Key info */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+            <div className="bg-bg rounded-xl p-4 space-y-2 border border-line">
               {product.origin_country && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">{t('infoOrigin')}</span>
-                  <span className="font-medium text-gray-900">{product.origin_country}</span>
+                  <span className="text-muted">{t('infoOrigin')}</span>
+                  <span className="font-medium text-foreground">{product.origin_country}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{t('infoStockLocation')}</span>
-                <span className={`font-medium ${product.availability_type === 'local_stock' ? 'text-green-700' : 'text-purple-700'}`}>
+                <span className="text-muted">{t('infoStockLocation')}</span>
+                <span className={`font-medium ${product.availability_type === 'local_stock' ? 'text-success-fg' : 'text-muted'}`}>
                   {product.availability_type === 'local_stock'
                     ? `🇲🇦 ${t('infoStockMorocco')}`
                     : t('infoImportOnDemand')
@@ -233,13 +240,13 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{t('infoMoq')}</span>
-                <span className="font-medium text-gray-900">{product.min_quantity} {product.unit}</span>
+                <span className="text-muted">{t('infoMoq')}</span>
+                <span className="font-medium text-foreground">{product.min_quantity} {product.unit}</span>
               </div>
               {product.stock_quantity != null && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">{t('infoStock')}</span>
-                  <span className={`font-medium ${product.stock_quantity > 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  <span className="text-muted">{t('infoStock')}</span>
+                  <span className={`font-medium ${product.stock_quantity > 0 ? 'text-success-fg' : 'text-danger-fg'}`}>
                     {product.stock_quantity > 0
                       ? `${product.stock_quantity.toLocaleString(numLocale)} ${product.unit}`
                       : t('infoStockOut')
@@ -249,13 +256,13 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
               )}
               {product.lead_time_days != null && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">{t('infoLeadTime')}</span>
-                  <span className="font-medium text-gray-900">{t('infoLeadTimeDays', { days: product.lead_time_days })}</span>
+                  <span className="text-muted">{t('infoLeadTime')}</span>
+                  <span className="font-medium text-foreground">{t('infoLeadTimeDays', { days: product.lead_time_days })}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm pt-1 border-t border-gray-200">
-                <span className="text-gray-500">{isMorocco ? t('infoPriceMorocco') : t('infoPriceImport')}</span>
-                <span className="font-bold text-gray-900 text-base">
+              <div className="flex justify-between text-sm pt-1 border-t border-line">
+                <span className="text-muted">{isMorocco ? t('infoPriceMorocco') : t('infoPriceImport')}</span>
+                <span className="font-bold text-foreground text-base">
                   {product.suggested_wholesale_price_mad != null
                     ? `${product.suggested_wholesale_price_mad.toLocaleString(numLocale)} MAD`
                     : t('infoOnQuote')
@@ -265,7 +272,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
             </div>
 
             {!isMorocco && (
-              <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
+              <p className="text-xs text-muted bg-surface-2 rounded-lg px-3 py-2 border border-line">
                 {t('importPriceNote')}
               </p>
             )}
@@ -273,20 +280,20 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
             {ctaMode === 'direct' ? (
               <>
                 {/* Primary: direct order */}
-                <div className="bg-white rounded-xl border border-emerald-200 p-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">{t('directOrderTitle')}</p>
-                  <p className="text-xs text-gray-500 mb-3">{t('directOrderSubtitle')}</p>
+                <div className="bg-surface rounded-xl border border-success p-4">
+                  <p className="text-sm font-semibold text-foreground mb-1">{t('directOrderTitle')}</p>
+                  <p className="text-xs text-muted mb-3">{t('directOrderSubtitle')}</p>
                   <MarketplaceDirectOrderForm
                     supplierProductId={product.id}
                     unitPrice={directUnitPrice}
-                    minQty={product.min_quantity}
+                    minQty={directMinQty}
                     stockCount={directStock}
                     unit={product.unit}
                     locale={locale}
                     tDirect={{
-                      stockNote: t('directStockNote', { moq: product.min_quantity, unit: product.unit }),
+                      stockNote: t('directStockNote', { moq: directMinQty, unit: product.unit }),
                       qtyLabel: t('directQtyLabel'),
-                      qtyMin: t('directQtyMin', { min: product.min_quantity }),
+                      qtyMin: t('directQtyMin', { min: directMinQty }),
                       unitPrice: t('directUnitPrice'),
                       subtotal: t('directSubtotal'),
                       stockAvailable: directStock != null && directStock > 0
@@ -298,13 +305,16 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                       adding: t('directAdding'),
                       addedSuccess: t('directAddedSuccess'),
                       viewCart: t('directViewCart'),
+                      overOrderTitle: t('overOrderTitle'),
+                      overOrderDesc: t('overOrderDesc'),
+                      overOrderCta: t('overOrderCta'),
                     }}
                   />
                 </div>
                 {/* Secondary: sample / document */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">{t('sampleTitle')}</p>
-                  <p className="text-xs text-gray-500 mb-3">{t('sampleSubtitle')}</p>
+                <div className="bg-surface rounded-xl border border-line p-4">
+                  <p className="text-sm font-semibold text-foreground mb-1">{t('sampleTitle')}</p>
+                  <p className="text-xs text-muted mb-3">{t('sampleSubtitle')}</p>
                   <SampleRequestClient
                     supplierProductId={product.id}
                     tSample={{
@@ -324,10 +334,10 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                     }}
                   />
                 </div>
-                {/* Tertiary: quote for edge cases */}
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
-                  <p className="text-sm font-medium text-gray-600 mb-1">{t('quoteSpecialTitle')}</p>
-                  <p className="text-xs text-gray-400 mb-3">{t('quoteSpecialSubtitle')}</p>
+                {/* Tertiary: quote for edge cases — cible de l'ancre #quote (sur-commande) */}
+                <div id="quote" className="bg-bg rounded-xl border border-line p-4 scroll-mt-20">
+                  <p className="text-sm font-medium text-muted mb-1">{t('quoteSpecialTitle')}</p>
+                  <p className="text-xs text-faint mb-3">{t('quoteSpecialSubtitle')}</p>
                   <MarketplaceQuoteForm
                     supplierProductId={product.id}
                     minQuantity={product.min_quantity}
@@ -361,10 +371,10 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
               </>
             ) : (
               <>
-                {/* Primary: quote */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">{t('quoteTitle')}</p>
-                  <p className="text-xs text-gray-500 mb-3">{t('quoteSubtitle')}</p>
+                {/* Primary: quote — cible de l'ancre #quote */}
+                <div id="quote" className="bg-surface rounded-xl border border-line p-4 scroll-mt-20">
+                  <p className="text-sm font-semibold text-foreground mb-1">{t('quoteTitle')}</p>
+                  <p className="text-xs text-muted mb-3">{t('quoteSubtitle')}</p>
                   <MarketplaceQuoteForm
                     supplierProductId={product.id}
                     minQuantity={product.min_quantity}
@@ -396,9 +406,9 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                   />
                 </div>
                 {/* Secondary: sample / document */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">{t('sampleTitle')}</p>
-                  <p className="text-xs text-gray-500 mb-3">{t('sampleSubtitle')}</p>
+                <div className="bg-surface rounded-xl border border-line p-4">
+                  <p className="text-sm font-semibold text-foreground mb-1">{t('sampleTitle')}</p>
+                  <p className="text-xs text-muted mb-3">{t('sampleSubtitle')}</p>
                   <SampleRequestClient
                     supplierProductId={product.id}
                     tSample={{

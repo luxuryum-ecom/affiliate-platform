@@ -8,10 +8,10 @@ import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/ta
 const initial: SupplierProductState = { error: null }
 
 // ─── Shared input style ────────────────────────────────────────────────────────
-const INPUT = 'w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50'
-const LABEL = 'block text-sm font-medium text-gray-700 mb-1'
-const HELPER = 'mt-1 text-xs text-gray-400'
-const SECTION = 'text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 pb-1 border-b border-gray-100'
+const INPUT = 'w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent disabled:bg-surface-2'
+const LABEL = 'block text-sm font-medium text-muted mb-1'
+const HELPER = 'mt-1 text-xs text-faint'
+const SECTION = 'text-xs font-semibold text-faint uppercase tracking-widest mb-3 pb-1 border-b border-line'
 
 export function SubmitProductForm({ currency }: { currency?: string }) {
   const t = useTranslations('supplier.submitProductForm')
@@ -30,16 +30,16 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
 
         <div>
           <label className={LABEL}>
-            {t('supplierTypeLabel')} <span className="text-red-500">*</span>
+            {t('supplierTypeLabel')} <span className="text-danger">*</span>
           </label>
-          <div className="flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
+          <div className="flex rounded-lg border border-line p-0.5 bg-surface-2">
             <button
               type="button"
               onClick={() => setSupplierType('morocco')}
               className={`flex-1 text-center py-2 text-sm font-medium rounded-md transition-colors ${
                 supplierType === 'morocco'
-                  ? 'bg-gray-900 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted hover:text-foreground'
               }`}
             >
               🇲🇦 {t('supplierTypeMorocco')}
@@ -49,8 +49,8 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
               onClick={() => setSupplierType('international')}
               className={`flex-1 text-center py-2 text-sm font-medium rounded-md transition-colors ${
                 supplierType === 'international'
-                  ? 'bg-gray-900 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted hover:text-foreground'
               }`}
             >
               🌍 {t('supplierTypeInternational')}
@@ -59,11 +59,11 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
           <input type="hidden" name="supplier_type" value={supplierType} />
 
           {supplierType === 'morocco' ? (
-            <p className="mt-1.5 text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1.5 border border-emerald-100">
+            <p className="mt-1.5 text-xs text-success-fg bg-success-soft rounded-lg px-3 py-1.5 border border-success">
               🏭 {t('notesMorocco')}
             </p>
           ) : (
-            <p className="mt-1.5 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100">
+            <p className="mt-1.5 text-xs text-muted bg-surface-2 rounded-lg px-3 py-1.5 border border-line">
               🌍 {t('notesInternational')}
             </p>
           )}
@@ -77,7 +77,7 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
         {/* Product name */}
         <div>
           <label className={LABEL}>
-            {t('productNameLabel')} <span className="text-red-500">*</span>
+            {t('productNameLabel')} <span className="text-danger">*</span>
           </label>
           <input
             name="product_name"
@@ -93,7 +93,7 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={LABEL}>
-              {t('categoryLabel')} <span className="text-red-500">*</span>
+              {t('categoryLabel')} <span className="text-danger">*</span>
             </label>
             <select
               name="category"
@@ -159,7 +159,7 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
           <div>
             <label className={LABEL}>
               {supplierType === 'morocco' ? t('originLabelMorocco') : t('originLabelInternational')}
-              <span className="text-red-500"> *</span>
+              <span className="text-danger"> *</span>
             </label>
             {supplierType === 'international' ? (
               <select
@@ -188,7 +188,7 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
           {/* Min quantity */}
           <div>
             <label className={LABEL}>
-              {t('moqLabel')} <span className="text-red-500">*</span>
+              {t('moqLabel')} <span className="text-danger">*</span>
             </label>
             <input
               name="min_quantity"
@@ -219,9 +219,9 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
         ) : (
           <>
             <input type="hidden" name="availability_type" value="local_stock" />
-            <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5">
-              <p className="text-xs text-gray-500">
-                {t('availabilityStaticLabel')} <span className="font-medium text-gray-700">{t('availabilityStaticValue')}</span>
+            <div className="rounded-lg bg-surface-2 border border-line px-3 py-2.5">
+              <p className="text-xs text-muted">
+                {t('availabilityStaticLabel')} <span className="font-medium text-foreground">{t('availabilityStaticValue')}</span>
               </p>
             </div>
           </>
@@ -231,9 +231,9 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
         {supplierType === 'morocco' ? (
           <>
             <input type="hidden" name="target_buyer_type" value="wholesaler" />
-            <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5">
-              <p className="text-xs text-gray-500">
-                {t('targetBuyerStaticLabel')} <span className="font-medium text-gray-700">{t('targetBuyerStaticValue')}</span>
+            <div className="rounded-lg bg-surface-2 border border-line px-3 py-2.5">
+              <p className="text-xs text-muted">
+                {t('targetBuyerStaticLabel')} <span className="font-medium text-foreground">{t('targetBuyerStaticValue')}</span>
               </p>
             </div>
           </>
@@ -364,7 +364,7 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
 
       {/* Error */}
       {state?.error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+        <p className="text-sm text-danger-fg bg-danger-soft border border-danger px-3 py-2 rounded-lg">
           {state.error}
         </p>
       )}
@@ -372,7 +372,7 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-3 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isPending ? t('submitting') : t('ctaSubmit')}
       </button>

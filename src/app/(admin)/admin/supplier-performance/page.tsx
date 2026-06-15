@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getTranslations, getLocale } from 'next-intl/server'
 import AddIssueForm from './AddIssueForm'
 import type {
   SupplierQuoteRequest,
@@ -12,7 +12,10 @@ import type {
   SupplierPerformance,
 } from '@/types/database'
 
-export const metadata = { title: 'Performance fournisseurs — Administration' }
+export async function generateMetadata() {
+  const t = await getTranslations('admin.supplierPerformance')
+  return { title: t('metaTitle') }
+}
 
 type QuoteRow = Pick<
   SupplierQuoteRequest,
@@ -31,22 +34,24 @@ type QuoteRow = Pick<
     | null
 }
 
+// ARGENT: fonctions de calcul inchangées
 function reliabilityScore(issueCount: number, delayedCount: number): number {
   return Math.max(0, 100 - 5 * issueCount - 3 * delayedCount)
 }
 
-function scoreColor(score: number) {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 50) return 'text-amber-600'
-  return 'text-red-600'
+function scoreColorClass(score: number): string {
+  if (score >= 80) return 'text-success-fg'
+  if (score >= 50) return 'text-warning-fg'
+  return 'text-danger-fg'
 }
 
 export default async function SupplierPerformancePage() {
   const supabase = await createClient()
+  const t = await getTranslations('admin.supplierPerformance')
+  const tc = await getTranslations('admin.common')
+  const locale = await getLocale()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const { data: profile } = (await supabase
@@ -54,8 +59,6 @@ export default async function SupplierPerformancePage() {
     .select('full_name')
     .eq('id', user.id)
     .single()) as { data: Pick<Profile, 'full_name'> | null; error: unknown }
-
-  // ── Fetch all supplier quote requests with supplier identity ────────────────
 
   const { data: quotesData } = await supabase
     .from('supplier_quote_requests')
@@ -71,8 +74,6 @@ export default async function SupplierPerformancePage() {
 
   const quotes = (quotesData ?? []) as unknown as QuoteRow[]
 
-  // ── Fetch all supplier issues (admin-only table) ────────────────────────────
-
   const { data: issuesData } = await supabase
     .from('supplier_issues')
     .select('id, supplier_id, issue_type, delivery_days, created_at')
@@ -83,8 +84,6 @@ export default async function SupplierPerformancePage() {
     'id' | 'supplier_id' | 'issue_type' | 'delivery_days' | 'created_at'
   >[]
 
-  // ── Fetch all approved suppliers (so they appear even with 0 orders) ─────────
-
   const { data: suppliersData } = await supabase
     .from('profiles')
     .select('id, full_name')
@@ -94,8 +93,6 @@ export default async function SupplierPerformancePage() {
 
   const knownSuppliers = (suppliersData ?? []) as Pick<Profile, 'id' | 'full_name'>[]
 
-  // ── Fetch first product per supplier for type/country/category context ───────
-
   const { data: productsData } = await supabase
     .from('supplier_products')
     .select('supplier_id, supplier_type, origin_country, category, niche')
@@ -104,8 +101,7 @@ export default async function SupplierPerformancePage() {
   type ProductMeta = Pick<SupplierProduct, 'supplier_id' | 'supplier_type' | 'origin_country' | 'category' | 'niche'>
   const products = (productsData ?? []) as ProductMeta[]
 
-  // ── Build per-supplier aggregates ──────────────────────────────────────────
-
+  // ARGENT: agrégats inchangés
   type Acc = {
     supplierId: string
     supplierName: string
@@ -123,7 +119,6 @@ export default async function SupplierPerformancePage() {
 
   const map = new Map<string, Acc>()
 
-  // Seed from known suppliers
   for (const s of knownSuppliers) {
     map.set(s.id, {
       supplierId: s.id,
@@ -141,7 +136,6 @@ export default async function SupplierPerformancePage() {
     })
   }
 
-  // Enrich with product metadata
   for (const p of products) {
     if (!map.has(p.supplier_id)) continue
     const acc = map.get(p.supplier_id)!
@@ -151,7 +145,6 @@ export default async function SupplierPerformancePage() {
     if (p.niche) acc.nicheSet.add(p.niche)
   }
 
-  // Aggregate from quote requests
   for (const q of quotes) {
     const supplierId = q.supplier_product?.supplier?.id
     if (!supplierId) continue
@@ -159,7 +152,7 @@ export default async function SupplierPerformancePage() {
     if (!map.has(supplierId)) {
       map.set(supplierId, {
         supplierId,
-        supplierName: q.supplier_product?.supplier?.full_name ?? 'Inconnu',
+        supplierName: q.supplier_product?.supplier?.full_name ?? tc('unknown'),
         supplierType: q.supplier_product?.supplier_type ?? null,
         countrySet: new Set(),
         categorySet: new Set(),
@@ -184,7 +177,6 @@ export default async function SupplierPerformancePage() {
     acc.totalCommissionMad += q.platform_commission_amount_mad ?? 0
   }
 
-  // Aggregate from issues
   for (const issue of issues) {
     if (!map.has(issue.supplier_id)) continue
     const acc = map.get(issue.supplier_id)!
@@ -193,7 +185,6 @@ export default async function SupplierPerformancePage() {
     if (issue.delivery_days != null) acc.deliveryDaysArr.push(issue.delivery_days)
   }
 
-  // Finalise
   const rows: SupplierPerformance[] = Array.from(map.values())
     .map((acc) => ({
       supplierId: acc.supplierId,
@@ -217,119 +208,105 @@ export default async function SupplierPerformancePage() {
 
   const suppliersForForm = knownSuppliers
 
+  const tableHeaders = [
+    t('colSupplier'),
+    t('colTypeCountry'),
+    t('colCategoryNiche'),
+    t('colOrders'),
+    t('colRevenue'),
+    t('colCommission'),
+    t('colAvgDelivery'),
+    t('colDelays'),
+    t('colIssues'),
+    t('colScore'),
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
-              ← Dashboard
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">Performance fournisseurs</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{profile?.full_name}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <DashboardHeader
+        breadcrumb={t('pageTitle')}
+        backHref="/admin/dashboard"
+        backLabel={tc('dashboard')}
+        userName={profile?.full_name}
+        signOutLabel={tc('signOut')}
+        maxWidth="max-w-6xl"
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Performance fournisseurs</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Fiabilité, commandes, revenus et incidents — admin uniquement.
-          </p>
+          <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
+          <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
 
         {/* Add issue form */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Ajouter une note d&apos;incident</h2>
+        <div className="bg-surface rounded-xl border border-line p-5">
+          <h2 className="text-sm font-semibold text-foreground mb-4">{t('addIssueTitle')}</h2>
           <AddIssueForm suppliers={suppliersForForm} />
         </div>
 
         {/* Performance table */}
         {rows.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-sm text-gray-400">
-            Aucun fournisseur enregistré.
+          <div className="bg-surface rounded-xl border border-line p-10 text-center text-sm text-faint">
+            {t('empty')}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-surface rounded-xl border border-line overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-surface-2 border-b border-line">
                   <tr>
-                    {[
-                      'Fournisseur',
-                      'Type / Pays',
-                      'Catégorie / Niche',
-                      'Commandes',
-                      'Revenu',
-                      'Commission',
-                      'Moy. livraison',
-                      'Retards',
-                      'Incidents',
-                      'Score fiabilité',
-                    ].map((h) => (
+                    {tableHeaders.map((h) => (
                       <th
                         key={h}
-                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                        className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide whitespace-nowrap"
                       >
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-line">
                   {rows.map((row) => {
                     const score = row.reliabilityScore
                     return (
-                      <tr key={row.supplierId} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                      <tr key={row.supplierId} className="hover:bg-surface-2 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
                           {row.supplierName}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                          <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 capitalize">
+                        <td className="px-4 py-3 text-muted whitespace-nowrap">
+                          <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line capitalize">
                             {row.supplierType ?? '—'}
                           </span>
                           {row.countries !== '—' && (
-                            <span className="ml-1 text-xs text-gray-400">{row.countries}</span>
+                            <span className="ml-1 text-xs text-faint">{row.countries}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs max-w-[160px]">
+                        <td className="px-4 py-3 text-muted text-xs max-w-[160px]">
                           <div className="truncate">{row.categories}</div>
                           {row.niches !== '—' && (
-                            <div className="truncate text-gray-400">{row.niches}</div>
+                            <div className="truncate text-faint">{row.niches}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 tabular-nums text-gray-900 text-right">
+                        <td className="px-4 py-3 tabular-nums text-foreground text-right">
                           {row.totalOrders}
                         </td>
-                        <td className="px-4 py-3 tabular-nums text-gray-900 text-right whitespace-nowrap">
+                        <td className="px-4 py-3 tabular-nums text-foreground text-right whitespace-nowrap">
                           {formatMAD(row.totalRevenueMad)}
                         </td>
-                        <td className="px-4 py-3 tabular-nums text-indigo-700 font-medium text-right whitespace-nowrap">
+                        <td className="px-4 py-3 tabular-nums text-gold-600 font-medium text-right whitespace-nowrap">
                           {formatMAD(row.totalCommissionMad)}
                         </td>
-                        <td className="px-4 py-3 tabular-nums text-gray-600 text-right whitespace-nowrap">
+                        <td className="px-4 py-3 tabular-nums text-muted text-right whitespace-nowrap">
                           {row.averageDeliveryDays != null
-                            ? `${row.averageDeliveryDays}j`
+                            ? t('deliveryDays', { days: row.averageDeliveryDays })
                             : '—'}
                         </td>
                         <td className="px-4 py-3 tabular-nums text-right">
                           <span
-                            className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full border ${
                               row.delayedOrdersCount > 0
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-gray-100 text-gray-500'
+                                ? 'bg-warning-soft text-warning-fg border-warning'
+                                : 'bg-surface-2 text-faint border-line'
                             }`}
                           >
                             {row.delayedOrdersCount}
@@ -337,10 +314,10 @@ export default async function SupplierPerformancePage() {
                         </td>
                         <td className="px-4 py-3 tabular-nums text-right">
                           <span
-                            className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full border ${
                               row.issueCount > 0
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-gray-100 text-gray-500'
+                                ? 'bg-danger-soft text-danger-fg border-danger'
+                                : 'bg-surface-2 text-faint border-line'
                             }`}
                           >
                             {row.issueCount}
@@ -348,15 +325,15 @@ export default async function SupplierPerformancePage() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           {row.totalOrders === 0 && row.issueCount === 0 ? (
-                            <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">
-                              Données insuffisantes
+                            <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-surface-2 text-faint border border-line">
+                              {t('insufficientData')}
                             </span>
                           ) : (
                             <span
-                              className={`inline-block text-sm font-bold tabular-nums ${scoreColor(score)}`}
+                              className={`inline-block text-sm font-bold tabular-nums ${scoreColorClass(score)}`}
                             >
                               {score}
-                              <span className="text-xs font-normal text-gray-400">/100</span>
+                              <span className="text-xs font-normal text-faint">{t('scoreSuffix')}</span>
                             </span>
                           )}
                         </td>
