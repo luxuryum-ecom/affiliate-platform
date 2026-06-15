@@ -191,7 +191,7 @@ export default async function AffiliateProductsPage() {
                     availStock: t('availStock'),
                     catalogPrice: t('catalogPrice'),
                     baseCommission: t('baseCommission'),
-                    notProfitable: t('notProfitable'),
+                    adjustPrice: t('adjustPrice'),
                     customPriceActive: t('customPriceActive'),
                     feeConfirmation: t('feeConfirmation'),
                     feePackaging: t('feePackaging'),
@@ -223,7 +223,7 @@ type CardStrings = {
     availStock: string
     catalogPrice: string
     baseCommission: string
-    notProfitable: string
+    adjustPrice: string
     customPriceActive: string
     feeConfirmation: string
     feePackaging: string
@@ -315,7 +315,7 @@ function AffiliateProductCard({
                 {formatMAD(baseCommission)}
               </p>
             ) : (
-              <p className="text-sm font-bold text-danger-fg">{t.notProfitable}</p>
+              <p className="text-sm font-medium text-accent-fg">{t.adjustPrice}</p>
             )}
           </div>
         </div>
