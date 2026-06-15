@@ -8,6 +8,23 @@
 > Liste de tête à attaquer en début de prochaine session. Ordre = priorité décroissante.
 > Chaque point : `@architect` plan d'abord → validation Abdou → implémentation. **Rien n'est codé ici.**
 
+## === RETOURS TEST PROD MOBILE (15/06) — à traiter ===
+> Retours d'Abdou après test de la prod sur mobile (Vercel). Ordre = ordre de saisie, pas
+> de priorité figée. Aucune correction lancée — on cadrera l'ampleur de chaque point APRÈS.
+
+1. **[FAIT 15/06]** Erreur serveur `/wholesale/marketplace/[id]` (digest `3098525211`) corrigée,
+   mergée dans `main` (`894fa06`), déployée en prod.
+2. **[RÈGLE MÉTIER]** Maroc : quantité ≤ stock → commande directe ; quantité > stock → devis /
+   confirmation équipe (sur-commande, **jamais « pas disponible »**). Import (Chine / Turquie /
+   Égypte / Dubai) : toujours devis + mention « transport calculé après, variable ». Supprimer la
+   contradiction UI (bloc « Commander » + message rouge affichés ensemble).
+3. **[PRIX]** Prix = fournisseur + commission, **hors cargo**, mention « hors transport ». Vérifier
+   cohérence prix fiche ↔ panier.
+4. **[i18n]** Sélecteur type d'activité (Boutique physique / Instagram-Facebook / E-commerce /
+   Importateur) reste en français en arabe → traduire.
+5. **[UX]** « Stock local Maroc » trompeur → reformuler.
+6. **[MOBILE]** Images + organisation à hisser au standard SaaS international (90 % trafic mobile).
+
 ## 🧭 ORDRE DE REPRISE (figé avec Abdou, session 2026-06-12)
 > Reprendre EXACTEMENT dans cet ordre. On ne saute pas d'étape. La branche
 > `feat/habillage-premium` est à jour et poussée ; **toute la DETTE UX est résorbée**
