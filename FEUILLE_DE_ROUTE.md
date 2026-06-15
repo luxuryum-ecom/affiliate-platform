@@ -4,6 +4,34 @@
 
 ---
 
+## === 🗓️ ÉTAT FIN DE SESSION 15/06 (nuit) ===
+> État réel, sans embellissement. Code prod = **`f748732`**, base = **migration 072**.
+
+### ✅ Déployé en prod ce soir
+1. **Fix design cartes marketplace** (`theme-dark`) — commit `b9d7973`.
+2. **Règle A1 affichage** : Maroc `local_stock` + stock > 0 → « Commander » (découplé du miroir) + auto-miroir & coût fournisseur pré-rempli + **migration 069** — commit `71e893d`.
+3. **Fix upload preuve de paiement** : policy RLS storage bucket `order-proofs` + **migration 070** — commit `4707bb3`.
+4. **Fix « Non rentable » → « Ajuste ton prix de vente »** (FR/AR/EN, affichage) — commit `ed520ab`.
+5. **Affichage prix import honnête** : « hors transport et douane » + « Marge selon devis » + champ mode aérien/maritime au devis import + **migration 071** — commit `028d790`.
+6. **Dette sécurité 012 (anon) fermée** : vue `products_public_read` whitelistée + **migration 072** — commit `f748732`.
+
+### 📱 À VÉRIFIER PAR ABDOU SUR IPHONE (une fois Vercel vert)
+- Cartes marketplace = design noir & or propre.
+- Produit Maroc en stock = bouton « Commander ».
+- Upload preuve de paiement (grossiste sur SA commande) = succès, plus d'erreur RLS.
+- Plus de « Non rentable » affiché aux affiliés.
+- Produit import = « hors transport et douane » + « Marge selon devis » + champ aérien/maritime au devis.
+- Fiche produit publique (non connecté) = s'affiche normalement.
+
+### 🔜 RESTE AU BACKLOG (prochaine session, à tête reposée)
+- **P3** : inscription **téléphone + OTP WhatsApp (PAS SMS)** — nécessite choix fournisseur + coût, **décision business**.
+- **Dette 073 (authenticated)** : `factory_cost_mad` exposé aux affiliés/grossistes — délicat, **touche le calcul de commission**, à cadrer avec prudence.
+- **A5** : amélioration mobile / images iPhone.
+- **A3** : sélecteur type d'activité reste en FR en mode arabe → traduire.
+- **Produits actuels = FAUX** → à remplacer par les vrais.
+
+---
+
 ## === 🗓️ ÉTAT FIN DE SESSION 15/06 ===
 > État réel, sans embellissement.
 
