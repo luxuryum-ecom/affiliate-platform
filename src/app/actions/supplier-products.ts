@@ -344,6 +344,12 @@ export async function requestSupplierProductQuote(
   const whatsapp_number = (formData.get('whatsapp_number') as string)?.trim() || ''
   const buyer_purchase_profile = (formData.get('buyer_purchase_profile') as string)?.trim() || ''
   const buyer_volume_tier = (formData.get('buyer_volume_tier') as string)?.trim() || ''
+  // Mode d'expédition (import) — optionnel ; allowlist serveur (zéro confiance UI).
+  const preferred_shipping_mode = (formData.get('preferred_shipping_mode') as string)?.trim() || null
+  const ALLOWED_SHIPPING_MODES = ['air_door_to_door_kg', 'sea_textile_kg', 'sea_volume_cbm']
+  if (preferred_shipping_mode && !ALLOWED_SHIPPING_MODES.includes(preferred_shipping_mode)) {
+    return { error: 'Mode d\'expédition invalide.' }
+  }
 
   if (!supplier_product_id) return { error: 'Produit introuvable.' }
   if (!quantity_requested || quantity_requested < 1) return { error: 'Quantité invalide.' }
@@ -361,6 +367,7 @@ export async function requestSupplierProductQuote(
     quantity_requested,
     buyer_purchase_profile,
     buyer_volume_tier,
+    preferred_shipping_mode,
     destination_country,
     destination_city,
     buyer_notes,

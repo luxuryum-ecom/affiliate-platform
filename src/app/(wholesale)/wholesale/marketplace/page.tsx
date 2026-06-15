@@ -767,6 +767,10 @@ function MarketplaceProductCard({
                   <span className="text-[9px] font-normal text-faint ms-1">· {t('cardPriceTiers')}</span>
                 )}
               </p>
+              {/* Import : prix HORS transport/douane (inconnus à ce stade) — mention honnête */}
+              {!isLocalStock && (
+                <p className="text-[9px] text-faint leading-none mt-0.5">{t('cardImportPriceNote')}</p>
+              )}
               {resaleLow != null && resaleHigh != null && (
                 <div className="mt-0.5 space-y-0.5">
                   <p className="text-[9px] text-muted leading-none">
@@ -775,12 +779,20 @@ function MarketplaceProductCard({
                       high: resaleHigh.toLocaleString(numLocale),
                     })}
                   </p>
-                  {marginLow != null && marginHigh != null && (
-                    <p className="text-[9px] text-success-fg font-semibold leading-none">
-                      {t('cardMargin', {
-                        low: marginLow.toLocaleString(numLocale),
-                        high: marginHigh.toLocaleString(numLocale),
-                      })}
+                  {isLocalStock ? (
+                    // Stock Maroc : marge fiable (pas de transport) → chiffre affiché.
+                    marginLow != null && marginHigh != null && (
+                      <p className="text-[9px] text-success-fg font-semibold leading-none">
+                        {t('cardMargin', {
+                          low: marginLow.toLocaleString(numLocale),
+                          high: marginHigh.toLocaleString(numLocale),
+                        })}
+                      </p>
+                    )
+                  ) : (
+                    // Import : marge dépend du transport/douane → AUCUN chiffre, message devis.
+                    <p className="text-[9px] text-accent-fg font-medium leading-none">
+                      {t('cardMarginQuote')}
                     </p>
                   )}
                 </div>

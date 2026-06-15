@@ -1002,6 +1002,8 @@ export interface SupplierQuoteRequest {
   buyer_purchase_profile: BuyerPurchaseProfile | null
   /** Admin-only intake — not selected in supplier-facing queries. */
   buyer_volume_tier: BuyerVolumeTier | null
+  /** Mode d'expédition souhaité (import) : air_door_to_door_kg | sea_textile_kg | sea_volume_cbm. NULL = à déterminer. */
+  preferred_shipping_mode: string | null
   destination_country: string
   destination_city: string | null
   buyer_notes: string | null
@@ -1521,8 +1523,9 @@ export type Database = {
       >
       supplier_quote_requests: TableDef<
         SupplierQuoteRequest,
-        Omit<SupplierQuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'quoted_unit_price_mad' | 'supplier_cost_mad' | 'platform_commission_type' | 'platform_commission_value' | 'platform_commission_amount_mad' | 'transport_customs_cost_mad' | 'supplier_payout_amount_mad' | 'supplier_payout_status'> & {
+        Omit<SupplierQuoteRequest, 'id' | 'created_at' | 'updated_at' | 'status' | 'admin_notes' | 'quoted_unit_price_mad' | 'supplier_cost_mad' | 'platform_commission_type' | 'platform_commission_value' | 'platform_commission_amount_mad' | 'transport_customs_cost_mad' | 'supplier_payout_amount_mad' | 'supplier_payout_status' | 'preferred_shipping_mode'> & {
           status?: SupplierQuoteRequestStatus
+          preferred_shipping_mode?: string | null
           admin_notes?: string | null
           quoted_unit_price_mad?: number | null
           supplier_cost_mad?: number | null

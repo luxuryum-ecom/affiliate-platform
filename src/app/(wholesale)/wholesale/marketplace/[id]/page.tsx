@@ -365,6 +365,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                   <MarketplaceQuoteForm
                     supplierProductId={product.id}
                     minQuantity={product.min_quantity}
+                    showShippingMode={product.availability_type !== 'local_stock'}
                     tQuote={{
                       qtyLabel: t('quoteFormQtyLabel'),
                       qtyMin: t('quoteFormQtyMin', { min: product.min_quantity }),
@@ -389,6 +390,11 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                       submitting: t('quoteFormSubmitting'),
                       cta: t('quoteFormCta'),
                       success: t('quoteSuccess'),
+                      shippingLabel: t('quoteFormShippingLabel'),
+                      shippingNone: t('quoteFormShippingNone'),
+                      shippingAir: t('quoteFormShippingAir'),
+                      shippingSeaTextile: t('quoteFormShippingSeaTextile'),
+                      shippingSeaVolume: t('quoteFormShippingSeaVolume'),
                     }}
                   />
                 </div>

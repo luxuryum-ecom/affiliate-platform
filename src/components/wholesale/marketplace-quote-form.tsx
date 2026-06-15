@@ -38,15 +38,23 @@ interface TQuote {
   submitting: string
   cta: string
   success: string
+  // Mode d'expédition — uniquement pour les produits importés (showShippingMode).
+  shippingLabel?: string
+  shippingNone?: string
+  shippingAir?: string
+  shippingSeaTextile?: string
+  shippingSeaVolume?: string
 }
 
 interface Props {
   supplierProductId: string
   minQuantity: number
+  /** Affiche le champ mode d'expédition (aérien/maritime) — réservé aux produits importés. */
+  showShippingMode?: boolean
   tQuote: TQuote
 }
 
-export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }: Props) {
+export function MarketplaceQuoteForm({ supplierProductId, minQuantity, showShippingMode = false, tQuote }: Props) {
   const [state, action, isPending] = useActionState(requestSupplierProductQuote, initial)
   const [open, setOpen] = useState(false)
 
@@ -167,6 +175,18 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, tQuote }:
           placeholder={tQuote.whatsappPlaceholder}
         />
       </div>
+
+      {showShippingMode && tQuote.shippingLabel && (
+        <div>
+          <label className={LABEL}>{tQuote.shippingLabel}</label>
+          <select name="preferred_shipping_mode" disabled={isPending} className={INPUT}>
+            <option value="">{tQuote.shippingNone}</option>
+            <option value="air_door_to_door_kg">{tQuote.shippingAir}</option>
+            <option value="sea_textile_kg">{tQuote.shippingSeaTextile}</option>
+            <option value="sea_volume_cbm">{tQuote.shippingSeaVolume}</option>
+          </select>
+        </div>
+      )}
 
       <div>
         <label className={LABEL}>{tQuote.notesLabel}</label>
