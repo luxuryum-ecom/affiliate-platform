@@ -6,7 +6,6 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
 import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
-import { findCatalogLink } from '@/lib/wholesale-catalog-link'
 import SampleRequestClient from './SampleRequestClient'
 import type {
   Profile,
@@ -81,26 +80,14 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const isMorocco = product.supplier_type === 'morocco'
   const directUnitPrice = product.suggested_wholesale_price_mad ?? 0
 
-  // Commande directe = candidat 'direct' ET miroir catalogue interne commandable.
-  // Sans miroir, le checkout refuserait : on rétrograde donc en 'rfq' AVANT
-  // d'afficher le CTA (source de vérité unique partagée avec addMarketplaceToCart).
-  const catalogLink =
-    getSupplierProductCtaMode(product) === 'direct'
-      ? await findCatalogLink(supabase, product)
-      : null
-  const ctaMode: 'direct' | 'rfq' = catalogLink ? 'direct' : 'rfq'
-
-  // Seuils RÉELLEMENT appliqués au checkout = cumul des gardes fournisseur ET
-  // catalogue (cart.ts). On les affiche pour ne pas « déplacer le mur » : MOQ =
-  // max des deux, stock = min des deux. Sans miroir, valeurs fournisseur brutes.
-  const directMinQty = catalogLink
-    ? Math.max(product.min_quantity, catalogLink.wholesale_min_qty)
-    : product.min_quantity
-  const directStock = catalogLink
-    ? product.stock_quantity == null
-      ? catalogLink.stock_count
-      : Math.min(product.stock_quantity, catalogLink.stock_count)
-    : product.stock_quantity
+  // CTA d'affichage (A1) — décidé UNIQUEMENT sur origine + stock fournisseur, SANS
+  // dépendre du miroir catalogue : Maroc local_stock + prix + stock > 0 → 'direct' ;
+  // import / pas de prix / rupture → 'rfq'. La sur-commande (qty > stock) bascule en
+  // devis côté formulaire (réactif). Le miroir reste exigé/garanti côté SERVEUR
+  // (addMarketplaceToCart + auto-provision à l'approbation) — défense en profondeur.
+  const ctaMode = getSupplierProductCtaMode(product)
+  const directMinQty = product.min_quantity
+  const directStock = product.stock_quantity
 
   const hasCatalog = attachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
   const hasVideo   = attachments.some((a) => a.attachment_type === 'video')

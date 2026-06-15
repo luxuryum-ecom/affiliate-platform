@@ -9,10 +9,11 @@
 
 1. **Merge `feat/habillage-premium` → `main` FAIT** : commit de merge **`3ee9530`**, **poussé en prod** (push `894fa06..3ee9530`, pre-push smoke 20/20 vert). Vercel redéploie sur `main`. **Base Supabase prod (`owvtfzxvirttrbcsiveg`) déjà à la migration 068** → aucune migration à appliquer, code et base alignés.
 
-2. **🔴 PROBLÈME OUVERT — À CORRIGER EN PRIORITÉ (régression A1 visible en prod)** : des produits **Maroc EN STOCK** affichent **« Demander un devis »** au lieu de **« Commander »**. C'est **FAUX** selon la règle A1 (stock disponible = commande directe). **Capture confirmée par Abdou.** Cause à investiguer :
-   - soit des **produits Maroc sans miroir catalogue** qui basculent en devis (comportement « sans miroir → devis » décidé pour A1, mais visiblement trop large — la plupart des produits Maroc n'ont pas de miroir → tous en devis) ;
-   - soit un **défaut d'implémentation A1** (CTA mal calculé).
-   → Investiguer le flux `getSupplierProductCtaMode` + `findCatalogLink` (downgrade `rfq`) sur `/wholesale/marketplace/[id]` et la liste. **Ne pas reconstruire avant d'avoir la cause exacte.**
+2. **✅ A1 AFFICHAGE CORRIGÉ (régression « Maroc en stock → devis » résolue)** : cause confirmée = le CTA dépendait de `findCatalogLink` (miroir catalogue) → les produits Maroc sans miroir basculaient en devis même en stock. **Correctif (commande directe, non commité tant qu'Abdou n'a pas validé)** :
+   - **Affichage découplé du miroir** : le CTA (liste + fiche) se décide UNIQUEMENT via `getSupplierProductCtaMode` — Maroc `local_stock` + prix + stock > 0 → « Commander » ; import / rupture → « Demander un devis » ; sur-commande (qty > stock) → devis (réactif côté formulaire). Plus de dépendance `findCatalogLink` pour l'affichage (`marketplace/page.tsx`, `marketplace/[id]/page.tsx`).
+   - **Miroir garanti côté SERVEUR** : auto-provision du miroir catalogue à l'approbation du `supplier_product` (Maroc local_stock, prix MAD) — `sell_price = final` (vitrine), `factory_cost_mad = suggested` (coût), marge captée UNE fois ; idempotent (migr. **069** additive : `source_supplier_product_id` + index unique partiel) ; `supplier_cost_mad` pré-rempli à la commande (C-B1). Re-audits **@finance GO** + **@security GO** (réserve = dette 012 `factory_cost` anon, non aggravée, déjà BLOC B).
+   - ⚠️ **À FAIRE pour activer en prod** : (a) appliquer **migr. 069** sur la base prod (additive) ; (b) **backfill / ré-approbation** des produits Maroc déjà approuvés (le miroir se crée à l'approbation → les produits antérieurs n'en ont pas encore). Tant que (a)+(b) pas faits : un « Commander » sur un produit sans miroir renvoie le message serveur « pas encore dispo → devis » (repli sûr, pas un crash).
+   - 4 checks verts : tsc 0 / 157 tests / build OK ; smoke au pre-push.
 
 3. **Backups prod du 15/06** dans `~/AI-FACTORY/backups/` : `prod_backup_2026-06-15.sql` (schéma, 46 tables) + `prod_backup_2026-06-15_data.sql` (données, 30 tables : profiles/products/wholesale_orders/commissions/ledger…).
 

@@ -10,6 +10,7 @@ import { resolveDeliveryFeeByCity } from './cities'
 import { requireAdmin } from './_guards'
 import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
 import { parseMoneyInput } from '@/lib/money'
+import { computeSupplierCostMad } from '@/lib/supplier-mirror'
 import {
   scoreDuplicateOrder,
   scoreFraudOrder,
@@ -561,12 +562,20 @@ export async function createWholesaleOrderFromCart(
 
   const total = (totalCents / 100).toFixed(2)
 
+  // C-B1 — coût fournisseur pré-rempli = Σ(factory_cost_mad × qty), centimes entiers.
+  // Évite un gross_profit faux + un payout fournisseur à 0 sur les commandes directes
+  // (miroirs auto-provisionnés). Modifiable ensuite par l'admin (updateWholesaleOrderCosts).
+  const supplierCost = computeSupplierCostMad(
+    cartItems.map((i) => ({ factory_cost_mad: i.product.factory_cost_mad, quantity: i.quantity })),
+  )
+
   // ── Create wholesale_order ─────────────────────────────────────────────────
   const { data: newOrder, error: orderErr } = (await supabase
     .from('wholesale_orders')
     .insert({
       buyer_id:            buyerId,
       total_amount:        total,
+      supplier_cost_mad:   supplierCost,
       status:              'pending',
       delivery_preference: 'delivery',
     })
@@ -682,11 +691,17 @@ export async function submitWholesaleOrder(
   const address      = ((formData.get('address') as string)?.trim()) || null
   const buyer_notes  = ((formData.get('buyer_notes') as string)?.trim()) || null
 
+  // C-B1 — coût fournisseur pré-rempli = Σ(factory_cost_mad × qty), centimes entiers (idem ci-dessus).
+  const supplierCost = computeSupplierCostMad(
+    cartItems.map((i) => ({ factory_cost_mad: i.product.factory_cost_mad, quantity: i.quantity })),
+  )
+
   const { data: newOrder, error: orderErr } = (await supabase
     .from('wholesale_orders')
     .insert({
       buyer_id: user.id,
       total_amount: total,
+      supplier_cost_mad: supplierCost,
       status: 'pending',
       delivery_preference: 'delivery',
       city,

@@ -1,0 +1,99 @@
+// ─── Miroir catalogue auto-provisionné (commande directe Maroc) ──────────────
+// Logique PURE (aucune I/O) → testable unitairement. Câblée par :
+//   - src/app/actions/supplier-products.ts (approveSupplierProduct) : UPSERT du miroir.
+//   - src/app/actions/orders.ts (création de commande) : pré-remplissage du coût fournisseur.
+//
+// Règle argent (validée @finance, conditions C-B1..C-B5) :
+//   sell_price       = final_wholesale_price_mad   (prix vitrine, déjà marge incluse)
+//   factory_cost_mad = suggested_wholesale_price_mad (coût fournisseur AVANT marge)
+//   marge plateforme = sell_price − factory_cost_mad, captée UNE seule fois (jamais réappliquée).
+
+/** Entrée minimale issue d'un supplier_product pour décider/construire le miroir. */
+export interface SupplierMirrorInput {
+  id: string
+  product_name: string
+  public_name: string | null
+  availability_type: string
+  /** Coût fournisseur converti MAD, AVANT marge plateforme. */
+  suggested_wholesale_price_mad: number | null
+  /** Prix vitrine = COALESCE(final, suggested) ; déjà marge incluse. */
+  final_wholesale_price_mad: number | null
+  stock_quantity: number | null
+  min_quantity: number
+}
+
+/** Ligne `products` à UPSERT. Colonnes minimales : suffisantes pour findCatalogLink + checkout. */
+export interface MirrorRow {
+  source_supplier_product_id: string
+  name: string
+  sell_price: number
+  factory_cost_mad: number
+  wholesale_min_qty: number
+  stock_count: number
+  availability_type: 'local_stock'
+  approval_status: 'approved'
+  active: true
+}
+
+export type MirrorSkipReason =
+  | 'not_local_stock' // C-B5 : import → reste devis
+  | 'no_fx_rate' // C-B3 : prix MAD indisponible (devise sans taux) → reste devis
+  | 'non_positive_price' // CHECK products.sell_price > 0
+  | 'negative_margin' // C-B2 : sell < factory (ne devrait jamais arriver)
+
+export type MirrorDecision =
+  | { create: false; reason: MirrorSkipReason }
+  | { create: true; row: MirrorRow }
+
+/**
+ * Décide si un supplier_product doit avoir un miroir catalogue, et le construit.
+ * Déterministe : même entrée → même sortie (idempotence de l'UPSERT onConflict).
+ */
+export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
+  // C-B5 — seuls les produits Maroc en stock local sont commandables en direct.
+  if (sp.availability_type !== 'local_stock') return { create: false, reason: 'not_local_stock' }
+
+  // C-B3 — sans prix MAD (devise sans taux FX), pas de miroir : le produit reste en devis.
+  const factory = sp.suggested_wholesale_price_mad
+  if (factory == null) return { create: false, reason: 'no_fx_rate' }
+
+  // sell_price = prix vitrine (final) ; si la marge n'a pas été appliquée, final == suggested.
+  const sell = sp.final_wholesale_price_mad ?? factory
+
+  if (sell <= 0) return { create: false, reason: 'non_positive_price' } // CHECK sell_price > 0
+  if (sell < factory) return { create: false, reason: 'negative_margin' } // C-B2 (garde défensive)
+
+  return {
+    create: true,
+    row: {
+      source_supplier_product_id: sp.id,
+      name: (sp.public_name || sp.product_name).trim(),
+      sell_price: sell,
+      factory_cost_mad: factory,
+      wholesale_min_qty: sp.min_quantity,
+      // stock fournisseur NULL → 0 : pas de survente. Avec 0, la commande directe bascule
+      // en sur-commande → devis (règle A1), jamais « indisponible ». Stock déclaré → direct.
+      stock_count: sp.stock_quantity ?? 0,
+      availability_type: 'local_stock',
+      approval_status: 'approved',
+      active: true,
+    },
+  }
+}
+
+/**
+ * C-B1 — Coût fournisseur pré-rempli d'une commande directe = Σ(factory_cost_mad × qty).
+ * CENTIMES ENTIERS (zéro flottant). factory_cost_mad NULL (catalogue legacy) → 0 pour cette
+ * ligne (l'admin ajuste). Pour un miroir auto-provisionné, factory_cost_mad est toujours posé,
+ * donc le coût n'est jamais un 0 silencieux. Renvoie une chaîne `numeric`-safe (2 décimales).
+ */
+export function computeSupplierCostMad(
+  lines: { factory_cost_mad: number | null; quantity: number }[],
+): string {
+  let cents = 0
+  for (const l of lines) {
+    const unit = l.factory_cost_mad ?? 0
+    cents += Math.round(unit * 100) * l.quantity
+  }
+  return (cents / 100).toFixed(2)
+}

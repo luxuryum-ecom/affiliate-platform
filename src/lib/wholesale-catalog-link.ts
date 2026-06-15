@@ -21,11 +21,14 @@ import type { Product } from '@/types/database'
 type ServerClient = Awaited<ReturnType<typeof createClient>>
 
 /** Ligne catalogue réellement utilisée au checkout (seuils inclus). */
-export type CatalogLink = Pick<Product, 'id' | 'name' | 'wholesale_min_qty' | 'stock_count'>
+export type CatalogLink = Pick<
+  Product,
+  'id' | 'name' | 'wholesale_min_qty' | 'stock_count' | 'source_supplier_product_id'
+>
 
 type SupplierLike = { public_name: string | null; product_name: string }
 
-const CATALOG_SELECT = 'id, name, wholesale_min_qty, stock_count'
+const CATALOG_SELECT = 'id, name, wholesale_min_qty, stock_count, source_supplier_product_id'
 
 function lookupNameOf(p: SupplierLike): string {
   return (p.public_name || p.product_name).trim()
@@ -38,8 +41,23 @@ function lookupNameOf(p: SupplierLike): string {
  */
 export async function findCatalogLink(
   supabase: ServerClient,
-  product: SupplierLike,
+  product: SupplierLike & { id?: string },
 ): Promise<CatalogLink | null> {
+  // Lien FORT : miroir auto-provisionné rattaché par id (migr. 069). Prioritaire,
+  // insensible au renommage (contrairement au match nom).
+  if (product.id) {
+    const { data: linked } = (await supabase
+      .from('products')
+      .select(CATALOG_SELECT)
+      .eq('source_supplier_product_id', product.id)
+      .eq('active', true)
+      .eq('approval_status', 'approved')
+      .eq('availability_type', 'local_stock')
+      .maybeSingle()) as { data: CatalogLink | null; error: unknown }
+    if (linked) return linked
+  }
+
+  // Repli historique : match par nom normalisé (miroirs manuels pré-069).
   const lookupName = lookupNameOf(product)
 
   const { data } = (await supabase
@@ -77,8 +95,11 @@ export async function findCatalogLinks(
     .eq('availability_type', 'local_stock')
     .order('id', { ascending: true })) as { data: CatalogLink[] | null; error: unknown }
 
+  const bySource = new Map<string, CatalogLink>()
   const byNormalizedName = new Map<string, CatalogLink>()
   for (const row of data ?? []) {
+    // Lien FORT : miroir auto-provisionné (migr. 069) — prioritaire sur le match nom.
+    if (row.source_supplier_product_id) bySource.set(row.source_supplier_product_id, row)
     const key = normalizeCatalogLookupName(row.name)
     // Premier gagnant sur un ordre déterministe (id croissant) → même miroir choisi
     // que la résolution unitaire en cas de doublons de noms dans le catalogue.
@@ -86,7 +107,8 @@ export async function findCatalogLinks(
   }
 
   for (const p of products) {
-    const link = byNormalizedName.get(normalizeCatalogLookupName(lookupNameOf(p)))
+    const link =
+      bySource.get(p.id) ?? byNormalizedName.get(normalizeCatalogLookupName(lookupNameOf(p)))
     if (link) result.set(p.id, link)
   }
   return result

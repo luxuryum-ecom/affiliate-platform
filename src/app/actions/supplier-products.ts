@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
 import { buildSupplierPricing, applyPlatformMargin } from '@/lib/supplier-pricing'
 import { checkProductLimit } from '@/lib/product-limit'
+import { buildSupplierMirror } from '@/lib/supplier-mirror'
 import { parseMoneyInput } from '@/lib/money'
 import { parsePercentInput } from '@/lib/rate'
 import type {
@@ -217,9 +218,18 @@ export async function approveSupplierProduct(
   const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
   const { data: existing } = (await supabase
     .from('supplier_products')
-    .select('suggested_wholesale_price_mad')
+    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity')
     .eq('id', id)
-    .single()) as { data: { suggested_wholesale_price_mad: number | null } | null; error: unknown }
+    .single()) as {
+    data: {
+      suggested_wholesale_price_mad: number | null
+      product_name: string
+      availability_type: string
+      stock_quantity: number | null
+      min_quantity: number
+    } | null
+    error: unknown
+  }
   const suggested = existing?.suggested_wholesale_price_mad ?? null
   const marginValueNum = platform_margin_value != null ? Number(platform_margin_value) : null
   const final_wholesale_price_mad = applyPlatformMargin(
@@ -248,6 +258,38 @@ export async function approveSupplierProduct(
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  // ── C-B : auto-provisionner le miroir catalogue (commande directe Maroc) ──────
+  // Produit Maroc local_stock avec prix MAD → on crée/maj un miroir `products` pour
+  // autoriser la commande directe. sell_price = final (vitrine), factory_cost_mad =
+  // suggested (coût). Marge captée UNE fois. UPSERT idempotent sur source_supplier_product_id.
+  // Import / sans taux FX / marge anormale → pas de miroir (le produit reste en devis).
+  if (existing) {
+    const mirror = buildSupplierMirror({
+      id,
+      product_name: existing.product_name,
+      public_name,
+      availability_type: existing.availability_type,
+      suggested_wholesale_price_mad: suggested,
+      final_wholesale_price_mad,
+      stock_quantity: existing.stock_quantity,
+      min_quantity: existing.min_quantity,
+    })
+    if (mirror.create) {
+      const { error: mirrorErr } = await supabase
+        .from('products')
+        .upsert(mirror.row, { onConflict: 'source_supplier_product_id' })
+      // Non-fatal : l'approbation a réussi. Sans miroir, le produit reste commandable
+      // via devis (repli sûr, jamais « indisponible »). On trace pour diagnostic.
+      if (mirrorErr) {
+        console.error('[approveSupplierProduct] miroir catalogue non créé', {
+          supplierProductId: id,
+          error: mirrorErr.message,
+        })
+      }
+    }
+  }
+
   revalidatePath('/admin/supplier-products')
   revalidatePath(`/admin/supplier-products/${id}`)
   revalidatePath('/wholesale/marketplace')

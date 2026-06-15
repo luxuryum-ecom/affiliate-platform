@@ -277,6 +277,9 @@ export interface Product {
   approval_status: ProductApprovalStatus
   approved_by: string | null
   approved_at: string | null
+  /** Non-NULL = miroir catalogue auto-provisionné d'un supplier_product (migr. 069).
+   *  sell_price = final_wholesale_price_mad ; factory_cost_mad = suggested_wholesale_price_mad. */
+  source_supplier_product_id: string | null
 
   // ── Sales / catalog ───────────────────────────────────────────────────────
   active: boolean
