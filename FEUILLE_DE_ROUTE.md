@@ -4,6 +4,50 @@
 
 ---
 
+## === 🎯 PLAN D'ACTION MAÎTRE (source unique de vérité) ===
+> Sommaire consolidé créé le 2026-06-15. **NE duplique PAS** le détail : chaque point renvoie
+> à sa section existante (TITRE + ligne `≈` indicative — les lignes glissent à chaque édition,
+> se fier au TITRE). **Aucun contenu existant supprimé** : ceci n'est qu'un index ordonné.
+
+### 🥇 RÈGLE D'OR
+> **Un seul chantier à la fois, jamais en parallèle.** Ordre imposé : finir **BLOC A**, puis
+> **BLOC B**, puis **BLOC C** — un point à la fois, jamais deux de front.
+
+### BLOC A — CORRECTIONS PROD (retours test mobile du 15/06)
+> Détail : « === RETOURS TEST PROD MOBILE (15/06) === » (≈ L55).
+- **P0** ✅ **[FAIT]** Bug serveur `/wholesale/marketplace/[id]` (digest 3098525211) → mergé `main` `894fa06`, en prod.
+- **P1** Règle métier Maroc (qty ≤ stock → commande directe / qty > stock → devis) + Import → toujours devis + **supprimer la contradiction UI** (bloc « Commander » + message rouge ensemble). → cf. RETOURS TEST pt 2 + « CHANTIER TRANSPORT DDP » (≈ L315) + DETTE UX [P0] (≈ L145).
+- **P2** Prix = fournisseur + commission **hors cargo**, mention « hors transport » + **cohérence prix fiche ↔ panier**. → cf. RETOURS TEST pt 3 + LOT T0/T1 transport (≈ L330).
+- **P3** i18n sélecteur type d'activité (reste FR en arabe) → traduire FR/AR/EN. → cf. RETOURS TEST pt 4.
+- **P4** « Stock local Maroc » trompeur → reformuler (UX wording). → cf. RETOURS TEST pt 5.
+- **P5** Images + organisation au standard SaaS international (90 % trafic mobile). → cf. RETOURS TEST pt 6 + GO-LIVE pt 7 optim images (≈ L123).
+
+### BLOC B — DETTES TECHNIQUES (à solder AVANT go-live public)
+> Détail : « SECTION 3 — DETTES & SUJETS EN ATTENTE » (≈ L586) + checklist « GO-LIVE PUBLIC » (≈ L123).
+- 🛡️ RLS `products` expose `factory_cost_mad` à `anon` (migr. 012) → vue/colonne masquée. (≈ L589)
+- ⏱️ Rate-limiting manquant sur `placeOrder` (flux public COD). (≈ L590)
+- 🔑 Confiance `metadata.role` au signup (rôle non auto-déclarable). (≈ L595)
+- 🧪 Test d'intégration DB idempotence réelle `create_payout` (RPC Postgres). (≈ L591)
+- 📥🔁 Import CSV `publishBulkImport` : reporting des lignes échouées + clé d'idempotence. (≈ L593-594)
+- 🧽 MÉNAGE TEST — retirer secrets/comptes (`TelegramTest2026!`, `AgentDemo2026!`, `AdminTest2026!`) + régénérer authtoken ngrok. (≈ L596-600)
+- 🧾 i18n du CONTENU DB (noms/descriptions produits non traduisibles). (≈ L588)
+- 🚚 Logistique B2B grossiste = frais manuels par commande, pas de moteur auto. (≈ L601)
+- 🔀 MERGE `feat/habillage-premium` → `main` (`MERGE_PLAN.md`, GO explicite Abdou). (≈ L602)
+- 💰 Purge money résiduelle (`parseFloat` argent) : `bulk-import.ts:39`, fees `products.ts` 108-110, `orders.ts` 707-709 + COD/pricing. → cf. tête « CHANTIER MONEY » (≈ L65, L85).
+- 🛡️ Signatures webhooks + logs d'audit + audit `@security` final. → cf. PHASE 5 (≈ L398).
+
+### BLOC C — GRANDES FEATURES (vision, UN chantier à la fois)
+> Détail : « VISION ABDOU — grands chantiers » (≈ L508) + BACKLOG B1-B5 (≈ L478) + ROADMAP multi-pays (≈ L433).
+1. **Parcours fournisseur + IA** (photo → l'IA remplit nom/catégorie/prix). → SECTION 1 (≈ L512).
+2. **Agents sourcing par pays + isolation données client** (tél/adresse masqués, audit RLS). → SECTION 2 (≈ L524).
+3. **Gestion commandes Deliveroo B2B** (cycle, assignation, FSM). → SECTION 2bis-A (≈ L540) + PRIORITÉ N°1 LOT 5/6 (≈ L301).
+4. **Fidélité grossistes** (points/cadeaux, même prix de vente). → SECTION 2bis-B (≈ L549).
+5. **Features B1-B5** (saisie commande affilié, précommande usine, upload photo sourcing, affichage par secteur, bot WhatsApp/Telegram fournisseur). → BACKLOG (≈ L478).
+6. **Stock multi-entrepôt par pays + signup téléphone (migr. 056) + secteur grossistes locaux Maroc.** → ROADMAP pt 6 (≈ L451) + secteur B2B local (≈ L460).
+7. **[NOUVEAU] Demande de contenu créatif par les affiliés** : un affilié peut demander **photos + vidéos** d'un produit pour ses publicités (Meta/TikTok). À terme, branchement possible sur la **machine créative existante (n8n / Remotion / voix Darija)**. → à cadrer `@architect` d'abord, AUCUN code. *(Nouveau — pas encore de section détaillée.)*
+
+---
+
 # 🔴 PROCHAINE SESSION — PRIORITÉS ABDOU
 > Liste de tête à attaquer en début de prochaine session. Ordre = priorité décroissante.
 > Chaque point : `@architect` plan d'abord → validation Abdou → implémentation. **Rien n'est codé ici.**
