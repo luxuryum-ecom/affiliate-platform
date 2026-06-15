@@ -21,6 +21,31 @@
 3. **Chantier A5 — mobile / images (iPhone)** : amélioration expérience mobile + optimisation images. **PAS encore commencé.**
 4. **Dette 012** (`factory_cost_mad` exposé à `anon`) : à fermer **AVANT go-live public** (BLOC B).
 
+## === 🔴 RETOURS PROD 15/06 (soir) — à traiter, sans casser le déployé ===
+> Retours d'Abdou après test prod du soir. Classés par priorité. **Rien codé** — documentation
+> seule. À traiter prochaine session SANS régresser le déployé (`71e893d` + migr. 069).
+
+1. **[P1] BUG upload preuve de paiement — `new row violates row-level security policy`** (storage).
+   Le client COD **ne peut pas envoyer sa preuve de paiement** → **BLOQUANT**. Cause probable :
+   policy RLS du **bucket storage** manquante/incorrecte pour l'INSERT par l'utilisateur authentifié.
+   → Corriger la policy storage (insert par `auth.uid()` sur le bon bucket/chemin), **tester un
+   upload réel**. ⚠️ Touche RLS → audit `@security`.
+
+2. **[P1] « Non rentable » affiché à l'affilié** (badge rouge « Commission de base : Non rentable »).
+   Message **interne** qui ne doit **JAMAIS** être montré tel quel (impression amateur). Solution :
+   masquer ce libellé côté affilié **OU** le reformuler en message constructif (« Ajuste ton prix de
+   vente pour dégager une marge »). **Wording à décider avec Abdou.** Pur affichage (pas de calcul).
+
+3. **[P2] Produits IMPORTÉS — ne PAS afficher prix de vente ferme + marge estimée** tant que
+   transport + douane sont inconnus (la marge affichée est **fausse**, trompe l'affilié). Cible :
+   produit import → afficher **« Prix sur devis »** sans marge chiffrée ; la demande de devis exige
+   **quantité souhaitée + mode d'expédition (aérien/maritime)** ; le devis renvoyé inclut transport +
+   douane. **Chantier UX devis import à cadrer** — touche l'affichage prix/marge des produits
+   non-`local_stock`. ⚠️ Touche argent (marge) → circuit `@finance` au cadrage.
+
+4. **[P3] Inscription par TÉLÉPHONE + OTP SMS** (comme les SaaS pro), en plus de email/Google.
+   Amélioration conversion onboarding. À cadrer (fournisseur SMS, coût, vérif OTP, anti-abus).
+
 ---
 
 ## === 🎯 PLAN D'ACTION MAÎTRE — source unique de vérité ===
