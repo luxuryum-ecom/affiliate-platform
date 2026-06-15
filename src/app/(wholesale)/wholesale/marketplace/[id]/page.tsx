@@ -134,7 +134,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const numLocale = locale === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-MA'
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="theme-dark min-h-screen bg-bg">
       <DashboardHeader
         breadcrumb={displayName}
         backHref="/wholesale/marketplace"

@@ -146,7 +146,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   )
 
   return (
-    <div className="bg-bg text-foreground min-h-screen">
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="bg-surface border-b border-line sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -698,7 +698,7 @@ function MarketplaceProductCard({
         {/* Top-left: origin badge */}
         {product.origin_country && (
           <div className="absolute top-2 start-2">
-            <OriginBadge country={product.origin_country} className="bg-white/95 shadow-sm" />
+            <OriginBadge country={product.origin_country} className="bg-surface/95 shadow-sm" />
           </div>
         )}
 
