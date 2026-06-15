@@ -305,6 +305,9 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                       adding: t('directAdding'),
                       addedSuccess: t('directAddedSuccess'),
                       viewCart: t('directViewCart'),
+                      overOrderTitle: t('overOrderTitle'),
+                      overOrderDesc: t('overOrderDesc'),
+                      overOrderCta: t('overOrderCta'),
                     }}
                   />
                 </div>
@@ -331,8 +334,8 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                     }}
                   />
                 </div>
-                {/* Tertiary: quote for edge cases */}
-                <div className="bg-bg rounded-xl border border-line p-4">
+                {/* Tertiary: quote for edge cases — cible de l'ancre #quote (sur-commande) */}
+                <div id="quote" className="bg-bg rounded-xl border border-line p-4 scroll-mt-20">
                   <p className="text-sm font-medium text-muted mb-1">{t('quoteSpecialTitle')}</p>
                   <p className="text-xs text-faint mb-3">{t('quoteSpecialSubtitle')}</p>
                   <MarketplaceQuoteForm
@@ -368,8 +371,8 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
               </>
             ) : (
               <>
-                {/* Primary: quote */}
-                <div className="bg-surface rounded-xl border border-line p-4">
+                {/* Primary: quote — cible de l'ancre #quote */}
+                <div id="quote" className="bg-surface rounded-xl border border-line p-4 scroll-mt-20">
                   <p className="text-sm font-semibold text-foreground mb-1">{t('quoteTitle')}</p>
                   <p className="text-xs text-muted mb-3">{t('quoteSubtitle')}</p>
                   <MarketplaceQuoteForm

@@ -123,8 +123,8 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                 </span>
               )}
               {product.stock_count === 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-danger-soft text-danger-fg border border-danger">
-                  {t('badgeUnavailable')}
+                <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">
+                  {t('badgeOverOrder')}
                 </span>
               )}
               {product.stock_count > 0 && product.stock_count < product.wholesale_min_qty && (
@@ -183,17 +183,26 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                 <QuoteRequestForm productId={product.id} productName={product.name} />
               </div>
             ) : (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-success-fg uppercase tracking-wide">
-                  {t('labelStockSection')}
-                </p>
-                <AddToCartForm
-                  productId={product.id}
-                  sellPrice={product.sell_price}
-                  tiers={product.wholesale_tiers}
-                  minQty={product.wholesale_min_qty}
-                  stockCount={product.stock_count}
-                />
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-success-fg uppercase tracking-wide">
+                    {t('labelStockSection')}
+                  </p>
+                  <AddToCartForm
+                    productId={product.id}
+                    sellPrice={product.sell_price}
+                    tiers={product.wholesale_tiers}
+                    minQty={product.wholesale_min_qty}
+                    stockCount={product.stock_count}
+                  />
+                </div>
+                {/* Sur-commande / rupture → devis (cible de l'ancre #quote depuis AddToCartForm) */}
+                <div id="quote" className="space-y-2 pt-2 border-t border-line scroll-mt-20">
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+                    {t('overOrderSectionLabel')}
+                  </p>
+                  <QuoteRequestForm productId={product.id} productName={product.name} />
+                </div>
               </div>
             )}
           </div>
