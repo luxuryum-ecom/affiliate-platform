@@ -4,20 +4,22 @@
 
 ---
 
-## === 🗓️ ÉTAT AU 15/06 — fin de session ===
+## === 🗓️ ÉTAT FIN DE SESSION 15/06 ===
 > État réel, sans embellissement.
 
-1. **Merge `feat/habillage-premium` → `main` FAIT** : commit de merge **`3ee9530`**, **poussé en prod** (push `894fa06..3ee9530`, pre-push smoke 20/20 vert). Vercel redéploie sur `main`. **Base Supabase prod (`owvtfzxvirttrbcsiveg`) déjà à la migration 068** → aucune migration à appliquer, code et base alignés.
+### ✅ Déployé en prod (commit `71e893d`, poussé ; pre-push smoke 20/20)
+- **Fix design cartes marketplace** (`theme-dark`) — liste + fiche cohérentes (plus de mix clair/noir).
+- **Règle A1 affichage** : Maroc `local_stock` + stock > 0 → « Commander » (commande directe), **découplé du miroir catalogue** ; import / rupture / qty > stock → « Demander un devis ».
+- **Auto-miroir catalogue** à l'approbation du `supplier_product` (`sell_price=final`, `factory_cost_mad=suggested`, marge captée une fois, idempotent) + **coût fournisseur `supplier_cost_mad` pré-rempli** à la commande directe.
+- **Migration `069` APPLIQUÉE en prod** (`owvtfzxvirttrbcsiveg`, additive : `source_supplier_product_id` + index unique partiel + FK `ON DELETE SET NULL`). Code + base alignés (Local=Remote=069).
+- Antérieurs même journée : merge `feat/habillage-premium` → `main` (`3ee9530`), hotfix marketplace (`894fa06`).
+- Filets : backups prod du jour `~/AI-FACTORY/backups/` (schéma + data) ; rollback Vercel possible (Promote to Production d'un déploiement antérieur — la base reste à 069, un rollback de code ne la touche pas).
 
-2. **✅ A1 AFFICHAGE CORRIGÉ (régression « Maroc en stock → devis » résolue)** : cause confirmée = le CTA dépendait de `findCatalogLink` (miroir catalogue) → les produits Maroc sans miroir basculaient en devis même en stock. **Correctif (commande directe, non commité tant qu'Abdou n'a pas validé)** :
-   - **Affichage découplé du miroir** : le CTA (liste + fiche) se décide UNIQUEMENT via `getSupplierProductCtaMode` — Maroc `local_stock` + prix + stock > 0 → « Commander » ; import / rupture → « Demander un devis » ; sur-commande (qty > stock) → devis (réactif côté formulaire). Plus de dépendance `findCatalogLink` pour l'affichage (`marketplace/page.tsx`, `marketplace/[id]/page.tsx`).
-   - **Miroir garanti côté SERVEUR** : auto-provision du miroir catalogue à l'approbation du `supplier_product` (Maroc local_stock, prix MAD) — `sell_price = final` (vitrine), `factory_cost_mad = suggested` (coût), marge captée UNE fois ; idempotent (migr. **069** additive : `source_supplier_product_id` + index unique partiel) ; `supplier_cost_mad` pré-rempli à la commande (C-B1). Re-audits **@finance GO** + **@security GO** (réserve = dette 012 `factory_cost` anon, non aggravée, déjà BLOC B).
-   - ⚠️ **À FAIRE pour activer en prod** : (a) appliquer **migr. 069** sur la base prod (additive) ; (b) **backfill / ré-approbation** des produits Maroc déjà approuvés (le miroir se crée à l'approbation → les produits antérieurs n'en ont pas encore). Tant que (a)+(b) pas faits : un « Commander » sur un produit sans miroir renvoie le message serveur « pas encore dispo → devis » (repli sûr, pas un crash).
-   - 4 checks verts : tsc 0 / 157 tests / build OK ; smoke au pre-push.
-
-3. **Backups prod du 15/06** dans `~/AI-FACTORY/backups/` : `prod_backup_2026-06-15.sql` (schéma, 46 tables) + `prod_backup_2026-06-15_data.sql` (données, 30 tables : profiles/products/wholesale_orders/commissions/ledger…).
-
-4. **Rollback possible** : revenir au déploiement Vercel **antérieur à `3ee9530`** (le précédent prod = hotfix `894fa06`) via le dashboard Vercel (Deployments → Promote to Production) si besoin. La base étant déjà à 068, un rollback de code ne touche pas la base.
+### 🔜 RESTE À FAIRE — prioritaire prochaine session
+1. **Script backfill miroirs** pour les produits Maroc **déjà approuvés** : le miroir naît à l'approbation → les produits antérieurs n'en ont pas. Sans backfill, ils affichent « Commander » mais le serveur renvoie « pas encore dispo → devis » (repli sûr, pas un crash). Script idempotent (réutilise `buildSupplierMirror` + UPSERT onConflict), à auditer avant exécution.
+2. **Produits actuels = FAUX (données de test)** → à **SUPPRIMER** pour mettre les vrais produits.
+3. **Chantier A5 — mobile / images (iPhone)** : amélioration expérience mobile + optimisation images. **PAS encore commencé.**
+4. **Dette 012** (`factory_cost_mad` exposé à `anon`) : à fermer **AVANT go-live public** (BLOC B).
 
 ---
 
