@@ -4,47 +4,50 @@
 
 ---
 
-## === 🎯 PLAN D'ACTION MAÎTRE (source unique de vérité) ===
+## === 🎯 PLAN D'ACTION MAÎTRE — source unique de vérité ===
 > Sommaire consolidé créé le 2026-06-15. **NE duplique PAS** le détail : chaque point renvoie
 > à sa section existante (TITRE + ligne `≈` indicative — les lignes glissent à chaque édition,
 > se fier au TITRE). **Aucun contenu existant supprimé** : ceci n'est qu'un index ordonné.
 
 ### 🥇 RÈGLE D'OR
-> **Un seul chantier à la fois, jamais en parallèle.** Ordre imposé : finir **BLOC A**, puis
-> **BLOC B**, puis **BLOC C** — un point à la fois, jamais deux de front.
+> **Un seul chantier à la fois, jamais en parallèle.** Ordre strict : **BLOC A → BLOC B → BLOC C**.
+> Ne pas démarrer un nouveau chantier tant que le précédent n'est pas fini ET validé.
 
-### BLOC A — CORRECTIONS PROD (retours test mobile du 15/06)
-> Détail : « === RETOURS TEST PROD MOBILE (15/06) === » (≈ L55).
-- **P0** ✅ **[FAIT]** Bug serveur `/wholesale/marketplace/[id]` (digest 3098525211) → mergé `main` `894fa06`, en prod.
-- **P1** Règle métier Maroc (qty ≤ stock → commande directe / qty > stock → devis) + Import → toujours devis + **supprimer la contradiction UI** (bloc « Commander » + message rouge ensemble). → cf. RETOURS TEST pt 2 + « CHANTIER TRANSPORT DDP » (≈ L315) + DETTE UX [P0] (≈ L145).
-- **P2** Prix = fournisseur + commission **hors cargo**, mention « hors transport » + **cohérence prix fiche ↔ panier**. → cf. RETOURS TEST pt 3 + LOT T0/T1 transport (≈ L330).
-- **P3** i18n sélecteur type d'activité (reste FR en arabe) → traduire FR/AR/EN. → cf. RETOURS TEST pt 4.
-- **P4** « Stock local Maroc » trompeur → reformuler (UX wording). → cf. RETOURS TEST pt 5.
-- **P5** Images + organisation au standard SaaS international (90 % trafic mobile). → cf. RETOURS TEST pt 6 + GO-LIVE pt 7 optim images (≈ L123).
+### BLOC A — CORRECTIONS PROD (retours test 15/06, priorité immédiate)
+> Détail : « === RETOURS TEST PROD MOBILE (15/06) === » (≈ L58).
+- **A0** ✅ **[FAIT]** Bug serveur `/wholesale/marketplace/[id]` (digest 3098525211) → mergé `main` `894fa06`, en prod.
+- **A1** Règle métier Maroc (qty ≤ stock → **commande directe** / qty > stock → **devis / confirmation équipe**, **jamais « pas disponible »**) + Import (Chine / Turquie / Égypte / Dubai) → **toujours devis** + mention « transport calculé après, variable » + **supprimer la contradiction UI** (bloc « Commander » + message rouge affichés ensemble). → cf. RETOURS TEST pt 2 + « CHANTIER TRANSPORT DDP » (≈ L318) + DETTE UX [P0] (≈ L148).
+- **A2** Prix = fournisseur + commission, **hors cargo**, mention « hors transport » + **vérifier cohérence prix fiche ↔ panier**. → cf. RETOURS TEST pt 3 + LOT T0/T1 transport (≈ L333).
+- **A3** i18n sélecteur type d'activité (Boutique physique / Instagram-Facebook / E-commerce / Importateur) reste en FR en arabe → traduire FR/AR/EN. → cf. RETOURS TEST pt 4.
+- **A4** « Stock local Maroc » trompeur → reformuler. → cf. RETOURS TEST pt 5.
+- **A5** **EXPÉRIENCE MOBILE & DESIGN** (90 % du trafic = mobile, priorité haute) : → cf. RETOURS TEST pt 6 + SECTION 4 perfs (≈ L357) + GO-LIVE pt 7 optim images (≈ L126).
+  - (a) images produits/hero non adaptées/optimisées sur mobile → cadrage + compression + composant `next/image`.
+  - (b) organisation, hiérarchie visuelle et design général à hisser au standard d'un SaaS international.
+  - (c) cohérence du design sur toutes les pages clés (fiche produit, marketplace, catalogue, dashboards).
+  - (d) diagnostiquer la lenteur/lourdeur perçue (cf. SECTION 4 perfs).
 
 ### BLOC B — DETTES TECHNIQUES (à solder AVANT go-live public)
-> Détail : « SECTION 3 — DETTES & SUJETS EN ATTENTE » (≈ L586) + checklist « GO-LIVE PUBLIC » (≈ L123).
-- 🛡️ RLS `products` expose `factory_cost_mad` à `anon` (migr. 012) → vue/colonne masquée. (≈ L589)
-- ⏱️ Rate-limiting manquant sur `placeOrder` (flux public COD). (≈ L590)
-- 🔑 Confiance `metadata.role` au signup (rôle non auto-déclarable). (≈ L595)
-- 🧪 Test d'intégration DB idempotence réelle `create_payout` (RPC Postgres). (≈ L591)
-- 📥🔁 Import CSV `publishBulkImport` : reporting des lignes échouées + clé d'idempotence. (≈ L593-594)
-- 🧽 MÉNAGE TEST — retirer secrets/comptes (`TelegramTest2026!`, `AgentDemo2026!`, `AdminTest2026!`) + régénérer authtoken ngrok. (≈ L596-600)
-- 🧾 i18n du CONTENU DB (noms/descriptions produits non traduisibles). (≈ L588)
-- 🚚 Logistique B2B grossiste = frais manuels par commande, pas de moteur auto. (≈ L601)
-- 🔀 MERGE `feat/habillage-premium` → `main` (`MERGE_PLAN.md`, GO explicite Abdou). (≈ L602)
-- 💰 Purge money résiduelle (`parseFloat` argent) : `bulk-import.ts:39`, fees `products.ts` 108-110, `orders.ts` 707-709 + COD/pricing. → cf. tête « CHANTIER MONEY » (≈ L65, L85).
-- 🛡️ Signatures webhooks + logs d'audit + audit `@security` final. → cf. PHASE 5 (≈ L398).
+> Détail : « SECTION 3 — DETTES & SUJETS EN ATTENTE » (≈ L589) + checklist « GO-LIVE PUBLIC » (≈ L126) + PHASE 5 (≈ L401).
+- 🛡️ RLS `products` expose `factory_cost_mad` à `anon` (migr. 012) → vue/colonne masquée. (≈ L592)
+- ⏱️ Rate-limiting manquant sur `placeOrder` (flux public COD). (≈ L593)
+- 🔑 Durcir la confiance `metadata.role` au signup (rôle non auto-déclarable). (≈ L598)
+- 🛡️ Signatures webhooks + logs d'audit. → cf. PHASE 5 (≈ L401).
+- 📥🔁 Import CSV `publishBulkImport` : idempotence + reporting des lignes échouées. (≈ L596-597)
+- 🧽 MÉNAGE TEST — retirer secrets/comptes (`TelegramTest2026!`, `AgentDemo2026!`, `AdminTest2026!`) + régénérer authtoken ngrok. (≈ L599-603)
+- 🔎 Audit sécurité `@security` final avant go-live. → cf. PHASE 5 (≈ L401) + ROADMAP pt 10 (≈ L461).
+- *(Aussi en attente, cf. SECTION 3 : 🧪 test idempotence `create_payout` ≈L594 · 🧾 i18n contenu DB ≈L591 · 🚚 logistique B2B manuelle ≈L604 · 💰 purge money résiduelle ≈L68/L88 · 🔀 merge `main` ≈L605.)*
 
 ### BLOC C — GRANDES FEATURES (vision, UN chantier à la fois)
-> Détail : « VISION ABDOU — grands chantiers » (≈ L508) + BACKLOG B1-B5 (≈ L478) + ROADMAP multi-pays (≈ L433).
-1. **Parcours fournisseur + IA** (photo → l'IA remplit nom/catégorie/prix). → SECTION 1 (≈ L512).
-2. **Agents sourcing par pays + isolation données client** (tél/adresse masqués, audit RLS). → SECTION 2 (≈ L524).
-3. **Gestion commandes Deliveroo B2B** (cycle, assignation, FSM). → SECTION 2bis-A (≈ L540) + PRIORITÉ N°1 LOT 5/6 (≈ L301).
-4. **Fidélité grossistes** (points/cadeaux, même prix de vente). → SECTION 2bis-B (≈ L549).
-5. **Features B1-B5** (saisie commande affilié, précommande usine, upload photo sourcing, affichage par secteur, bot WhatsApp/Telegram fournisseur). → BACKLOG (≈ L478).
-6. **Stock multi-entrepôt par pays + signup téléphone (migr. 056) + secteur grossistes locaux Maroc.** → ROADMAP pt 6 (≈ L451) + secteur B2B local (≈ L460).
-7. **[NOUVEAU] Demande de contenu créatif par les affiliés** : un affilié peut demander **photos + vidéos** d'un produit pour ses publicités (Meta/TikTok). À terme, branchement possible sur la **machine créative existante (n8n / Remotion / voix Darija)**. → à cadrer `@architect` d'abord, AUCUN code. *(Nouveau — pas encore de section détaillée.)*
+> Détail : « VISION ABDOU — grands chantiers » (≈ L511) + BACKLOG B1-B5 (≈ L481) + ROADMAP multi-pays (≈ L436).
+- **C1** Parcours fournisseur + IA (photo → l'IA remplit nom/catégorie/prix). → SECTION 1 (≈ L515).
+- **C2** Agents sourcing par pays + isolation données client (tél/adresse masqués, audit RLS). → SECTION 2 (≈ L527).
+- **C3** Gestion commandes Deliveroo + alertes/notifs (cycle, assignation, FSM, escalade auto). → SECTION 2bis-A (≈ L543) + PRIORITÉ N°1 LOT 5/6 (≈ L304).
+- **C4** Fidélité grossistes (points/cadeaux, même prix de vente) — **ARGENT → circuit @finance**. → SECTION 2bis-B (≈ L552).
+- **C5** Features B1-B5 (saisie commande affilié, précommande usine, upload photo sourcing, affichage par secteur, bot WhatsApp/Telegram fournisseur). → BACKLOG (≈ L481).
+- **C6** Stock multi-entrepôt par pays + commande sourcing 2 lignes + courier API (`courier_*`) + signup téléphone (migr. 056) + secteur grossistes locaux Maroc. → ROADMAP pts 5-8 (≈ L453) + secteur B2B local (≈ L463).
+- **C7** Transport DDP auto-calculé (capture poids/volume produit + paliers dégressifs) — **ARGENT → circuit @finance**. → LOT T3 futur (≈ L340) + ROADMAP pt 8 (≈ L459).
+- **C8** **[NOUVEAU]** Demande de contenu créatif par les affiliés : un affilié demande **photos + vidéos** d'un produit pour ses pubs Meta/TikTok ; à terme brancher sur la **machine créative existante (n8n / Remotion / voix Darija)**. → à cadrer `@architect`, AUCUN code. *(Nouveau — pas encore de section détaillée.)*
+- **C9** WMS scan QR + relevés/rapports partenaires PDF (post-lancement). → WMS (≈ L560) + Relevés PDF/QR (≈ L573).
 
 ---
 
