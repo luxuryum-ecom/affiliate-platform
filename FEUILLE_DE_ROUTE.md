@@ -633,7 +633,8 @@ But : relevés exportables/imprimables par partenaire, pour audit manuel et envo
 ## SECTION 3 — DETTES & SUJETS EN ATTENTE (consolidation)
 
 - 🧾 **i18n contenu DB** : noms/descriptions produits (et libellés saisis) non traduisibles par i18n → stratégie à cadrer (**colonnes `name_ar`/`name_en`** ou **table de traductions**, ou traduction à la saisie/IA).
-- 🛡️ **Dette sécurité — RLS `products`** : expose `factory_cost_mad` à `anon` (migr. 012) → à corriger (vue/colonne masquée).
+- 🛡️ **Dette 012 (ANON) — fermée côté code (migration 072), à APPLIQUER en prod** : `factory_cost_mad` & coût/marge étaient lisibles par `anon` (RLS filtre les lignes, pas les colonnes). Correctif : vue `products_public_read` whitelistée (security_invoker au défaut) + GRANT anon/authenticated + DROP de la policy `"products: anon read active"` + page `/products/[id]` repointée. Additif, audit @security GO. ⏳ Reste : `supabase db push` de la migration 072 en prod (sur GO Abdou).
+- 🛡️ **Dette 073 (AUTHENTICATED) — SÉPARÉE, à traiter AVEC PRUDENCE** : la policy `"products: authenticated read active"` (migr. 001) expose aussi `factory_cost_mad`/coût/marge à **tout utilisateur authentifié** (affiliés/grossistes), pas seulement anon. ⚠️ **Touche le calcul de commission affilié** (`calculateNetAffiliateCommission` dérive la commission de `factory_cost_mad` côté serveur) → corriger via vue redacted + policy authenticated restreinte **sans casser ce calcul serveur**. NON traité par 072. À cadrer séparément.
 - ⏱️ **Dette — rate-limiting manquant** sur `placeOrder` (flux public COD).
 - 🧪 **Dette — test d'intégration DB** de l'idempotence réelle de `create_payout` (RPC Postgres : rejeu/atomicité/ON CONFLICT) ; les tests unitaires couvrent seulement le contrat JS.
 - ✅ **Espace ADMIN — habillage premium + i18n FR/AR/EN : TERMINÉ** (LOT 3d, 12/12 sous-lots) — voir « Déjà fait & figé ». Plus une dette.

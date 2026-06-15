@@ -22,10 +22,9 @@ export async function generateMetadata({ params }: Params) {
   const t = await getTranslations('publicProduct')
   const supabase = await createClient()
   const { data } = (await supabase
-    .from('products')
+    .from('products_public_read')
     .select('name, description')
     .eq('id', id)
-    .eq('active', true)
     .single()) as { data: { name: string; description: string | null } | null; error: unknown }
   if (!data) return { title: t('metaUnavailable') }
   return {
@@ -42,12 +41,12 @@ export default async function PublicProductPage({ params, searchParams }: Params
 
   const supabase = await createClient()
 
+  // Vue publique whitelistée (migr. 072) — JAMAIS de colonne coût/marge exposée à anon.
+  // La vue applique déjà active=true AND approval_status='approved'.
   const { data: product } = (await supabase
-    .from('products')
+    .from('products_public_read')
     .select('*')
     .eq('id', id)
-    .eq('active', true)
-    .eq('approval_status', 'approved')
     .eq('affiliate_enabled', true)
     .single()) as { data: Product | null; error: unknown }
 
