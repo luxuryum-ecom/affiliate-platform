@@ -4,6 +4,22 @@
 
 ---
 
+## === 🗓️ ÉTAT AU 15/06 — fin de session ===
+> État réel, sans embellissement.
+
+1. **Merge `feat/habillage-premium` → `main` FAIT** : commit de merge **`3ee9530`**, **poussé en prod** (push `894fa06..3ee9530`, pre-push smoke 20/20 vert). Vercel redéploie sur `main`. **Base Supabase prod (`owvtfzxvirttrbcsiveg`) déjà à la migration 068** → aucune migration à appliquer, code et base alignés.
+
+2. **🔴 PROBLÈME OUVERT — À CORRIGER EN PRIORITÉ (régression A1 visible en prod)** : des produits **Maroc EN STOCK** affichent **« Demander un devis »** au lieu de **« Commander »**. C'est **FAUX** selon la règle A1 (stock disponible = commande directe). **Capture confirmée par Abdou.** Cause à investiguer :
+   - soit des **produits Maroc sans miroir catalogue** qui basculent en devis (comportement « sans miroir → devis » décidé pour A1, mais visiblement trop large — la plupart des produits Maroc n'ont pas de miroir → tous en devis) ;
+   - soit un **défaut d'implémentation A1** (CTA mal calculé).
+   → Investiguer le flux `getSupplierProductCtaMode` + `findCatalogLink` (downgrade `rfq`) sur `/wholesale/marketplace/[id]` et la liste. **Ne pas reconstruire avant d'avoir la cause exacte.**
+
+3. **Backups prod du 15/06** dans `~/AI-FACTORY/backups/` : `prod_backup_2026-06-15.sql` (schéma, 46 tables) + `prod_backup_2026-06-15_data.sql` (données, 30 tables : profiles/products/wholesale_orders/commissions/ledger…).
+
+4. **Rollback possible** : revenir au déploiement Vercel **antérieur à `3ee9530`** (le précédent prod = hotfix `894fa06`) via le dashboard Vercel (Deployments → Promote to Production) si besoin. La base étant déjà à 068, un rollback de code ne touche pas la base.
+
+---
+
 ## === 🎯 PLAN D'ACTION MAÎTRE — source unique de vérité ===
 > Sommaire consolidé créé le 2026-06-15. **NE duplique PAS** le détail : chaque point renvoie
 > à sa section existante (TITRE + ligne `≈` indicative — les lignes glissent à chaque édition,
