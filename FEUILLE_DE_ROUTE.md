@@ -29,6 +29,7 @@
 - **Mobile / images** (A5).
 - **OTP WhatsApp** (inscription, P3).
 - **Dette 073 authenticated** (`factory_cost_mad` exposé aux affiliés/grossistes — à cadrer).
+- **Dette — transport devisé non refacturé** : à la conversion d'un devis (`convertQuoteToOrder`), le `total_amount` ne couvre que la marchandise (`quoted_unit_price_mad × quoted_quantity`) ; le **transport devisé** (`quoted_transport_total_mad`) n'est **PAS** refacturé à l'acheteur dans `total_amount` (il reste capté côté coûts via le trigger 025). **Décision produit à trancher** : refacturer le transport à l'acheteur, ou le garder en coût interne uniquement. Signalé par @finance lors de l'audit M-1 (2026-06-16).
 
 ---
 
