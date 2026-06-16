@@ -4,9 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { calculateNetAffiliateCommission, getWholesaleTier } from '@/lib/utils'
+import { calculateNetAffiliateCommission, getWholesaleTier, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
-import { resolveDeliveryFeeByCity } from './cities'
 import { requireAdmin } from './_guards'
 import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
 import { parseMoneyInput } from '@/lib/money'
@@ -136,14 +135,24 @@ export async function placeOrder(
     validatedClickId = clickRow?.id ?? null
   }
 
-  // ── Resolve delivery fee: cities table → logistics_settings default ──────
-  const [deliveryFeeResolved, logisticsSettings] = await Promise.all([
-    resolveDeliveryFeeByCity(customerCity),
-    getLogisticsSettings(),
-  ])
+  // ── Resolve logistics settings (return fee only) ─────────────────────────
+  // La livraison COD affilié est couverte par la provision fixe dans le capital.
+  // resolveDeliveryFeeByCity n'est plus utilisé dans ce flux.
+  const logisticsSettings = await getLogisticsSettings()
   const returnFeeResolved = logisticsSettings
     ? Number(logisticsSettings.return_fee_mad)
     : 10
+
+  // ── Garde : coût usine obligatoire pour calculer la commission affilié ────
+  // Fail closed (@finance) : si factory_cost_mad est null ET qu'un affilié est
+  // attribué, on refuse la commande plutôt que de calculer sur 0.
+  if (validatedAffiliateId && product.factory_cost_mad == null) {
+    return {
+      error: 'Produit incomplet (coût usine manquant) — commande impossible.',
+      success: false,
+      orderId: null,
+    }
+  }
 
   // Total = prix × quantité en CENTIMES ENTIERS (zéro flottant) → chaîne pour numeric.
   // unitPrice vient de la DB (numeric ≤ 2 décimales), donc Math.round(prix*100) est exact.
@@ -152,10 +161,12 @@ export async function placeOrder(
   const commissionAmount = validatedAffiliateId
     ? calculateNetAffiliateCommission({
         affiliateSellPrice: unitPrice,
-        factoryCostMad: product.factory_cost_mad ?? product.purchase_price_mad ?? 0,
+        // factory_cost_mad est non-null garanti par la garde ci-dessus.
+        factoryCostMad: product.factory_cost_mad as number,
         marginType: product.platform_margin_type,
         marginValue: product.platform_margin_value ?? 0,
-        deliveryFee: deliveryFeeResolved,
+        // Livraison = provision fixe incluse dans le capital → une seule déduction.
+        deliveryFee: DELIVERY_PROVISION_MAD,
         confirmationFee: product.confirmation_fee_mad ?? 10,
         packagingFee: product.packaging_fee_mad ?? 10,
         quantity,
@@ -167,7 +178,8 @@ export async function placeOrder(
   // la vente passe et la plateforme encaisse ; l'affilié touche simplement 0.
   // Le blocage strict n'a lieu que côté affilié (createAffiliateOrder).
 
-  const deliveryFeeSnapshot = deliveryFeeResolved
+  // delivery_fee_snapshot = provision fixe (cohérence avec le capital).
+  const deliveryFeeSnapshot = DELIVERY_PROVISION_MAD
   const packagingFeeSnapshot = product.packaging_fee_mad ?? 10
   const confirmationFeeSnapshot = product.confirmation_fee_mad ?? 10
 
@@ -339,10 +351,16 @@ export async function createAffiliateOrder(
       orderId: null,
     }
 
-  const [deliveryFeeResolved, logisticsSettings] = await Promise.all([
-    resolveDeliveryFeeByCity(customerCity),
-    getLogisticsSettings(),
-  ])
+  // ── Garde : coût usine obligatoire (fail closed, @finance) ──────────────
+  if (product.factory_cost_mad == null) {
+    return {
+      error: 'Produit incomplet (coût usine manquant) — commande impossible.',
+      success: false,
+      orderId: null,
+    }
+  }
+
+  const logisticsSettings = await getLogisticsSettings()
   const returnFeeResolved = logisticsSettings ? Number(logisticsSettings.return_fee_mad) : 10
 
   // Total = prix × quantité en CENTIMES ENTIERS (arithmétique exacte, zéro flottant),
@@ -351,10 +369,12 @@ export async function createAffiliateOrder(
   const totalAmount = (totalAmountCents / 100).toFixed(2)
   const commissionAmount = calculateNetAffiliateCommission({
     affiliateSellPrice: sellPriceNum,
-    factoryCostMad: product.factory_cost_mad ?? 0,
+    // factory_cost_mad est non-null garanti par la garde ci-dessus.
+    factoryCostMad: product.factory_cost_mad,
     marginType: product.platform_margin_type,
     marginValue: product.platform_margin_value ?? 0,
-    deliveryFee: deliveryFeeResolved,
+    // Livraison = provision fixe incluse dans le capital → une seule déduction.
+    deliveryFee: DELIVERY_PROVISION_MAD,
     confirmationFee: product.confirmation_fee_mad ?? 10,
     packagingFee: product.packaging_fee_mad ?? 10,
     quantity,
@@ -384,7 +404,7 @@ export async function createAffiliateOrder(
       commission_amount:     Math.max(0, commissionAmount),
       product_price_snapshot: sellPrice,
       affiliate_commission_mad_snapshot: Math.max(0, commissionAmount),
-      delivery_fee_snapshot:   deliveryFeeResolved,
+      delivery_fee_snapshot:   DELIVERY_PROVISION_MAD,
       packaging_fee_snapshot:  product.packaging_fee_mad ?? 10,
       confirmation_fee_snapshot: product.confirmation_fee_mad ?? 10,
       return_fee_snapshot:     returnFeeResolved,
