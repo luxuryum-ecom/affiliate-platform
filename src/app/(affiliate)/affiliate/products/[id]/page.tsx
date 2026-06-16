@@ -1,0 +1,273 @@
+import Link from 'next/link'
+import { redirect, notFound } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
+import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { getProductCoverUrl, getMeaningfulDescription } from '@/lib/product-media'
+import { formatMAD, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
+import { getLogisticsSettings } from '@/app/actions/logistics'
+import { getTranslations } from 'next-intl/server'
+import type { Product } from '@/types/database'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const { id } = await params
+  const t = await getTranslations('affiliate.products')
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('products')
+    .select('name')
+    .eq('id', id)
+    .single() as { data: { name: string } | null; error: unknown }
+  return { title: data?.name ? `${data.name} — ${t('metaTitle')}` : t('metaTitle') }
+}
+
+export default async function AffiliateProductDetailPage({ params }: PageProps) {
+  const { id } = await params
+  const supabase = await createClient()
+  const t = await getTranslations('affiliate.products')
+  const tCommon = await getTranslations('affiliate.common')
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single() as { data: { full_name: string } | null; error: unknown }
+
+  const [productRes, customPriceRes, clicksRes, ordersRes, commissionsRes] = await Promise.all([
+    supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .eq('active', true)
+      .eq('approval_status', 'approved')
+      .eq('affiliate_enabled', true)
+      .single() as unknown as Promise<{ data: Product | null; error: unknown }>,
+    supabase
+      .from('affiliate_product_prices')
+      .select('custom_sell_price_mad')
+      .eq('affiliate_id', user.id)
+      .eq('product_id', id)
+      .maybeSingle() as unknown as Promise<{
+        data: { custom_sell_price_mad: number } | null
+        error: unknown
+      }>,
+    supabase
+      .from('affiliate_clicks')
+      .select('id')
+      .eq('affiliate_id', user.id)
+      .eq('product_id', id) as unknown as Promise<{ data: { id: string }[] | null; error: unknown }>,
+    supabase
+      .from('orders')
+      .select('status')
+      .eq('affiliate_id', user.id)
+      .eq('product_id', id) as unknown as Promise<{
+        data: { status: string }[] | null
+        error: unknown
+      }>,
+    supabase
+      .from('commissions')
+      .select('amount, order:orders!order_id(product_id)')
+      .eq('affiliate_id', user.id) as unknown as Promise<{
+        data: { amount: number; order: { product_id: string } | null }[] | null
+        error: unknown
+      }>,
+  ])
+
+  const product = productRes.data
+  if (!product) notFound()
+
+  const customPrice =
+    customPriceRes.data != null ? Number(customPriceRes.data.custom_sell_price_mad) : null
+
+  const logistics = await getLogisticsSettings()
+  const refDeliveryFee = Math.max(
+    MIN_DELIVERY_FEE_MAD,
+    logistics ? Number(logistics.default_delivery_fee_mad) : 35
+  )
+
+  // Stats for this product
+  const clicks = clicksRes.data?.length ?? 0
+  const ordersList = ordersRes.data ?? []
+  const orders = ordersList.length
+  const commissionEarned = (commissionsRes.data ?? [])
+    .filter((c) => c.order?.product_id === id)
+    .reduce((sum, c) => sum + Number(c.amount), 0)
+  const convRate = clicks > 0 ? `${((orders / clicks) * 100).toFixed(0)}%` : '—'
+
+  const baseCommission = calculateNetAffiliateCommission({
+    affiliateSellPrice: product.sell_price,
+    factoryCostMad: product.factory_cost_mad ?? product.purchase_price_mad ?? 0,
+    marginType: product.platform_margin_type,
+    marginValue: product.platform_margin_value ?? 0,
+    packagingFee: product.packaging_fee_mad ?? 10,
+    confirmationFee: product.confirmation_fee_mad ?? 10,
+    deliveryFee: refDeliveryFee,
+    quantity: 1,
+  })
+
+  const coverUrl = getProductCoverUrl(product)
+  const description = getMeaningfulDescription(product.name, product.description)
+  const inStock = product.availability_type !== 'import_on_demand'
+
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL
+    ?? (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
+  const referralUrl = `${APP_URL}/products/${product.id}?ref=${user.id}`
+
+  const priceFormStrings = {
+    myPrice: t('myPrice'),
+    priceVsCatalog: t.raw('priceVsCatalog') as string,
+    priceNotSet: t.raw('priceNotSet') as string,
+    priceSave: t('priceSave'),
+    priceSaving: t('priceSaving'),
+    priceReset: t.raw('priceReset') as string,
+    priceMin: t.raw('priceMin') as string,
+    priceSavedOk: t('priceSavedOk'),
+    priceResetOk: t('priceResetOk'),
+  }
+  const copyLinkStrings = { copy: t('copyLink'), copied: t('copied') }
+
+  return (
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
+      <DashboardHeader
+        breadcrumb={product.name}
+        userName={profile?.full_name}
+        signOutLabel={tCommon('signOut')}
+        maxWidth="max-w-4xl"
+      />
+
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Back to catalog */}
+        <Link
+          href="/affiliate/products"
+          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors mb-4"
+        >
+          <span aria-hidden="true">←</span> {t('backToCatalog')}
+        </Link>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: image + availability/stock grouped */}
+          <div className="flex flex-col gap-3">
+            <ProductThumbnail
+              src={coverUrl}
+              name={product.name}
+              className="aspect-square w-full rounded-xl border border-line text-5xl"
+            />
+            <div className="flex items-center justify-between bg-surface rounded-lg border border-line px-3 py-2 text-xs">
+              <span
+                className={`px-2 py-0.5 rounded-full border ${
+                  inStock
+                    ? 'bg-success-soft text-success-fg border-success'
+                    : 'bg-surface-2 text-muted border-line'
+                }`}
+              >
+                {inStock ? t('availStock') : t('availImport')}
+              </span>
+              <span className={product.stock_count > 0 ? 'text-success-fg' : 'text-danger-fg'}>
+                {t('stock')}&nbsp;:{' '}
+                {product.stock_count > 0 ? t('stockUnits', { count: product.stock_count }) : t('stockEmpty')}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: name, description, commission, price form */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <h1 className="text-xl font-semibold text-foreground leading-snug">{product.name}</h1>
+              {description && (
+                <p className="text-sm text-muted mt-2 leading-relaxed">{description}</p>
+              )}
+            </div>
+
+            {/* Commission + catalog price — highlighted, the affiliate's key numbers */}
+            <div className="bg-accent-soft border border-gold-300 rounded-xl p-4 flex items-end justify-between">
+              <div>
+                <p className="text-xs text-faint">{t('baseCommission')}</p>
+                {baseCommission > 0 ? (
+                  <p className="text-2xl font-bold text-success-fg tabular-nums leading-tight">
+                    {formatMAD(baseCommission)}
+                  </p>
+                ) : (
+                  <p className="text-base font-semibold text-accent-fg">{t('adjustPrice')}</p>
+                )}
+              </div>
+              <div className="text-end">
+                <p className="text-xs text-faint">{t('catalogPrice')}</p>
+                <p className="text-sm font-medium text-muted tabular-nums">{formatMAD(product.sell_price)}</p>
+              </div>
+            </div>
+
+            {/* Custom price setter (client component — strings only) */}
+            <div className="bg-surface rounded-xl border border-line px-4 pb-4">
+              <AffiliatePriceForm
+                productId={product.id}
+                platformPrice={product.sell_price}
+                currentCustomPrice={customPrice}
+                strings={priceFormStrings}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Fees — deducted from commission */}
+        <div className="mt-6 bg-surface rounded-xl border border-line p-4">
+          <p className="text-xs font-semibold text-muted mb-2">{t('feesTitle')}</p>
+          <div className="text-sm text-faint space-y-1">
+            <div className="flex justify-between">
+              <span>{t('feeConfirmation')}</span>
+              <span className="text-muted tabular-nums">{product.confirmation_fee_mad} MAD</span>
+            </div>
+            <div className="flex justify-between">
+              <span>{t('feePackaging')}</span>
+              <span className="text-muted tabular-nums">{product.packaging_fee_mad} MAD</span>
+            </div>
+            {product.delivery_fee_mad > 0 && (
+              <div className="flex justify-between">
+                <span>{t('feeDelivery')}</span>
+                <span className="text-muted tabular-nums">{product.delivery_fee_mad} MAD</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="mt-6">
+          <p className="text-xs font-semibold text-muted mb-2">{t('statsTitle')}</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { value: String(clicks), label: t('statsClicks') },
+              { value: String(orders), label: t('statsOrders') },
+              { value: convRate, label: t('statsConv') },
+              { value: commissionEarned > 0 ? formatMAD(commissionEarned) : '—', label: t('statsEarned'), good: commissionEarned > 0 },
+            ].map((s, i) => (
+              <div key={i} className="bg-surface rounded-lg border border-line px-2 py-3 text-center">
+                <p className={`text-sm font-bold tabular-nums ${s.good ? 'text-success-fg' : 'text-foreground'}`}>
+                  {s.value}
+                </p>
+                <p className="text-[10px] text-faint leading-tight mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Affiliate link */}
+        <div className="mt-6 bg-surface rounded-xl border border-line p-4">
+          <p className="text-xs font-semibold text-muted mb-2">{t('affiliateLinkTitle')}</p>
+          <p className="text-xs text-faint break-all mb-3 tabular-nums">{referralUrl}</p>
+          <CopyLinkButton url={referralUrl} strings={copyLinkStrings} />
+        </div>
+      </main>
+    </div>
+  )
+}

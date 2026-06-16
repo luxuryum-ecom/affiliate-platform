@@ -51,6 +51,33 @@ export function getProductGalleryUrls(source: ProductMediaSource): string[] {
   return getProductImageUrls(source).slice(1)
 }
 
+/** Normalize for loose text comparison: lowercase, collapse spaces, strip punctuation. */
+function normalizeForCompare(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Returns the description only when it adds information beyond the product name.
+ * Display-only: hides descriptions that merely repeat (or are a prefix of) the name.
+ */
+export function getMeaningfulDescription(
+  name: string,
+  description: string | null | undefined
+): string | null {
+  const desc = description?.trim()
+  if (!desc) return null
+  const nName = normalizeForCompare(name)
+  const nDesc = normalizeForCompare(desc)
+  if (!nDesc) return null
+  if (nDesc === nName) return null
+  if (nName && (nDesc.startsWith(nName) || nName.startsWith(nDesc))) return null
+  return desc
+}
+
 /** Two-letter placeholder from product name. */
 export function getProductInitials(name: string): string {
   const trimmed = name.trim()
