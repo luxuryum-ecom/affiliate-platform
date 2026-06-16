@@ -401,6 +401,8 @@ export interface Order {
   /** How the affiliate captured this order. Null for legacy public-page orders. */
   order_source: OrderSource | null
   notes: string | null
+  /** True when the vendor pre-confirmed the order — platform keeps the 10 MAD confirmation fee (Option A). Commission unchanged. */
+  is_pre_confirmed: boolean
 
   // ── COD traceability (added migration 004) ────────────────────────────────
   delivery_company: string | null
