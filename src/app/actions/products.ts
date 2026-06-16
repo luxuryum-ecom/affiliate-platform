@@ -230,6 +230,12 @@ export async function upsertProduct(
   const isAffiliateLocalStock =
     affiliate_enabled === true && availability_type === 'local_stock' && !isMirrorProduct
 
+  // D2 — packaging min 10 MAD pour produits affiliés locaux (décision Abdou 2026-06-16).
+  // Appliqué AVANT toute dérivation du capital pour que la valeur stockée ET le calcul
+  // utilisent packaging ≥ 10. Seul le packaging est plafonné ici (confirmation = hors scope).
+  let packFeeNumClamped = packFeeNum
+  let packagingFeeMadClamped = packaging_fee_mad
+
   // ── Sales fields ──────────────────────────────────────────────────────────
 
   // RÈGLE ARGENT n°4 — prix de vente validé en CHAÎNE décimale stricte (money.ts),
@@ -249,11 +255,14 @@ export async function upsertProduct(
     if (factoryCostStr === '') {
       return { error: 'Le coût usine (prix_usine) est obligatoire pour un produit affilié.' }
     }
+    // D2 — plancher packaging 10 MAD : appliqué avant le calcul capital ET avant le payload.
+    packFeeNumClamped = Math.max(10, packFeeNum)
+    packagingFeeMadClamped = packFeeNumClamped.toFixed(2)
     if (factoryCostNum !== null) {
       // capital = calculatePlatformPrice(usine, marge) + packaging + confirmation + provision livraison
       const capital =
         calculatePlatformPrice(factoryCostNum, platform_margin_type, platform_margin_value) +
-        packFeeNum +
+        packFeeNumClamped +
         confFeeNum +
         DELIVERY_PROVISION_MAD
       sell_price = capital.toFixed(2)
@@ -284,7 +293,7 @@ export async function upsertProduct(
       factoryCostMad: factoryCostNum,
       marginType: platform_margin_type,
       marginValue: platform_margin_value,
-      packagingFee: packFeeNum,
+      packagingFee: packFeeNumClamped,
       // Affilié local : provision fixe (dans le capital) → commission au catalogue = 0.
       // Autres : défaut logistique planché (D2).
       deliveryFee: previewDeliveryFee,
@@ -466,7 +475,7 @@ export async function upsertProduct(
     platform_margin_value: platform_margin_value_str,
     factory_cost_mad,
     confirmation_fee_mad,
-    packaging_fee_mad,
+    packaging_fee_mad: isAffiliateLocalStock ? packagingFeeMadClamped : packaging_fee_mad,
     delivery_fee_mad,
     approval_status: approval_status as ProductApprovalStatus,
     active,

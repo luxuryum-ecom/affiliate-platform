@@ -230,6 +230,7 @@ export async function placeOrder(
       cod_expected: totalAmount,
       status: 'pending_confirmation',
       notes,
+      is_pre_confirmed: false, // Option A — flux public : jamais pré-confirmé
     })
     .select('id')
     .single()) as { data: { id: string } | null; error: unknown }
@@ -291,6 +292,10 @@ export async function createAffiliateOrder(
   const customerAddress = (formData.get('customer_address') as string)?.trim()
   const notes          = ((formData.get('notes') as string)?.trim()) || null
   const orderSource    = ((formData.get('order_source') as string)?.trim() || 'manual') as OrderSource
+  // Anti-coercion : formData.get() renvoie une string. "false" est truthy en JS —
+  // NE JAMAIS faire Boolean(formData.get(...)). Comparaison stricte === 'true' uniquement.
+  // Défaut false sur tout le reste (absent, null, "false", toute autre string).
+  const isPreConfirmed = formData.get('is_pre_confirmed') === 'true'
 
   if (!productId)                     return { error: 'Produit requis.', success: false, orderId: null }
   if (isNaN(quantity) || quantity < 1) return { error: 'Quantité invalide.', success: false, orderId: null }
@@ -412,6 +417,7 @@ export async function createAffiliateOrder(
       order_source:            orderSource,
       status:                  'pending_confirmation',
       notes,
+      is_pre_confirmed:        isPreConfirmed,
       fraud_score:             0,
       duplicate_risk_score:    0,
       spam_score:              0,

@@ -56,7 +56,7 @@ export const DELIVERY_PROVISION_MAD = 35
  *       − platform_margin
  *       − packaging_fee
  *       − delivery_fee
- *       − confirmation_fee   (pass 0 when affiliate confirms himself)
+ *       − confirmation_fee   (incluse dans le capital — ne JAMAIS passer 0)
  *
  * Returns the total for the given quantity (can be negative if sell_price is too low).
  */
@@ -67,7 +67,9 @@ export function calculateNetAffiliateCommission(params: {
   marginValue: number
   packagingFee: number
   deliveryFee: number
-  /** Pass 0 when the affiliate handles order confirmation himself. */
+  /** La confirmation est incluse dans le capital ; ne JAMAIS passer 0 ici.
+   *  La pré-confirmation (is_pre_confirmed) est gérée au niveau commande
+   *  (Option A : plateforme garde les 10 MAD), elle NE modifie PAS ce calcul. */
   confirmationFee: number
   quantity: number
 }): number {

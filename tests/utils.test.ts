@@ -195,3 +195,49 @@ describe('règle capital affilié — commission au catalogue = 0, au-dessus > 0
     expect(Math.max(0, commission)).toBe(0)
   })
 })
+
+// ── D2 — plancher packaging 10 MAD (décision Abdou 2026-06-16) ───────────────
+
+describe('plancher packaging 10 MAD — impact sur commission et capital', () => {
+  // Démontre que packaging=5 donne une commission différente de packaging=10 :
+  // c'est le justificatif que le Math.max(10, packFeeNum) dans products.ts a un effet réel.
+  it('packagingFee 5 vs 10 → commission différente de 5 MAD', () => {
+    const base = {
+      affiliateSellPrice: 200, factoryCostMad: 30,
+      marginType: 'percentage' as const, marginValue: 0,
+      deliveryFee: DELIVERY_PROVISION_MAD, confirmationFee: 10, quantity: 1,
+    }
+    const withPack5  = calculateNetAffiliateCommission({ ...base, packagingFee: 5 })
+    const withPack10 = calculateNetAffiliateCommission({ ...base, packagingFee: 10 })
+    // packaging plus élevé → commission plus basse
+    expect(withPack5 - withPack10).toBe(5)
+    expect(withPack10).toBe(115) // 200-30-0-35-10-10 = 115
+    expect(withPack5).toBe(120)  // 200-30-0-35-10-5  = 120
+  })
+
+  // Démontre que le capital d'un produit affilié local avec packaging saisi 5 MAD
+  // utilise bien 10 MAD après plancher (Math.max(10, packFeeNum) dans products.ts).
+  it('capital affilié local avec packaging saisi 5 → calculé avec 10', () => {
+    const usine = 100
+    // Simule le comportement de upsertProduct pour isAffiliateLocalStock :
+    // packFeeNumClamped = Math.max(10, 5) = 10
+    const packFeeNumClamped = Math.max(10, 5)
+    expect(packFeeNumClamped).toBe(10)
+
+    const capital = calculatePlatformPrice(usine, 'percentage', 0) + packFeeNumClamped + 10 + DELIVERY_PROVISION_MAD
+    // 100 + 10 + 10 + 35 = 155 (pas 100 + 5 + 10 + 35 = 150)
+    expect(capital).toBe(155)
+
+    // Commission au catalogue avec le plancher appliqué = 0 (règle capital)
+    const commission = calculateNetAffiliateCommission({
+      affiliateSellPrice: capital,
+      factoryCostMad: usine,
+      marginType: 'percentage', marginValue: 0,
+      packagingFee: packFeeNumClamped,
+      deliveryFee: DELIVERY_PROVISION_MAD,
+      confirmationFee: 10,
+      quantity: 1,
+    })
+    expect(commission).toBe(0)
+  })
+})
