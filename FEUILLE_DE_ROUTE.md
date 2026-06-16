@@ -26,6 +26,28 @@
 9. **Confirmation = CONDITIONNELLE** : appliquée si commande **à confirmer** ; **PAS** appliquée si commande **déjà confirmée** (client déjà connu, nom + adresse en main).
 10. **Commandes « prêtes » SANS lien d'affiliation** (le vendeur a déjà nom + prénom + adresse du client) → prévoir un **parcours de commande directe** pour ces personnes. **Nouvelle fonctionnalité à cadrer.**
 
+### 💡 VISION FICHE PRODUIT AFFILIÉ — par paliers (idée fondateur Abdou)
+> Vision long terme pour la **fiche produit affilié**. Consigné le **2026-06-16**. **Rien n'est codé.**
+> On avance **palier par palier** — ne pas mélanger les paliers entre eux.
+
+**PALIER 1 — Fiche produit affilié de base** *(chantier en cours)*
+- Lien d'affiliation + détails produit + définir son prix de vente + stats.
+- **Architecture** : catalogue léger (liste) → **fiche détaillée `[id]`**.
+
+**PALIER 2 — Galerie créatives** *(ensuite)*
+- Dans la fiche produit, afficher les **créatives (photos / vidéos) DÉJÀ disponibles** pour ce produit, que l'affilié peut **télécharger / utiliser** pour ses pubs **Meta / TikTok**.
+- Nécessite une **bibliothèque de créatives liée aux produits**.
+
+**PALIER 3 — Génération de créatives IA À LA DEMANDE** *(projet dédié — monétisation / passive income)*
+- **Génération IA payante par crédits**, directement dans la fiche produit : l'affilié génère **photo / vidéo IA en un clic**, paie en **crédits** → **nouvelle source de revenu récurrente** pour Abdou.
+- **INFRASTRUCTURE EXISTANTE À RÉUTILISER** (machine à créatives déjà en place) :
+  - **n8n** sur **VPS Hostinger `72.62.188.150`**
+  - **Remotion** dans `/root/remotion-ads/`
+  - template **`OldMoneyAd_v2`**
+  - **API PM2** sur **port `3333`**
+- **À CADRER SÉPARÉMENT (vrai module business)** : modèle de **prix / crédits**, **paiement**, **coût par génération IA** (chaque génération coûte de l'argent à Abdou → **marge à définir**), **file d'attente**, **connexion plateforme ↔ n8n**.
+- ⚠️ **NE PAS mélanger avec les paliers 1-2.** Module à part entière, à planifier séparément (process argent / `@finance` pour la partie crédits/paiement).
+
 ---
 
 ## === 🗓️ ÉTAT FIN DE SESSION 15/06 (nuit) ===
