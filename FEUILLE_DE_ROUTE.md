@@ -96,6 +96,15 @@
 - **À CADRER SÉPARÉMENT (vrai module business)** : modèle de **prix / crédits**, **paiement**, **coût par génération IA** (chaque génération coûte de l'argent à Abdou → **marge à définir**), **file d'attente**, **connexion plateforme ↔ n8n**.
 - ⚠️ **NE PAS mélanger avec les paliers 1-2.** Module à part entière, à planifier séparément (process argent / `@finance` pour la partie crédits/paiement).
 
+### 🧭 FILTRE PAR NICHE / CATÉGORIE — catalogue affilié (idée Abdou, pour scaler avec plusieurs niches)
+> Consigné le **2026-06-16**. **Rien n'est codé.** Affichage uniquement (pas d'argent touché). À faire **après les chantiers en cours**.
+- **Besoin** : quand le catalogue aura beaucoup de produits dans plusieurs niches, l'affilié doit pouvoir **filtrer / choisir ses niches** pour ne voir que ce qui l'intéresse (un affilié cosmétique ne veut pas scroller le gaming).
+- **Niches / catégories citées par Abdou** : cosmétique, textile homme, textile femme, gadgets, compléments alimentaires, décoration, gaming. *(Liste extensible.)*
+- **2 niveaux à concevoir** :
+  - **(a) Catégorisation produits** : chaque produit rangé dans une/des catégorie(s). **Vérifier si un champ `category`/`subcategory` existe déjà dans `products`** (vu dans la vue `products_public_read`) — **réutiliser plutôt que recréer**.
+  - **(b) Filtre côté affilié** : barre de filtres par catégorie dans le catalogue + éventuellement préférence **« mes niches »** par affilié (profil) pour un affichage par défaut personnalisé.
+- **À cadrer** : **taxonomie figée** des niches (liste admin), **UI filtre** (chips/dropdown), **filtre combinable** avec Maroc/import, **persistance** de la préférence affilié.
+
 ---
 
 ## === 🗓️ ÉTAT FIN DE SESSION 15/06 (nuit) ===
