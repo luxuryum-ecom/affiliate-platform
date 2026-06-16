@@ -30,9 +30,13 @@
 > Vision long terme pour la **fiche produit affilié**. Consigné le **2026-06-16**. **Rien n'est codé.**
 > On avance **palier par palier** — ne pas mélanger les paliers entre eux.
 
-**PALIER 1 — Fiche produit affilié de base** *(chantier en cours)*
+**PALIER 1 — Fiche produit affilié de base** *(✅ LIVRÉ 2026-06-16)*
 - Lien d'affiliation + détails produit + définir son prix de vente + stats.
 - **Architecture** : catalogue léger (liste) → **fiche détaillée `[id]`**.
+- **Fait** : catalogue `theme-dark` noir & or, grille responsive (2 mobile → 4 xl), carte simple (image placeholder thémé + nom + commission + prix + « Voir / Promouvoir ») → `affiliate/products/[id]` (fiche : retour catalogue, image, dispo+stock regroupés, description dédupliquée, bloc commission/prix mis en avant, `AffiliatePriceForm` + `CopyLinkButton` réutilisés tels quels, frais titrés, stats, lien affilié).
+- **Affichage uniquement** : `calculateNetAffiliateCommission` réutilisé à l'identique, aucun calcul argent touché. Traite les remarques visuelles #1-7 ci-dessus ; #8-9-10 (logique frais) restent réservés au process `@finance`.
+- **Décision prise seule** : composant partagé `ProductThumbnail` thémé (`bg-surface-2` + initiales `text-faint` au lieu de gris codés en dur) plutôt que dupliqué → cohérent partout, bénéfique aussi en thème clair, 0 régression (marketplace n'utilise pas ce composant).
+- **i18n** FR/AR/EN : `viewPromote`, `backToCatalog`, `feesTitle`, `statsTitle`, `affiliateLinkTitle`. Nouveau helper `getMeaningfulDescription` (+ test). Checks verts : tsc, vitest (162), build, smoke (20/20).
 
 **PALIER 2 — Galerie créatives** *(ensuite)*
 - Dans la fiche produit, afficher les **créatives (photos / vidéos) DÉJÀ disponibles** pour ce produit, que l'affilié peut **télécharger / utiliser** pour ses pubs **Meta / TikTok**.

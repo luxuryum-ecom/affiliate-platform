@@ -28,7 +28,7 @@ export function ProductThumbnail({
   return (
     <div
       className={cn(
-        'overflow-hidden bg-gray-100 flex items-center justify-center shrink-0',
+        'overflow-hidden bg-surface-2 flex items-center justify-center shrink-0',
         className
       )}
     >
@@ -48,7 +48,7 @@ export function ProductThumbnail({
         />
       ) : (
         <span
-          className="font-bold text-gray-300 select-none"
+          className="font-bold text-faint select-none"
           aria-hidden="true"
         >
           {initials}
