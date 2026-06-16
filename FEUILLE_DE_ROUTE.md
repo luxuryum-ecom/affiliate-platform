@@ -4,6 +4,34 @@
 
 ---
 
+## === 🗓️ ÉTAT FIN DE SESSION 16/06 ===
+> Code prod = **`628d8c7`**, base = **migration 073**.
+
+### ✅ DÉPLOYÉ EN PROD (`628d8c7`, base migration 073)
+1. **Catalogue affilié 2 niveaux** — catalogue léger (grille) + **fiche détaillée `[id]`**, thème **noir & or** cohérent avec le marketplace.
+2. **Garde-fou pre-push build à froid** — `rm -rf .next && next build` dans le hook pre-push pour attraper avant push les erreurs type Vercel (régression `no-html-link-for-pages` du merge Palier 1).
+3. **RÈGLE CAPITAL AFFILIÉ corrigée** (audits `@finance` + `@security` GO, **migration 073**) :
+   - **prix catalogue = usine + marge% + emballage + confirmation + provision livraison 35**.
+   - **commission affilié = prix_vente − capital** ; **au prix catalogue = 0 pile** (Option B : marge arrondie comme le capital, aucune fraction versée par erreur).
+   - **coût usine obligatoire** pour un produit affilié ; **découplage impossible** (prix catalogue **dérivé serveur**, champ form ignoré anti-POST).
+   - **livraison comptée une seule fois** (provision fixe 35 dans le capital, plus de livraison par ville dans la commission).
+   - **24 produits recalibrés** (table d'audit `products_sell_price_audit`), **non rétroactif** (snapshots commandes immuables).
+
+### ⚠️ DETTE MINEURE notée (non bloquante)
+- **Preview commission du formulaire admin** (`product-form.tsx`) calcule encore avec la **livraison saisie / `sell_price` libre** → peut afficher une commission ≠ 0 alors que le **serveur stocke 0**. **Affichage admin seulement, aucun impact ledger.** À corriger plus tard.
+
+### 🔜 RESTE BACKLOG
+- **Frais emballage/confirmation** à finaliser (confirmation conditionnelle, cf. commande directe).
+- **Commande directe SANS lien d'affiliation** (saisie manuelle + import CSV/Sheet).
+- **Traduction IA du contenu produits** (nom + description, à l'approbation).
+- **Galerie créatives** (Palier 2).
+- **Génération IA payante par crédits** (Palier 3).
+- **Mobile / images** (A5).
+- **OTP WhatsApp** (inscription, P3).
+- **Dette 073 authenticated** (`factory_cost_mad` exposé aux affiliés/grossistes — à cadrer).
+
+---
+
 ## 📋 REMARQUES CATALOGUE AFFILIÉ (à traiter) — ne pas oublier
 > Cible : **catalogue affilié** = `src/app/(affiliate)/affiliate/products/page.tsx`.
 > Consigné le **2026-06-16**. **Rien n'est codé** ici — c'est un backlog permanent à traiter plus tard.
