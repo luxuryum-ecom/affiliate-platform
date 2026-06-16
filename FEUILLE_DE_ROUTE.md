@@ -4,6 +4,30 @@
 
 ---
 
+## 📋 REMARQUES CATALOGUE AFFILIÉ (à traiter) — ne pas oublier
+> Cible : **catalogue affilié** = `src/app/(affiliate)/affiliate/products/page.tsx`.
+> Consigné le **2026-06-16**. **Rien n'est codé** ici — c'est un backlog permanent à traiter plus tard.
+> Les points 8-10 touchent l'**argent** → circuit `@finance` + `@security-reviewer` + validation Abdou AVANT tout commit (cf. RÈGLES ABSOLUES).
+
+### 🎨 Thème & layout
+1. **Thème clair (blanc) au lieu du noir & or premium** du marketplace → appliquer `theme-dark` (même fix que marketplace).
+   **DÉCISION ABDOU : oui, mettre le catalogue affilié en noir & or comme le marketplace** (cohérence de marque).
+2. **Cartes affichées 1 par ligne** → passer en **grille multi-colonnes responsive** comme le marketplace (plusieurs produits par ligne).
+3. **Images manquantes** : gros vide gris avec initiales (SC, DM…) quand pas d'image → **placeholder élégant** cohérent avec le thème.
+
+### 🧾 Contenu & infos de la carte affilié
+4. **Description redondante** : le titre et la description répètent le nom du produit (« Sac Cuir Artisan Cabas » écrit 2 fois) → nettoyer, éviter la répétition.
+5. **Hiérarchie de l'info à revoir** : pour l'affilié, mettre en avant ce qui compte le plus (**sa commission / son prix de vente**), ne pas noyer ces infos.
+6. **Bloc Confirmation/Emballage (encadré gris) peu lisible** → améliorer lisibilité / hiérarchie.
+7. **Alignement des infos stock** : le badge « Stock Maroc » (haut) et l'info « Stock : X unités » (bas) sont séparés → **regrouper les infos liées**, améliorer l'alignement.
+
+### 💸 Logique frais (déjà décidé avec Abdou — à implémenter via process argent / `@finance`)
+8. **Emballage = OBLIGATOIRE toujours** (la marchandise sort du stock Abdou = coût systématique).
+9. **Confirmation = CONDITIONNELLE** : appliquée si commande **à confirmer** ; **PAS** appliquée si commande **déjà confirmée** (client déjà connu, nom + adresse en main).
+10. **Commandes « prêtes » SANS lien d'affiliation** (le vendeur a déjà nom + prénom + adresse du client) → prévoir un **parcours de commande directe** pour ces personnes. **Nouvelle fonctionnalité à cadrer.**
+
+---
+
 ## === 🗓️ ÉTAT FIN DE SESSION 15/06 (nuit) ===
 > État réel, sans embellissement. Code prod = **`f748732`**, base = **migration 072**.
 
