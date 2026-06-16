@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from './_guards'
-import { getWholesaleTier } from '@/lib/utils'
 import { getRateToMad, getClientCurrency } from '@/lib/fx'
 import { parseMoneyInput } from '@/lib/money'
 import { parseRateInput } from '@/lib/rate'
@@ -266,12 +265,23 @@ export async function convertQuoteToOrder(
   if (!quote) return { error: 'Demande introuvable.' }
   if (quote.status !== 'approved') return { error: 'La demande doit être approuvée avant conversion.' }
 
-  const tier = getWholesaleTier(quote.product.wholesale_tiers ?? [], quote.quantity_requested)
-  const unitPrice = tier?.price_per_unit ?? 0
-  const tierLabel = tier?.label ?? 'Prix à définir'
-  // Arrondi half-up centimes (convention unique du chantier). No-op vs l'ancien toFixed
-  // ici (tier MAD 2-déc × qty entier = exact) ; basculé pour la cohérence d'audit.
-  const subtotal = Math.round(unitPrice * quote.quantity_requested * 100) / 100
+  // ── M-1 (fix) — facturer le PRIX DE DEVIS NÉGOCIÉ figé, jamais recalculer sur les
+  // paliers. Fail-closed : sans prix de devis valide (> 0), on REFUSE la conversion
+  // (plus de `tier?.price_per_unit ?? 0` → plus de commande à 0 MAD si aucun palier
+  // ne matche). Audit @finance M-1, GO Abdou 2026-06-16.
+  const quotedUnitPrice = quote.quoted_unit_price_mad
+  const quotedQty = quote.quoted_quantity ?? quote.quantity_requested
+  if (quotedUnitPrice == null || quotedUnitPrice <= 0) {
+    return { error: 'Aucun prix de devis valide n\'est figé sur cette demande. Préparez le devis (prix unitaire) avant de convertir.' }
+  }
+  if (quotedQty == null || quotedQty <= 0) {
+    return { error: 'Quantité de devis invalide. Préparez le devis avant de convertir.' }
+  }
+  const unitPrice = quotedUnitPrice
+  const tierLabel = 'Prix de devis négocié'
+  // Arrondi half-up centimes (convention unique du chantier). unitPrice (numeric ≤2 déc)
+  // × quantité entière = exact ; on facture exactement le devis figé.
+  const subtotal = Math.round(unitPrice * quotedQty * 100) / 100
 
   // Propagation du snapshot de taux figé du devis vers la commande (traçabilité argent).
   // NB : total_amount reste calculé sur les tiers MAD (comportement existant inchangé) ;
@@ -285,7 +295,7 @@ export async function convertQuoteToOrder(
   // (no-op vs l'ancien toFixed(4) : source × qty entier ; basculé pour cohérence).
   const merchandiseSourceAmount =
     fxQuote.quoted_unit_price_source != null
-      ? Math.round(fxQuote.quoted_unit_price_source * quote.quantity_requested * 10000) / 10000
+      ? Math.round(fxQuote.quoted_unit_price_source * quotedQty * 10000) / 10000
       : null
 
   const { data: newOrder, error: orderErr } = (await supabase
@@ -315,7 +325,7 @@ export async function convertQuoteToOrder(
   const { error: itemErr } = await supabase.from('wholesale_order_items').insert({
     order_id:            newOrder.id,
     product_id:          quote.product_id,
-    quantity:            quote.quantity_requested,
+    quantity:            quotedQty,
     unit_price_snapshot: unitPrice,
     subtotal,
     tier_label_snapshot: tierLabel,
