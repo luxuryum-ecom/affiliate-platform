@@ -4,8 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl } from '@/lib/product-media'
-import { formatMAD, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
-import { getLogisticsSettings } from '@/app/actions/logistics'
+import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
@@ -41,11 +40,10 @@ export default async function AffiliateProductsPage() {
 
   const list = productsRes.data ?? []
 
-  const logistics = await getLogisticsSettings()
-  const refDeliveryFee = Math.max(
-    MIN_DELIVERY_FEE_MAD,
-    logistics ? Number(logistics.default_delivery_fee_mad) : 35
-  )
+  // Aperçu commission au prix catalogue = prix_vente − capital.
+  // Capital inclut déjà DELIVERY_PROVISION_MAD → on passe la même provision
+  // pour ne compter la livraison qu'une fois. Au catalogue → commission = 0.
+  const refDeliveryFee = DELIVERY_PROVISION_MAD
 
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
@@ -73,16 +71,21 @@ export default async function AffiliateProductsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {list.map((product) => {
               const coverUrl = getProductCoverUrl(product)
-              const baseCommission = calculateNetAffiliateCommission({
-                affiliateSellPrice: product.sell_price,
-                factoryCostMad: product.factory_cost_mad ?? product.purchase_price_mad ?? 0,
-                marginType: product.platform_margin_type,
-                marginValue: product.platform_margin_value ?? 0,
-                packagingFee: product.packaging_fee_mad ?? 10,
-                confirmationFee: product.confirmation_fee_mad ?? 10,
-                deliveryFee: refDeliveryFee,
-                quantity: 1,
-              })
+              // Si factory_cost_mad est null, on n'affiche pas de commission
+              // (évite de calculer sur 0 qui donnerait un montant trompeur).
+              const baseCommission =
+                product.factory_cost_mad != null
+                  ? calculateNetAffiliateCommission({
+                      affiliateSellPrice: product.sell_price,
+                      factoryCostMad: product.factory_cost_mad,
+                      marginType: product.platform_margin_type,
+                      marginValue: product.platform_margin_value ?? 0,
+                      packagingFee: product.packaging_fee_mad ?? 10,
+                      confirmationFee: product.confirmation_fee_mad ?? 10,
+                      deliveryFee: refDeliveryFee,
+                      quantity: 1,
+                    })
+                  : null
               const inStock = product.availability_type !== 'import_on_demand'
               return (
                 <Link
@@ -117,7 +120,7 @@ export default async function AffiliateProductsPage() {
                     {/* Commission — the number that matters for the affiliate */}
                     <div className="mt-auto pt-1">
                       <p className="text-[11px] text-faint">{t('baseCommission')}</p>
-                      {baseCommission > 0 ? (
+                      {baseCommission != null && baseCommission > 0 ? (
                         <p className="text-lg font-bold text-success-fg tabular-nums leading-tight">
                           {formatMAD(baseCommission)}
                         </p>

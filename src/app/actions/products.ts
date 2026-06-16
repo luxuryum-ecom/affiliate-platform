@@ -21,7 +21,7 @@ import type {
 function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
   return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
 }
-import { calculatePlatformPrice, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD } from '@/lib/utils'
+import { calculatePlatformPrice, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
 import { getRateToMad } from '@/lib/fx'
 import { parseMoneyInput } from '@/lib/money'
@@ -205,6 +205,31 @@ export async function upsertProduct(
   }
   const factoryCostNum = factory_cost_mad === null ? null : Number(factory_cost_mad)
 
+  // ── Règle capital affilié (migration 073) ─────────────────────────────────
+  // Pour un produit affilié saisi manuellement (local_stock, affiliate_enabled),
+  // le prix catalogue EST le capital : usine + marge + packaging + confirmation + 35.
+  // Le champ sell_price du formulaire est IGNORÉ anti-POST-direct — on dérive côté serveur.
+  // Même dérivation à la création ET à la mise à jour (y compris approbation).
+  //
+  // Défense en profondeur (#1 audit @security) : on EXCLUT les miroirs fournisseur
+  // (source_supplier_product_id non-null). Leur sell_price capte DÉJÀ la marge du
+  // miroir (régression 2026-06-14) — y appliquer la dérivation capital doublonnerait
+  // la marge. Périmètre aligné sur le filtre de la migration 073.
+  let isMirrorProduct = false
+  if (id) {
+    const { data: existingMirror } = (await supabase
+      .from('products')
+      .select('source_supplier_product_id')
+      .eq('id', id)
+      .single()) as {
+        data: { source_supplier_product_id: string | null } | null
+        error: unknown
+      }
+    isMirrorProduct = existingMirror?.source_supplier_product_id != null
+  }
+  const isAffiliateLocalStock =
+    affiliate_enabled === true && availability_type === 'local_stock' && !isMirrorProduct
+
   // ── Sales fields ──────────────────────────────────────────────────────────
 
   // RÈGLE ARGENT n°4 — prix de vente validé en CHAÎNE décimale stricte (money.ts),
@@ -212,22 +237,45 @@ export async function upsertProduct(
   // ≤2 déc.) ne sert qu'au calcul de la commission préview et à la validation > 0 —
   // valeur identique à l'ancien parseFloat (commission bit-identique).
   const sellPriceR = parseMoneyInput(formData.get('sell_price'))
-  const sell_price: string | null = sellPriceR.ok ? sellPriceR.value : null
-  const sellPriceNum = sellPriceR.ok ? Number(sellPriceR.value) : NaN
+  let sell_price: string | null = sellPriceR.ok ? sellPriceR.value : null
+  let sellPriceNum = sellPriceR.ok ? Number(sellPriceR.value) : NaN
   const wholesale_min_qty = parseInt(formData.get('wholesale_min_qty') as string) || 1
   const stock_count = parseInt(formData.get('stock_count') as string) || 0
+
+  // ── Dérivation prix catalogue (capital) pour produits affiliés locaux ─────
+  // Appliqué AVANT la validation sell_price → la garde passe sur la valeur dérivée.
+  if (isAffiliateLocalStock) {
+    // Coût usine explicite obligatoire (pas de repli sur purchase_price_mad).
+    if (factoryCostStr === '') {
+      return { error: 'Le coût usine (prix_usine) est obligatoire pour un produit affilié.' }
+    }
+    if (factoryCostNum !== null) {
+      // capital = calculatePlatformPrice(usine, marge) + packaging + confirmation + provision livraison
+      const capital =
+        calculatePlatformPrice(factoryCostNum, platform_margin_type, platform_margin_value) +
+        packFeeNum +
+        confFeeNum +
+        DELIVERY_PROVISION_MAD
+      sell_price = capital.toFixed(2)
+      sellPriceNum = capital
+    }
+  }
 
   // ── Auto-compute commission from cost formula ─────────────────────────────
   // commission = sell_price − factory_cost − platform_margin − delivery_fee − confirmation_fee − packaging_fee
   // Returns 0 when affiliate is disabled or factory_cost_mad is not set yet.
 
-  // Base de livraison de l'aperçu = défaut logistique planché (D2), identique à
-  // l'affichage catalogue (page.tsx) → aperçu stocké et affiché cohérents.
-  const logisticsSettings = await getLogisticsSettings()
-  const previewDeliveryFee = Math.max(
-    MIN_DELIVERY_FEE_MAD,
-    logisticsSettings ? Number(logisticsSettings.default_delivery_fee_mad) : 35
-  )
+  // Base de livraison de l'aperçu — différenciée selon le type de produit :
+  // - affilié local (capital rule) : provision fixe 35 incluse dans le prix →
+  //   commission au prix catalogue = 0 exactement (cohérent avec la règle capital).
+  // - autres produits : défaut logistique planché (D2), identique à l'affichage.
+  const logisticsSettings = isAffiliateLocalStock ? null : await getLogisticsSettings()
+  const previewDeliveryFee = isAffiliateLocalStock
+    ? DELIVERY_PROVISION_MAD
+    : Math.max(
+        MIN_DELIVERY_FEE_MAD,
+        logisticsSettings ? Number(logisticsSettings.default_delivery_fee_mad) : 35
+      )
 
   const commission_amount: number = (() => {
     if (!affiliate_enabled || factoryCostNum === null) return 0
@@ -237,8 +285,8 @@ export async function upsertProduct(
       marginType: platform_margin_type,
       marginValue: platform_margin_value,
       packagingFee: packFeeNum,
-      // La livraison n'est jamais 0 ; on utilise le défaut logistique planché
-      // (et non delivery_fee_mad du produit) pour rester cohérent avec page.tsx.
+      // Affilié local : provision fixe (dans le capital) → commission au catalogue = 0.
+      // Autres : défaut logistique planché (D2).
       deliveryFee: previewDeliveryFee,
       confirmationFee: confFeeNum,
       quantity: 1,

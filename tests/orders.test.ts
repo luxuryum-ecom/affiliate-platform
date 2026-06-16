@@ -91,6 +91,81 @@ describe('createAffiliateOrder — D4 blocage commission négative', () => {
   })
 })
 
+// ─────────────────── createAffiliateOrder — garde coût usine null ──────────────────────
+
+describe('createAffiliateOrder — garde factory_cost_mad null (fail closed)', () => {
+  it('factory_cost_mad null → commande REFUSÉE (produit incomplet)', async () => {
+    const inserted: string[] = []
+    mocked(createClient).mockResolvedValue(
+      makeClient({
+        getUser: () => ({ data: { user: { id: 'aff1' } } }),
+        onInsert: (table) => inserted.push(table),
+        resolve: (table) => {
+          if (table === 'profiles') return { data: { role: 'affiliate', status: 'approved' }, error: null }
+          // factory_cost_mad absent → null
+          if (table === 'products') return { data: product({ sell_price: 200, factory_cost_mad: null }), error: null }
+          if (table === 'orders') return { data: { id: 'o1' }, error: null }
+          return { data: null, error: null }
+        },
+      }),
+    )
+    const res = await createAffiliateOrder(emptyOrderState, fd({ product_id: 'p1', quantity: '1', sell_price: '200', order_source: 'manual', ...customer }))
+    expect(res.success).toBe(false)
+    expect(res.error).toMatch(/coût usine/i)
+    expect(res.orderId).toBeNull()
+    expect(inserted).not.toContain('orders')
+  })
+})
+
+// ─────────────────── placeOrder — garde coût usine null ────────────────────────────────
+
+describe('placeOrder — garde factory_cost_mad null avec affilié (fail closed)', () => {
+  it('factory_cost_mad null + affilié validé → commande REFUSÉE', async () => {
+    const inserted: string[] = []
+    mocked(createAdminClient).mockReturnValue(
+      makeClient({
+        onInsert: (table) => inserted.push(table),
+        resolve: (table) => {
+          if (table === 'products') return { data: product({ sell_price: 200, factory_cost_mad: null }), error: null }
+          if (table === 'profiles') return { data: { id: 'aff1', role: 'affiliate', status: 'approved' }, error: null }
+          if (table === 'affiliate_product_prices') return { data: null, error: null }
+          if (table === 'orders') {
+            return { data: { id: 'o1' }, error: null }
+          }
+          return { data: null, error: null }
+        },
+      }),
+    )
+    const res = await placeOrder(emptyOrderState, fd({ productId: 'p1', affiliateId: 'aff1', quantity: '1', ...customer }))
+    expect(res.success).toBe(false)
+    expect(res.error).toMatch(/coût usine/i)
+    expect(res.orderId).toBeNull()
+    expect(inserted).not.toContain('orders')
+  })
+
+  it("factory_cost_mad null SANS affilié → vente passante (la garde ne s'applique que si affilié)", async () => {
+    let ordersPayload: Record<string, unknown> | undefined
+    mocked(createAdminClient).mockReturnValue(
+      makeClient({
+        onInsert: (table, payload) => { if (table === 'orders') ordersPayload = payload as Record<string, unknown> },
+        resolve: (table, state) => {
+          if (table === 'products') return { data: product({ sell_price: 200, factory_cost_mad: null }), error: null }
+          if (table === 'orders') {
+            if (state.op === 'select' && state.head) return { count: 0, data: null, error: null }
+            return { data: { id: 'o1' }, error: null }
+          }
+          if (table === 'order_signals') return { data: null, error: null }
+          return { data: null, error: null }
+        },
+      }),
+    )
+    // Pas d'affiliateId → validatedAffiliateId sera null → pas de commission → vente passe
+    const res = await placeOrder(emptyOrderState, fd({ productId: 'p1', quantity: '1', ...customer }))
+    expect(res.success).toBe(true)
+    expect(ordersPayload?.commission_amount).toBe(0)
+  })
+})
+
 // ───────────────────────── placeOrder (flux public : NON bloqué) ─────────────────────────
 
 describe('placeOrder — flux public, commission négative NON bloquante', () => {

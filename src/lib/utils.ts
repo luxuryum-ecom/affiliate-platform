@@ -40,6 +40,15 @@ export const MIN_DELIVERY_FEE_MAD = 35
 export const MIN_DELIVERY_FEE_CASABLANCA_MAD = 25
 
 /**
+ * Provision livraison fixe incluse dans le capital/prix catalogue affilié.
+ * Utilisée comme deliveryFee dans le calcul de commission pour ne compter
+ * la livraison qu'une seule fois : prix catalogue = usine + marge + packaging
+ * + confirmation + DELIVERY_PROVISION_MAD. Commission = prix_vente − capital.
+ * NE PAS cumuler avec la livraison par ville dans le même calcul de commission.
+ */
+export const DELIVERY_PROVISION_MAD = 35
+
+/**
  * Compute the net affiliate commission per unit.
  *
  * net = affiliate_sell_price
@@ -62,15 +71,20 @@ export function calculateNetAffiliateCommission(params: {
   confirmationFee: number
   quantity: number
 }): number {
-  const platformMargin =
-    params.marginType === 'percentage'
-      ? params.factoryCostMad * (params.marginValue / 100)
-      : params.marginValue
+  // Option B (capital exact) — on soustrait le PRIX PLATEFORME ARRONDI
+  // (calculatePlatformPrice = usine + marge, même arrondi half-up que le capital
+  // catalogue), et NON `usine + marge_non_arrondie`. Garantit commission =
+  // prix_vente − capital EXACTEMENT → 0 pile au prix catalogue, jamais de fraction
+  // de MAD versée par erreur d'arrondi (audit @finance, GO Abdou).
+  const platformPrice = calculatePlatformPrice(
+    params.factoryCostMad,
+    params.marginType,
+    params.marginValue
+  )
 
   const netPerUnit =
     params.affiliateSellPrice -
-    params.factoryCostMad -
-    platformMargin -
+    platformPrice -
     params.deliveryFee -
     params.confirmationFee -
     params.packagingFee
