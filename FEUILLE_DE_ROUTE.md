@@ -21,10 +21,26 @@
 6. **Bloc Confirmation/Emballage (encadré gris) peu lisible** → améliorer lisibilité / hiérarchie.
 7. **Alignement des infos stock** : le badge « Stock Maroc » (haut) et l'info « Stock : X unités » (bas) sont séparés → **regrouper les infos liées**, améliorer l'alignement.
 
-### 💸 Logique frais (déjà décidé avec Abdou — à implémenter via process argent / `@finance`)
-8. **Emballage = OBLIGATOIRE toujours** (la marchandise sort du stock Abdou = coût systématique).
-9. **Confirmation = CONDITIONNELLE** : appliquée si commande **à confirmer** ; **PAS** appliquée si commande **déjà confirmée** (client déjà connu, nom + adresse en main).
-10. **Commandes « prêtes » SANS lien d'affiliation** (le vendeur a déjà nom + prénom + adresse du client) → prévoir un **parcours de commande directe** pour ces personnes. **Nouvelle fonctionnalité à cadrer.**
+### 💸 Logique frais (valeurs corrigées par Abdou — à implémenter via process argent / `@finance`)
+> ⚠️ **Touche le calcul de commission** → circuit `@finance` + `@security-reviewer` + validation Abdou AVANT tout commit. Affichage seul interdit ici tant que la logique n'est pas validée.
+8. **Emballage = 10 DH, OBLIGATOIRE toujours** (la marchandise sort du stock Abdou = coût systématique).
+9. **Confirmation = 10 DH, OPTIONNELLE** : appliquée **seulement si la commande doit être confirmée** ; **PAS** appliquée si la commande est **déjà confirmée** (client déjà connu, nom + adresse en main).
+10. **À CORRIGER** — actuellement affiché : **Confirmation 10 / Emballage 5 / Livraison 35**. → Porter **emballage à 10 DH** et rendre la **confirmation conditionnelle** (cf. #8-9). C'est une **correction de valeurs/logique de frais**, donc **process `@finance`** (pas un simple correctif d'affichage).
+
+### 🆕 Commande directe SANS lien d'affiliation (NOUVELLE FONCTIONNALITÉ — priorité business)
+> Consigné le **2026-06-16**. **Rien n'est codé.** Touche les **commandes = argent** → **conception validée + audit `@finance`** obligatoires AVANT tout code.
+- **Cas** : un vendeur ne veut **PAS** promouvoir via lien/ads. Il a **DÉJÀ** ses clients avec leurs infos (nom, prénom, adresse).
+- **Besoin** :
+  - **(a) Saisie manuelle** d'une commande client — formulaire **nom / prénom / adresse / produit / quantité**.
+  - **(b) Import de fichier** (Google Sheet / CSV) d'une base clients déjà constituée.
+- **Frais** : ces commandes sont **DÉJÀ CONFIRMÉES** → **pas de frais de confirmation** (cohérent avec la règle confirmation optionnelle, #9). Emballage reste dû (#8).
+- **À cadrer (conception requise avant code)** :
+  - **Parcours UI** : où dans l'espace affilié ? (nouvelle entrée dédiée ? extension de `affiliate/orders/new` ?)
+  - **Format d'import** : colonnes attendues (mapping nom/prénom/adresse/produit/quantité), gabarit CSV/Sheet.
+  - **Validation** des lignes (champs requis, ville reconnue pour la livraison, produit existant).
+  - **Dédoublonnage** des clients/commandes importés.
+  - **Lien avec le calcul commission/frais** (confirmation OFF, emballage ON, livraison selon ville).
+- ⛔ **NE PAS coder sans conception validée + audit `@finance`.**
 
 ### 💡 VISION FICHE PRODUIT AFFILIÉ — par paliers (idée fondateur Abdou)
 > Vision long terme pour la **fiche produit affilié**. Consigné le **2026-06-16**. **Rien n'est codé.**
