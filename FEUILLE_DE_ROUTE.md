@@ -107,6 +107,29 @@
 
 ---
 
+## 🚀 VISION STRATÉGIQUE — Marketplace affiliation multi-partenaires (idée fondateur Abdou)
+> Consigné le **2026-06-16**. **Rien n'est codé.** **Chantier MAJEUR** (presque un produit dans le produit), **cœur financier** → conception complète + **`@finance` + `@architect` obligatoires** AVANT tout code. À planifier **après stabilisation des bases actuelles**.
+
+**CONCEPT** : ouvrir l'affiliation à des produits de **PARTENAIRES FOURNISSEURS** (pas seulement le stock d'Abdou). Le **fournisseur** apporte produit + stock ; **Abdou/plateforme** orchestre ; l'**affilié** promeut/vend. Abdou devient **marketplace / intermédiaire**, plus seulement vendeur.
+
+**BASE EXISTANTE À RÉUTILISER** (ne pas reconstruire) :
+- **Rôle fournisseur** (marketplace fournisseurs déjà en place).
+- **Miroir catalogue** (lien produit fournisseur ↔ catalogue).
+- **`factory_cost`** dans le calcul de commission.
+- **Règle capital** (migration 073).
+- **Ledger / snapshots** (immutabilité des montants par commande).
+
+**POINTS À CONCEVOIR / TRANCHER** (cœur financier → `@finance` + `@architect`) :
+1. **Partage financier à 3-4 parties** : fournisseur (son prix) / plateforme Abdou (**commission : % ou fixe ? qui la fixe ?**) / affilié (sa marge) / frais. **Définir le modèle.**
+2. **Tracking & traçabilité** : chaque commande relie **produit → fournisseur → affilié → client → montants → part de chacun**. **Ledger par commande.**
+3. **Gestion stock partenaire** : mise à jour **manuelle / import / synchro** ? Que faire si **rupture côté fournisseur après une vente affilié** ?
+4. **Confidentialité** (cohérent avec la règle existante) : le **fournisseur ne voit PAS les coordonnées du client final** (client d'Abdou) ; l'**affilié ne voit PAS le coût fournisseur réel**. **Cloisonnement strict des données par rôle.**
+5. **Payout** : Abdou **encaisse le COD** puis **reverse fournisseur + affilié**, garde sa part. **Système de versements traçable + idempotent.**
+
+**NATURE** : chantier majeur, **pas une feature** — concevoir **entièrement** avant tout code. À planifier après stabilisation des bases actuelles.
+
+---
+
 ## === 🗓️ ÉTAT FIN DE SESSION 15/06 (nuit) ===
 > État réel, sans embellissement. Code prod = **`f748732`**, base = **migration 072**.
 
