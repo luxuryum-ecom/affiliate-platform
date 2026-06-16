@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAffiliateOrder } from '@/app/actions/orders'
@@ -333,12 +334,12 @@ export function CreateOrderForm({ products, cities, strings: s }: Props) {
       </div>
 
       <div className="flex items-center justify-between gap-4 pt-2">
-        <a
+        <Link
           href="/affiliate/orders"
           className="text-sm text-muted hover:text-foreground transition-colors"
         >
           {s.backButton}
-        </a>
+        </Link>
         <button
           type="submit"
           disabled={isPending || (product ? sellPrice < product.sell_price : false)}

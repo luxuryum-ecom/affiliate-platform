@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { validateBulkImport, publishBulkImport } from '@/app/actions/supplier-bulk'
@@ -52,9 +53,9 @@ export default function BulkImportClient() {
         <p className="text-xs text-success-fg">
           {t('successBody')}
         </p>
-        <a href="/supplier/products" className="mt-4 inline-block text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
+        <Link href="/supplier/products" className="mt-4 inline-block text-xs px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
           {t('ctaViewProducts')}
-        </a>
+        </Link>
       </div>
     )
   }

@@ -656,14 +656,14 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                   ) : (
                     <p className="text-xs text-warning-fg">
                       {t('tariffNoActive', { country: importOriginCountry, mode: SHIPPING_MODE_LABELS[importShippingMode] })}{' '}
-                      <a
+                      <Link
                         href="/admin/import-tariffs"
                         target="_blank"
                         rel="noreferrer"
                         className="text-gold-500 hover:text-gold-600 underline"
                       >
                         {t('tariffConfigure')}
-                      </a>
+                      </Link>
                     </p>
                   )}
                 </div>

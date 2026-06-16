@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCities } from '@/app/actions/cities'
 import { CreateOrderForm } from '@/components/affiliate/create-order-form'
@@ -103,12 +104,12 @@ export default async function NewAffiliateOrderPage() {
         {products.length === 0 ? (
           <div className="bg-surface rounded-xl border border-line p-12 text-center">
             <p className="text-sm text-faint">{t('emptyProducts')}</p>
-            <a
+            <Link
               href="/affiliate/products"
               className="mt-3 inline-block text-sm text-gold-500 hover:text-gold-600 hover:underline"
             >
               {t('viewCatalog')}
-            </a>
+            </Link>
           </div>
         ) : (
           <CreateOrderForm products={products} cities={cities} strings={formStrings} />

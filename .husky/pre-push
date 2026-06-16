@@ -5,7 +5,12 @@
 echo "🔍 pre-push · typecheck (tsc --noEmit)…"
 npx tsc --noEmit || { echo "❌ Typecheck en échec — push BLOQUÉ."; exit 1; }
 
-echo "🏗️  pre-push · build (next build)…"
+# Build À FROID (rm -rf .next) = identique à Vercel. Indispensable : un build incrémental
+# réutilise le cache ESLint et masque des erreurs (ex. no-html-link-for-pages) qui cassent
+# pourtant le déploiement Vercel. Coût marginal faible (1 seul build ; le smoke le réutilise
+# via `next start`). Régression réelle 2026-06-16 : merge Palier 1 vert en local, Error sur Vercel.
+echo "🏗️  pre-push · build À FROID (rm -rf .next && next build)…"
+rm -rf .next
 npx next build || { echo "❌ Build en échec — push BLOQUÉ."; exit 1; }
 
 # Smoke Playwright : ne tourne que si au moins un compte test est configuré (.env.local).
