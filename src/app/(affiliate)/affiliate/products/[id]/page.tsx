@@ -132,10 +132,14 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
     priceNotSet: t.raw('priceNotSet') as string,
     priceSave: t('priceSave'),
     priceSaving: t('priceSaving'),
-    priceReset: t.raw('priceReset') as string,
-    priceMin: t.raw('priceMin') as string,
     priceSavedOk: t('priceSavedOk'),
     priceResetOk: t('priceResetOk'),
+    keepDifference: t('keepDifference'),
+    gainPerSale: t.raw('gainPerSale') as string,
+    gainPlaceholder: t.raw('gainPlaceholder') as string,
+    suggestedLabel: t.raw('suggestedLabel') as string,
+    suggestedRange: t.raw('suggestedRange') as string,
+    suggestedGain: t.raw('suggestedGain') as string,
   }
   const copyLinkStrings = { copy: t('copyLink'), copied: t('copied') }
 
