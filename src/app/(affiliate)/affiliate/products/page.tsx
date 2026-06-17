@@ -136,6 +136,7 @@ export default async function AffiliateProductsPage() {
                         {t('catalogPrice')}&nbsp;:{' '}
                         <span className="text-muted tabular-nums">{formatMAD(product.sell_price)}</span>
                       </p>
+                      <p className="text-[10px] text-success-fg mt-0.5">✅ {t('priceAllInclusiveShort')}</p>
                     </div>
 
                     {/* CTA */}

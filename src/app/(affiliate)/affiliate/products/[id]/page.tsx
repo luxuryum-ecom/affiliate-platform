@@ -213,6 +213,9 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
               </div>
             </div>
 
+            {/* Prix tout compris — justifie le prix catalogue (affichage pur) */}
+            <p className="text-xs text-success-fg">✅ {t('priceAllInclusive')}</p>
+
             {/* Custom price setter (client component — strings only) */}
             <div className="bg-surface rounded-xl border border-line px-4 pb-4">
               <AffiliatePriceForm
@@ -225,25 +228,15 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
           </div>
         </div>
 
-        {/* Fees — deducted from commission */}
-        <div className="mt-6 bg-surface rounded-xl border border-line p-4">
-          <p className="text-xs font-semibold text-muted mb-2">{t('feesTitle')}</p>
-          <div className="text-sm text-faint space-y-1">
-            <div className="flex justify-between">
-              <span>{t('feeConfirmation')}</span>
-              <span className="text-muted tabular-nums">{product.confirmation_fee_mad} MAD</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{t('feePackaging')}</span>
-              <span className="text-muted tabular-nums">{product.packaging_fee_mad} MAD</span>
-            </div>
-            {product.delivery_fee_mad > 0 && (
-              <div className="flex justify-between">
-                <span>{t('feeDelivery')}</span>
-                <span className="text-muted tabular-nums">{product.delivery_fee_mad} MAD</span>
-              </div>
-            )}
-          </div>
+        {/* Tout inclus — argument de vente (affichage pur ; les frais sont DÉJÀ dans le capital) */}
+        <div className="mt-6 bg-success-soft border border-success rounded-xl p-4">
+          <p className="text-sm font-bold text-success-fg mb-2">{t('feesIncludedTitle')}</p>
+          <ul className="text-sm text-foreground space-y-1">
+            <li>✅ {t('feesIncludedDelivery')}</li>
+            <li>✅ {t('feesIncludedPackaging')}</li>
+            <li>✅ {t('feesIncludedConfirmation')}</li>
+          </ul>
+          <p className="text-xs text-muted mt-2">{t('feesIncludedFooter')}</p>
         </div>
 
         {/* Stats */}
