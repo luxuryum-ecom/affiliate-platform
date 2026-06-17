@@ -63,6 +63,11 @@ export default async function AffiliateProductsPage() {
           </p>
         </div>
 
+        {/* Accroche profit affilié */}
+        <div className="mb-6 rounded-xl border border-gold-300 bg-accent-soft px-4 py-3">
+          <p className="text-sm font-semibold text-accent-fg">💰 {t('catalogBanner')}</p>
+        </div>
+
         {list.length === 0 ? (
           <div className="bg-surface rounded-xl border border-line p-12 text-center">
             <p className="text-sm text-faint">{t('emptyProducts')}</p>
