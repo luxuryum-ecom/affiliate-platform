@@ -85,6 +85,7 @@
 | Affichage prix import honnête (aérien/maritime, marge selon devis) | ✅ EN PROD | `028d790` / mig. **071** | `071_supplier_quote_shipping_mode.sql` |
 | **Catalogue grossiste UNIFIÉ** (2 onglets Disponible/À importer, interne+fournisseur fusionnés & cloisonnés, design noir & or) | ✅ **EN PROD** | `d379ca1` / mig. **075** | vue `wholesale_catalog_read` (`075_wholesale_catalog_read_view.sql`) ∪ `products_public_read`+`supplier_products_wholesaler_read` ; page `src/app/(wholesale)/wholesale/products/page.tsx` (`source` serveur only, @security GO, aucun coût/marge exposé) |
 | **Thème grossiste `/wholesale/products`** (rendait en thème clair → corrigé en noir & or) | ✅ **CORRIGÉ** | `2ce7406` | wrapper `theme-dark bg-bg text-foreground min-h-screen` (`wholesale/products/page.tsx:125`, comme affilié/marketplace) |
+| **Thème détail produit interne `/wholesale/products/[id]`** (rendait en thème clair → corrigé en noir & or) | ✅ **CORRIGÉ** | `1d90483` | wrapper `theme-dark bg-bg text-foreground min-h-screen` (`wholesale/products/[id]/page.tsx:72`, comme le détail fournisseur) |
 
 ---
 
