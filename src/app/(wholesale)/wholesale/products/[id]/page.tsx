@@ -69,7 +69,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const ctaMode = getCatalogProductCtaMode(product.availability_type)
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
       {/* Navbar */}
       <DashboardHeader
         breadcrumb={product.name}
