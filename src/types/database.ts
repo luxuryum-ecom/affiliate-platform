@@ -1378,6 +1378,31 @@ export interface CommissionWithOrder extends Commission {
   order: Pick<Order, 'id' | 'customer_name' | 'quantity' | 'total_amount' | 'status' | 'created_at'>
 }
 
+// ─── WHOLESALE UNIFIED CATALOG VIEW (migration 075) ──────────────────────────
+// Shape of `public.wholesale_catalog_read`.
+// `source` is SERVER-ONLY — never pass it to a Client Component.
+// Route the detail link server-side and transmit only the resolved `href` string.
+
+export interface WholesaleCatalogRow {
+  id: string
+  /** SERVER ONLY — used to resolve the detail href. Never sent to client components. */
+  source: 'internal' | 'supplier'
+  name: string
+  description: string | null
+  /** Already-computed "from" price in MAD. Display directly via formatMAD. */
+  from_price_mad: number
+  min_qty: number
+  stock: number | null
+  image: string | null
+  category: string
+  subcategory: string
+  origin_country: string
+  availability_type: 'local_stock' | 'import_on_demand'
+  is_featured: boolean
+  is_verified: boolean
+  created_at: string
+}
+
 // ─── DATABASE TYPE (for Supabase client generics) ─────────────────────────────
 // Hand-written stub that satisfies the shape @supabase/supabase-js v2 expects.
 // Replace with the generated output of:
