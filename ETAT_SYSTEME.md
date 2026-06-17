@@ -90,6 +90,7 @@
 |---|---|---|---|
 | Catalogue affilié, liens, commissions | ✅ EN PROD | — | `src/app/(affiliate)/affiliate/*` |
 | Message « Ajuste ton prix » (remplace « Non rentable ») | ✅ EN PROD | `ed520ab` | affichage affilié (FR/AR/EN) |
+| **HOOK PROFIT AFFILIÉ** — corriger l'incitation (le champ « laissez vide = prix catalogue » pousse à commission 0). Hook « fixe ton prix, garde la différence » : mini-simulateur bénéfice + prix conseillé sur la fiche, accroche en tête de catalogue, reformuler la phrase marge-zéro | 📄 **DOCUMENTÉ — PRIORITÉ HAUTE (Sprint 3 conversion)** | — | UI/affichage, zéro calcul d'argent modifié. Détail : `FEUILLE_DE_ROUTE.md` → HOOK PROFIT AFFILIÉ |
 
 ---
 
