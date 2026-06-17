@@ -24,6 +24,8 @@
 | Envoi Telegram sortant lié à une commande | ❌ PAS FAIT | aucun | `src/lib/telegram/client.ts` `telegramSendMessage` n'est appelé QUE par `telegram/ingest.ts` (réponses aux messages **entrants** du fournisseur) |
 | In-app / email / SMS / push infra | ❌ PAS FAIT | aucun | aucune lib (`resend/nodemailer/twilio/web-push/fcm` absents), aucune table notifications |
 
+> **📌 DESTINATAIRES (TÂCHE 2, à cadrer)** : essentiels **toujours notifiés** = **Abdou + le fournisseur** ; **commercial/agent pays = optionnel cochable**. Design fin des destinataires (par événement/rôle/canal) **à finaliser par Abdou**. PII acheteur masquée côté fournisseur (vues redacted). Détail : `FEUILLE_DE_ROUTE.md` → LOT 6.
+
 > **⚠️ PIÈGE DE NOMMAGE :** « **Deliveroo** » dans le code **n'est PAS** un système de notification.
 > C'est la **machine à états (FSM) des commandes B2B** (suivi de statuts, façon tracking Deliveroo) —
 > voir section Wholesale/B2B. La recherche `deliveroo|notifySupplier|sendOrderNotification|lot6`
