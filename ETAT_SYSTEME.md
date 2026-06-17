@@ -4,6 +4,8 @@
 > **Avant de construire quoi que ce soit, lire ce fichier.** Une feature validée s'inscrit
 > ici et **ne se reconstruit jamais**. **Mettre à jour ce fichier à chaque feature finie.**
 > Ce registre fait foi : il est rempli à partir du **code et de git** (pas de mémoire).
+>
+> **🩺 RÈGLE DIAGNOSTIC — déploiement d'abord.** Si l'agent voit le **bon comportement dans le code** (vérifié runtime sur build local) mais que l'utilisateur voit **autre chose en prod**, **VÉRIFIER LE DÉPLOIEMENT VERCEL EN PREMIER** (souvent en retard sur `main` / cache). Ne PAS conclure « ergonomie » ou « non reproduit » avant ça. Trancher en **forçant un redeploy** : `git commit --allow-empty -m "chore: force redeploy" && git push` sur `main`. Cas réel : recherche grossiste « Pull ref 5 » = 0 en prod alors que le code était correct → déploiement périmé (résolu par `6dc0244`).
 
 **Dernière synchro :** 2026-06-17 — `main` @ `5c54544` — 74 migrations (001→074).
 
@@ -85,7 +87,8 @@
 | Affichage prix import honnête (aérien/maritime, marge selon devis) | ✅ EN PROD | `028d790` / mig. **071** | `071_supplier_quote_shipping_mode.sql` |
 | **Catalogue grossiste UNIFIÉ** (2 onglets Disponible/À importer, interne+fournisseur fusionnés & cloisonnés, design noir & or) | ✅ **EN PROD** | `d379ca1` / mig. **075** | vue `wholesale_catalog_read` (`075_wholesale_catalog_read_view.sql`) ∪ `products_public_read`+`supplier_products_wholesaler_read` ; page `src/app/(wholesale)/wholesale/products/page.tsx` (`source` serveur only, @security GO, aucun coût/marge exposé) |
 | **Thème grossiste `/wholesale/products`** (rendait en thème clair → corrigé en noir & or) | ✅ **CORRIGÉ** | `2ce7406` | wrapper `theme-dark bg-bg text-foreground min-h-screen` (`wholesale/products/page.tsx:125`, comme affilié/marketplace) |
-| **Thème détail produit interne `/wholesale/products/[id]`** (rendait en thème clair → corrigé en noir & or) | ✅ **CORRIGÉ** | `1d90483` | wrapper `theme-dark bg-bg text-foreground min-h-screen` (`wholesale/products/[id]/page.tsx:72`, comme le détail fournisseur) |
+| **Thème détail produit interne `/wholesale/products/[id]`** (rendait en thème clair → corrigé en noir & or) | ✅ **CORRIGÉ EN PROD** | `6dc0244` | wrapper `theme-dark bg-bg text-foreground min-h-screen` (`wholesale/products/[id]/page.tsx:72`, comme le détail fournisseur) |
+| **Recherche grossiste `/wholesale/products` (« Pull ref 5 » = 0 résultat)** | ✅ **OK — pas un bug code** | — | prouvé runtime : Pull ref 5 = 1ʳᵉ carte de l'onglet Disponible + trouvé par le champ recherche. Le 0 venait d'un **déploiement Vercel périmé** (résolu par redeploy `6dc0244`), pas du code |
 
 ---
 
