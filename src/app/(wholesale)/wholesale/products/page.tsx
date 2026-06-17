@@ -122,7 +122,7 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
   const clearHref = `/wholesale/products?tab=${activeTab}`
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="theme-dark bg-bg text-foreground min-h-screen">
       {/* Navbar */}
       <DashboardHeader
         breadcrumb={t('pageTitle')}
