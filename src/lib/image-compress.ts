@@ -4,12 +4,50 @@ const MAX_DIMENSION = 1600
 const DEFAULT_QUALITY = 0.85
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const HEIC_TYPES = new Set([
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
+])
 
 export class ImageCompressError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'ImageCompressError'
   }
+}
+
+/** HEIC/HEIF — détecté par MIME, sinon par extension (iOS livre souvent un MIME vide). */
+export function isHeic(file: { type: string; name: string }): boolean {
+  return HEIC_TYPES.has(file.type) || /\.hei[cf]$/i.test(file.name)
+}
+
+/**
+ * Décode un HEIC/HEIF en JPEG côté client. La lib (libheif/WASM) est chargée
+ * À LA DEMANDE : aucun impact sur le bundle initial ni sur les autres formats.
+ */
+async function decodeHeicToJpeg(file: File): Promise<File> {
+  let convert: typeof import('heic2any')['default']
+  try {
+    convert = (await import('heic2any')).default
+  } catch {
+    throw new ImageCompressError(
+      'Lecture HEIC indisponible sur cet appareil. Convertissez la photo en JPEG.'
+    )
+  }
+  let out: Blob | Blob[]
+  try {
+    out = await convert({ blob: file, toType: 'image/jpeg', quality: 0.92 })
+  } catch {
+    throw new ImageCompressError('Impossible de convertir cette image HEIC. Essayez un JPEG.')
+  }
+  const blob = Array.isArray(out) ? out[0] : out
+  const baseName = file.name.replace(/\.[^.]+$/, '') || 'product'
+  return new File([blob], `${baseName}.jpg`, {
+    type: 'image/jpeg',
+    lastModified: file.lastModified,
+  })
 }
 
 function loadImage(file: File): Promise<HTMLImageElement> {
@@ -58,17 +96,24 @@ function scaleDimensions(
  * GIFs under 512 KB are kept as-is to preserve animation.
  */
 export async function compressImageForUpload(file: File): Promise<File> {
-  if (!ALLOWED_TYPES.has(file.type)) {
-    throw new ImageCompressError('Format non supporté. Utilisez JPEG, PNG ou WebP.')
-  }
   if (file.size > MAX_INPUT_BYTES) {
     throw new ImageCompressError('Image trop lourde (max 10 Mo avant compression).')
   }
-  if (file.type === 'image/gif' && file.size <= 512 * 1024) {
-    return file
+
+  // HEIC/HEIF (format par défaut iPhone) : convertir en JPEG AVANT le pipeline canvas
+  // (Chrome/Firefox/Android ne décodent pas HEIC nativement).
+  let working = file
+  if (isHeic(file)) {
+    working = await decodeHeicToJpeg(file)
+  } else if (!ALLOWED_TYPES.has(file.type)) {
+    throw new ImageCompressError('Format non supporté. Utilisez JPEG, PNG, WebP ou HEIC.')
   }
 
-  const img = await loadImage(file)
+  if (working.type === 'image/gif' && working.size <= 512 * 1024) {
+    return working
+  }
+
+  const img = await loadImage(working)
   const { width, height } = scaleDimensions(img.naturalWidth, img.naturalHeight, MAX_DIMENSION)
 
   const canvas = document.createElement('canvas')
@@ -96,6 +141,6 @@ export async function compressImageForUpload(file: File): Promise<File> {
     throw new ImageCompressError('Échec de la compression image.')
   }
 
-  const baseName = file.name.replace(/\.[^.]+$/, '') || 'product'
+  const baseName = working.name.replace(/\.[^.]+$/, '') || 'product'
   return new File([blob], `${baseName}.${ext}`, { type: outputType, lastModified: Date.now() })
 }

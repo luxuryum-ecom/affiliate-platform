@@ -130,7 +130,7 @@ export function ProductCoverUpload({
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
           className="hidden"
           disabled={disabled || uploading}
           onChange={(e) => {

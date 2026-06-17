@@ -1383,7 +1383,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
                     <input
                       ref={(el) => { fileInputRefs.current[i] = el }}
                       type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0]
