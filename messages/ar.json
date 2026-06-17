@@ -771,6 +771,8 @@
       "tabLocal": "متوفر (المغرب)",
       "tabImport": "للاستيراد",
       "tabCount": "{count, plural, one {# منتج} other {# منتجات}}",
+      "otherTabHintQ": "لا نتائج هنا — لكن {count, plural, one {# منتج} other {# منتجات}} «{term}» في علامة التبويب الأخرى ←",
+      "otherTabHint": "لا نتائج هنا — لكن {count, plural, one {# منتج} other {# منتجات}} في علامة التبويب الأخرى ←",
       "filterTitle": "تصفية المنتجات",
       "filterSearch": "بحث",
       "filterSearchPlaceholder": "الاسم، الفئة…",

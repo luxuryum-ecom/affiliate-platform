@@ -771,6 +771,8 @@
       "tabLocal": "Disponible (Maroc)",
       "tabImport": "À importer",
       "tabCount": "{count, plural, one {# produit} other {# produits}}",
+      "otherTabHintQ": "Aucun résultat ici — mais {count, plural, one {# produit} other {# produits}} « {term} » dans l'autre onglet →",
+      "otherTabHint": "Aucun résultat ici — mais {count, plural, one {# produit} other {# produits}} dans l'autre onglet →",
       "filterTitle": "Filtrer les produits",
       "filterSearch": "Recherche",
       "filterSearchPlaceholder": "Nom, catégorie…",

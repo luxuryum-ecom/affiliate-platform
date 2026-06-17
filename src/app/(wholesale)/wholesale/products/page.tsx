@@ -93,6 +93,8 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
   const localRows = rows.filter((r) => r.availability_type === 'local_stock')
   const importRows = rows.filter((r) => r.availability_type === 'import_on_demand')
   const visibleRows = activeTab === 'local' ? localRows : importRows
+  const otherTab = activeTab === 'local' ? 'import' : 'local'
+  const otherRows = activeTab === 'local' ? importRows : localRows
 
   const isFiltered = !!(
     filters.q ||
@@ -344,6 +346,17 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
                 className="mt-3 inline-block text-sm text-gold-400 hover:underline"
               >
                 {t('filterClear')}
+              </Link>
+            )}
+            {/* Renvoi vers l'autre onglet quand l'actif est vide mais l'autre a des résultats filtrés */}
+            {isFiltered && otherRows.length > 0 && (
+              <Link
+                href={tabHref(otherTab)}
+                className="mt-3 ms-3 inline-block text-sm text-gold-400 hover:underline"
+              >
+                {filters.q
+                  ? t('otherTabHintQ', { count: otherRows.length, term: filters.q })
+                  : t('otherTabHint', { count: otherRows.length })}
               </Link>
             )}
           </div>
