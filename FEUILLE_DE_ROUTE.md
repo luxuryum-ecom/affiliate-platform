@@ -40,6 +40,18 @@
 > Consigné le **2026-06-16**. **Rien n'est codé** ici — c'est un backlog permanent à traiter plus tard.
 > Les points 8-10 touchent l'**argent** → circuit `@finance` + `@security-reviewer` + validation Abdou AVANT tout commit (cf. RÈGLES ABSOLUES).
 
+### 🪝 HOOK PROFIT AFFILIÉ — corriger l'incitation du catalogue (PRIORITÉ HAUTE — Sprint 3 conversion)
+
+> Problème réel constaté par Abdou. **UI/affichage uniquement — aucun calcul d'argent modifié.** Lié au simulateur de profit affilié déjà prévu au Sprint 3.
+
+- **PROBLÈME** : sur la fiche produit affilié (`/affiliate/products/[id]`), le champ « Mon prix de vente » dit « Min. 149 MAD / Laissez vide pour réinitialiser au prix catalogue ». **Au prix catalogue, la commission affilié = 0.** L'UI actuelle incite donc l'affilié à vendre **sans marge** — absurde, décourage la vente.
+- **OBJECTIF** : remplacer cette incitation par un **HOOK** qui pousse l'affilié à fixer un prix **AU-DESSUS** du catalogue et à voir son gain. Le fait que **livraison + emballage + confirmation soient déjà inclus** dans le prix catalogue doit **MOTIVER** (l'affilié n'a rien à payer, il n'ajoute que sa marge), et **non** servir de plancher à 0.
+- **À CADRER (emplacements)** :
+  - (a) **Fiche produit affilié** : mini-simulateur « mets ton prix → voilà ton bénéfice par vente » + un **PRIX CONSEILLÉ** motivant.
+  - (b) **Haut du catalogue affilié général** : message d'accroche « fixe ton prix, garde la différence ».
+  - (c) **Supprimer/reformuler** la phrase « laissez vide = prix catalogue » qui incite à la marge zéro.
+- **Nature** : UI/affichage (pas de calcul d'argent modifié). Si le simulateur **dérive** un montant de bénéfice → vérifier qu'il réutilise les calculs existants (zéro nouveau calcul de commission) ; sinon circuit `@finance`.
+
 ### 🎨 Thème & layout
 1. **Thème clair (blanc) au lieu du noir & or premium** du marketplace → appliquer `theme-dark` (même fix que marketplace).
    **DÉCISION ABDOU : oui, mettre le catalogue affilié en noir & or comme le marketplace** (cohérence de marque).
