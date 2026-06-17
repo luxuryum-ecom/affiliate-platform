@@ -133,7 +133,18 @@
 
 ---
 
+## 🛟 SÉCURITÉ / BACKUP
+
+- **CODE** : tout est sur **GitHub** (`origin`). `main` = prod. Branches de travail poussées (y compris `feat/dette-factory-cost-authenticated`, sauvegardée à distance).
+- **BASE Supabase** (plan gratuit = **aucun backup auto** → critique) : dump complet schéma + données via le **CLI Supabase**, dans `~/AI-FACTORY/backups/` (fichiers datés `prod_backup_<date>.sql` + `_data.sql`).
+- **Refaire un backup manuellement** : `bash ~/AI-FACTORY/backups/backup-prod.sh`
+- **Backup hebdo automatique** : LaunchAgent macOS `com.mozouna.backup-prod` (lundi 9h) → `~/Library/LaunchAgents/com.mozouna.backup-prod.plist`, logs dans `~/AI-FACTORY/backups/backup.log`. (cron classique bloqué par macOS « Operation not permitted » → launchd à la place.)
+  - Vérifier : `launchctl list | grep mozouna` · Désactiver : `launchctl unload ~/Library/LaunchAgents/com.mozouna.backup-prod.plist`
+- **ROUTINE** : backup **AVANT chaque migration** (`supabase db push`) + **1×/semaine** (auto) + avant tout backfill de données. Copier `~/AI-FACTORY/backups/` **hors du PC** régulièrement.
+
+---
+
 ## ⏸️ BRANCHES NON MERGÉES (état git au 2026-06-17)
-- `feat/dette-factory-cost-authenticated` — chantier **différé (option C)**, pas dans `main`.
+- `feat/dette-factory-cost-authenticated` — chantier **différé (option C)**, pas dans `main` mais **poussé sur `origin`** (sauvegardé).
 
 > Toutes les autres `feat/*` et `fix/*` listées par `git branch --merged main` sont **mergées et en prod**.
