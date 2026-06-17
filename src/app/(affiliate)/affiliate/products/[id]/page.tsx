@@ -214,7 +214,7 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
             </div>
 
             {/* Prix tout compris — justifie le prix catalogue (affichage pur) */}
-            <p className="text-xs text-success-fg">✅ {t('priceAllInclusive')}</p>
+            <p className="text-xs text-success-fg">{t('priceAllInclusive')}</p>
 
             {/* Custom price setter (client component — strings only) */}
             <div className="bg-surface rounded-xl border border-line px-4 pb-4">
@@ -236,7 +236,8 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
             <li>✅ {t('feesIncludedPackaging')}</li>
             <li>✅ {t('feesIncludedConfirmation')}</li>
           </ul>
-          <p className="text-xs text-muted mt-2">{t('feesIncludedFooter')}</p>
+          <p className="text-sm font-semibold text-foreground mt-3">{t('feesIncludedZero')}</p>
+          <p className="text-xs text-muted mt-1">{t('feesIncludedFooter')}</p>
         </div>
 
         {/* Stats */}
