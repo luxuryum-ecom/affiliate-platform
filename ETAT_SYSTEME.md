@@ -94,6 +94,7 @@
 | Catalogue affilié, liens, commissions | ✅ EN PROD | — | `src/app/(affiliate)/affiliate/*` |
 | Message « Ajuste ton prix » (remplace « Non rentable ») | ✅ EN PROD | `ed520ab` | affichage affilié (FR/AR/EN) |
 | **HOOK PROFIT AFFILIÉ** — simulateur gain temps réel (« Tu gagnes X/vente » = prix saisi − catalogue), prix conseillé catalogue × 1,25 (fourchette +20/+30 %) cliquable, accroche catalogue « fixe tes prix, garde la différence », phrase marge-zéro remplacée par encouragement | ✅ **EN PROD** | `ba4b2af` | `src/components/affiliate/affiliate-price-form.tsx` + `affiliate/products/{[id],}/page.tsx` ; AFFICHAGE PUR (calcul serveur commission inchangé, aucune donnée coût/marge au client) |
+| **Wording affilié tout-inclus (vendeur/punchy)** — bloc « frais déduits » négatif remplacé par « 💰 Tu vends, tu encaisses. Le reste, c'est notre job. » (livraison/emballage/confirmation gérés, zéro avance) + mentions « prix tout compris » sous le prix (fiche + cartes) | ✅ **EN PROD** | `842acce` | `affiliate/products/{[id],}/page.tsx` + i18n FR/AR/EN ; AFFICHAGE PUR (frais déjà dans le capital, calcul serveur inchangé) |
 
 ---
 
