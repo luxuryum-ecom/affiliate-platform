@@ -771,6 +771,8 @@
       "tabLocal": "Available (Morocco)",
       "tabImport": "Import on demand",
       "tabCount": "{count, plural, one {# product} other {# products}}",
+      "otherTabHintQ": "No results here — but {count, plural, one {# product} other {# products}} “{term}” in the other tab →",
+      "otherTabHint": "No results here — but {count, plural, one {# product} other {# products}} in the other tab →",
       "filterTitle": "Filter products",
       "filterSearch": "Search",
       "filterSearchPlaceholder": "Name, category…",
