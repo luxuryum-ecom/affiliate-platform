@@ -727,6 +727,16 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
 - **Nature** : chantier de **conception** (matrice **visibilité produit × canal × niveau d'abonnement**). À cadrer avec `@architect`. Pertinent surtout au moment de l'**ouverture publique + système d'abonnement (Sprint 4+)**, quand il y aura de vrais sellers à qui vendre de l'exclusivité.
 - **À NE PAS construire maintenant** (Sprint 2 = vrais produits en cours).
 
+## SECTION PREMIUM-DIRECT — PLAN PREMIUM « ACCÈS DIRECT FOURNISSEUR » (~10 000 DH/mois)
+
+> Vision **future**, **exception payante à la RÈGLE D'OR**. **NE PAS construire maintenant.**
+
+- **Principe** : un palier d'abonnement **ultra-haut de gamme (~10 000 DH/mois)** qui **lève le cloisonnement** : le grossiste premium accède **directement** au fournisseur (identité / contact), court-circuitant l'intermédiation Mozouna.
+- **Pourquoi si cher** : ça contredit volontairement la règle « **aucun contact direct grossiste/affilié ↔ fournisseur** ». Le prix élevé est précisément la contrepartie de cette exclusivité.
+- **Nature** : changement **du modèle de confidentialité ET du modèle de revenu** → à concevoir avec **`@architect` + `@finance` + `@security-reviewer`** (le trio complet : argent + RLS/données sensibles).
+- **Quand** : lié au **système d'abonnement (Sprint 4+)**, après l'ouverture publique.
+- **À NE PAS construire maintenant.**
+
 ## SECTION 1 — PARCOURS FOURNISSEUR (refonte)
 
 **Objectif :** un parcours digne d'un gros SaaS international (Shopify / Faire / Alibaba), **ultra-simple** pour des fournisseurs de **tous niveaux** (vendeur de légumes/viande → alimentaire → construction → déco → électronique), **nationaux et internationaux**.
