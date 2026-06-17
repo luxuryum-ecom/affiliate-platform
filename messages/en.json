@@ -3108,5 +3108,13 @@
       "colCommissions": "Commissions",
       "affiliateMeta": "{orders, plural, one {# order placed} other {# orders placed}}"
     }
+  },
+  "notifications": {
+    "order_assigned": {
+      "title": "🛒 New order to prepare",
+      "body": "Ref: #{ref} · Delivery: {city}",
+      "item": "• {label} × {qty}",
+      "due": "Prepare before: {date}"
+    }
   }
 }
