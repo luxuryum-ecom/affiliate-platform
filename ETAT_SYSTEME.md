@@ -1,0 +1,129 @@
+# ETAT_SYSTEME.md — REGISTRE DE VÉRITÉ UNIQUE
+
+> **⚠️ RÈGLE DE TRAVAIL — À LIRE AVANT TOUT CHANTIER.**
+> **Avant de construire quoi que ce soit, lire ce fichier.** Une feature validée s'inscrit
+> ici et **ne se reconstruit jamais**. **Mettre à jour ce fichier à chaque feature finie.**
+> Ce registre fait foi : il est rempli à partir du **code et de git** (pas de mémoire).
+
+**Dernière synchro :** 2026-06-17 — `main` @ `a081622` — 346 commits, 74 migrations (001→074).
+
+## Légende des statuts
+- ✅ **FAIT ET EN PROD** — mergé dans `main` (+ migration appliquée si concerné)
+- 📄 **DOCUMENTÉ / SPÉCIFIÉ** — décrit dans la roadmap, **pas de code**
+- ⏸️ **BRANCHE NON MERGÉE** — code existant mais pas dans `main`
+- ❌ **PAS FAIT** — n'existe nulle part (ni code, ni branche, ni stash)
+
+---
+
+## 🔔 NOTIFICATIONS — cas « Deliveroo » fournisseur (TRANCHÉ)
+
+| Feature | Statut | Commit / Branche | Preuve (fichier clé) |
+|---|---|---|---|
+| **Notif fournisseur « commande → averti automatiquement » (push type Deliveroo)** | ❌ **PAS FAIT — JAMAIS COMMITÉ** | aucun (TODO seulement) | `src/app/actions/orders.ts:1107` & `:1387` → *« l'alerting réel (in-app + Telegram) arrive au LOT 6 »* / *« Notification (LOT 6) will be added here later »* |
+| Notif RFQ fournisseurs (matching sourcing) | ⚠️ Partiel (flag DB, **PULL**) | `2825927`, `29f859d` | `src/app/actions/rfq-engine.ts:250` `notifyMatchedSuppliers` = met `rfq_matches.status='notified'` + `revalidatePath`, **n'envoie sur aucun canal** |
+| Envoi Telegram sortant lié à une commande | ❌ PAS FAIT | aucun | `src/lib/telegram/client.ts` `telegramSendMessage` n'est appelé QUE par `telegram/ingest.ts` (réponses aux messages **entrants** du fournisseur) |
+| In-app / email / SMS / push infra | ❌ PAS FAIT | aucun | aucune lib (`resend/nodemailer/twilio/web-push/fcm` absents), aucune table notifications |
+
+> **⚠️ PIÈGE DE NOMMAGE :** « **Deliveroo** » dans le code **n'est PAS** un système de notification.
+> C'est la **machine à états (FSM) des commandes B2B** (suivi de statuts, façon tracking Deliveroo) —
+> voir section Wholesale/B2B. La recherche `deliveroo|notifySupplier|sendOrderNotification|lot6`
+> sur **tout l'historique + toutes les branches + stash** ne révèle **aucune** implémentation de notif.
+
+---
+
+## 💸 FINANCE (cœur — le plus critique)
+
+| Feature | Statut | Commit / Branche | Preuve |
+|---|---|---|---|
+| Ledger append-only + commissions + COD Maroc | ✅ EN PROD | migrations 009+ | `src/app/actions/orders.ts`, mig. `009_cod_order_engine.sql` |
+| Multi-devise (pivot MAD) — pays/devise, devis, ledger | ✅ EN PROD | `feat/etape1/2/3-*` (mergées) | mig. ledger currency, `008_delivery_fee_and_costs.sql` |
+| Règle capital affilié (prix catalogue = usine+marge+emballage+conf+provision livr. 35) | ✅ EN PROD | `628d8c7` / mig. **073** | `073_affiliate_catalog_capital_rule.sql` |
+| Confirmation conditionnelle (`is_pre_confirmed`) + packaging min 10 | ✅ EN PROD | `4e2127b` / mig. **074** | `074_orders_pre_confirmed_and_packaging_fix.sql` |
+| Fix M-1 — `convertQuoteToOrder` facture le devis figé (fail-closed, jamais 0 MAD) | ✅ EN PROD | `6a33573` / `fix/m1-quote-conversion-price` | `src/app/actions/orders.ts` (convertQuoteToOrder) |
+| Payout atomique + RLS prix/clics | ✅ EN PROD | `fix/phase2-ledger-atomic-payout` | mig. ledger / RPC |
+| Audit financier E2E (5 types de commande, bouclages X=Y+Z+W) | ✅ DOC | `2fab7b5` | `AUDIT_FINANCIER_E2E.md` |
+| **Dette `factory_cost` authenticated** | ⏸️ **NON MERGÉE (différée option C)** | `feat/dette-factory-cost-authenticated` | `a081622` (roadmap : chantier dédié différé) |
+
+---
+
+## 🛒 PRODUITS
+
+| Feature | Statut | Commit / Branche | Preuve |
+|---|---|---|---|
+| CRUD produits admin (liste / création / édition) | ✅ EN PROD | — | `src/app/(admin)/admin/products/{page,new,[id]/edit}.tsx` |
+| Upload image produit (compression canvas → WebP/JPEG, bucket `product-images`) | ✅ EN PROD | mig. **002** | `src/lib/product-image-upload.ts`, `src/lib/image-compress.ts` |
+| **Support HEIC/HEIF (photo iPhone) à l'upload** | ❌ PAS FAIT | aucun (fix proposé, non appliqué) | `image-compress.ts:6` `ALLOWED_TYPES` sans HEIC → « Format non supporté » |
+| Catalogue affilié 2 niveaux (P1 fiche produit) | ✅ EN PROD | `f920834` / `feat/affiliate-catalog-detail-p1` | `src/app/(affiliate)/affiliate/products/...` |
+| Vue publique products whitelistée (ferme fuite coût/marge ANON — dette 012) | ✅ EN PROD | `f748732` / mig. **072** | `072_products_public_read_view.sql` |
+
+---
+
+## 🏭 FOURNISSEURS
+
+| Feature | Statut | Commit / Branche | Preuve |
+|---|---|---|---|
+| Espace fournisseur (dashboard, products, orders, catalogs, samples, opportunities, analytics, premium) | ✅ EN PROD | — | `src/app/(supplier)/supplier/*` |
+| Miroir catalogue + coût fournisseur + marge plateforme | ✅ EN PROD | mig. **068/069** | `src/lib/supplier-mirror.ts`, `069_products_supplier_mirror_link.sql` |
+| Modération supplier-products (admin) | ✅ EN PROD | — | `src/app/(admin)/admin/supplier-products/*` |
+| Onboarding « Pays non configuré » (flag + action admin) | ✅ EN PROD | `41ee0b9` (LOT UX-3a) / mig. 066 | `src/app/actions/users.ts` |
+| Telegram — liaison compte + ingestion produits (ENTRANT) | ✅ EN PROD | mig. **053** | `src/lib/telegram/ingest.ts`, `webhook/route.ts` |
+| RFQ — moteur de matching automatique | ✅ EN PROD | `2825927` / mig. **037** | `src/app/actions/rfq-engine.ts` |
+
+---
+
+## 🤝 WHOLESALE / B2B (« Deliveroo » = FSM commande, PAS notif)
+
+| Feature | Statut | Commit / Branche | Preuve |
+|---|---|---|---|
+| FSM cycle de vie commande B2B (états type Deliveroo) | ✅ EN PROD | `6fa1d23` (LOT 1) / mig. **057** | `src/lib/wholesale-fsm.ts:15` *« Cycle Deliveroo-style »* |
+| Assignation commandes B2B + équipes + FSM stricte | ✅ EN PROD | `75021b5` (LOT 2) | `src/components/admin/wholesale-order-status-form.tsx` |
+| Lien fournisseur + vue redacted (sans PII acheteur) | ✅ EN PROD | `896a4ad` (LOT 3a) | `wholesale_orders_supplier_read` (vue) |
+| Transition de statut atomique | ✅ EN PROD | mig. **061** | `061_atomic_wholesale_status_transition.sql` |
+| Paiement → collecte cash + détection E3-bis (sous-collatéral) | ✅ EN PROD | `3ff966a` (LOT 4.2-C) / mig. **065/067** | `065_wholesale_delivery_cash_rpcs.sql` |
+| Affichage prix import honnête (aérien/maritime, marge selon devis) | ✅ EN PROD | `028d790` / mig. **071** | `071_supplier_quote_shipping_mode.sql` |
+
+---
+
+## 🧑‍💼 AFFILIÉS
+
+| Feature | Statut | Commit / Branche | Preuve |
+|---|---|---|---|
+| Catalogue affilié, liens, commissions | ✅ EN PROD | — | `src/app/(affiliate)/affiliate/*` |
+| Message « Ajuste ton prix » (remplace « Non rentable ») | ✅ EN PROD | `ed520ab` | affichage affilié (FR/AR/EN) |
+
+---
+
+## 🔐 AUTH & SÉCURITÉ
+
+| Feature | Statut | Commit / Branche | Preuve |
+|---|---|---|---|
+| Auth + rôles (admin/agent/affiliate/wholesaler/supplier) + RLS deny-default | ✅ EN PROD | mig. **001** | `src/app/(admin)/layout.tsx:23-31` (guard rôle/statut) |
+| Gestion users admin (`updateUserById` via service_role) | ✅ EN PROD | — | `src/app/(admin)/admin/users/[id]/page.tsx` |
+| **Page self-service « mot de passe oublié » / reset** | ❌ PAS FAIT | aucun | aucune route reset ; récupération admin = script `scripts/reset-admin-password.mjs` (hors app) |
+
+---
+
+## 🎨 DESIGN & i18n
+
+| Feature | Statut | Commit / Branche | Preuve |
+|---|---|---|---|
+| Habillage premium (thème noir & or) | ✅ EN PROD | `3ee9530` / `feat/habillage-premium` | composants UI, `b9d7973` theme-dark |
+| i18n FR / AR (فصحى) / EN + RTL | ✅ EN PROD | `3ee9530` | `messages/{fr,ar,en}.json`, `next-intl` |
+
+---
+
+## 🗄️ STORAGE (buckets)
+
+| Bucket | Statut | Preuve |
+|---|---|---|
+| `product-images` (public) + policies admin/SELECT public | ✅ EN PROD | mig. **002** |
+| `supplier-product-images` (public) | ✅ EN PROD | mig. **053** |
+| `order-proofs` (public) + INSERT policy | ✅ EN PROD | mig. **070** |
+| `supplier-catalogs`, `supplier-attachments`, `sample-files` (private) | ✅ EN PROD | mig. **036** |
+
+---
+
+## ⏸️ BRANCHES NON MERGÉES (état git au 2026-06-17)
+- `feat/dette-factory-cost-authenticated` — chantier **différé (option C)**, pas dans `main`.
+
+> Toutes les autres `feat/*` et `fix/*` listées par `git branch --merged main` sont **mergées et en prod**.
