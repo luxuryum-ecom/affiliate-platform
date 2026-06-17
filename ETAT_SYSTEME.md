@@ -89,6 +89,7 @@
 | **Thème grossiste `/wholesale/products`** (rendait en thème clair → corrigé en noir & or) | ✅ **CORRIGÉ** | `2ce7406` | wrapper `theme-dark bg-bg text-foreground min-h-screen` (`wholesale/products/page.tsx:125`, comme affilié/marketplace) |
 | **Thème détail produit interne `/wholesale/products/[id]`** (rendait en thème clair → corrigé en noir & or) | ✅ **CORRIGÉ EN PROD** | `6dc0244` | wrapper `theme-dark bg-bg text-foreground min-h-screen` (`wholesale/products/[id]/page.tsx:72`, comme le détail fournisseur) |
 | **Recherche grossiste `/wholesale/products` (« Pull ref 5 » = 0 résultat)** | ✅ **OK — pas un bug code** | — | prouvé runtime : Pull ref 5 = 1ʳᵉ carte de l'onglet Disponible + trouvé par le champ recherche. Le 0 venait d'un **déploiement Vercel périmé** (résolu par redeploy `6dc0244`), pas du code |
+| **Message inter-onglets recherche grossiste** — quand l'onglet actif est vide mais l'autre a des résultats filtrés, lien « Aucun résultat ici — mais N produit(s) “terme” dans l'autre onglet → » (conserve recherche/filtres) | ✅ **EN PROD** | `b5251d1` | `wholesale/products/page.tsx` (réutilise localRows/importRows/tabHref) + i18n FR/AR/EN ; UI pur, aucune logique de filtre changée |
 
 ---
 
