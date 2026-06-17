@@ -71,6 +71,8 @@ export async function upsertProduct(
 
   const supplier_name = ((formData.get('supplier_name') as string)?.trim()) || null
   const origin_country = ((formData.get('origin_country') as string)?.trim()) || null
+  const category = ((formData.get('category') as string)?.trim()) || null
+  const subcategory = ((formData.get('subcategory') as string)?.trim()) || null
   const source_notes = ((formData.get('source_notes') as string)?.trim()) || null
   const submitted_via = (formData.get('submitted_via') as string) || 'admin_dashboard'
 
@@ -463,6 +465,8 @@ export async function upsertProduct(
     affiliate_enabled,
     supplier_name,
     origin_country,
+    category,
+    subcategory,
     submitted_via: submitted_via as ProductSubmittedVia,
     source_notes,
     purchase_price,
