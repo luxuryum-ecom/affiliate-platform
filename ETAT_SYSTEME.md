@@ -81,6 +81,7 @@
 | Transition de statut atomique | ✅ EN PROD | mig. **061** | `061_atomic_wholesale_status_transition.sql` |
 | Paiement → collecte cash + détection E3-bis (sous-collatéral) | ✅ EN PROD | `3ff966a` (LOT 4.2-C) / mig. **065/067** | `065_wholesale_delivery_cash_rpcs.sql` |
 | Affichage prix import honnête (aérien/maritime, marge selon devis) | ✅ EN PROD | `028d790` / mig. **071** | `071_supplier_quote_shipping_mode.sql` |
+| **Catalogue grossiste UNIFIÉ** (2 onglets Disponible/À importer, interne+fournisseur fusionnés & cloisonnés, design noir & or) | ✅ **EN PROD** | `d379ca1` / mig. **075** | vue `wholesale_catalog_read` (`075_wholesale_catalog_read_view.sql`) ∪ `products_public_read`+`supplier_products_wholesaler_read` ; page `src/app/(wholesale)/wholesale/products/page.tsx` (`source` serveur only, @security GO, aucun coût/marge exposé) |
 
 ---
 
