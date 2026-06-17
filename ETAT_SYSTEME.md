@@ -5,7 +5,7 @@
 > ici et **ne se reconstruit jamais**. **Mettre à jour ce fichier à chaque feature finie.**
 > Ce registre fait foi : il est rempli à partir du **code et de git** (pas de mémoire).
 
-**Dernière synchro :** 2026-06-17 — `main` @ `a081622` — 346 commits, 74 migrations (001→074).
+**Dernière synchro :** 2026-06-17 — `main` @ `5c54544` — 74 migrations (001→074).
 
 ## Légende des statuts
 - ✅ **FAIT ET EN PROD** — mergé dans `main` (+ migration appliquée si concerné)
@@ -52,7 +52,7 @@
 |---|---|---|---|
 | CRUD produits admin (liste / création / édition) | ✅ EN PROD | — | `src/app/(admin)/admin/products/{page,new,[id]/edit}.tsx` |
 | Upload image produit (compression canvas → WebP/JPEG, bucket `product-images`) | ✅ EN PROD | mig. **002** | `src/lib/product-image-upload.ts`, `src/lib/image-compress.ts` |
-| **Support HEIC/HEIF (photo iPhone) à l'upload** | ❌ PAS FAIT | aucun (fix proposé, non appliqué) | `image-compress.ts:6` `ALLOWED_TYPES` sans HEIC → « Format non supporté » |
+| **Support HEIC/HEIF (photo iPhone) à l'upload** | ✅ **FAIT ET EN PROD** | `5c54544` | `image-compress.ts` `isHeic()` + `decodeHeicToJpeg()` (heic2any, import dynamique) → conversion JPEG avant canvas ; `accept` élargi sur les 2 inputs |
 | Catalogue affilié 2 niveaux (P1 fiche produit) | ✅ EN PROD | `f920834` / `feat/affiliate-catalog-detail-p1` | `src/app/(affiliate)/affiliate/products/...` |
 | Vue publique products whitelistée (ferme fuite coût/marge ANON — dette 012) | ✅ EN PROD | `f748732` / mig. **072** | `072_products_public_read_view.sql` |
 
