@@ -1,52 +1,125 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getTranslations, getLocale } from 'next-intl/server'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
-import { ProductThumbnail } from '@/components/shared/product-thumbnail'
-import { getProductCoverUrl } from '@/lib/product-media'
-import { formatMAD, getWholesaleTier } from '@/lib/utils'
-import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
-import type { Product, WholesaleCartItem } from '@/types/database'
+import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
+import { WholesaleCatalogCard } from '@/components/wholesale/wholesale-catalog-card'
+import { formatMAD } from '@/lib/utils'
+import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
+import type { WholesaleCatalogRow, WholesaleCartItem } from '@/types/database'
 
 export async function generateMetadata() {
   const t = await getTranslations('wholesale.products')
   return { title: t('metaTitle') }
 }
 
-export default async function WholesaleProductsPage() {
+interface SearchParams {
+  tab?: string
+  q?: string
+  category?: string
+  subcategory?: string
+  origin?: string
+  max_moq?: string
+  in_stock?: string
+}
+
+interface PageProps {
+  searchParams: Promise<SearchParams>
+}
+
+export default async function WholesaleProductsPage({ searchParams }: PageProps) {
+  const filters = await searchParams
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
   if (!user) redirect('/login')
 
-  const [profileResult, productsResult, cartResult] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
+  const [t, tc, profileResult, catalogResult, cartResult] = await Promise.all([
+    getTranslations('wholesale.products'),
+    getTranslations('wholesale.common'),
+    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
-      .from('products')
+      .from('wholesale_catalog_read')
       .select('*')
-      .eq('active', true)
-      .eq('approval_status', 'approved')
+      .order('is_verified', { ascending: false })
+      .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false }),
-    supabase
-      .from('wholesale_cart_items')
-      .select('*')
-      .eq('buyer_id', user.id),
+    supabase.from('wholesale_cart_items').select('*').eq('buyer_id', user.id),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
-  const products = (productsResult.data ?? []) as Product[]
+  const allRows = (catalogResult.data ?? []) as WholesaleCatalogRow[]
   const cartItems = (cartResult.data ?? []) as WholesaleCartItem[]
 
-  const t = await getTranslations('wholesale.products')
-  const tc = await getTranslations('wholesale.common')
-
-  // Build a quick lookup: productId → qty in cart
+  // Build cart lookup: product_id → quantity
   const cartMap = new Map(cartItems.map((c) => [c.product_id, c.quantity]))
   const cartCount = cartItems.length
+
+  // ── Tab ────────────────────────────────────────────────────────────────────
+  const activeTab = filters.tab === 'import' ? 'import' : 'local'
+
+  // ── Filters (applied in memory after single DB fetch) ─────────────────────
+  let rows = allRows
+
+  if (filters.q) {
+    const q = filters.q.toLowerCase()
+    rows = rows.filter(
+      (r) => r.name.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)
+    )
+  }
+  if (filters.category) {
+    rows = rows.filter((r) => r.category === filters.category)
+  }
+  if (filters.subcategory) {
+    const sub = filters.subcategory.toLowerCase()
+    rows = rows.filter((r) => r.subcategory.toLowerCase().includes(sub))
+  }
+  if (filters.origin) {
+    const orig = filters.origin.toLowerCase()
+    rows = rows.filter((r) => r.origin_country.toLowerCase().includes(orig))
+  }
+  if (filters.max_moq) {
+    const qty = parseInt(filters.max_moq, 10)
+    if (!isNaN(qty)) rows = rows.filter((r) => r.min_qty <= qty)
+  }
+  if (filters.in_stock === '1') {
+    rows = rows.filter((r) => (r.stock ?? 0) > 0)
+  }
+
+  // ── Tab split ──────────────────────────────────────────────────────────────
+  const localRows = rows.filter((r) => r.availability_type === 'local_stock')
+  const importRows = rows.filter((r) => r.availability_type === 'import_on_demand')
+  const visibleRows = activeTab === 'local' ? localRows : importRows
+
+  const isFiltered = !!(
+    filters.q ||
+    filters.category ||
+    filters.subcategory ||
+    filters.origin ||
+    filters.max_moq ||
+    filters.in_stock
+  )
+
+  const subcategoryOptions = filters.category ? getSubcategories(filters.category) : []
+
+  // Helper: build a tab href preserving current filters
+  function tabHref(tab: string) {
+    const params = new URLSearchParams()
+    params.set('tab', tab)
+    if (filters.q) params.set('q', filters.q)
+    if (filters.category) params.set('category', filters.category)
+    if (filters.subcategory) params.set('subcategory', filters.subcategory)
+    if (filters.origin) params.set('origin', filters.origin)
+    if (filters.max_moq) params.set('max_moq', filters.max_moq)
+    if (filters.in_stock) params.set('in_stock', filters.in_stock)
+    return `/wholesale/products?${params.toString()}`
+  }
+
+  // Helper: build the clear-filters href (preserves tab only)
+  const clearHref = `/wholesale/products?tab=${activeTab}`
 
   return (
     <div className="min-h-screen bg-bg">
@@ -66,7 +139,7 @@ export default async function WholesaleProductsPage() {
           <div>
             <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
             <p className="text-sm text-muted mt-0.5">
-              {t('subtitle', { count: products.length })}
+              {t('subtitle', { count: allRows.length })}
             </p>
             <Link
               href="/wholesale/marketplace"
@@ -85,140 +158,237 @@ export default async function WholesaleProductsPage() {
           )}
         </div>
 
-        {products.length === 0 ? (
+        {/* ── Tabs ────────────────────────────────────────────────────────────── */}
+        <div className="flex gap-1 mb-5 border-b border-line">
+          <Link
+            href={tabHref('local')}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === 'local'
+                ? 'bg-surface border border-b-0 border-line text-foreground'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            {t('tabLocal')}
+            <span className="ms-1.5 text-xs text-faint">
+              ({t('tabCount', { count: localRows.length })})
+            </span>
+          </Link>
+          <Link
+            href={tabHref('import')}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === 'import'
+                ? 'bg-surface border border-b-0 border-line text-foreground'
+                : 'text-muted hover:text-foreground'
+            }`}
+          >
+            {t('tabImport')}
+            <span className="ms-1.5 text-xs text-faint">
+              ({t('tabCount', { count: importRows.length })})
+            </span>
+          </Link>
+        </div>
+
+        {/* ── Filters ─────────────────────────────────────────────────────────── */}
+        <MarketplaceFilters filterTitle={t('filterTitle')}>
+          <form method="GET" className="bg-surface rounded-xl border border-line p-4 shadow-premium">
+            {/* Preserve tab */}
+            <input type="hidden" name="tab" value={activeTab} />
+
+            {/* Row 1: keyword + category + subcategory + origin */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">
+                  {t('filterSearch')}
+                </label>
+                <input
+                  name="q"
+                  type="text"
+                  defaultValue={filters.q ?? ''}
+                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  placeholder={t('filterSearchPlaceholder')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">
+                  {t('filterCategory')}
+                </label>
+                <select
+                  name="category"
+                  defaultValue={filters.category ?? ''}
+                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                >
+                  <option value="">{t('filterCategoryAll')}</option>
+                  {PRODUCT_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">
+                  {t('filterSubcategory')}
+                </label>
+                {subcategoryOptions.length > 0 ? (
+                  <select
+                    name="subcategory"
+                    defaultValue={filters.subcategory ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  >
+                    <option value="">{t('filterSubcategoryAll')}</option>
+                    {subcategoryOptions.map((sub) => (
+                      <option key={sub} value={sub}>
+                        {sub}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    name="subcategory"
+                    type="text"
+                    defaultValue={filters.subcategory ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
+                    placeholder={t('filterSubcategoryPlaceholder')}
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">
+                  {t('filterOrigin')}
+                </label>
+                <select
+                  name="origin"
+                  defaultValue={filters.origin ?? ''}
+                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                >
+                  <option value="">{t('filterOriginAll')}</option>
+                  {ORIGIN_COUNTRIES.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: max MOQ + in stock */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">
+                  {t('filterMaxMoq')}
+                </label>
+                <input
+                  name="max_moq"
+                  type="number"
+                  min={1}
+                  defaultValue={filters.max_moq ?? ''}
+                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  placeholder={t('filterMaxMoqPlaceholder')}
+                />
+              </div>
+
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    name="in_stock"
+                    type="checkbox"
+                    value="1"
+                    defaultChecked={filters.in_stock === '1'}
+                    className="rounded border-line w-4 h-4 accent-gold-500"
+                  />
+                  <span className="text-xs text-muted font-medium">{t('filterInStock')}</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+              >
+                {t('filterSubmit')}
+              </button>
+              {isFiltered && (
+                <Link
+                  href={clearHref}
+                  className="px-4 py-2 border border-line text-muted text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors"
+                >
+                  {t('filterClear')}
+                </Link>
+              )}
+            </div>
+          </form>
+        </MarketplaceFilters>
+
+        {/* ── Result count ────────────────────────────────────────────────────── */}
+        <p className="text-sm text-muted mb-4">
+          <span className="font-semibold text-foreground">
+            {visibleRows.length !== 1
+              ? t('resultFoundPlural', { count: visibleRows.length })
+              : t('resultFound', { count: visibleRows.length })}
+          </span>
+        </p>
+
+        {/* ── Product grid ────────────────────────────────────────────────────── */}
+        {visibleRows.length === 0 ? (
           <div className="bg-surface rounded-xl border border-line p-12 text-center">
-            <p className="text-sm text-faint">{t('empty')}</p>
+            <p className="text-sm text-faint">
+              {isFiltered ? t('emptyFiltered') : t('empty')}
+            </p>
+            {isFiltered && (
+              <Link
+                href={clearHref}
+                className="mt-3 inline-block text-sm text-gold-400 hover:underline"
+              >
+                {t('filterClear')}
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {products.map((product) => {
-              const inCart = cartMap.get(product.id)
-              const lowestTier =
-                product.wholesale_tiers.length > 0
-                  ? getWholesaleTier(
-                      product.wholesale_tiers,
-                      product.wholesale_tiers[product.wholesale_tiers.length - 1].min_qty
-                    )
-                  : null
-              const displayPrice = lowestTier?.price_per_unit ?? product.sell_price
+            {visibleRows.map((row) => {
+              // ⚠️ source is resolved server-side. Never passed to the card component.
+              const href =
+                row.source === 'internal'
+                  ? `/wholesale/products/${row.id}`
+                  : `/wholesale/marketplace/${row.id}`
+
+              const isLocalStock = row.availability_type === 'local_stock'
+              const inCartQty = cartMap.get(row.id)
+
+              // All strings resolved server-side
+              const availabilityBadge = isLocalStock ? t('badgeStock') : t('badgeImport')
+              const fromPriceLabel = formatMAD(Number(row.from_price_mad))
+              const minQtyLabel = t('minQty', { count: row.min_qty })
+              const ctaLabel = isLocalStock ? t('ctaOrder') : t('ctaRfq')
+              const inCartLabel =
+                inCartQty != null ? t('inCart', { count: inCartQty }) : undefined
 
               return (
-                <WholesaleProductCard
-                  key={product.id}
-                  product={product}
-                  displayPrice={displayPrice}
-                  inCartQty={inCart}
-                  badgeImport={t('badgeImport')}
-                  badgeStock={t('badgeStock')}
-                  badgeTiers={t('badgeTiers')}
-                  inCartLabel={t('inCart', { count: inCart ?? 0 })}
-                  ctaRfq={t('ctaRfq')}
-                  ctaOrder={t('ctaOrder')}
-                  fromPrice={t('fromPrice')}
-                  minQtyLabel={t('minQty', { count: product.wholesale_min_qty })}
+                <WholesaleCatalogCard
+                  key={row.id}
+                  href={href}
+                  name={row.name}
+                  imageUrl={row.image}
+                  fromPriceLabel={fromPriceLabel}
+                  minQtyLabel={minQtyLabel}
+                  availabilityBadge={availabilityBadge}
+                  isLocalStock={isLocalStock}
+                  isVerified={row.is_verified}
+                  isFeatured={row.is_featured}
+                  verifiedLabel={t('badgeVerified')}
+                  featuredLabel={t('badgeFeatured')}
+                  ctaLabel={ctaLabel}
+                  inCartLabel={inCartLabel}
                 />
               )
             })}
           </div>
         )}
       </main>
-    </div>
-  )
-}
-
-// ─── Product card ─────────────────────────────────────────────────────────────
-
-function WholesaleProductCard({
-  product,
-  displayPrice,
-  inCartQty,
-  badgeImport,
-  badgeStock,
-  badgeTiers,
-  inCartLabel,
-  ctaRfq,
-  ctaOrder,
-  fromPrice,
-  minQtyLabel,
-}: {
-  product: Product
-  displayPrice: number
-  inCartQty: number | undefined
-  badgeImport: string
-  badgeStock: string
-  badgeTiers: string
-  inCartLabel: string
-  ctaRfq: string
-  ctaOrder: string
-  fromPrice: string
-  minQtyLabel: string
-}) {
-  const coverUrl = getProductCoverUrl(product)
-  const tierQtys = [...product.wholesale_tiers]
-    .sort((a, b) => a.min_qty - b.min_qty)
-    .map((t) => t.min_qty)
-  const hasTiers = tierQtys.length > 0
-  const productUrl = `/wholesale/products/${product.id}`
-  const isRfq = getCatalogProductCtaMode(product.availability_type) === 'rfq'
-
-  return (
-    <div className="group bg-surface rounded-xl border border-line overflow-hidden flex flex-col hover:shadow-premium transition-shadow">
-      {/* Thumbnail */}
-      <Link href={productUrl} className="aspect-square relative overflow-hidden block">
-        <ProductThumbnail
-          src={coverUrl}
-          name={product.name}
-          className="w-full h-full text-2xl group-hover:scale-105 transition-transform duration-300"
-        />
-
-        {/* In-cart badge */}
-        {inCartQty != null && (
-          <div className="absolute top-2 end-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-            {inCartLabel}
-          </div>
-        )}
-      </Link>
-
-      {/* Info */}
-      <div className="p-3 flex flex-col gap-1.5 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full ${
-              isRfq
-                ? 'bg-surface-2 text-muted border border-line'
-                : 'bg-success-soft text-success-fg border border-success'
-            }`}
-          >
-            {isRfq ? badgeImport : badgeStock}
-          </span>
-          {hasTiers && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning-fg border border-warning">
-              {badgeTiers}
-            </span>
-          )}
-        </div>
-
-        <Link href={productUrl}>
-          <h3 className="font-medium text-foreground text-sm leading-snug line-clamp-2 hover:text-muted transition-colors">
-            {product.name}
-          </h3>
-        </Link>
-
-        <div className="mt-auto pt-1.5 border-t border-line">
-          <p className="text-sm font-bold text-foreground">{formatMAD(displayPrice)}</p>
-          <p className="text-xs text-faint mt-0.5">
-            {hasTiers ? fromPrice : ''}{minQtyLabel}
-          </p>
-        </div>
-
-        {/* CTA */}
-        <Link
-          href={productUrl}
-          className="block w-full text-center text-xs font-bold py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          {isRfq ? ctaRfq : ctaOrder}
-        </Link>
-      </div>
     </div>
   )
 }
