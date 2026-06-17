@@ -714,6 +714,19 @@ La session principale de Claude Code = le **CHEF D'ORCHESTRE**. Elle ne code pas
 
 > ⚠️ **Règle d'or de ces chantiers** : on en conçoit/construit **UN SEUL à la fois, jamais en parallèle**. Chacun démarre par `@architect` (plan) + audit avant tout code. On NE reconstruit PAS l'existant — **audit préalable obligatoire**.
 
+## SECTION VIS-CANAL — CONTRÔLE DE VISIBILITÉ PRODUIT PAR CANAL (idée stratégique Abdou)
+
+> Feature **future**, levier business. **À NE PAS construire maintenant** (Sprint 2 = vrais produits en cours).
+
+- **Besoin** : pour chaque produit, des boutons pour activer/désactiver son affichage sur **chaque canal** (catalogue affilié, catalogue grossiste, marketplace, vitrine publique). Aujourd'hui c'est binaire (`affiliate_enabled` + toujours visible grossiste si actif).
+- **Objectifs business** :
+  1. **CONTRÔLE** fin de la visibilité par Abdou ;
+  2. **EXCLUSIVITÉ** — réserver un produit à certains sellers/grossistes, les protéger de la concurrence interne ;
+  3. **MONÉTISATION** — « produit visible sur toutes les plateformes » devient une feature **PREMIUM payante par abonnement** (le premium est partout, le basique restreint) ;
+  4. distinguer les **niveaux d'abonnement**.
+- **Nature** : chantier de **conception** (matrice **visibilité produit × canal × niveau d'abonnement**). À cadrer avec `@architect`. Pertinent surtout au moment de l'**ouverture publique + système d'abonnement (Sprint 4+)**, quand il y aura de vrais sellers à qui vendre de l'exclusivité.
+- **À NE PAS construire maintenant** (Sprint 2 = vrais produits en cours).
+
 ## SECTION 1 — PARCOURS FOURNISSEUR (refonte)
 
 **Objectif :** un parcours digne d'un gros SaaS international (Shopify / Faire / Alibaba), **ultra-simple** pour des fournisseurs de **tous niveaux** (vendeur de légumes/viande → alimentaire → construction → déco → électronique), **nationaux et internationaux**.

@@ -123,6 +123,14 @@
 
 ---
 
+## 🚀 FEATURES FUTURES / MONÉTISATION (à concevoir — NE PAS coder maintenant)
+
+| Feature | Statut | Détail |
+|---|---|---|
+| **Contrôle de visibilité produit par canal** (idée stratégique Abdou) | 📄 DOCUMENTÉ — feature future | Boutons activer/désactiver l'affichage d'un produit **par canal** (catalogue affilié, catalogue grossiste, marketplace, vitrine publique). Aujourd'hui binaire (`affiliate_enabled` + grossiste toujours visible si actif). **Leviers** : (1) contrôle fin Abdou ; (2) **exclusivité** sellers/grossistes (protection concurrence interne) ; (3) **monétisation** — « visible partout » = feature **PREMIUM** payante par abonnement ; (4) distinguer les niveaux d'abonnement. **Nature** : conception d'une matrice **produit × canal × niveau d'abonnement**, à cadrer avec `@architect`. Pertinent à l'**ouverture publique + abonnements (Sprint 4+)**. Détail complet : `FEUILLE_DE_ROUTE.md` → SECTION VIS-CANAL. **À NE PAS construire maintenant** (Sprint 2 = vrais produits). |
+
+---
+
 ## ⏸️ BRANCHES NON MERGÉES (état git au 2026-06-17)
 - `feat/dette-factory-cost-authenticated` — chantier **différé (option C)**, pas dans `main`.
 
