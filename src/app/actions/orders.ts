@@ -10,6 +10,7 @@ import { requireAdmin } from './_guards'
 import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
 import { parseMoneyInput } from '@/lib/money'
 import { computeSupplierCostMad } from '@/lib/supplier-mirror'
+import { notifyOrderAssigned } from '@/lib/notifications/order-assigned'
 import {
   scoreDuplicateOrder,
   scoreFraudOrder,
@@ -1384,11 +1385,13 @@ export async function updateWholesaleOrderBuyerNote(
  * Idempotence: re-assigning the same supplier is a no-op (returns ok silently).
  *
  * Does NOT touch: status, amounts, agent_id, buyer_id, or any financial column.
- * Notification (LOT 6) will be added here later.
+ * LOT 6 : notifie le fournisseur + admin(s) (+ agent si notifyAgent) en best-effort
+ * APRÈS l'update — n'altère jamais l'assignation (notif = lecture + insert + message).
  */
 export async function assignSupplierToOrder(
   orderId: string,
   supplierId: string,
+  opts?: { notifyAgent?: boolean },
 ): Promise<ActionState> {
   // ── Input validation ──────────────────────────────────────────────────────
   if (!orderId?.trim())    return fail('errors.order_id_required')
@@ -1442,6 +1445,9 @@ export async function assignSupplierToOrder(
     .eq('id', orderId)
 
   if (updateErr) return fail('errors.update_failed')
+
+  // LOT 6 — notif best-effort (ne throw jamais, n'altère pas l'assignation).
+  await notifyOrderAssigned(orderId, { notifyAgent: opts?.notifyAgent ?? false })
 
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/admin/wholesale-orders/${orderId}`)

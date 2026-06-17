@@ -19,10 +19,11 @@
 
 | Feature | Statut | Commit / Branche | Preuve (fichier clé) |
 |---|---|---|---|
-| **Notif fournisseur « commande → averti automatiquement » (push type Deliveroo)** | ❌ **PAS FAIT — JAMAIS COMMITÉ** | aucun (TODO seulement) | `src/app/actions/orders.ts:1107` & `:1387` → *« l'alerting réel (in-app + Telegram) arrive au LOT 6 »* / *« Notification (LOT 6) will be added here later »* |
+| **Notif fournisseur LOT 6 — commande assignée → fournisseur + admin(s) (+ agent optionnel) avertis** (in-app + Telegram best-effort, zéro PII acheteur, RLS étanche own-only) | ✅ **EN PROD** | migrations **076+077** | table `notifications` + helper `src/lib/notifications/order-assigned.ts` (appelé dans `assignSupplierToOrder`) ; @security GO ; test runtime : 5 lignes créées, payload sans PII, RLS étanche, idempotent |
 | Notif RFQ fournisseurs (matching sourcing) | ⚠️ Partiel (flag DB, **PULL**) | `2825927`, `29f859d` | `src/app/actions/rfq-engine.ts:250` `notifyMatchedSuppliers` = met `rfq_matches.status='notified'` + `revalidatePath`, **n'envoie sur aucun canal** |
-| Envoi Telegram sortant lié à une commande | ❌ PAS FAIT | aucun | `src/lib/telegram/client.ts` `telegramSendMessage` n'est appelé QUE par `telegram/ingest.ts` (réponses aux messages **entrants** du fournisseur) |
-| In-app / email / SMS / push infra | ❌ PAS FAIT | aucun | aucune lib (`resend/nodemailer/twilio/web-push/fcm` absents), aucune table notifications |
+| Envoi Telegram sortant lié à une commande | ✅ **EN PROD (LOT 6, best-effort)** | migrations 076+077 | `notifyOrderAssigned` push `telegramSendMessage` au fournisseur lié + `ADMIN_TELEGRAM_CHAT_ID` ; échec silencieux, n'altère jamais l'assignation |
+| In-app infra (table `notifications`) | ✅ **EN PROD** | migrations **076+077** | table append-only, RLS read/maj own-only, insert service-role only, idempotence `(order_id,event,recipient_id)` |
+| Email / SMS / push web infra | ❌ PAS FAIT | aucun | aucune lib (`resend/nodemailer/twilio/web-push/fcm`) |
 
 > **📌 DESTINATAIRES (TÂCHE 2, à cadrer)** : essentiels **toujours notifiés** = **Abdou + le fournisseur** ; **commercial/agent pays = optionnel cochable**. Design fin des destinataires (par événement/rôle/canal) **à finaliser par Abdou**. PII acheteur masquée côté fournisseur (vues redacted). Détail : `FEUILLE_DE_ROUTE.md` → LOT 6.
 

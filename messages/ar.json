@@ -3116,5 +3116,13 @@
       "colCommissions": "العمولات",
       "affiliateMeta": "{orders, plural, one {# طلب مُقدَّم} other {# طلبات مُقدَّمة}}"
     }
+  },
+  "notifications": {
+    "order_assigned": {
+      "title": "🛒 طلب جديد للتحضير",
+      "body": "المرجع: #{ref} · التسليم: {city}",
+      "item": "• {label} × {qty}",
+      "due": "للتحضير قبل: {date}"
+    }
   }
 }
