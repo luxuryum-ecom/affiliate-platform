@@ -7,6 +7,7 @@ import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
 import { QuoteRequestForm } from '@/components/wholesale/quote-request-form'
 import { WholesaleSavingsHook } from '@/components/wholesale/wholesale-savings-hook'
 import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
+import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getActiveTariff } from '@/app/actions/tariffs'
@@ -183,6 +184,14 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                 {priceWithUnit(formatMAD(product.sell_price), unitLabel)}
               </span>
             </div>
+
+            {/* Conditionnement descriptif (P3) — rien si pack_size/pack_unit non posés */}
+            <PackBreakdown
+              price={product.sell_price}
+              packSize={product.pack_size}
+              packUnit={product.pack_unit}
+              saleUnit={product.sale_unit}
+            />
 
             {/* Hook grossiste — économie totale en achetant gros (affichage pur, paliers stockés).
                 Rendu uniquement s'il y a ≥ 2 paliers avec économie (sinon retourne null). */}

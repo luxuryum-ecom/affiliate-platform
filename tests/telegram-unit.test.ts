@@ -51,3 +51,25 @@ describe('P2 — extraction IA de l’unité de vente', () => {
     expect(c.lead_time_days).toBeNull()
   })
 })
+
+describe('P3 — extraction conditionnement (pack_size / pack_unit)', () => {
+  it('« carton de 50 boîtes » → pack_size 50, pack_unit "boîte"', () => {
+    const c = buildCleanExtraction({ ...base, unit: 'carton', pack_size: 50, pack_unit: 'boîte' })
+    expect(c.pack_size).toBe(50)
+    expect(c.pack_unit).toBe('boîte')
+  })
+  it('incomplet (taille seule OU nom seul) → { null, null } = pas de conditionnement', () => {
+    expect(buildCleanExtraction({ ...base, pack_size: 50, pack_unit: null }).pack_size).toBeNull()
+    expect(buildCleanExtraction({ ...base, pack_size: null, pack_unit: 'boîte' }).pack_unit).toBeNull()
+  })
+  it('taille < 2 (lot de 1) → ignoré', () => {
+    const c = buildCleanExtraction({ ...base, pack_size: 1, pack_unit: 'boîte' })
+    expect(c.pack_size).toBeNull()
+    expect(c.pack_unit).toBeNull()
+  })
+  it('aucun conditionnement (défaut) → null/null, jamais d’erreur', () => {
+    const c = buildCleanExtraction(base)
+    expect(c.pack_size).toBeNull()
+    expect(c.pack_unit).toBeNull()
+  })
+})

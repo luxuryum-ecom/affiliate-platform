@@ -4,7 +4,10 @@
     "metre": "m",
     "kg": "kg",
     "paquet": "paquet",
-    "carton": "carton"
+    "carton": "carton",
+    "lot": "Lot",
+    "packComposition": "{unit} de {size} {packUnit}",
+    "packPerUnit": "≈ {perUnit} / {packUnit}"
   },
   "errors": {
     "unauthenticated": "Session expirée, reconnectez-vous.",

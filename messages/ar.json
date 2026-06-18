@@ -4,7 +4,10 @@
     "metre": "م",
     "kg": "كغ",
     "paquet": "حزمة",
-    "carton": "كرطونة"
+    "carton": "كرطونة",
+    "lot": "مجموعة",
+    "packComposition": "{unit} من {size} {packUnit}",
+    "packPerUnit": "≈ {perUnit} / {packUnit}"
   },
   "errors": {
     "unauthenticated": "انتهت الجلسة، يرجى تسجيل الدخول من جديد.",
