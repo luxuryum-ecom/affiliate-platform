@@ -70,6 +70,30 @@ export async function notifyOrderAssigned(
     ;(admins ?? []).forEach((a) => recipients.add(a.id))
     if (opts?.notifyAgent && order.agent_id) recipients.add(order.agent_id)
 
+    // 3bis) Superviseurs PAYS — agents liés au pays du fournisseur (awareness, PII-safe).
+    // Isolé dans SON PROPRE try : un échec ici (table absente avant migration, requête KO)
+    // ne doit JAMAIS empêcher la notif fournisseur/admin existante. Défense en profondeur :
+    // re-vérif role='agent' à la lecture (le rôle d'un profil a pu changer depuis le lien).
+    // supplier.country_code null → personne ajouté. Awareness SEULE (aucun accès fiche).
+    try {
+      const { data: supplier } = (await admin
+        .from('profiles')
+        .select('country_code')
+        .eq('id', order.supplier_id)
+        .single()) as { data: { country_code: string | null } | null }
+
+      if (supplier?.country_code) {
+        const { data: countryAgents } = (await admin
+          .from('agent_countries')
+          .select('agent_id, profiles!inner(role)')
+          .eq('country_code', supplier.country_code)
+          .eq('profiles.role', 'agent')) as { data: { agent_id: string }[] | null }
+        ;(countryAgents ?? []).forEach((a) => recipients.add(a.agent_id))
+      }
+    } catch (e) {
+      console.error('notifyOrderAssigned/countrySupervisors', e)
+    }
+
     // 4) Insert in-app idempotent (1 ligne par destinataire). Canal garanti.
     const rows = [...recipients].map((rid) => ({
       recipient_id: rid,
