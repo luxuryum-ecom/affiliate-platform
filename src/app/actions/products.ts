@@ -202,7 +202,18 @@ export async function upsertProduct(
       factory_cost_mad = null
       factoryCostInvalid = true
     }
+  } else if (needsConversion && purchasePriceNum !== null) {
+    // DETTE ARRONDI (fix @finance, GO Abdou) — coût usine DÉRIVÉ du FX = ENTIER MAD
+    // recalculé DIRECT `Math.round(source × taux)`, JAMAIS via `purchase_price_mad` à
+    // 2 décimales dont le biais ½ centime est tagué « hors-ledger » : il ne doit pas
+    // entrer dans le capital/commission affilié. Convention alignée sur le moteur capital
+    // (calculatePlatformPrice / applyPlatformMargin / +35 travaillent déjà en entier MAD).
+    // NON-RÉTROACTIF : ne s'applique qu'aux nouveaux/re-saves — l'existant figé n'est
+    // jamais re-converti (append-only). La saisie MANUELLE d'un coût (branche ci-dessus)
+    // reste inchangée (≤ 2 déc. acceptées verbatim).
+    factory_cost_mad = Math.round(purchasePriceNum * exchange_rate_to_mad)
   } else {
+    // Sans FX (prix déjà en MAD) ou sans prix : inchangé (saisie MAD directe préservée).
     factory_cost_mad = purchase_price_mad
   }
   const factoryCostNum = factory_cost_mad === null ? null : Number(factory_cost_mad)
