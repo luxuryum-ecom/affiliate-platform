@@ -62,6 +62,16 @@ export async function upsertProduct(
   const source_supplier_product_id =
     !id ? ((formData.get('source_supplier_product_id') as string | null)?.trim() || null) : null
 
+  // ── Unité de vente & conditionnement (P1/P3) — AFFICHAGE PUR, zéro calcul ───
+  // sale_unit vide → null = pièce (aucun suffixe). Conditionnement valide = taille
+  // ENTIÈRE ≥ 2 ET nom non vide, sinon les DEUX à null (pas de conditionnement).
+  const sale_unit = (formData.get('sale_unit') as string | null)?.trim() || null
+  const packSizeNum = parseInt(formData.get('pack_size') as string, 10)
+  const packUnitStr = (formData.get('pack_unit') as string | null)?.trim() || null
+  const hasPack = Number.isInteger(packSizeNum) && packSizeNum >= 2 && packUnitStr != null
+  const pack_size = hasPack ? packSizeNum : null
+  const pack_unit = hasPack ? packUnitStr : null
+
   // ── Availability (migration 007) ──────────────────────────────────────────
 
   const availability_type = (formData.get('availability_type') as string) || 'local_stock'
@@ -506,6 +516,9 @@ export async function upsertProduct(
     wholesale_min_qty,
     wholesale_tiers,
     stock_count,
+    sale_unit,
+    pack_size,
+    pack_unit,
     media,
     images,
     estimated_cost_mad: tariff_mode === 'global' && availability_type === 'import_on_demand' ? null : estimated_cost_mad,
