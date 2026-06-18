@@ -10,7 +10,7 @@ import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
-import type { Profile, SupplierProductPublic, SupplierType } from '@/types/database'
+import type { Profile, SupplierProductPublic, SupplierType, WholesaleCatalogRow } from '@/types/database'
 
 export async function generateMetadata() {
   const t = await getTranslations('wholesale.marketplace')
@@ -40,7 +40,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [t, locale, profileResult, productsResult] = await Promise.all([
+  const [t, locale, profileResult, productsResult, internalResult] = await Promise.all([
     getTranslations('wholesale.marketplace'),
     getLocale(),
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
@@ -49,6 +49,11 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
       .select(
         'id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, is_featured, is_verified, supplier_product_attachments(attachment_type, admin_status), supplier_product_moq_tiers(min_quantity, unit_price_usd)'
       )
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('wholesale_catalog_read')
+      .select('id, source, name, description, from_price_mad, min_qty, stock, image, category, subcategory, origin_country, availability_type, is_featured, is_verified, created_at')
+      .eq('source', 'internal')
       .order('created_at', { ascending: false }),
   ])
 
@@ -69,8 +74,69 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     supplier_product_moq_tiers: MoqTierRow[]
     is_featured: boolean
     is_verified: boolean
+    /** SERVER-ONLY — never rendered, used only to resolve the detail href. */
+    __source: 'internal' | 'supplier'
   }
-  let products = (productsResult.data ?? []) as MarketplaceProduct[]
+
+  // Map supplier rows — mark as 'supplier' for server-side routing
+  const supplierProducts: MarketplaceProduct[] = (productsResult.data ?? []).map((row) => ({
+    ...(row as unknown as MarketplaceProduct),
+    __source: 'supplier' as const,
+  }))
+
+  // Map internal rows from wholesale_catalog_read — no supplier/cost/margin data exposed
+  const internalRows = (internalResult.data ?? []) as WholesaleCatalogRow[]
+  const internalProducts: MarketplaceProduct[] = internalRows.map((row) => ({
+    id: row.id,
+    product_name: row.name,
+    public_name: row.name,
+    description: row.description,
+    public_description: row.description,
+    category: row.category,
+    subcategory: row.subcategory ?? '',
+    niche: '',
+    photos: row.image ? [row.image] : [],
+    min_quantity: row.min_qty,
+    origin_country: row.origin_country,
+    availability_type: row.availability_type,
+    target_buyer_type: 'both' as const,
+    suggested_wholesale_price_mad: row.from_price_mad,
+    // 'morocco' = offre locale marocaine, indistinguable d'un fournisseur marocain
+    supplier_type: 'morocco' as const,
+    unit: '',
+    stock_quantity: row.stock,
+    lead_time_days: null,
+    export_countries: [],
+    is_featured: row.is_featured,
+    is_verified: row.is_verified,
+    supplier_product_attachments: [],
+    supplier_product_moq_tiers: [],
+    approval_status: 'approved' as const,
+    created_at: row.created_at,
+    updated_at: row.created_at,
+    // Moderation/workflow fields — neutral values for internal products
+    moderation_flag: null,
+    ai_risk_score: null,
+    moderation_reason: null,
+    moderation_signals: [],
+    approved_at: null,
+    rejected_at: null,
+    archived_at: null,
+    // Ingestion source field ('web' is the neutral default — does not expose internal origin)
+    source: 'web' as const,
+    telegram_message_id: null,
+    // Platform margin fields — not used for internal products (routed to /wholesale/products)
+    apply_platform_margin: false,
+    final_wholesale_price_mad: row.from_price_mad,
+    source_currency: 'MAD',
+    price_source: null,
+    fx_rate_source_to_mad: null,
+    supplier_unit_price_usd: null,
+    __source: 'internal' as const,
+  }))
+
+  // Merge internal + supplier before any filter/sort
+  let products: MarketplaceProduct[] = [...internalProducts, ...supplierProducts]
 
   // Premium suppliers first
   products.sort((a, b) => {
@@ -124,8 +190,8 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     if (!isNaN(days)) products = products.filter((p) => p.lead_time_days == null || p.lead_time_days <= days)
   }
 
-  // Trust metrics — real counts from unfiltered approved products
-  const allApproved = (productsResult.data ?? []) as MarketplaceProduct[]
+  // Trust metrics — real counts from unfiltered approved products (internal + supplier)
+  const allApproved = [...internalProducts, ...supplierProducts]
   const totalProductCount = allApproved.length
   const verifiedSupplierCount = allApproved.filter((p) => p.is_verified).length
   const localStockProductCount = allApproved.filter(
@@ -629,6 +695,8 @@ function MarketplaceProductCard({
     lead_time_days?: number | null
     supplier_product_attachments?: { attachment_type: string; admin_status: string }[]
     supplier_product_moq_tiers?: MoqTierRow[]
+    /** SERVER-ONLY routing discriminant — never rendered visually. */
+    __source?: 'internal' | 'supplier'
   }
   isFeatured?: boolean
   isVerified?: boolean
@@ -668,7 +736,10 @@ function MarketplaceProductCard({
 
   const numLocale = locale === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-MA'
 
-  const productUrl = `/wholesale/marketplace/${product.id}`
+  // Route to the correct detail page based on source — __source never rendered visually
+  const productUrl = product.__source === 'internal'
+    ? `/wholesale/products/${product.id}`
+    : `/wholesale/marketplace/${product.id}`
   const waText = encodeURIComponent(
     `Bonjour, je souhaite un devis grossiste pour : ${displayName} (MOQ : ${product.min_quantity} ${product.unit ?? 'u.'})`
   )
