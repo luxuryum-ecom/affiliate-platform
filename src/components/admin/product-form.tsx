@@ -98,6 +98,7 @@ const initialState: ProductFormState = { error: null }
 export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierProductId }: ProductFormProps) {
   const t = useTranslations('admin.productForm')
   const tc = useTranslations('admin.common')
+  const tUnits = useTranslations('units')
   const locale = useLocale()
 
   const [state, action, isPending] = useActionState(upsertProduct, initialState)
@@ -1212,6 +1213,44 @@ export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierP
             </p>
           </div>
         </div>
+
+        {/* Unité de vente & conditionnement (P1/P3) — AFFICHAGE PUR, aucun calcul.
+            sale_unit vide = pièce (aucun suffixe). pack_size/pack_unit = descriptif. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label htmlFor="sale_unit" className={LABEL}>{t('saleUnit')}</label>
+            <select
+              id="sale_unit" name="sale_unit" disabled={isPending}
+              defaultValue={product?.sale_unit ?? ''}
+              className={INPUT}
+            >
+              <option value="">{tUnits('piece')}</option>
+              <option value="metre">{tUnits('metre')}</option>
+              <option value="kg">{tUnits('kg')}</option>
+              <option value="paquet">{tUnits('paquet')}</option>
+              <option value="carton">{tUnits('carton')}</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="pack_size" className={LABEL}>{t('packSize')}</label>
+            <input
+              id="pack_size" name="pack_size" type="number" min="2" disabled={isPending}
+              defaultValue={product?.pack_size != null ? String(product.pack_size) : ''}
+              placeholder={t('packSizePlaceholder')}
+              className={INPUT}
+            />
+          </div>
+          <div>
+            <label htmlFor="pack_unit" className={LABEL}>{t('packUnit')}</label>
+            <input
+              id="pack_unit" name="pack_unit" type="text" disabled={isPending}
+              defaultValue={product?.pack_unit ?? ''}
+              placeholder={t('packUnitPlaceholder')}
+              className={INPUT}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-faint">{t('saleUnitHint')}</p>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════

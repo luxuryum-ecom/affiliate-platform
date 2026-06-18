@@ -5,6 +5,7 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTariffs } from '@/app/actions/tariffs'
 import { getRatesMap } from '@/lib/fx'
 import { getTranslations } from 'next-intl/server'
+import { normalizeSaleUnit } from '@/lib/units'
 import type { Product } from '@/types/database'
 
 export async function generateMetadata() {
@@ -48,7 +49,7 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
     const { data: sp } = (await supabase
       .from('supplier_products')
       .select(
-        'id, product_name, public_name, description, public_description, category, subcategory, origin_country, stock_quantity, photos'
+        'id, product_name, public_name, description, public_description, category, subcategory, origin_country, stock_quantity, photos, unit, pack_size, pack_unit'
       )
       .eq('id', from_supplier)
       .eq('approval_status', 'approved')
@@ -64,13 +65,19 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
         origin_country: string | null
         stock_quantity: number | null
         photos: string[] | null
+        unit: string | null
+        pack_size: number | null
+        pack_unit: string | null
       } | null
       error: unknown
     }
     if (sp) {
       const photos = sp.photos ?? []
-      // Graine BASIQUES uniquement. Champs d'argent OMIS volontairement → le form les
-      // initialise vides. affiliate_enabled = false (canal coché ensuite par l'admin).
+      // Unité de vente reportée depuis l'IA Telegram : une unité RÉELLE seulement
+      // (kg/metre/paquet/carton). 'pcs'/null → null = pièce → aucun suffixe (inchangé).
+      const seededUnit = normalizeSaleUnit(sp.unit)
+      // Graine BASIQUES + unité/conditionnement (P1/P3, affichage). Champs d'argent
+      // OMIS → le form les initialise vides. affiliate_enabled = false.
       seed = {
         name: sp.public_name || sp.product_name,
         description: sp.public_description || sp.description,
@@ -80,6 +87,9 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
         availability_type: 'local_stock',
         stock_count: sp.stock_quantity ?? 0,
         affiliate_enabled: false,
+        sale_unit: seededUnit === 'piece' ? null : seededUnit,
+        pack_size: sp.pack_size,
+        pack_unit: sp.pack_unit,
         media: photos.map((url) => ({ url, type: 'image' as const })),
         images: photos,
       } as unknown as Product
