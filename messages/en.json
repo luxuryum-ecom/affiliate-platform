@@ -2042,6 +2042,9 @@
       "detailPhotos": "Photos ({count})",
       "detailPhotoLink": "Photo {n} ↗",
       "detailApproveSection": "Approve (publish to marketplace)",
+      "detailFinalizeSection": "Finalize in catalogue",
+      "detailFinalizeHint": "Opens the full product form, pre-filled with the basics. You add the cost, margin, fees, tiers and channels (affiliate / wholesale).",
+      "detailFinalizeToCatalog": "Finalize in catalogue",
       "detailBlockSection": "Block",
       "supplierTypeMorocco": "Morocco Supplier",
       "supplierTypeInternational": "International Supplier"

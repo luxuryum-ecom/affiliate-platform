@@ -2042,6 +2042,9 @@
       "detailPhotos": "Photos ({count})",
       "detailPhotoLink": "Photo {n} ↗",
       "detailApproveSection": "Approuver (publier marketplace)",
+      "detailFinalizeSection": "Finaliser dans le catalogue",
+      "detailFinalizeHint": "Ouvre le formulaire produit complet, pré-rempli avec les infos de base. Vous y ajoutez le coût, la marge, les frais, les paliers et les canaux (affilié / grossiste).",
+      "detailFinalizeToCatalog": "Finaliser dans le catalogue",
       "detailBlockSection": "Bloquer",
       "supplierTypeMorocco": "Fournisseur Maroc",
       "supplierTypeInternational": "Fournisseur International"

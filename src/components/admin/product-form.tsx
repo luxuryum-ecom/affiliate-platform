@@ -84,11 +84,18 @@ interface ProductFormProps {
   tariffs?: ImportTariff[]
   /** Taux centraux courants par devise (rate_vs_mad), ex. { MAD:1, USD:10, ... }. */
   rates?: Record<string, number>
+  /**
+   * Flux « Finaliser » (Option 1) : id du supplier_product source. Posé en hidden
+   * sur la ligne `products` créée (lien anti-doublon) ; le serveur archive ensuite
+   * le supplier_product source. Présent UNIQUEMENT en création depuis un fournisseur ;
+   * jamais en édition d'un produit existant. Plomberie UI — aucune logique d'argent.
+   */
+  sourceSupplierProductId?: string
 }
 
 const initialState: ProductFormState = { error: null }
 
-export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormProps) {
+export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierProductId }: ProductFormProps) {
   const t = useTranslations('admin.productForm')
   const tc = useTranslations('admin.common')
   const locale = useLocale()
@@ -373,7 +380,13 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
   return (
     <form action={action} className="space-y-8">
       {/* Hidden serialised state */}
-      {product && <input type="hidden" name="id" value={product.id} />}
+      {/* Edit-mode UNIQUEMENT si une ligne products existe déjà (product.id). Un seed
+          de pré-remplissage (flux « Finaliser ») n'a PAS d'id → reste en création. */}
+      {product?.id && <input type="hidden" name="id" value={product.id} />}
+      {/* Lien anti-doublon : la ligne products créée pointe vers son supplier_product source. */}
+      {sourceSupplierProductId && (
+        <input type="hidden" name="source_supplier_product_id" value={sourceSupplierProductId} />
+      )}
       <input type="hidden" name="wholesale_tiers" value={JSON.stringify(validTiers)} />
       <input type="hidden" name="media" value={JSON.stringify(validMedia)} />
       <input type="hidden" name="submitted_via" value="admin_dashboard" />
@@ -1502,7 +1515,7 @@ export function ProductForm({ product, tariffs = [], rates = {} }: ProductFormPr
         >
           {isPending
             ? tc('saving')
-            : product
+            : product?.id
             ? t('submitUpdate')
             : t('submitCreate')}
         </button>

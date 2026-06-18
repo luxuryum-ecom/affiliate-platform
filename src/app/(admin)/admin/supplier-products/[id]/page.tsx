@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
@@ -270,6 +271,24 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
 
           {/* ── Right column — action panels ── */}
           <div className="space-y-4">
+            {/* Flux « Finaliser » (Option 1) : ouvre le formulaire produit complet,
+                pré-rempli avec les BASIQUES de ce supplier_product. Visible uniquement
+                quand le produit fournisseur est validé. */}
+            {product.approval_status === 'approved' && (
+              <div className="bg-surface rounded-xl border border-gold-500/40 p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-2">
+                  {t('detailFinalizeSection')}
+                </h2>
+                <p className="text-xs text-muted mb-3">{t('detailFinalizeHint')}</p>
+                <Link
+                  href={`/admin/products/new?from_supplier=${product.id}`}
+                  className="block w-full text-center py-2.5 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  {t('detailFinalizeToCatalog')}
+                </Link>
+              </div>
+            )}
+
             <div className="bg-surface rounded-xl border border-line p-5">
               <h2 className="text-sm font-semibold text-foreground mb-4">
                 {t('detailApproveSection')}
