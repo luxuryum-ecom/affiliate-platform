@@ -12,6 +12,8 @@ export interface TierSaving {
   minQty: number
   /** Prix unitaire à ce palier. */
   pricePerUnit: number
+  /** Prix du LOT = ce que le client paie réellement = pricePerUnit × minQty. */
+  lotPrice: number
   /** Économie TOTALE vs le plus petit palier, pour un lot de `minQty` pièces. */
   totalSaving: number
 }
@@ -58,7 +60,12 @@ export function computeWholesaleSavings(
     // Centièmes entiers pour absorber l'imprécision flottante, puis arrondi MAD.
     const totalSaving = Math.round((basePrice - t.price_per_unit) * t.min_qty)
     if (totalSaving > 0) {
-      savings.push({ minQty: t.min_qty, pricePerUnit: t.price_per_unit, totalSaving })
+      savings.push({
+        minQty: t.min_qty,
+        pricePerUnit: t.price_per_unit,
+        lotPrice: Math.round(t.price_per_unit * t.min_qty),
+        totalSaving,
+      })
     }
   }
   if (savings.length === 0) return null
