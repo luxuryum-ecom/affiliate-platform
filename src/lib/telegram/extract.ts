@@ -31,6 +31,11 @@ Règles STRICTES :
   Exemples : « stock 50 », « 50 en stock », darija « كاين 50 فالستوك », arabe « مخزون 50 » → 50. Ne JAMAIS inventer.
 - "lead_time_days" : délai de livraison EN JOURS (entier ≥ 0) UNIQUEMENT s'il figure, sinon null.
   Convertis en jours : « délai 20j » / « livraison 20 jours » / arabe « مدة 20 يوم » → 20 ; « 2 semaines » → 14 ; « 1 mois » → 30. Ne JAMAIS inventer.
+- "unit" : UNITÉ DE VENTE = l'unité dans laquelle le prix est exprimé, devinée d'après la légende.
+  Valeurs autorisées (copie EXACTE) : "metre", "kg", "paquet", "carton", "piece".
+  Exemples : « 40 dh le mètre » / « le metro » / arabe « متر » → "metre" ; « 12 dh le kg » / « le kilo » / « كيلو » → "kg" ;
+  « 8 dh le carton » / « la caisse » / « كرطونة » → "carton" ; « le paquet » / « le sac » / « كيس » → "paquet".
+  Si l'unité n'est PAS explicite dans la légende → "piece" (défaut). Ne JAMAIS deviner au-delà de ce qui est écrit.
 
 Catégories et sous-catégories autorisées :
 ${renderTaxonomy()}`
@@ -58,6 +63,11 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
         type: ['integer', 'null'],
         description: 'Délai de livraison EN JOURS (entier ≥ 0) si indiqué, sinon null.',
       },
+      unit: {
+        type: ['string', 'null'],
+        description:
+          'Unité de vente : "metre", "kg", "paquet", "carton" si explicite dans la légende, sinon "piece" (défaut).',
+      },
     },
     required: [
       'product_name',
@@ -67,6 +77,7 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       'price',
       'stock_quantity',
       'lead_time_days',
+      'unit',
     ],
   } as Anthropic.Tool['input_schema'],
 }

@@ -288,6 +288,10 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
         fx_rate_source_to_mad: pricing.fx_rate_source_to_mad,
         stock_quantity: clean.stock_quantity,
         lead_time_days: clean.lead_time_days,
+        // P2 — unité de vente devinée par l'IA. On NE pose `unit` QUE si une unité
+        // NON-pièce a été détectée → un produit sans unité garde le défaut colonne
+        // ('pcs') : comportement existant strictement inchangé (RÈGLE ABSOLUE).
+        ...(clean.unit !== 'piece' ? { unit: clean.unit } : {}),
         approval_status: 'pending_review',
         source: 'telegram',
         telegram_message_id: messageKey,
