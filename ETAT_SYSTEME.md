@@ -88,6 +88,20 @@
 
 ---
 
+## 📦 RÈGLE STOCK & COMMANDE — définitive (TRANCHÉ)
+> Gravé le **2026-06-18** (décision Abdou). Règle métier, vaut pour tout affichage/flux commande.
+
+- **On ne bloque JAMAIS une commande pour cause de stock indisponible.** Si le stock n'est pas
+  dispo, on livre **SUR COMMANDE** (réapprovisionnement).
+- Le **blocage n'arrive qu'en cas de FORCE MAJEURE** — et dans ce cas, on **contacte le client sur
+  WhatsApp** pour s'excuser.
+- **Conséquence affichage** : le **hook économie grossiste** (et les paliers) affiche **TOUS les
+  paliers même au-dessus du stock actuel** = **comportement VOULU** (pas un bug), car tout est
+  livrable sur commande. → L'observation « paliers au-dessus du stock » (test humain du hook) est
+  **résolue : c'est intentionnel**, ne pas « corriger » en masquant des paliers.
+
+---
+
 ## 🔔 NOTIFICATIONS — cas « Deliveroo » fournisseur (TRANCHÉ)
 
 | Feature | Statut | Commit / Branche | Preuve (fichier clé) |
