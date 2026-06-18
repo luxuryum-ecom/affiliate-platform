@@ -200,6 +200,30 @@ produit par canal », `ETAT_SYSTEME.md`). **NE PAS coder maintenant.**
 
 ---
 
+## 📥 VARIER LES MODES D'IMPORT PRODUITS (s'adapter à tous les fournisseurs — à CADRER, rien codé)
+> Gravé le **2026-06-18**. Idée à cadrer plus tard. **NE PAS construire maintenant.**
+
+**EXISTANT** : l'**import CSV fournisseur** existe déjà (pipeline complet : template → validation
+ligne par ligne → publication par lot → modération admin groupée). Fichiers : `src/lib/bulk-import.ts`
+(Papaparse), `src/app/actions/supplier-bulk.ts`, `src/app/(supplier)/supplier/products/import/*`,
+`src/lib/csv-sanitize.ts`, mig 035.
+
+**IDÉE** : offrir **plusieurs canaux d'import** selon le **profil du fournisseur** (tous n'ont pas le
+même niveau technique). Pistes à cadrer, par ordre de praticité à évaluer :
+1. **Album Telegram multi-produits** : plusieurs photos d'un coup → plusieurs produits, via
+   `media_group_id`. **Le plus accessible** pour fournisseurs peu techniques. (Aujourd'hui : aucune
+   gestion d'album → 1 message = 1 photo = 1 produit.)
+2. **Vrai support Excel (`.xlsx`)** en plus du CSV. ⚠️ Aujourd'hui le `.xlsx` est **accepté à l'upload
+   mais PAS réellement parsé** (parser = Papaparse/CSV) = **piège à corriger**.
+3. **IA appliquée au bulk** : le CSV **ne passe pas par l'IA** aujourd'hui (contrairement au Telegram
+   1-produit où l'IA devine nom/prix/unité/catégorie).
+4. **Extraction auto d'un catalogue PDF** uploadé → produits. Aujourd'hui le catalogue fournisseur est
+   **seulement stocké** (bucket `supplier-catalogs`, mig 036), **pas extrait**.
+
+**À CADRER** : lequel est le plus pratique/prioritaire, faisabilité, impact. **NE PAS construire maintenant.**
+
+---
+
 ## 📏 UNITÉS DE VENTE MULTIPLES (besoin Abdou — à CADRER, rien codé)
 > Gravé le **2026-06-18**. Chantier à concevoir (touche affichage + extraction IA + peut-être
 > calcul paliers). **NE PAS construire maintenant.**
