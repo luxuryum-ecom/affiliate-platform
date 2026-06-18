@@ -46,6 +46,45 @@
 
 ---
 
+## 💰 RÈGLE MÉTIER DÉFINITIVE — 2 CANAUX = 2 MODÈLES ÉCONOMIQUES SÉPARÉS
+> Gravé le **2026-06-18** (décision Abdou). **Calculs DIFFÉRENTS, JAMAIS mélangés.** Toute évolution
+> prix/commission respecte cette séparation. Touche l'argent → circuit `@finance` + `@security` + GO Abdou.
+
+- **CANAL GROSSISTE** (achat de **stock réel**, le grossiste prend le risque) :
+  - Calcul = **prix grossiste + PALIERS DÉGRESSIFS** quantité→prix (plus il achète, moins cher).
+  - **AUCUN frais COD** (emballage / confirmation / livraison **ne le concernent pas**).
+  - Champs `products` : `wholesale_tiers`, `wholesale_min_qty`. Prix lu par `wholesale_catalog_read` = MIN palier.
+- **CANAL AFFILIÉ** (dropshipping / **COD**, zéro stock, zéro risque) :
+  - Calcul = **capital mig 073** = coût marchandise + marge + **emballage 10 + confirmation 10 + livraison 35** ; `commission = prix_vente − capital`.
+  - **AUCUN PALIER** (vente à l'unité). Les paliers sont **réservés au grossiste**.
+  - **Marge plateforme > 0 OBLIGATOIRE** : « commission incluse » (marge 0) **INTERDITE en affilié** (sinon la part Mozouna devient 0 non traçable). Le « tout inclus » est réservé au grossiste.
+  - Champs `products` : `factory_cost_mad`, `platform_margin_*`, `packaging_fee_mad`, `confirmation_fee_mad`, `delivery_fee_mad`, `sell_price`, `commission_amount`, `affiliate_enabled`.
+- **🛑 ABSOLU** : paliers = **grossiste only** ; frais COD = **affilié only**. **JAMAIS l'un dans l'autre.**
+  (Erreur à NE PAS refaire : appliquer un garde-fou « palier ≥ capital affilié » — ça mélange les 2 modèles.)
+- **INTENTION BUSINESS ASSUMÉE** : le prix grossiste (achat stock) **peut être plus avantageux** que le
+  dropshipping affilié → **incitation VOULUE** à acheter du stock réel. Un palier grossiste sous le capital
+  affilié **n'est PAS une anomalie** (canaux séparés).
+- **Vérifié dans le code (2026-06-18)** : vue grossiste `075` = zéro frais COD ; `calculateNetAffiliateCommission`
+  = zéro palier ; les 2 jeux de colonnes coexistent **séparément** sur la même ligne `products`.
+- **Flux de validation cible (« Finaliser un produit fournisseur/Telegram ») — NON CONSTRUIT, session dédiée** :
+  fournisseur/Telegram saisit **son prix** → l'admin **coche les canaux** (grossiste et/ou affilié) → chaque canal
+  coché applique **SON calcul, séparément**, sur la même ligne `products`. **À construire AVEC : branche dédiée +
+  `@finance` + `@security-reviewer` + GO Abdou AVANT chaque étape. NE PAS construire maintenant.** Détail :
+  `FEUILLE_DE_ROUTE.md` → « PRODUIT TELEGRAM → CATALOGUE COMPLET » (Option 1 / Option 3). Garde-fous @finance
+  retenus (GO-conditionné) : **marge affilié > 0** (interdire « commission incluse » en affilié) ; **snapshot règle
+  par produit + audit immuable + idempotence** ; paliers grossiste validés (prix > 0, `min_qty` croissants
+  non-chevauchants, monotone décroissant). Un **grossiste-seul** n'injecte JAMAIS de `factory_cost_mad` (pas de
+  commission fantôme) et les **miroirs fournisseur restent exclus** de la dérivation capital (régression
+  double-marge du 2026-06-14 à ne pas rouvrir).
+- **🐞 DETTE PRÉ-REQUISE (gravée séparément, à corriger AVANT ce chantier — chantier `@finance` dédié)** :
+  `factory_cost_mad` dérivé du FX doit être un **ENTIER MAD** (`Math.round(price_source × fx_rate)`), **pas** le
+  fallback `purchase_price_mad` à 2 décimales (`products.ts` ~L206). Biais ½ centime « hors-ledger » qui entre
+  **déjà en prod** dans le capital/commission affilié dès que le coût est dérivé du FX (faible mais argent
+  non-traçable, cumulatif). **NE JAMAIS reconvertir les produits existants** (passé figé ; appliquer uniquement
+  aux nouveaux/re-saves, comme la convention FX actuelle). Saisie manuelle ≤ 2 déc. reste OK.
+
+---
+
 ## 🔔 NOTIFICATIONS — cas « Deliveroo » fournisseur (TRANCHÉ)
 
 | Feature | Statut | Commit / Branche | Preuve (fichier clé) |
