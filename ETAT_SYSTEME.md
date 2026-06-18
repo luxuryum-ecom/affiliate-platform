@@ -71,6 +71,7 @@
 | Modération supplier-products (admin) | ✅ EN PROD | — | `src/app/(admin)/admin/supplier-products/*` |
 | Onboarding « Pays non configuré » (flag + action admin) | ✅ EN PROD | `41ee0b9` (LOT UX-3a) / mig. 066 | `src/app/actions/users.ts` |
 | Telegram — liaison compte + ingestion produits (ENTRANT) | ✅ EN PROD | mig. **053** | `src/lib/telegram/ingest.ts`, `webhook/route.ts` |
+| **Bot Telegram ingestion produit EN PROD** (webhook prod, extraction IA caption, image upload Storage, produit créé en attente validation admin) | ✅ **EN PROD** | webhook re-pointé 2026-06-18 | Webhook Telegram pointe désormais sur **`https://affiliate-platform-gamma.vercel.app/api/telegram/webhook`** (plus ngrok dev). Test runtime bout-en-bout 2026-06-18 : message `608081527:13` → `telegram_inbound` status `inserted` → `supplier_products` `b6340464…` créé (« Pack 3 boxers en bambou MAWRI », Textile/Sous-vêtements, 40 MAD, stock 200, image uploadée HTTP 200, `approval_status='pending_review'`, `source='telegram'`). Secret webhook (Vercel) = `.env.local` vérifié (200/401). Barrière `checkProductLimit` active (3 canaux). 4 vars prod requises : `TELEGRAM_BOT_TOKEN`/`TELEGRAM_WEBHOOK_SECRET`/`ANTHROPIC_API_KEY`/`TELEGRAM_BOT_USERNAME` |
 | RFQ — moteur de matching automatique | ✅ EN PROD | `2825927` / mig. **037** | `src/app/actions/rfq-engine.ts` |
 
 ---
