@@ -312,6 +312,12 @@ export interface Product {
   estimated_import_price_mad: number | null
   /** Unit for estimated_import_price_mad: 'kg' | 'cbm'. Only for import_on_demand. */
   import_price_unit: ImportPriceUnit | null
+  /**
+   * Unité de VENTE pour affichage (mètre/kg/paquet/pièce/carton). NULL = pièce
+   * implicite. AFFICHAGE PUR — aucun calcul n'en dépend. DISTINCT de
+   * import_price_unit (unité du coût transport import). Normalisé via lib/units.ts.
+   */
+  sale_unit: string | null
   /** Optional notes shown to wholesalers. Recommended when origin_country = 'Mixte'. */
   import_notes: string | null
 

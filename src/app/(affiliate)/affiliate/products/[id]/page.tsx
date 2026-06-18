@@ -7,6 +7,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl, getMeaningfulDescription } from '@/lib/product-media'
 import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
+import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
 import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
@@ -31,6 +32,7 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
   const supabase = await createClient()
   const t = await getTranslations('affiliate.products')
   const tCommon = await getTranslations('affiliate.common')
+  const tUnits = await getTranslations('units')
 
   const {
     data: { user },
@@ -209,7 +211,14 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
               </div>
               <div className="text-end">
                 <p className="text-xs text-faint">{t('catalogPrice')}</p>
-                <p className="text-sm font-medium text-muted tabular-nums">{formatMAD(product.sell_price)}</p>
+                {/* Suffixe d'unité AJOUTÉ seulement si sale_unit est posé → produit
+                    sans unité (NULL) = affichage strictement identique à avant. */}
+                <p className="text-sm font-medium text-muted tabular-nums">
+                  {priceWithUnit(
+                    formatMAD(product.sell_price),
+                    product.sale_unit ? resolveUnitLabel(product.sale_unit, tUnits) : null,
+                  )}
+                </p>
               </div>
             </div>
 
