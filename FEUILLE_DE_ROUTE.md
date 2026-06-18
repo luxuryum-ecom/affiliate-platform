@@ -145,6 +145,61 @@
 
 ---
 
+## 🔗 PRODUIT TELEGRAM → CATALOGUE COMPLET (2 canaux affilié + grossiste)
+> Consigné le **2026-06-18**. Cadrage lecture seule fait (aucun code). Issue du constat : un produit
+> ajouté par le bot Telegram vit dans `supplier_products` (canal grossiste-fournisseur, prix unique
+> sans paliers) et **n'a aucune présence affilié** (pas de ligne `products`, pas de capital, pas de
+> commission). Décision Abdou = **OPTION 1** (manuelle) maintenant ; **OPTION 3** (intégrée) plus tard.
+
+**RAPPEL ARCHITECTURE (vérifié runtime sur `b6340464` « Pack 3 boxers MAWRI ») :**
+- `supplier_products` = canal **grossiste marketplace fournisseur** : `suggested_wholesale_price_mad`
+  (+ marge vitrine `final_wholesale_price_mad`). **PAS** de `factory_cost`, `sell_price`/capital,
+  `commission_amount`, `wholesale_tiers`, `affiliate_enabled` (ces colonnes n'existent pas sur cette table).
+- `products` = canal **affilié** (capital usine+marge+frais → commission, règle mig 073) **+ grossiste
+  interne** (paliers `wholesale_tiers`). Le **formulaire admin** (`ProductForm` → `upsertProduct`)
+  saisit **les deux jeux de champs** sur une seule ligne ; le pré-remplissage marche via la prop `product`.
+- Pont = **miroir** `buildSupplierMirror` à l'approbation (ligne `products` minimale : nom, `sell_price=final`,
+  `factory_cost=suggested`, stock). Il **ne porte ni affiliation, ni paliers**.
+
+**🐞 BUG À CORRIGER (séparé) — miroir silencieusement cassé :** `approveSupplierProduct` fait
+`upsert(..., { onConflict: 'source_supplier_product_id' })` mais l'index unique (mig 069) est **PARTIEL**
+(`WHERE source_supplier_product_id IS NOT NULL`). Un `ON CONFLICT (col)` **sans prédicat** ne matche pas un
+index partiel → Postgres **42P10** → upsert en erreur, attrapé en **non-fatal** (`console.error`) → **aucun
+miroir créé pour AUCUN supplier_product** depuis la mig 069 (vérifié : `b6340464` n'a pas de miroir).
+À confirmer via logs Vercel ou test ciblé. Correctif probable = `onConflict` avec prédicat / `merge-duplicates`
+adapté. **Hors argent** (plomberie d'idempotence) — mais à valider car touche la commande directe grossiste.
+
+**OPTION 1 (retenue maintenant — manuelle, minimale) :** depuis `/admin/supplier-products/[id]` (produit
+Telegram validé), un bouton **« Finaliser dans le catalogue »** ouvre le **formulaire admin produit complet**
+(le même que « Pull ref 5 »), **pré-rempli** avec ce que Telegram a déjà capté (nom, photo, catégorie,
+sous-catégorie, origine, stock). L'admin complète **coût usine, marge, frais, paliers, `affiliate_enabled`**.
+- **Ce qui EXISTE déjà :** `ProductForm` pré-remplissable (prop `product`) ; `upsertProduct` gère tous les
+  champs + calcule capital/commission/paliers (déjà audité @finance, mig 073) ; `buildSupplierMirror` mappe
+  déjà supplier_product → ébauche `products` (réutilisable comme graine).
+- **Ce qui MANQUE (le plus petit ajout) :** (a) le **bouton** « Finaliser » sur la page d'approbation ;
+  (b) la page `products/new` doit lire un param `?from_supplier=<id>`, charger le supplier_product et
+  **mapper seulement les basiques NON-argent** (nom→`name`, `photos`→`images/media`, `category`/`subcategory`,
+  `origin_country`, `stock_quantity`→`stock_count`) dans une graine `Product` passée à `<ProductForm>` —
+  **id vide** (créer une NOUVELLE ligne `products`, surtout pas réutiliser l'id du supplier_product) ;
+  laisser **tous les champs argent VIDES** pour saisie admin. (c) Optionnel : lien retour
+  `source_supplier_product_id` + archivage/masquage du supplier_product pour éviter le **double-listing
+  grossiste** (apparaît sinon 2× : branche fournisseur + branche interne).
+- **PÉRIMÈTRE ARGENT :** le **pré-remplissage des basiques = plomberie UI pure** (hors @finance). Les
+  **valeurs** coût/marge/frais/paliers saisies passent par le form déjà audité. **Ne PAS** auto-dériver
+  `sell_price`/`factory_cost` depuis `suggested_wholesale_price_mad` sans **circuit @finance** (ce serait une
+  décision de prix). Tant qu'on seede uniquement les basiques et qu'on laisse l'argent vide → pas de @finance.
+
+**OPTION 3 (chantier FUTUR — écran de finalisation INTÉGRÉ à l'approbation) :** au lieu d'un saut vers un
+form séparé, **enrichir l'étape d'approbation `/admin/supplier-products/[id]`** pour qu'elle ajoute, dans le
+même écran, la **mécanique capital/commission/paliers** et des **cases à cocher de canaux** (affilié /
+grossiste / marketplace), produisant directement la ligne `products` complète + le lien
+`source_supplier_product_id` + le dédoublonnage grossiste. **Cœur financier** (capital, commission, paliers,
+prix facturé) → **conception + circuit `@finance` + `@security-reviewer` + validation Abdou obligatoires AVANT
+tout code.** Englobe aussi le correctif du miroir et la matrice produit × canal (cf. « Contrôle de visibilité
+produit par canal », `ETAT_SYSTEME.md`). **NE PAS coder maintenant.**
+
+---
+
 ## === 🗓️ ÉTAT FIN DE SESSION 15/06 (nuit) ===
 > État réel, sans embellissement. Code prod = **`f748732`**, base = **migration 072**.
 
