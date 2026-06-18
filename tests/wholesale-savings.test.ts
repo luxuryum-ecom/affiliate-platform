@@ -15,11 +15,11 @@ describe('computeWholesaleSavings', () => {
     ])!
     expect(r).not.toBeNull()
     expect(r.basePrice).toBe(52)
-    // économie totale = (52 − prix) × min_qty
+    // lotPrice = prix × qty (ce que le client paie) ; économie = (52 − prix) × qty
     expect(r.tiers).toEqual([
-      { minQty: 50, pricePerUnit: 50, totalSaving: 100 },
-      { minQty: 100, pricePerUnit: 48, totalSaving: 400 },
-      { minQty: 500, pricePerUnit: 46, totalSaving: 3000 },
+      { minQty: 50, pricePerUnit: 50, lotPrice: 2500, totalSaving: 100 },
+      { minQty: 100, pricePerUnit: 48, lotPrice: 4800, totalSaving: 400 },
+      { minQty: 500, pricePerUnit: 46, lotPrice: 23000, totalSaving: 3000 },
     ])
     expect(r.maxSaving).toBe(3000)
     expect(r.maxSavingQty).toBe(500)
@@ -50,7 +50,7 @@ describe('computeWholesaleSavings', () => {
       { min_qty: 50, price_per_unit: 55 },
       { min_qty: 100, price_per_unit: 45 },
     ])!
-    expect(r.tiers).toEqual([{ minQty: 100, pricePerUnit: 45, totalSaving: 500 }])
+    expect(r.tiers).toEqual([{ minQty: 100, pricePerUnit: 45, lotPrice: 4500, totalSaving: 500 }])
     expect(r.maxSaving).toBe(500)
   })
 
@@ -70,8 +70,20 @@ describe('computeWholesaleSavings', () => {
       { min_qty: 100, price_per_unit: 0 },
       { min_qty: 200, price_per_unit: 46 },
     ])!
-    // seuls 10@52 et 200@46 sont valides → 1 économie : (52−46)×200 = 1200
-    expect(r.tiers).toEqual([{ minQty: 200, pricePerUnit: 46, totalSaving: 1200 }])
+    // seuls 10@52 et 200@46 sont valides → 1 économie : (52−46)×200 = 1200 ; lot = 46×200 = 9200
+    expect(r.tiers).toEqual([{ minQty: 200, pricePerUnit: 46, lotPrice: 9200, totalSaving: 1200 }])
+  })
+
+  it('lotPrice = prix du palier × quantité (ce que le client paie)', () => {
+    const r = computeWholesaleSavings([
+      { min_qty: 10, price_per_unit: 94 },
+      { min_qty: 50, price_per_unit: 90 },
+      { min_qty: 500, price_per_unit: 83 },
+    ])!
+    expect(r.tiers).toEqual([
+      { minQty: 50, pricePerUnit: 90, lotPrice: 4500, totalSaving: 200 },
+      { minQty: 500, pricePerUnit: 83, lotPrice: 41500, totalSaving: 5500 },
+    ])
   })
 })
 
