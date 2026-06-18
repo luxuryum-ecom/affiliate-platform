@@ -7,7 +7,36 @@
 >
 > **🩺 RÈGLE DIAGNOSTIC — déploiement d'abord.** Si l'agent voit le **bon comportement dans le code** (vérifié runtime sur build local) mais que l'utilisateur voit **autre chose en prod**, **VÉRIFIER LE DÉPLOIEMENT VERCEL EN PREMIER** (souvent en retard sur `main` / cache). Ne PAS conclure « ergonomie » ou « non reproduit » avant ça. Trancher en **forçant un redeploy** : `git commit --allow-empty -m "chore: force redeploy" && git push` sur `main`. Cas réel : recherche grossiste « Pull ref 5 » = 0 en prod alors que le code était correct → déploiement périmé (résolu par `6dc0244`).
 
-**Dernière synchro :** 2026-06-17 — `main` @ `5c54544` — 74 migrations (001→074).
+**Dernière synchro :** 2026-06-18 — `main` @ `c300e4a` — 77 migrations (001→077).
+
+---
+
+## 🧭 POINT DE REPRISE — fin de session 2026-06-18 (à lire en premier)
+
+### ✅ EN PROD (confirmé, validé runtime)
+- **Catalogue grossiste UNIFIÉ** (2 onglets Disponible/À importer, interne+fournisseur fusionnés & cloisonnés, noir & or) — `d379ca1` / mig. 075.
+- **Marketplace grossiste GLOBAL** (inclut produits internes Mozouna + fournisseurs, source invisible) + **filtres pays** (Chine/Turquie/Égypte/Dubai) corrigés — `8ab5189` / `c908809`.
+- **Hook profit affilié** (simulateur gain temps réel, prix conseillé ×1,25) — `ba4b2af`.
+- **Wording affilié tout-inclus** (« Tu vends, tu encaisses… ») — `842acce`.
+- **Notif fournisseur LOT 6** (commande assignée → fournisseur + admin in-app + Telegram best-effort, zéro PII, RLS étanche) — mig. 076+077.
+- **Bot Telegram ingestion produit EN PROD** — webhook sur `https://affiliate-platform-gamma.vercel.app/api/telegram/webhook` (plus ngrok). **Validé bout-en-bout 18/06** : caption → extraction IA → upload image → `supplier_products` en `pending_review` → **validation admin testée**. Voir section FOURNISSEURS.
+- **Sécurité / backup** : code sur GitHub (`origin`, `main`=prod) ; base Supabase dumpée dans `~/AI-FACTORY/backups/` + backup hebdo launchd `com.mozouna.backup-prod`. Voir section SÉCURITÉ / BACKUP.
+
+### ⏳ EN ATTENTE (non urgent — à reprendre)
+- **Abonnement « Entreprise » de TEST** posé sur le fournisseur `cec673db-e148-4247-9b08-06839d975142` (lignes `supplier_subscriptions` `88fcfe24…` + audit `18b6a686…`) pour débloquer le test Telegram. **À RETIRER un jour** (DELETE → retour `free`/5). Donnée de test réelle en prod, sans impact ailleurs.
+- **`ADMIN_TELEGRAM_CHAT_ID` non configuré dans Vercel** : sans lui, les notifs de commande LOT 6 vers le Telegram d'Abdou sont **sautées** (best-effort, le fournisseur est quand même notifié). Optionnel — l'ajouter = recevoir ces alertes.
+- **UI cloche notifications in-app PAS construite** : la table `notifications` existe et se remplit (LOT 6), mais **aucun composant cloche/liste** côté front pour les afficher.
+- **Backfill catégories des autres produits internes** : l'ancien bug (catégorie/sous-catégorie jetées à l'upsert) est **corrigé pour les futurs** (`2ce7406`) ; les produits internes créés AVANT ont `category`/`subcategory` vides → backfill à prévoir pour le filtre par niche.
+
+### 🏗️ GROS CHANTIERS FUTURS (gravés roadmap — NE PAS coder sans cadrage @architect/@finance)
+- **Système d'abonnement/paiement automatique (Stripe)** : les 3 plans existent déjà (`free`/`professional`/`enterprise` — mig. 038) mais **l'attribution est 100 % manuelle admin** (`/admin/premium` + `assignPlan`), pas de paiement en ligne (upgrade fournisseur = lien WhatsApp placeholder). → automatiser facturation + checkout.
+- **Visibilité produit par canal** (matrice produit × canal × niveau abonnement) — voir section FEATURES FUTURES.
+- **Premium « accès direct fournisseur » 10K** (offre fournisseur premium à cadrer).
+- **Marketplace affiliation multi-partenaires** (cœur financier 3-4 parties) — voir `FEUILLE_DE_ROUTE.md` → VISION STRATÉGIQUE.
+- **Traduction IA du contenu produits** (nom + description à l'approbation).
+- **Dette `factory_cost` authenticated** (branche `feat/dette-factory-cost-authenticated`, différée option C) — voir section FINANCE.
+
+---
 
 ## Légende des statuts
 - ✅ **FAIT ET EN PROD** — mergé dans `main` (+ migration appliquée si concerné)
