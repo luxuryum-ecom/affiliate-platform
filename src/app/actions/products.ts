@@ -55,6 +55,13 @@ export async function upsertProduct(
   const name = (formData.get('name') as string)?.trim()
   const description = ((formData.get('description') as string)?.trim()) || null
 
+  // Flux « Finaliser » (Option 1) : lien vers le supplier_product source, posé
+  // UNIQUEMENT à la CRÉATION d'une nouvelle ligne products (jamais en édition, pour
+  // ne pas écraser le lien d'un miroir existant). Sert au lien anti-doublon + à
+  // l'archivage du supplier_product source après finalisation. Plomberie, zéro argent.
+  const source_supplier_product_id =
+    !id ? ((formData.get('source_supplier_product_id') as string | null)?.trim() || null) : null
+
   // ── Availability (migration 007) ──────────────────────────────────────────
 
   const availability_type = (formData.get('availability_type') as string) || 'local_stock'
@@ -559,10 +566,31 @@ export async function upsertProduct(
       submitted_by: userId,
       approved_by: approval_status === 'approved' ? userId : null,
       approved_at: approval_status === 'approved' ? now : null,
+      // Lien anti-doublon (flux « Finaliser ») : null pour un produit manuel normal.
+      source_supplier_product_id,
     }
 
     const { error } = await supabase.from('products').insert(insertPayload)
     if (error) return { error: error.message }
+
+    // ── Anti-doublon : archiver le supplier_product source après finalisation ──
+    // La vue grossiste fournisseur (`supplier_products_wholesaler_read`, mig 068)
+    // gate `archived_at IS NULL` → archiver retire la fiche fournisseur du catalogue,
+    // évitant qu'elle s'affiche EN PLUS de la nouvelle ligne products (branche interne).
+    // Best-effort : la création produit a réussi ; un échec d'archivage ne l'annule pas.
+    if (source_supplier_product_id) {
+      const { error: archiveErr } = await supabase
+        .from('supplier_products')
+        .update({ archived_at: now })
+        .eq('id', source_supplier_product_id)
+        .is('archived_at', null)
+      if (archiveErr) {
+        console.error('[upsertProduct] archivage supplier_product source échoué', {
+          source_supplier_product_id,
+          error: archiveErr.message,
+        })
+      }
+    }
   }
 
   revalidatePath('/admin/products')

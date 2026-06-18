@@ -5,13 +5,18 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTariffs } from '@/app/actions/tariffs'
 import { getRatesMap } from '@/lib/fx'
 import { getTranslations } from 'next-intl/server'
+import type { Product } from '@/types/database'
 
 export async function generateMetadata() {
   const t = await getTranslations('admin.productNew')
   return { title: t('metaTitle') }
 }
 
-export default async function NewProductPage() {
+interface NewProductPageProps {
+  searchParams: Promise<{ from_supplier?: string }>
+}
+
+export default async function NewProductPage({ searchParams }: NewProductPageProps) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -22,6 +27,8 @@ export default async function NewProductPage() {
   const t = await getTranslations('admin.productNew')
   const tc = await getTranslations('admin.common')
 
+  const { from_supplier } = await searchParams
+
   const [profileResult, tariffs, rates] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     getTariffs(),
@@ -29,6 +36,56 @@ export default async function NewProductPage() {
   ])
 
   const profile = profileResult.data as { full_name: string } | null
+
+  // ── Flux « Finaliser » (Option 1) : pré-remplissage des BASIQUES depuis un
+  // supplier_product approuvé. AUCUNE donnée d'argent (coût, marge, frais, paliers,
+  // sell_price, commission, affiliate_enabled) n'est seedée → l'admin les saisit dans
+  // le formulaire déjà audité. id VIDE = nouvelle ligne products (jamais l'id du
+  // supplier_product). Le lien anti-doublon passe par `sourceSupplierProductId`.
+  let seed: Product | undefined
+  let sourceSupplierProductId: string | undefined
+  if (from_supplier) {
+    const { data: sp } = (await supabase
+      .from('supplier_products')
+      .select(
+        'id, product_name, public_name, description, public_description, category, subcategory, origin_country, stock_quantity, photos'
+      )
+      .eq('id', from_supplier)
+      .eq('approval_status', 'approved')
+      .maybeSingle()) as {
+      data: {
+        id: string
+        product_name: string
+        public_name: string | null
+        description: string | null
+        public_description: string | null
+        category: string | null
+        subcategory: string | null
+        origin_country: string | null
+        stock_quantity: number | null
+        photos: string[] | null
+      } | null
+      error: unknown
+    }
+    if (sp) {
+      const photos = sp.photos ?? []
+      // Graine BASIQUES uniquement. Champs d'argent OMIS volontairement → le form les
+      // initialise vides. affiliate_enabled = false (canal coché ensuite par l'admin).
+      seed = {
+        name: sp.public_name || sp.product_name,
+        description: sp.public_description || sp.description,
+        category: sp.category,
+        subcategory: sp.subcategory,
+        origin_country: sp.origin_country,
+        availability_type: 'local_stock',
+        stock_count: sp.stock_quantity ?? 0,
+        affiliate_enabled: false,
+        media: photos.map((url) => ({ url, type: 'image' as const })),
+        images: photos,
+      } as unknown as Product
+      sourceSupplierProductId = sp.id
+    }
+  }
 
   return (
     <div className="min-h-screen bg-bg">
@@ -44,7 +101,12 @@ export default async function NewProductPage() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-lg font-semibold text-foreground mb-6">{t('formTitle')}</h1>
         <div className="bg-surface rounded-xl border border-line p-6">
-          <ProductForm tariffs={tariffs} rates={rates} />
+          <ProductForm
+            product={seed}
+            sourceSupplierProductId={sourceSupplierProductId}
+            tariffs={tariffs}
+            rates={rates}
+          />
         </div>
       </main>
     </div>

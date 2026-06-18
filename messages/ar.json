@@ -2042,6 +2042,9 @@
       "detailPhotos": "الصور ({count})",
       "detailPhotoLink": "الصورة {n} ↗",
       "detailApproveSection": "اعتماد (نشر في السوق)",
+      "detailFinalizeSection": "إتمام في الكتالوج",
+      "detailFinalizeHint": "يفتح نموذج المنتج الكامل، معبّأً مسبقاً بالمعلومات الأساسية. تضيف فيه التكلفة والهامش والرسوم والشرائح والقنوات (المسوّق / تاجر الجملة).",
+      "detailFinalizeToCatalog": "إتمام في الكتالوج",
       "detailBlockSection": "حظر",
       "supplierTypeMorocco": "مورد المغرب",
       "supplierTypeInternational": "مورد دولي"
