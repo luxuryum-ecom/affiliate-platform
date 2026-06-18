@@ -92,12 +92,12 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     public_name: row.name,
     description: row.description,
     public_description: row.description,
-    category: row.category,
+    category: row.category ?? '',
     subcategory: row.subcategory ?? '',
     niche: '',
     photos: row.image ? [row.image] : [],
     min_quantity: row.min_qty,
-    origin_country: row.origin_country,
+    origin_country: row.origin_country ?? '',
     availability_type: row.availability_type,
     target_buyer_type: 'both' as const,
     suggested_wholesale_price_mad: row.from_price_mad,
@@ -151,8 +151,8 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     products = products.filter((p) =>
       (p.public_name ?? p.product_name).toLowerCase().includes(q) ||
       (p.public_description ?? p.description ?? '').toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      p.niche.toLowerCase().includes(q)
+      (p.category ?? '').toLowerCase().includes(q) ||
+      (p.niche ?? '').toLowerCase().includes(q)
     )
   }
   if (filters.category) {
@@ -161,12 +161,12 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   if (filters.subcategory) {
     const sub = filters.subcategory.toLowerCase()
     products = products.filter((p) =>
-      p.subcategory.toLowerCase().includes(sub) || p.niche.toLowerCase().includes(sub)
+      (p.subcategory ?? '').toLowerCase().includes(sub) || (p.niche ?? '').toLowerCase().includes(sub)
     )
   }
   if (filters.origin) {
     products = products.filter((p) =>
-      p.origin_country.toLowerCase().includes(filters.origin!.toLowerCase())
+      (p.origin_country ?? '').toLowerCase().includes(filters.origin!.toLowerCase())
     )
   }
   if (filters.availability) {
