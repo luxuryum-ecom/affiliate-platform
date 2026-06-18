@@ -1,4 +1,11 @@
 {
+  "units": {
+    "piece": "pc",
+    "metre": "m",
+    "kg": "kg",
+    "paquet": "pack",
+    "carton": "carton"
+  },
   "errors": {
     "unauthenticated": "Session expired, please sign in again.",
     "order_id_required": "Order not found.",

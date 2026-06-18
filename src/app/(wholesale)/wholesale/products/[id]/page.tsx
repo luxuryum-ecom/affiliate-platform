@@ -6,6 +6,7 @@ import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
 import { QuoteRequestForm } from '@/components/wholesale/quote-request-form'
 import { WholesaleSavingsHook } from '@/components/wholesale/wholesale-savings-hook'
+import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
 import { getActiveTariff } from '@/app/actions/tariffs'
@@ -52,7 +53,12 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   const t = await getTranslations('wholesale.productDetail')
   const tc = await getTranslations('wholesale.common')
+  const tUnits = await getTranslations('units')
   const locale = await getLocale()
+
+  // Suffixe d'unité résolu SERVEUR (string, jamais une fonction → sûr à passer au
+  // hook Client). null si sale_unit non posé → affichage identique à avant.
+  const unitLabel = product.sale_unit ? resolveUnitLabel(product.sale_unit, tUnits) : null
 
   // Fetch global tariff when product uses global tariff mode
   let globalTariff: ImportTariff | null = null
@@ -173,12 +179,14 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
             {/* Public price reference */}
             <div className="flex items-center gap-3 text-sm">
               <span className="text-faint">{t('publicPrice')}</span>
-              <span className="font-medium text-muted">{formatMAD(product.sell_price)}</span>
+              <span className="font-medium text-muted">
+                {priceWithUnit(formatMAD(product.sell_price), unitLabel)}
+              </span>
             </div>
 
             {/* Hook grossiste — économie totale en achetant gros (affichage pur, paliers stockés).
                 Rendu uniquement s'il y a ≥ 2 paliers avec économie (sinon retourne null). */}
-            <WholesaleSavingsHook tiers={product.wholesale_tiers} />
+            <WholesaleSavingsHook tiers={product.wholesale_tiers} unitLabel={unitLabel ?? undefined} />
 
             {ctaMode === 'rfq' ? (
               <div className="space-y-2">

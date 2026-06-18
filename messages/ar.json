@@ -1,4 +1,11 @@
 {
+  "units": {
+    "piece": "قطعة",
+    "metre": "م",
+    "kg": "كغ",
+    "paquet": "حزمة",
+    "carton": "كرطونة"
+  },
   "errors": {
     "unauthenticated": "انتهت الجلسة، يرجى تسجيل الدخول من جديد.",
     "order_id_required": "الطلب غير موجود.",
