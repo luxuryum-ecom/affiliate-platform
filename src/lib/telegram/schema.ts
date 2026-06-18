@@ -4,6 +4,7 @@
 
 import { z } from 'zod'
 import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
+import { normalizeSaleUnit, type SaleUnit } from '@/lib/units'
 
 // ── 1. Payload webhook Telegram (sous-ensemble consommé) ─────────────────────
 
@@ -71,6 +72,9 @@ export const aiExtractionRawSchema = z.object({
   // les force en sortie, mais on tolère leur absence sans casser le parse.
   stock_quantity: z.union([z.number(), z.string(), z.null()]).optional(),
   lead_time_days: z.union([z.number(), z.string(), z.null()]).optional(),
+  // Unité de vente devinée par l'IA (texte libre FR/AR/darija) — normalisée plus
+  // bas via normalizeSaleUnit (P1). Optionnel/nullable : absence = pièce par défaut.
+  unit: z.union([z.string(), z.null()]).optional(),
 })
 
 export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
@@ -231,6 +235,8 @@ export type CleanExtraction = {
   price_source: number | null
   stock_quantity: number | null
   lead_time_days: number | null
+  /** Unité de VENTE normalisée (enum). Toujours une valeur — 'piece' par défaut. */
+  unit: SaleUnit
 }
 
 export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
@@ -243,6 +249,8 @@ export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
     price_source: sanitizeExtractedPrice(raw.price),
     stock_quantity: sanitizeNonNegativeInt(raw.stock_quantity, MAX_STOCK_QUANTITY),
     lead_time_days: sanitizeNonNegativeInt(raw.lead_time_days, MAX_LEAD_TIME_DAYS),
+    // Réutilise le helper P1 (FR/AR/darija → enum, inconnu/null → 'piece', jamais d'erreur).
+    unit: normalizeSaleUnit(raw.unit),
   }
 }
 

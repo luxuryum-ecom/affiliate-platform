@@ -17,7 +17,9 @@ export type SaleUnit = (typeof SALE_UNITS)[number]
  */
 export function normalizeSaleUnit(raw: string | null | undefined): SaleUnit {
   if (!raw) return 'piece'
-  const v = raw.trim().toLowerCase()
+  // Tolère les articles en tête (« le mètre », « la caisse », « au kg ») au cas où
+  // l'IA n'aurait pas renvoyé l'enum nu. Robustesse — ne change rien aux tokens nus.
+  const v = raw.trim().toLowerCase().replace(/^(le |la |l'|au |du |de |des |un |une )/, '').trim()
   if (['pcs', 'pc', 'piece', 'pièce', 'pieces', 'pièces', 'unité', 'unite', 'u', 'قطعة'].includes(v)) return 'piece'
   if (['metre', 'mètre', 'm', 'meter', 'متر', 'متر'].includes(v)) return 'metre'
   if (['kg', 'kilo', 'kilos', 'kilogramme', 'كغ', 'كيلو'].includes(v)) return 'kg'
