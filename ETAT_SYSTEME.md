@@ -76,12 +76,13 @@
   non-chevauchants, monotone décroissant). Un **grossiste-seul** n'injecte JAMAIS de `factory_cost_mad` (pas de
   commission fantôme) et les **miroirs fournisseur restent exclus** de la dérivation capital (régression
   double-marge du 2026-06-14 à ne pas rouvrir).
-- **🐞 DETTE PRÉ-REQUISE (gravée séparément, à corriger AVANT ce chantier — chantier `@finance` dédié)** :
-  `factory_cost_mad` dérivé du FX doit être un **ENTIER MAD** (`Math.round(price_source × fx_rate)`), **pas** le
-  fallback `purchase_price_mad` à 2 décimales (`products.ts` ~L206). Biais ½ centime « hors-ledger » qui entre
-  **déjà en prod** dans le capital/commission affilié dès que le coût est dérivé du FX (faible mais argent
-  non-traçable, cumulatif). **NE JAMAIS reconvertir les produits existants** (passé figé ; appliquer uniquement
-  aux nouveaux/re-saves, comme la convention FX actuelle). Saisie manuelle ≤ 2 déc. reste OK.
+- **✅ DETTE ARRONDI factory_cost FX = CORRIGÉ** (`8df6d2b`, merge `0b11999`, @finance GO) :
+  `factory_cost_mad` dérivé du FX = désormais **ENTIER MAD** (`Math.round(price_source × fx_rate)`), au lieu du
+  fallback `purchase_price_mad` à 2 décimales (biais ½ centime « hors-ledger »). **Périmètre : futurs produits
+  importés uniquement** (coût non saisi + `needsConversion`). **Existant FIGÉ** (code d'écriture admin, aucun
+  recompute rétroactif — un produit ne bouge qu'à son re-save). **Capital/commission outputs INCHANGÉS** (déjà
+  arrondis entier par le moteur ; écart borné |Δ factory| ≤ 0,50 MAD). Saisie manuelle du coût ≤ 2 déc. inchangée.
+  Vérifié : tsc + 186 tests + build froid + smoke 20/20.
 
 ---
 
