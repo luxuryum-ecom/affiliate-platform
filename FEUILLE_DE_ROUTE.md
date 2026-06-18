@@ -200,6 +200,37 @@ produit par canal », `ETAT_SYSTEME.md`). **NE PAS coder maintenant.**
 
 ---
 
+## 📏 UNITÉS DE VENTE MULTIPLES (besoin Abdou — à CADRER, rien codé)
+> Gravé le **2026-06-18**. Chantier à concevoir (touche affichage + extraction IA + peut-être
+> calcul paliers). **NE PAS construire maintenant.**
+
+**PROBLÈME** : les fournisseurs vendent dans des **unités différentes** — au **MÈTRE** (tissu), au
+**KG** (boucher, légumes, riz, sucre, blé), au **PAQUET/PIÈCE** (sucre en paquet, unitaire), au
+**CARTON/CAISSE** (sardines, conserves). Aujourd'hui **tout est en « pièce »** → inadapté.
+
+**BESOIN** :
+1. Le fournisseur décrit en **Telegram en langage naturel** (ex. « riz basmati 12 dh le kg, sac 25 kg »
+   / « tissu coton 40 dh le mètre » / « sardines 8 dh le carton de 50 »).
+2. L'**IA d'extraction** (caption Telegram) **DEVINE l'unité de vente** (mètre / kg / paquet / pièce /
+   carton) et la **renseigne automatiquement**.
+3. Le produit est rangé dans la **BONNE CATÉGORIE** pour le filtre/recherche (alimentaire, textile, etc.).
+
+**À CADRER** :
+- Champ **« unité de vente »** sur les produits (enum : mètre / kg / paquet / pièce / carton…).
+- Impact **affichage prix** : `12 dh/kg` vs `40 dh/m` vs `8 dh/carton` (le suffixe d'unité partout où un
+  prix est montré).
+- Impact **paliers grossiste** : paliers en **kg** ? en **cartons** ? (quantité_palier exprimée dans
+  l'unité de vente → le hook « économie » et le calcul lot/paliers doivent suivre l'unité).
+- **Extraction IA de l'unité** depuis la caption (mapping langage naturel → enum unité ; gérer le
+  « sac de 25 kg » = conditionnement vs unité de prix).
+- **Taxonomie de catégories** alimentaires/textiles (étendre la taxo existante).
+
+**NATURE** : conception transverse (affichage + extraction IA + éventuel calcul paliers). À planifier
+avec `@architect` ; **si un calcul de prix/palier change de résultat → circuit `@finance`**. NE PAS
+construire maintenant.
+
+---
+
 ## === 🗓️ ÉTAT FIN DE SESSION 15/06 (nuit) ===
 > État réel, sans embellissement. Code prod = **`f748732`**, base = **migration 072**.
 
