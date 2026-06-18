@@ -75,6 +75,10 @@ export const aiExtractionRawSchema = z.object({
   // Unité de vente devinée par l'IA (texte libre FR/AR/darija) — normalisée plus
   // bas via normalizeSaleUnit (P1). Optionnel/nullable : absence = pièce par défaut.
   unit: z.union([z.string(), z.null()]).optional(),
+  // Conditionnement DESCRIPTIF (P3) : taille + nom de l'unité de cond.
+  // (« carton de 50 boîtes » → pack_size 50, pack_unit « boîte »). Absent → null.
+  pack_size: z.union([z.number(), z.string(), z.null()]).optional(),
+  pack_unit: z.union([z.string(), z.null()]).optional(),
 })
 
 export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
@@ -237,7 +241,13 @@ export type CleanExtraction = {
   lead_time_days: number | null
   /** Unité de VENTE normalisée (enum). Toujours une valeur — 'piece' par défaut. */
   unit: SaleUnit
+  /** Conditionnement DESCRIPTIF (P3). null si non détecté ou incomplet. */
+  pack_size: number | null
+  pack_unit: string | null
 }
+
+// Plafond anti-absurde du conditionnement (nb d'unités par lot).
+const MAX_PACK_SIZE = 1_000_000
 
 export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
   const category = normalizeCategory(raw.category)
@@ -251,7 +261,23 @@ export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
     lead_time_days: sanitizeNonNegativeInt(raw.lead_time_days, MAX_LEAD_TIME_DAYS),
     // Réutilise le helper P1 (FR/AR/darija → enum, inconnu/null → 'piece', jamais d'erreur).
     unit: normalizeSaleUnit(raw.unit),
+    ...normalizePack(raw.pack_size, raw.pack_unit),
   }
+}
+
+/**
+ * Conditionnement DESCRIPTIF (P3) : exige les DEUX (taille ≥ 2 ET nom non vide),
+ * sinon { null, null } → aucun conditionnement affiché. Jamais d'erreur.
+ */
+function normalizePack(
+  rawSize: unknown,
+  rawUnit: unknown,
+): { pack_size: number | null; pack_unit: string | null } {
+  const size = sanitizeNonNegativeInt(rawSize, MAX_PACK_SIZE)
+  const unit = typeof rawUnit === 'string' && rawUnit.trim() ? rawUnit.trim().slice(0, 40) : null
+  // pack_size doit être ≥ 2 (un « lot de 1 » n'a aucun sens) ET avoir un nom d'unité.
+  if (size == null || size < 2 || unit == null) return { pack_size: null, pack_unit: null }
+  return { pack_size: size, pack_unit: unit }
 }
 
 // ── 5. Liaison Telegram — code à usage unique ────────────────────────────────

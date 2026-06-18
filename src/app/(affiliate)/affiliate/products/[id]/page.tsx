@@ -8,6 +8,7 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl, getMeaningfulDescription } from '@/lib/product-media'
 import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
+import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
@@ -221,6 +222,14 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
                 </p>
               </div>
             </div>
+
+            {/* Conditionnement descriptif (P3) — rien si pack_size/pack_unit non posés */}
+            <PackBreakdown
+              price={product.sell_price}
+              packSize={product.pack_size}
+              packUnit={product.pack_unit}
+              saleUnit={product.sale_unit}
+            />
 
             {/* Prix tout compris — justifie le prix catalogue (affichage pur) */}
             <p className="text-xs text-success-fg">{t('priceAllInclusive')}</p>

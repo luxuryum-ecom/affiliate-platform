@@ -318,6 +318,13 @@ export interface Product {
    * import_price_unit (unité du coût transport import). Normalisé via lib/units.ts.
    */
   sale_unit: string | null
+  /**
+   * Conditionnement DESCRIPTIF (P3) : nb d'unités de cond. par unité de vente
+   * (ex. 50) + nom de l'unité de cond. (ex. « boîte »). NULL = aucun. AFFICHAGE
+   * SEUL — prix/boîte DÉRIVÉ (prix÷pack_size), jamais stocké ni facturé.
+   */
+  pack_size: number | null
+  pack_unit: string | null
   /** Optional notes shown to wholesalers. Recommended when origin_country = 'Mixte'. */
   import_notes: string | null
 

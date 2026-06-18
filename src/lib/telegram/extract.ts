@@ -36,6 +36,9 @@ Règles STRICTES :
   Exemples : « 40 dh le mètre » / « le metro » / arabe « متر » → "metre" ; « 12 dh le kg » / « le kilo » / « كيلو » → "kg" ;
   « 8 dh le carton » / « la caisse » / « كرطونة » → "carton" ; « le paquet » / « le sac » / « كيس » → "paquet".
   Si l'unité n'est PAS explicite dans la légende → "piece" (défaut). Ne JAMAIS deviner au-delà de ce qui est écrit.
+- "pack_size" + "pack_unit" : CONDITIONNEMENT si la légende le précise (« carton de 50 boîtes », « sac de 25 kg », « كرطونة فيها 50 علبة »).
+  pack_size = nombre d'unités dans le conditionnement (entier, ex. 50) ; pack_unit = nom de cette unité (ex. "boîte", "kg", "علبة").
+  Si AUCUN conditionnement n'est mentionné → pack_size = null ET pack_unit = null. Ne JAMAIS inventer.
 
 Catégories et sous-catégories autorisées :
 ${renderTaxonomy()}`
@@ -68,6 +71,14 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
         description:
           'Unité de vente : "metre", "kg", "paquet", "carton" si explicite dans la légende, sinon "piece" (défaut).',
       },
+      pack_size: {
+        type: ['integer', 'null'],
+        description: 'Conditionnement : nb d\'unités dans le lot (ex. 50) si mentionné, sinon null.',
+      },
+      pack_unit: {
+        type: ['string', 'null'],
+        description: 'Conditionnement : nom de l\'unité du lot (ex. "boîte") si mentionné, sinon null.',
+      },
     },
     required: [
       'product_name',
@@ -78,6 +89,8 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       'stock_quantity',
       'lead_time_days',
       'unit',
+      'pack_size',
+      'pack_unit',
     ],
   } as Anthropic.Tool['input_schema'],
 }

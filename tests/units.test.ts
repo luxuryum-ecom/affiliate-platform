@@ -3,6 +3,7 @@ import {
   normalizeSaleUnit,
   resolveUnitLabel,
   priceWithUnit,
+  packPerUnitPrice,
   type SaleUnit,
 } from '@/lib/units'
 
@@ -51,5 +52,20 @@ describe('priceWithUnit — NON-RÉGRESSION', () => {
     expect(priceWithUnit('40 MAD', null)).toBe('40 MAD')
     expect(priceWithUnit('40 MAD', undefined)).toBe('40 MAD')
     expect(priceWithUnit('40 MAD', '')).toBe('40 MAD')
+  })
+})
+
+describe('packPerUnitPrice — conditionnement DÉRIVÉ (P3)', () => {
+  it('prix ÷ pack_size, arrondi 2 déc.', () => {
+    expect(packPerUnitPrice(200, 50)).toBe(4) // carton 200 / 50 boîtes
+    expect(packPerUnitPrice(199, 50)).toBe(3.98)
+  })
+  it('null si pas de conditionnement exploitable → on n’affiche RIEN', () => {
+    expect(packPerUnitPrice(200, null)).toBeNull()
+    expect(packPerUnitPrice(200, undefined)).toBeNull()
+    expect(packPerUnitPrice(200, 1)).toBeNull() // lot de 1 = inutile
+    expect(packPerUnitPrice(200, 0)).toBeNull()
+    expect(packPerUnitPrice(0, 50)).toBeNull()
+    expect(packPerUnitPrice(null, 50)).toBeNull()
   })
 })

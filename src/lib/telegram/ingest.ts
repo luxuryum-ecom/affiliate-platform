@@ -292,6 +292,11 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
         // NON-pièce a été détectée → un produit sans unité garde le défaut colonne
         // ('pcs') : comportement existant strictement inchangé (RÈGLE ABSOLUE).
         ...(clean.unit !== 'piece' ? { unit: clean.unit } : {}),
+        // P3 — conditionnement DESCRIPTIF, posé UNIQUEMENT si détecté (les deux champs).
+        // Non détecté → colonnes NULL → aucun conditionnement affiché (inchangé).
+        ...(clean.pack_size != null && clean.pack_unit != null
+          ? { pack_size: clean.pack_size, pack_unit: clean.pack_unit }
+          : {}),
         approval_status: 'pending_review',
         source: 'telegram',
         telegram_message_id: messageKey,

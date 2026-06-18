@@ -49,3 +49,24 @@ export function resolveUnitLabel(
 export function priceWithUnit(priceFormatted: string, unitLabel: string | null | undefined): string {
   return unitLabel ? `${priceFormatted} / ${unitLabel}` : priceFormatted
 }
+
+// ── Conditionnement DESCRIPTIF (P3) — prix/unité-de-cond. DÉRIVÉ à l'affichage ──
+// JAMAIS stocké, JAMAIS facturé. On facture toujours au prix de l'unité de vente.
+
+/**
+ * Prix DÉRIVÉ par unité de conditionnement = prix ÷ pack_size, arrondi 2 décimales.
+ * Retourne null (→ on n'affiche PAS le « ≈ prix/boîte ») si :
+ *   - pas de pack_size exploitable (null, ≤ 1, non fini),
+ *   - prix non fini / ≤ 0,
+ *   - résultat non fini / ≤ 0.
+ * AFFICHAGE PUR — aucune écriture, aucun impact facturation/checkout.
+ */
+export function packPerUnitPrice(
+  price: number | null | undefined,
+  packSize: number | null | undefined,
+): number | null {
+  if (price == null || !Number.isFinite(price) || price <= 0) return null
+  if (packSize == null || !Number.isFinite(packSize) || packSize <= 1) return null
+  const per = Math.round((price / packSize) * 100) / 100
+  return Number.isFinite(per) && per > 0 ? per : null
+}
