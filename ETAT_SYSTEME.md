@@ -26,7 +26,7 @@
 
 ### ⏳ EN ATTENTE (non urgent — à reprendre)
 - **Abonnement « Entreprise » de TEST** posé sur le fournisseur `cec673db-e148-4247-9b08-06839d975142` (lignes `supplier_subscriptions` `88fcfe24…` + audit `18b6a686…`) pour débloquer le test Telegram. **À RETIRER un jour** (DELETE → retour `free`/5). Donnée de test réelle en prod, sans impact ailleurs.
-- **`ADMIN_TELEGRAM_CHAT_ID` non configuré dans Vercel** : sans lui, les notifs de commande LOT 6 vers le Telegram d'Abdou sont **sautées** (best-effort, le fournisseur est quand même notifié). Optionnel — l'ajouter = recevoir ces alertes.
+- ✅ **Notif commande Telegram admin (`ADMIN_TELEGRAM_CHAT_ID` actif) = EN PROD, VALIDÉE** (2026-06-18) : Abdou reçoit sur son Telegram (`608081527`) chaque commande B2B **assignée à un fournisseur** (`notifyOrderAssigned` → `telegramSendMessage` vers `ADMIN_TELEGRAM_CHAT_ID`). Variable posée dans Vercel Production + redéployé. Testé bout-en-bout sur prod : assignation réelle (fournisseur NON lié Telegram, pour isoler le canal admin) → message reçu (« 🛒 Nouvelle commande à préparer · Réf · ville · produits ×qty », zéro PII acheteur). Données de test nettoyées. Best-effort (n'altère jamais l'assignation).
 - **UI cloche notifications in-app PAS construite** : la table `notifications` existe et se remplit (LOT 6), mais **aucun composant cloche/liste** côté front pour les afficher.
 - **Backfill catégories des autres produits internes** : l'ancien bug (catégorie/sous-catégorie jetées à l'upsert) est **corrigé pour les futurs** (`2ce7406`) ; les produits internes créés AVANT ont `category`/`subcategory` vides → backfill à prévoir pour le filtre par niche.
 
