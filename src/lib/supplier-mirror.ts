@@ -7,6 +7,12 @@
 //   sell_price       = final_wholesale_price_mad   (prix vitrine, déjà marge incluse)
 //   factory_cost_mad = suggested_wholesale_price_mad (coût fournisseur AVANT marge)
 //   marge plateforme = sell_price − factory_cost_mad, captée UNE seule fois (jamais réappliquée).
+//
+// Unité de vente + conditionnement (sale_unit/pack_size/pack_unit) = AFFICHAGE PUR : reportés du
+// supplier_product au miroir comme le fait déjà le flux Finaliser, pour qu'un produit APPROUVÉ
+// (non finalisé) garde son unité au catalogue. ZÉRO impact sur l'argent (sell/factory/marge).
+
+import { normalizeSaleUnit } from '@/lib/units'
 
 /** Entrée minimale issue d'un supplier_product pour décider/construire le miroir. */
 export interface SupplierMirrorInput {
@@ -20,6 +26,11 @@ export interface SupplierMirrorInput {
   final_wholesale_price_mad: number | null
   stock_quantity: number | null
   min_quantity: number
+  /** Unité de vente brute (supplier_products.unit) — AFFICHAGE PUR, reportée au catalogue. */
+  unit: string | null
+  /** Conditionnement descriptif (affichage pur). */
+  pack_size: number | null
+  pack_unit: string | null
 }
 
 /** Ligne `products` à UPSERT. Colonnes minimales : suffisantes pour findCatalogLink + checkout. */
@@ -33,6 +44,10 @@ export interface MirrorRow {
   availability_type: 'local_stock'
   approval_status: 'approved'
   active: true
+  // Unité de vente + conditionnement — AFFICHAGE PUR (aucun calcul). null = pièce / aucun cond.
+  sale_unit: string | null
+  pack_size: number | null
+  pack_unit: string | null
 }
 
 export type MirrorSkipReason =
@@ -63,6 +78,10 @@ export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
   if (sell <= 0) return { create: false, reason: 'non_positive_price' } // CHECK sell_price > 0
   if (sell < factory) return { create: false, reason: 'negative_margin' } // C-B2 (garde défensive)
 
+  // Unité de vente reportée (AFFICHAGE PUR) — unité RÉELLE seulement : pcs/null → null = pièce
+  // implicite (inchangé). Identique au flux Finaliser. Aucun impact argent.
+  const saleUnit = normalizeSaleUnit(sp.unit)
+
   return {
     create: true,
     row: {
@@ -77,6 +96,10 @@ export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
       availability_type: 'local_stock',
       approval_status: 'approved',
       active: true,
+      // AFFICHAGE PUR — reporté tel quel, comme le flux Finaliser. Aucun calcul.
+      sale_unit: saleUnit === 'piece' ? null : saleUnit,
+      pack_size: sp.pack_size ?? null,
+      pack_unit: sp.pack_unit ?? null,
     },
   }
 }

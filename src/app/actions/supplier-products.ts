@@ -218,7 +218,7 @@ export async function approveSupplierProduct(
   const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
   const { data: existing } = (await supabase
     .from('supplier_products')
-    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity')
+    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit')
     .eq('id', id)
     .single()) as {
     data: {
@@ -227,6 +227,9 @@ export async function approveSupplierProduct(
       availability_type: string
       stock_quantity: number | null
       min_quantity: number
+      unit: string | null
+      pack_size: number | null
+      pack_unit: string | null
     } | null
     error: unknown
   }
@@ -274,6 +277,10 @@ export async function approveSupplierProduct(
       final_wholesale_price_mad,
       stock_quantity: existing.stock_quantity,
       min_quantity: existing.min_quantity,
+      // AFFICHAGE PUR — reporte l'unité/conditionnement au miroir (comme le flux Finaliser).
+      unit: existing.unit,
+      pack_size: existing.pack_size,
+      pack_unit: existing.pack_unit,
     })
     if (mirror.create) {
       const { error: mirrorErr } = await supabase
