@@ -29,13 +29,19 @@ export async function PackBreakdown({
   // SINGULIER pour le prix/unité (« / boîte »). Terme inconnu → texte brut conservé.
   const packUnitPlural = resolvePackUnitLabel(packUnit, packSize, t)
   const packUnitSingular = resolvePackUnitLabel(packUnit, 1, t)
+  // RTL : le « ≈ » est groupé AVEC la valeur dans UN SEUL isolat bidi (FSI U+2068 …
+  // PDI U+2069) → en arabe « ≈ 2,98 MAD » forme un îlot LTR unique et le ≈ colle au
+  // prix (au lieu de se détacher à droite). Calqué sur la convention du prix principal.
+  // Les isolats sont INVISIBLES en LTR → FR « ≈ 2,98 MAD / boîte » et EN inchangés.
+  const perUnit = `⁨≈ ${formatMAD(per)}⁩`
+  // {size} nu isolé aussi (robustesse RTL) — invisible en LTR (chiffres latins conservés).
+  const size = `⁨${packSize}⁩`
 
   return (
     <p className="text-xs text-muted">
-      {/* size en string → chiffres latins garantis (pas de format locale) */}
-      {t('packComposition', { unit: unitLabel, size: String(packSize), packUnit: packUnitPlural })}
+      {t('packComposition', { unit: unitLabel, size, packUnit: packUnitPlural })}
       {' — '}
-      {t('packPerUnit', { perUnit: formatMAD(per), packUnit: packUnitSingular })}
+      {t('packPerUnit', { perUnit, packUnit: packUnitSingular })}
     </p>
   )
 }
