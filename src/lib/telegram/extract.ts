@@ -31,16 +31,26 @@ Règles STRICTES :
   Exemples : « stock 50 », « 50 en stock », darija « كاين 50 فالستوك », arabe « مخزون 50 » → 50. Ne JAMAIS inventer.
 - "lead_time_days" : délai de livraison EN JOURS (entier ≥ 0) UNIQUEMENT s'il figure, sinon null.
   Convertis en jours : « délai 20j » / « livraison 20 jours » / arabe « مدة 20 يوم » → 20 ; « 2 semaines » → 14 ; « 1 mois » → 30. Ne JAMAIS inventer.
-- "unit" : UNITÉ DE VENTE = l'unité dans laquelle le prix est exprimé, devinée d'après la légende.
+- "unit" : UNITÉ DE VENTE = COMMENT le produit est vendu / facturé À L'UNITÉ (l'unité dans laquelle le prix est exprimé).
   Valeurs autorisées (copie EXACTE) : "metre", "kg", "gramme", "litre", "ml", "paquet", "carton", "piece".
   Exemples : « 40 dh le mètre » / « le metro » / arabe « متر » → "metre" ; « 12 dh le kg » / « le kilo » / « كيلو » → "kg" ;
   « 12 dh le gramme » / « le g » / arabe « غرام » → "gramme" ; « 80 dh le litre » / « le L » / arabe « لتر » → "litre" ;
   « 150 dh les 100 ml » / « le millilitre » / arabe « مل » → "ml" ;
-  « 8 dh le carton » / « la caisse » / « كرطونة » → "carton" ; « le paquet » / « le sac » / « كيس » → "paquet".
+  « 8 dh le carton » / « la caisse » / « كرطونة » → "carton" ; « le paquet » / « كيس » → "paquet".
+  IMPORTANT — quand le prix porte sur un CONTENANT (sac, carton, paquet, lot…), l'unité de vente est CE CONTENANT, pas son contenu.
+  Ex : « 90 dh le sac de 10 kg » → unit="paquet" (on vend LE SAC à 90 dh ; "sac" → "paquet" car non listé), surtout PAS "kg".
+  « 280 dh le carton de 50 boîtes » → unit="carton" (on vend LE CARTON), pas "boîte".
   Si l'unité n'est PAS explicite dans la légende → "piece" (défaut). Ne JAMAIS deviner au-delà de ce qui est écrit.
-- "pack_size" + "pack_unit" : CONDITIONNEMENT si la légende le précise (« carton de 50 boîtes », « sac de 25 kg », « كرطونة فيها 50 علبة »).
-  pack_size = nombre d'unités dans le conditionnement (entier, ex. 50) ; pack_unit = nom de cette unité (ex. "boîte", "kg", "علبة").
-  Si AUCUN conditionnement n'est mentionné → pack_size = null ET pack_unit = null. Ne JAMAIS inventer.
+- "pack_size" + "pack_unit" : CONDITIONNEMENT = un emballage qui GROUPE plusieurs sous-unités D'UNE NATURE DIFFÉRENTE de l'unité de vente.
+  RÈGLE CONTENANT/CONTENU (anti-inversion) : pack_unit = ce qu'il y a À L'INTÉRIEUR (le CONTENU) ; pack_size = COMBIEN il y en a. Le CONTENANT est déjà l'unité de vente (unit), on ne le répète PAS dans pack_unit.
+    ✅ « carton de 50 boîtes » → unit="carton", pack_size=50, pack_unit="boîte" (le carton CONTIENT 50 boîtes).
+    ✅ « sac de 10 kg » → unit="paquet", pack_size=10, pack_unit="kg" (le sac CONTIENT 10 kg).
+    ❌ INTERDIT (inversé) « sac de 10 kg » → unit="kg", pack_unit="sac" : le sac est le CONTENANT (= unit), kg le contenu.
+  RÈGLE ANTI-REDONDANCE : si le conditionnement aurait la MÊME unité que l'unité de vente → laisse pack_size ET pack_unit = null (ne crée pas de conditionnement).
+    ✅ « huile 100 ml » / « les 100 ml » → unit="ml", pack_size=null, pack_unit=null (JAMAIS « ml de 100 ml »).
+    ✅ « tissu au mètre, rouleau de 100 m » → unit="metre", pack_size=null, pack_unit=null (vendu AU MÈTRE ; JAMAIS « mètre de 100 mètres » ; le « rouleau » peut être ignoré).
+    ❌ INTERDIT (redondant) « tissu au mètre, rouleau de 100 m » → unit="metre", pack_size=100, pack_unit="mètre".
+  Si AUCUN conditionnement de nature différente n'est mentionné → pack_size = null ET pack_unit = null. Ne JAMAIS inventer.
 
 Catégories et sous-catégories autorisées :
 ${renderTaxonomy()}`
