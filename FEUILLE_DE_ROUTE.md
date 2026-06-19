@@ -4,6 +4,40 @@
 
 ---
 
+## === 📸 BILAN PLATEFORME + PLAN (19/06) ===
+> Vue d'ensemble « patron », en français simple. Photo réelle de Mozouna au 19/06.
+
+### ✅ CE QUI MARCHE (en prod, utilisable aujourd'hui)
+- **Réception de produits par Telegram** : le fournisseur envoie photo + description (FR/AR/darija), l'**IA devine nom / prix / catégorie / stock / unité de vente** ; produit en attente de validation.
+- **L'IA distingue bien le produit du conditionnement** (« carton de 50 boîtes », « sac de 10 kg », « rouleau de 100 m ») — plus d'inversions ni de doublons.
+- **Validation → mise au catalogue automatique** : approuver un produit Maroc en stock crée un vrai produit commandable, avec prix + unité (**miroir réparé le 19/06**).
+- **Commandes reçues sur Telegram** (admin + superviseur pays), sans données privées acheteur.
+- **Espace grossiste** : quantité min, stock, prix, **paliers dégressifs + économies** (« tu économises X »).
+- **Espace affilié** : **commission** + **prix de revente conseillé**.
+- **Affichage prix à l'unité + conditionnement** (« carton de 50 boîtes — ≈ X / boîte »).
+- **3 langues FR / AR / EN**, arabe propre (sens de lecture, prix bien placés).
+- **Moteur d'argent** (commission / capital / paiement à la livraison) + **import CSV fournisseur**.
+
+### ⚠️ À FINIR (impact client)
+- **Photos ne suivent pas le miroir d'approbation** → catalogue avec **initiales au lieu d'images** ; parfois photo liste ≠ détail. → **MOYEN, sans argent.**
+- **Prix unité vs total trompeur** : un rouleau de 100 m = 4 000 MAD pas toujours montré → risque de malentendu/litige. **Décision 1 prise** (montrer unité ET total), **à construire**. → **MOYEN, touche l'affichage prix.**
+- **Paliers fournisseur non reportés** automatiquement au catalogue → **re-saisie manuelle**. → **MOYEN, touche l'argent.**
+- **Deux flux de publication non coordonnés** (Approuver = prix B2B vs Finaliser = prix affilié) → **sécurisé (ne plante plus)** mais **modèle propre à décider**. → **MOYEN/GROS, touche l'argent.**
+
+### ❌ PAS ENCORE FAIT
+- **Envoi multi-produits** (album Telegram / Excel réel / extraction PDF). → GROS, sans argent.
+- **Bot conversationnel** qui relance le fournisseur quand une info manque. → GROS, sans argent.
+- **Canal auto par catégorie** (Décision 2 : textile fini = affilié, tissu brut/agro = grossiste seul). → MOYEN/GROS, touche l'argent.
+- **Rayons de navigation par familles** (Agroalimentaire, Textile, Électronique…). → MOYEN, sans argent.
+- **Facturation à la sous-unité** (vendre « à la boîte » plutôt qu'au carton ; aujourd'hui affichage seulement). → GROS, touche l'argent.
+
+### 🎯 PLAN — 3 PRIORITÉS DANS L'ORDRE
+1. **Faire suivre les photos au catalogue** (ce que le client voit en premier). → **sans argent, MOYEN.**
+2. **Prix unité + total clair** (éviter les litiges rouleau/carton). → **affichage prix, prudent.**
+3. **Canal par catégorie** (range la publication, supprime le doublon 2 prix). → **touche l'argent, prudent.**
+
+---
+
 ## === 🗓️ ÉTAT FIN DE SESSION 16/06 ===
 > Code prod = **`628d8c7`**, base = **migration 073**.
 
