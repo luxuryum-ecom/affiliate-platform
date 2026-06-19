@@ -1,8 +1,15 @@
+import { getTranslations } from 'next-intl/server'
 import { getOriginConfig, TRUST_BADGES, PRODUCT_CATEGORIES } from '@/lib/taxonomy'
+
+// AFFICHAGE PUR — i18n FR/AR/EN. Ces composants sont des SERVER COMPONENTS (tous leurs
+// usages sont des pages serveur) : ils résolvent leurs libellés via getTranslations
+// (jamais une fonction `t` passée à un Client Component — règle absolue #2). Les valeurs
+// DONNÉE (catégorie, sous-catégorie, qty, unit) ne sont pas traduites ici.
 
 // ─── Mozouna Group Logo ────────────────────────────────────────────────────────
 
-export function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+export async function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const t = await getTranslations('badges')
   const sizes = {
     sm: { monogram: 'w-6 h-6 text-xs', name: 'text-xs', tagline: 'hidden' },
     md: { monogram: 'w-8 h-8 text-sm', name: 'text-sm', tagline: 'text-[10px]' },
@@ -17,7 +24,7 @@ export function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
       </div>
       <div>
         <p className={`${s.name} font-bold text-foreground leading-none`}>Mozouna Group</p>
-        <p className={`${s.tagline} text-gold-600 leading-none mt-0.5`}>Plateforme B2B Maroc</p>
+        <p className={`${s.tagline} text-gold-600 leading-none mt-0.5`}>{t('tagline')}</p>
       </div>
     </div>
   )
@@ -25,12 +32,13 @@ export function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
 // ─── Origin badge ──────────────────────────────────────────────────────────────
 
-export function OriginBadge({ country, className = '' }: { country: string; className?: string }) {
+export async function OriginBadge({ country, className = '' }: { country: string; className?: string }) {
+  const t = await getTranslations('badges')
   const config = getOriginConfig(country)
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${config.badgeCls} ${config.textCls} ${className}`}>
       <span>{config.flag}</span>
-      <span>{config.label}</span>
+      <span>{t('originLabel', { country })}</span>
     </span>
   )
 }
@@ -50,6 +58,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Autres':               CATEGORY_CHIP,
 }
 
+// NB: category/subcategory = valeurs DONNÉE de la taxonomie (FR en base, utilisées comme
+// clés ailleurs). Leur traduction d'affichage est un chantier taxonomie séparé (cf. Décision 2
+// FEUILLE_DE_ROUTE) → non traité ici pour ne rien casser. Composant laissé synchrone.
 export function CategoryBadge({ category, subcategory, className = '' }: { category?: string; subcategory?: string; className?: string }) {
   if (!category) return null
   const cls = CATEGORY_COLORS[category] ?? CATEGORY_CHIP
@@ -63,59 +74,64 @@ export function CategoryBadge({ category, subcategory, className = '' }: { categ
 
 // ─── Supplier type badge ───────────────────────────────────────────────────────
 
-export function SupplierTypeBadge({ type }: { type: 'morocco' | 'international' }) {
+export async function SupplierTypeBadge({ type }: { type: 'morocco' | 'international' }) {
+  const t = await getTranslations('badges')
   // Type = information neutre (différencié par le drapeau), plus de vert/bleu.
   return (
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-surface-2 text-muted border border-line">
-      {type === 'morocco' ? '🇲🇦 Fournisseur Maroc' : '🌍 International'}
+      {type === 'morocco' ? `🇲🇦 ${t('supplierMorocco')}` : `🌍 ${t('supplierInternational')}`}
     </span>
   )
 }
 
 // ─── Stock / import badge ──────────────────────────────────────────────────────
 
-export function AvailabilityBadge({ type }: { type: string }) {
+export async function AvailabilityBadge({ type }: { type: string }) {
+  const t = await getTranslations('badges')
   return type === 'local_stock' ? (
     // Stock dispo = SUCCÈS (vert sémantique légitime).
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success-soft text-success-fg border border-success">
-      ✓ Stock disponible
+      ✓ {t('stockAvailable')}
     </span>
   ) : (
     // Import/commande = info neutre (plus de violet).
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">
-      ⏳ Import / Commande
+      ⏳ {t('importOrder')}
     </span>
   )
 }
 
 // ─── Premium badges ────────────────────────────────────────────────────────────
 
-export function VerifiedBadge() {
+export async function VerifiedBadge() {
+  const t = await getTranslations('badges')
   // Signal premium → accent OR (signature).
   return (
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-300">
-      ✓ Vérifié
+      ✓ {t('verified')}
     </span>
   )
 }
 
-export function FeaturedBadge() {
+export async function FeaturedBadge() {
+  const t = await getTranslations('badges')
   return (
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-300">
-      ★ Vedette
+      ★ {t('featured')}
     </span>
   )
 }
 
 // ─── Trust badges strip ────────────────────────────────────────────────────────
 
-export function TrustBadgesStrip() {
+export async function TrustBadgesStrip() {
+  const t = await getTranslations('badges')
   return (
     <div className="flex flex-wrap gap-2">
       {TRUST_BADGES.map((b) => (
         <span key={b.id} className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${b.cls}`}>
           <span>{b.icon}</span>
-          <span>{b.label}</span>
+          <span>{t('trustLabel', { id: b.id })}</span>
         </span>
       ))}
     </div>
@@ -125,6 +141,7 @@ export function TrustBadgesStrip() {
 // ─── Gold supplier & fast response badges ─────────────────────────────────────
 
 export function GoldSupplierBadge() {
+  // « Gold » = nom de palier universel (non traduit).
   return (
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-400">
       ✦ Gold
@@ -132,11 +149,12 @@ export function GoldSupplierBadge() {
   )
 }
 
-export function FastResponseBadge() {
+export async function FastResponseBadge() {
+  const t = await getTranslations('badges')
   // Trait premium positif (pas un succès/stock) → accent OR, plus de vert déco.
   return (
     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold bg-accent-soft text-accent-fg border border-gold-200">
-      ⚡ Réactif
+      ⚡ {t('fastResponse')}
     </span>
   )
 }
@@ -174,33 +192,39 @@ export function SupplierLogoBlock({
 
 // ─── Spec chips ────────────────────────────────────────────────────────────────
 
-export function MOQChip({ qty, unit }: { qty: number; unit: string }) {
+export async function MOQChip({ qty, unit }: { qty: number; unit: string }) {
+  const t = await getTranslations('badges')
+  // unit peut être vide (produits internes) → pas d'espace orphelin.
+  const u = unit?.trim()
   return (
     <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-surface-2 text-muted border border-line">
-      MOQ {qty} {unit}
+      {t('moq')} {qty}{u ? ` ${u}` : ''}
     </span>
   )
 }
 
-export function LeadTimeChip({ days }: { days: number }) {
+export async function LeadTimeChip({ days }: { days: number }) {
+  const t = await getTranslations('badges')
   // Délai = info neutre (plus de bleu).
   return (
     <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-surface-2 text-muted border border-line">
-      {days}j
+      {t('leadTimeDays', { days })}
     </span>
   )
 }
 
-export function StockChip({ qty, unit }: { qty: number; unit: string }) {
+export async function StockChip({ qty, unit }: { qty: number; unit: string }) {
+  const t = await getTranslations('badges')
   // Niveau de stock = sémantique : succès / en attente / rupture.
   const cls = qty > 100
     ? 'bg-success-soft text-success-fg border-success'
     : qty > 0
     ? 'bg-warning-soft text-warning-fg border-warning'
     : 'bg-danger-soft text-danger-fg border-danger'
+  const u = unit?.trim()
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border ${cls}`}>
-      {qty > 0 ? `${qty} ${unit}` : 'Rupture'}
+      {qty > 0 ? `${qty}${u ? ` ${u}` : ''}` : t('outOfStock')}
     </span>
   )
 }

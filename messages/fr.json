@@ -22,6 +22,21 @@
     "pu_ml": "ml",
     "pu_metre": "{count, plural, one {mètre} other {mètres}}"
   },
+  "badges": {
+    "tagline": "Plateforme B2B Maroc",
+    "supplierMorocco": "Fournisseur Maroc",
+    "supplierInternational": "International",
+    "stockAvailable": "Stock disponible",
+    "importOrder": "Import / Commande",
+    "verified": "Vérifié",
+    "featured": "Vedette",
+    "fastResponse": "Réactif",
+    "moq": "MOQ",
+    "outOfStock": "Rupture",
+    "leadTimeDays": "{days} j",
+    "originLabel": "{country, select, Maroc {Maroc} Turquie {Turquie} Chine {Chine} Égypte {Égypte} Dubai {Dubai} Autre {Autre} Mixte {Mixte} other {{country}}}",
+    "trustLabel": "{id, select, verified_supplier {Fournisseur vérifié} local_stock {Stock local Maroc} international {Fournisseur international} transport_included {Transport & douane inclus} platform_payment {Paiement via plateforme} identity_protected {Identité fournisseur protégée} other {}}"
+  },
   "errors": {
     "unauthenticated": "Session expirée, reconnectez-vous.",
     "order_id_required": "Commande introuvable.",

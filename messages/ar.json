@@ -22,6 +22,21 @@
     "pu_ml": "مل",
     "pu_metre": "م"
   },
+  "badges": {
+    "tagline": "منصة B2B المغرب",
+    "supplierMorocco": "مورّد المغرب",
+    "supplierInternational": "دولي",
+    "stockAvailable": "متوفّر في المخزون",
+    "importOrder": "استيراد / طلب",
+    "verified": "موثّق",
+    "featured": "مميّز",
+    "fastResponse": "سريع الاستجابة",
+    "moq": "أدنى كمية",
+    "outOfStock": "نفد المخزون",
+    "leadTimeDays": "{days} يوم",
+    "originLabel": "{country, select, Maroc {المغرب} Turquie {تركيا} Chine {الصين} Égypte {مصر} Dubai {دبي} Autre {أخرى} Mixte {مختلط} other {{country}}}",
+    "trustLabel": "{id, select, verified_supplier {مورّد موثّق} local_stock {مخزون محلي بالمغرب} international {مورّد دولي} transport_included {الشحن والجمارك مشمولة} platform_payment {الدفع عبر المنصة} identity_protected {هوية المورّد محمية} other {}}"
+  },
   "errors": {
     "unauthenticated": "انتهت الجلسة، يرجى تسجيل الدخول من جديد.",
     "order_id_required": "الطلب غير موجود.",
