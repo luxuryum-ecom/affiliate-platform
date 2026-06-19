@@ -62,6 +62,24 @@ export async function upsertProduct(
   const source_supplier_product_id =
     !id ? ((formData.get('source_supplier_product_id') as string | null)?.trim() || null) : null
 
+  // P0-1 / Option 1 — Finaliser POLI : si ce supplier_product a DÉJÀ un produit catalogue
+  // (miroir auto-créé à l'approbation), un INSERT violerait l'index unique partiel 069 →
+  // crash. On refuse proprement AVANT toute dérivation. Aucun calcul touché. Un produit
+  // SANS miroir (pas de ligne products liée) → finalisation inchangée.
+  if (source_supplier_product_id) {
+    const { data: existingLink } = await supabase
+      .from('products')
+      .select('id')
+      .eq('source_supplier_product_id', source_supplier_product_id)
+      .maybeSingle()
+    if (existingLink?.id) {
+      return {
+        error:
+          'Ce produit est déjà au catalogue (créé à l’approbation). Modifiez-le directement depuis le catalogue.',
+      }
+    }
+  }
+
   // ── Unité de vente & conditionnement (P1/P3) — AFFICHAGE PUR, zéro calcul ───
   // sale_unit vide → null = pièce (aucun suffixe). Conditionnement valide = taille
   // ENTIÈRE ≥ 2 ET nom non vide, sinon les DEUX à null (pas de conditionnement).

@@ -265,7 +265,7 @@ export async function approveSupplierProduct(
   // ── C-B : auto-provisionner le miroir catalogue (commande directe Maroc) ──────
   // Produit Maroc local_stock avec prix MAD → on crée/maj un miroir `products` pour
   // autoriser la commande directe. sell_price = final (vitrine), factory_cost_mad =
-  // suggested (coût). Marge captée UNE fois. UPSERT idempotent sur source_supplier_product_id.
+  // suggested (coût). Marge captée UNE fois. Idempotent sur source_supplier_product_id.
   // Import / sans taux FX / marge anormale → pas de miroir (le produit reste en devis).
   if (existing) {
     const mirror = buildSupplierMirror({
@@ -283,9 +283,31 @@ export async function approveSupplierProduct(
       pack_unit: existing.pack_unit,
     })
     if (mirror.create) {
-      const { error: mirrorErr } = await supabase
+      // P0-1 — l'index unique sur products.source_supplier_product_id est PARTIEL
+      // (WHERE ... IS NOT NULL) → `.upsert({ onConflict })` ne peut pas l'inférer
+      // (Postgres 42P10) et échouait silencieusement → AUCUN miroir n'était créé.
+      // Correctif app-level : SELECT existant → UPDATE, sinon INSERT. Idempotent ;
+      // l'index partiel 069 reste le backstop anti-doublon (race → échec propre non-fatal).
+      const { data: existingMirror } = await supabase
         .from('products')
-        .upsert(mirror.row, { onConflict: 'source_supplier_product_id' })
+        .select('id')
+        .eq('source_supplier_product_id', id)
+        .maybeSingle()
+      let mirrorErr: { message: string } | null = null
+      if (existingMirror?.id) {
+        // Ré-approbation : on met à jour la ligne existante. On NE réécrit JAMAIS
+        // source_supplier_product_id (clé de lien immuable) → on l'exclut du payload.
+        const { source_supplier_product_id: _omit, ...updatable } = mirror.row
+        void _omit
+        ;({ error: mirrorErr } = await supabase
+          .from('products')
+          .update(updatable)
+          .eq('id', existingMirror.id))
+      } else {
+        // Première approbation : INSERT. L'index partiel 069 garantit l'absence de
+        // doublon même en cas de race (le perdant échoue proprement, non-fatal).
+        ;({ error: mirrorErr } = await supabase.from('products').insert(mirror.row))
+      }
       // Non-fatal : l'approbation a réussi. Sans miroir, le produit reste commandable
       // via devis (repli sûr, jamais « indisponible »). On trace pour diagnostic.
       if (mirrorErr) {
