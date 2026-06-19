@@ -33,6 +33,23 @@ describe('P2 — extraction IA de l’unité de vente', () => {
     expect(buildCleanExtraction({ ...base, unit: 'paquet' }).unit).toBe('paquet')
     expect(buildCleanExtraction({ ...base, unit: 'le sac' }).unit).toBe('paquet')
   })
+  it('« le litre » / « L » / « لتر » → litre', () => {
+    expect(buildCleanExtraction({ ...base, unit: 'litre' }).unit).toBe('litre')
+    expect(buildCleanExtraction({ ...base, unit: 'le litre' }).unit).toBe('litre')
+    expect(buildCleanExtraction({ ...base, unit: 'L' }).unit).toBe('litre')
+    expect(buildCleanExtraction({ ...base, unit: 'لتر' }).unit).toBe('litre')
+  })
+  it('« les 100 ml » / « ml » / « مل » → ml', () => {
+    expect(buildCleanExtraction({ ...base, unit: 'ml' }).unit).toBe('ml')
+    expect(buildCleanExtraction({ ...base, unit: 'les 100 ml' }).unit).toBe('ml')
+    expect(buildCleanExtraction({ ...base, unit: 'مل' }).unit).toBe('ml')
+  })
+  it('« le gramme » / « g » / « غرام » → gramme', () => {
+    expect(buildCleanExtraction({ ...base, unit: 'gramme' }).unit).toBe('gramme')
+    expect(buildCleanExtraction({ ...base, unit: 'le gramme' }).unit).toBe('gramme')
+    expect(buildCleanExtraction({ ...base, unit: 'g' }).unit).toBe('gramme')
+    expect(buildCleanExtraction({ ...base, unit: 'غرام' }).unit).toBe('gramme')
+  })
   it('description SANS unité → piece (défaut, jamais d’erreur)', () => {
     expect(buildCleanExtraction({ ...base, unit: null }).unit).toBe('piece')
     expect(buildCleanExtraction({ ...base, unit: undefined }).unit).toBe('piece')

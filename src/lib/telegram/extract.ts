@@ -32,8 +32,10 @@ Règles STRICTES :
 - "lead_time_days" : délai de livraison EN JOURS (entier ≥ 0) UNIQUEMENT s'il figure, sinon null.
   Convertis en jours : « délai 20j » / « livraison 20 jours » / arabe « مدة 20 يوم » → 20 ; « 2 semaines » → 14 ; « 1 mois » → 30. Ne JAMAIS inventer.
 - "unit" : UNITÉ DE VENTE = l'unité dans laquelle le prix est exprimé, devinée d'après la légende.
-  Valeurs autorisées (copie EXACTE) : "metre", "kg", "paquet", "carton", "piece".
+  Valeurs autorisées (copie EXACTE) : "metre", "kg", "gramme", "litre", "ml", "paquet", "carton", "piece".
   Exemples : « 40 dh le mètre » / « le metro » / arabe « متر » → "metre" ; « 12 dh le kg » / « le kilo » / « كيلو » → "kg" ;
+  « 12 dh le gramme » / « le g » / arabe « غرام » → "gramme" ; « 80 dh le litre » / « le L » / arabe « لتر » → "litre" ;
+  « 150 dh les 100 ml » / « le millilitre » / arabe « مل » → "ml" ;
   « 8 dh le carton » / « la caisse » / « كرطونة » → "carton" ; « le paquet » / « le sac » / « كيس » → "paquet".
   Si l'unité n'est PAS explicite dans la légende → "piece" (défaut). Ne JAMAIS deviner au-delà de ce qui est écrit.
 - "pack_size" + "pack_unit" : CONDITIONNEMENT si la légende le précise (« carton de 50 boîtes », « sac de 25 kg », « كرطونة فيها 50 علبة »).
@@ -69,7 +71,7 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       unit: {
         type: ['string', 'null'],
         description:
-          'Unité de vente : "metre", "kg", "paquet", "carton" si explicite dans la légende, sinon "piece" (défaut).',
+          'Unité de vente : "metre", "kg", "gramme", "litre", "ml", "paquet", "carton" si explicite dans la légende, sinon "piece" (défaut).',
       },
       pack_size: {
         type: ['integer', 'null'],

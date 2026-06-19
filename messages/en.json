@@ -2,7 +2,10 @@
   "units": {
     "piece": "pc",
     "metre": "m",
+    "gramme": "g",
     "kg": "kg",
+    "ml": "ml",
+    "litre": "L",
     "paquet": "pack",
     "carton": "carton",
     "lot": "Pack",
@@ -14,6 +17,9 @@
     "pu_piece": "{count, plural, one {piece} other {pieces}}",
     "pu_paquet": "{count, plural, one {pack} other {packs}}",
     "pu_kg": "kg",
+    "pu_gramme": "{count, plural, one {gram} other {grams}}",
+    "pu_litre": "{count, plural, one {liter} other {liters}}",
+    "pu_ml": "ml",
     "pu_metre": "{count, plural, one {meter} other {meters}}"
   },
   "errors": {

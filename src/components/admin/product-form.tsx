@@ -1226,7 +1226,10 @@ export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierP
             >
               <option value="">{tUnits('piece')}</option>
               <option value="metre">{tUnits('metre')}</option>
+              <option value="gramme">{tUnits('gramme')}</option>
               <option value="kg">{tUnits('kg')}</option>
+              <option value="ml">{tUnits('ml')}</option>
+              <option value="litre">{tUnits('litre')}</option>
               <option value="paquet">{tUnits('paquet')}</option>
               <option value="carton">{tUnits('carton')}</option>
             </select>
