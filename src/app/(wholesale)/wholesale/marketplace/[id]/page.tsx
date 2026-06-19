@@ -7,6 +7,8 @@ import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-f
 import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
 import { formatMAD, formatQty } from '@/lib/utils'
+import { getMeaningfulDescription } from '@/lib/product-media'
+import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import SampleRequestClient from './SampleRequestClient'
 import type {
   Profile,
@@ -77,7 +79,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const attachments = (attachmentsRes.data ?? []) as unknown as SupplierProductAttachment[]
 
   const displayName = product.public_name || product.product_name
-  const displayDesc = product.public_description || product.description
+  const displayDesc = getMeaningfulDescription(displayName, product.public_description || product.description)
   const isMorocco = product.supplier_type === 'morocco'
   const directUnitPrice = product.suggested_wholesale_price_mad ?? 0
 
@@ -138,12 +140,12 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
             {product.photos.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
                 {product.photos.slice(0, 4).map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  // Fallback initiales si l'image est cassée (cohérent avec le reste du site).
+                  <ProductThumbnail
                     key={i}
                     src={url}
-                    alt={`${displayName} ${i + 1}`}
-                    className={`w-full object-cover rounded-xl ${i === 0 ? 'col-span-2 aspect-[16/9]' : 'aspect-square'}`}
+                    name={`${displayName} ${i + 1}`}
+                    className={`w-full rounded-xl text-3xl ${i === 0 ? 'col-span-2 aspect-[16/9]' : 'aspect-square'}`}
                   />
                 ))}
               </div>

@@ -9,7 +9,7 @@ import { WholesaleSavingsHook } from '@/components/wholesale/wholesale-savings-h
 import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
-import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
+import { getProductCoverUrl, getProductGalleryUrls, getMeaningfulDescription } from '@/lib/product-media'
 import { getActiveTariff } from '@/app/actions/tariffs'
 import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
 import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
@@ -75,6 +75,8 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const coverUrl = getProductCoverUrl(product)
   const galleryUrls = getProductGalleryUrls(product)
   const ctaMode = getCatalogProductCtaMode(product.availability_type)
+  // Description affichée seulement si elle apporte une info au-delà du nom (cohérent affilié).
+  const meaningfulDesc = getMeaningfulDescription(product.name, product.description)
 
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
@@ -145,8 +147,8 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
             {/* Name */}
             <div>
               <h1 className="text-xl font-bold text-foreground leading-tight">{product.name}</h1>
-              {product.description && (
-                <p className="text-sm text-muted mt-2 leading-relaxed">{product.description}</p>
+              {meaningfulDesc && (
+                <p className="text-sm text-muted mt-2 leading-relaxed">{meaningfulDesc}</p>
               )}
             </div>
 
@@ -252,10 +254,14 @@ function ImportInfoBlock({
   const shippingMode = tariff?.shipping_mode ?? product.import_shipping_mode
   const shippingModeLabel = shippingMode ? (SHIPPING_MODE_LABELS[shippingMode] ?? null) : null
 
-  const transportCostMad =
+  // Tarif transport : masqué si absent/vide/0 — Number('') donnait 0 → « 0,00 MAD » parasite.
+  const transportRaw =
     tariff != null
-      ? Number(tariff.transport_customs_price_mad)
+      ? tariff.transport_customs_price_mad
       : product.estimated_import_price_mad ?? product.estimated_cost_mad
+  // Number('') vaut 0 → filtré par « > 0 » ci-dessous (donc champ masqué, pas « 0,00 MAD »).
+  const transportNum = transportRaw == null ? NaN : Number(transportRaw)
+  const transportCostMad = Number.isFinite(transportNum) && transportNum > 0 ? transportNum : null
   const unit = tariff?.unit ?? product.import_price_unit
 
   const deliveryDays = tariff?.delivery_days ?? product.estimated_delivery_days
