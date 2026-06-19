@@ -35,6 +35,32 @@ describe('normalizeSaleUnit', () => {
     expect(normalizeSaleUnit('carton')).toBe('carton')
     expect(normalizeSaleUnit('caisse')).toBe('carton')
   })
+  it('NOUVELLES unités ml / litre / gramme — FR', () => {
+    expect(normalizeSaleUnit('ml')).toBe('ml')
+    expect(normalizeSaleUnit('millilitre')).toBe('ml')
+    expect(normalizeSaleUnit('le litre')).toBe('litre')
+    expect(normalizeSaleUnit('litres')).toBe('litre')
+    expect(normalizeSaleUnit('L')).toBe('litre')
+    expect(normalizeSaleUnit('le gramme')).toBe('gramme')
+    expect(normalizeSaleUnit('grammes')).toBe('gramme')
+    expect(normalizeSaleUnit('g')).toBe('gramme')
+  })
+  it('NOUVELLES unités ml / litre / gramme — arabe / darija', () => {
+    expect(normalizeSaleUnit('مل')).toBe('ml')
+    expect(normalizeSaleUnit('لتر')).toBe('litre')
+    expect(normalizeSaleUnit('غرام')).toBe('gramme')
+  })
+  it('repli dernier token — « les 100 ml » → ml, « 250 g » → gramme', () => {
+    expect(normalizeSaleUnit('les 100 ml')).toBe('ml')
+    expect(normalizeSaleUnit('100 ml')).toBe('ml')
+    expect(normalizeSaleUnit('250 g')).toBe('gramme')
+    expect(normalizeSaleUnit('le litre')).toBe('litre')
+  })
+  it('NON-RÉGRESSION : un libellé libre non-unité reste piece (défaut)', () => {
+    expect(normalizeSaleUnit('paires')).toBe('piece')
+    expect(normalizeSaleUnit('flacons')).toBe('piece')
+    expect(normalizeSaleUnit('lot de 6')).toBe('piece')
+  })
 })
 
 describe('resolveUnitLabel', () => {

@@ -7,8 +7,22 @@
 // existant s'affiche comme avant. Le suffixe n'est ajouté QUE si l'unité est posée
 // explicitement (voir priceWithUnit / l'usage `sale_unit != null` côté pages).
 
-export const SALE_UNITS = ['piece', 'metre', 'kg', 'paquet', 'carton'] as const
+// Mètre / gramme / kg / ml / litre / paquet / pièce / carton. AUCUN calcul ne dépend
+// de l'unité (affichage pur). Ajout ml/litre/gramme = additif : défaut 'piece' inchangé.
+export const SALE_UNITS = ['piece', 'metre', 'gramme', 'kg', 'ml', 'litre', 'paquet', 'carton'] as const
 export type SaleUnit = (typeof SALE_UNITS)[number]
+
+// Variantes FR / arabe / darija / EN → enum canonique. Inconnu → 'piece' (défaut).
+const SALE_UNIT_ALIASES: Record<string, SaleUnit> = {
+  pcs: 'piece', pc: 'piece', piece: 'piece', 'pièce': 'piece', pieces: 'piece', 'pièces': 'piece', 'unité': 'piece', unite: 'piece', u: 'piece', 'قطعة': 'piece',
+  metre: 'metre', 'mètre': 'metre', m: 'metre', meter: 'metre', 'متر': 'metre',
+  gramme: 'gramme', grammes: 'gramme', g: 'gramme', gram: 'gramme', grams: 'gramme', 'غرام': 'gramme', 'غ': 'gramme', 'جرام': 'gramme',
+  kg: 'kg', kilo: 'kg', kilos: 'kg', kilogramme: 'kg', 'كغ': 'kg', 'كيلو': 'kg',
+  ml: 'ml', millilitre: 'ml', millilitres: 'ml', 'مل': 'ml', 'ميلي': 'ml',
+  litre: 'litre', litres: 'litre', l: 'litre', liter: 'litre', liters: 'litre', 'لتر': 'litre',
+  paquet: 'paquet', pack: 'paquet', sac: 'paquet', sachet: 'paquet', 'حزمة': 'paquet', 'كيس': 'paquet',
+  carton: 'carton', cartons: 'carton', caisse: 'carton', box: 'carton', 'كرطونة': 'carton', 'صندوق': 'carton',
+}
 
 /**
  * Normalise une valeur d'unité brute (DB ou IA) vers l'enum applicatif.
@@ -17,15 +31,13 @@ export type SaleUnit = (typeof SALE_UNITS)[number]
  */
 export function normalizeSaleUnit(raw: string | null | undefined): SaleUnit {
   if (!raw) return 'piece'
-  // Tolère les articles en tête (« le mètre », « la caisse », « au kg ») au cas où
+  // Tolère les articles en tête (« le mètre », « les 100 ml », « au kg ») au cas où
   // l'IA n'aurait pas renvoyé l'enum nu. Robustesse — ne change rien aux tokens nus.
-  const v = raw.trim().toLowerCase().replace(/^(le |la |l'|au |du |de |des |un |une )/, '').trim()
-  if (['pcs', 'pc', 'piece', 'pièce', 'pieces', 'pièces', 'unité', 'unite', 'u', 'قطعة'].includes(v)) return 'piece'
-  if (['metre', 'mètre', 'm', 'meter', 'متر', 'متر'].includes(v)) return 'metre'
-  if (['kg', 'kilo', 'kilos', 'kilogramme', 'كغ', 'كيلو'].includes(v)) return 'kg'
-  if (['paquet', 'pack', 'sac', 'sachet', 'حزمة', 'كيس'].includes(v)) return 'paquet'
-  if (['carton', 'cartons', 'caisse', 'box', 'كرطونة', 'صندوق'].includes(v)) return 'carton'
-  return 'piece'
+  const v = raw.trim().toLowerCase().replace(/^(les |le |la |l'|au |du |de |des |un |une )/, '').trim()
+  if (SALE_UNIT_ALIASES[v]) return SALE_UNIT_ALIASES[v]
+  // Repli : dernier token (« les 100 ml » → ml, « 250 g » → gramme). Sinon pièce (défaut).
+  const last = v.split(/\s+/).pop() ?? ''
+  return SALE_UNIT_ALIASES[last] ?? 'piece'
 }
 
 /**
@@ -55,7 +67,7 @@ export function priceWithUnit(priceFormatted: string, unitLabel: string | null |
 // unité CONNUE, on l'affiche traduit (i18n) ET accordé en nombre (pluriel) ; sinon
 // on garde le texte BRUT tel quel (fallback sûr). N'ALTÈRE JAMAIS la valeur stockée.
 
-export const PACK_UNITS = ['boite', 'sac', 'carton', 'piece', 'paquet', 'kg', 'metre'] as const
+export const PACK_UNITS = ['boite', 'sac', 'carton', 'piece', 'paquet', 'kg', 'gramme', 'litre', 'ml', 'metre'] as const
 export type PackUnit = (typeof PACK_UNITS)[number]
 /** Clé i18n d'une unité de conditionnement (namespace 'units'). */
 export type PackUnitKey = `pu_${PackUnit}`
@@ -68,6 +80,9 @@ const PACK_UNIT_ALIASES: Record<string, PackUnit> = {
   piece: 'piece', 'pièce': 'piece', pieces: 'piece', 'pièces': 'piece', pcs: 'piece', pc: 'piece', 'قطعة': 'piece',
   paquet: 'paquet', paquets: 'paquet', pack: 'paquet', packs: 'paquet', 'حزمة': 'paquet',
   kg: 'kg', kilo: 'kg', kilos: 'kg', kilogramme: 'kg', 'كغ': 'kg', 'كيلو': 'kg',
+  gramme: 'gramme', grammes: 'gramme', g: 'gramme', gram: 'gramme', grams: 'gramme', 'غرام': 'gramme', 'غ': 'gramme', 'جرام': 'gramme',
+  litre: 'litre', litres: 'litre', l: 'litre', liter: 'litre', liters: 'litre', 'لتر': 'litre',
+  ml: 'ml', millilitre: 'ml', millilitres: 'ml', 'مل': 'ml', 'ميلي': 'ml',
   metre: 'metre', 'mètre': 'metre', metres: 'metre', 'mètres': 'metre', meter: 'metre', meters: 'metre', 'متر': 'metre',
 }
 
