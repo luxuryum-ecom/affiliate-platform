@@ -14,6 +14,9 @@ const base: SupplierMirrorInput = {
   final_wholesale_price_mad: 120,
   stock_quantity: 120,
   min_quantity: 10,
+  unit: null,
+  pack_size: null,
+  pack_unit: null,
 }
 
 describe('buildSupplierMirror', () => {
@@ -81,6 +84,32 @@ describe('buildSupplierMirror', () => {
     const a = buildSupplierMirror(base)
     const b = buildSupplierMirror({ ...base })
     expect(a).toEqual(b)
+  })
+
+  it('UNITÉ/CONDITIONNEMENT reportés au miroir (paquet + pack 10 kg) — AFFICHAGE PUR', () => {
+    const d = buildSupplierMirror({ ...base, unit: 'paquet', pack_size: 10, pack_unit: 'kg' })
+    expect(d.create).toBe(true)
+    if (!d.create) return
+    expect(d.row.sale_unit).toBe('paquet')
+    expect(d.row.pack_size).toBe(10)
+    expect(d.row.pack_unit).toBe('kg')
+    // l'argent reste INTACT (hors périmètre)
+    expect(d.row.sell_price).toBe(120)
+    expect(d.row.factory_cost_mad).toBe(100)
+  })
+
+  it('unité brute normalisée (« le mètre » → metre)', () => {
+    const d = buildSupplierMirror({ ...base, unit: 'le mètre' })
+    expect(d.create && d.row.sale_unit).toBe('metre')
+  })
+
+  it('NON-RÉGRESSION : sans unité (null/pcs) → sale_unit null, pack null/null = inchangé', () => {
+    const dNull = buildSupplierMirror(base)
+    expect(dNull.create && dNull.row.sale_unit).toBeNull()
+    expect(dNull.create && dNull.row.pack_size).toBeNull()
+    expect(dNull.create && dNull.row.pack_unit).toBeNull()
+    const dPcs = buildSupplierMirror({ ...base, unit: 'pcs' })
+    expect(dPcs.create && dPcs.row.sale_unit).toBeNull() // 'pcs' → piece → null (pas de suffixe)
   })
 })
 
