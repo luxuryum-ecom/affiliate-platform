@@ -7,7 +7,14 @@
     "carton": "كرطونة",
     "lot": "مجموعة",
     "packComposition": "{unit} من {size} {packUnit}",
-    "packPerUnit": "≈ {perUnit} / {packUnit}"
+    "packPerUnit": "≈ {perUnit} / {packUnit}",
+    "pu_boite": "علبة",
+    "pu_sac": "كيس",
+    "pu_carton": "كرطونة",
+    "pu_piece": "قطعة",
+    "pu_paquet": "حزمة",
+    "pu_kg": "كغ",
+    "pu_metre": "م"
   },
   "errors": {
     "unauthenticated": "انتهت الجلسة، يرجى تسجيل الدخول من جديد.",
