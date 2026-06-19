@@ -244,6 +244,56 @@ avec l'**extraction IA actuelle**. Chantier `@architect`. **NE PAS construire ma
 
 ---
 
+## 🧭 DÉCISIONS MÉTIER Abdou — affichage catalogue + canaux (2026-06-19, à CADRER/construire)
+> Gravé le **2026-06-19** suite à l'audit affichage catalogue. Décisions ACTÉES par Abdou ;
+> implémentation à cadrer (certaines touchent l'argent → circuit `@finance`). **NE PAS construire
+> sans valider chaque lot.** Réf. constats d'audit : P1-4 (unité/total), P1-6 (canaux), P1-2/P1-3 (paliers).
+
+### DÉCISION 1 — Prix TOUJOURS à l'unité + TOTAL du contenant affiché
+Le prix fournisseur est **TOUJOURS le prix à l'UNITÉ** (mètre, boîte, kg…). L'affichage doit montrer
+**le prix unitaire ET le prix total du contenant** pour ne jamais tromper le grossiste.
+- Ex. : **« 40 MAD / m — Rouleau de 100 m : 4 000 MAD »** ; **« 5,60 MAD / boîte — Carton de 50 boîtes : 280 MAD »**.
+- Le client doit voir **CE QU'IL ACHÈTE** (le contenant) **et COMBIEN AU TOTAL**.
+- ⚠️ **Inversion de sémantique vs l'existant** : aujourd'hui `sell_price` est traité comme le prix du
+  **contenant** (le code dérive `prix ÷ pack_size` dans `PackBreakdown`/`packPerUnitPrice`). La décision
+  pose `sell_price` = **prix UNITAIRE** → le total contenant devient `prix × pack_size` (et non l'inverse).
+  **Impact facturation à clarifier** (`@finance`) : aujourd'hui on facture `sell_price` × quantité. Si
+  `sell_price` devient le prix unitaire mais qu'on vend au contenant (rouleau), il faut décider ce qui est
+  facturé (l'unité ou le contenant). **AFFICHAGE pur d'abord ; tout changement de base facturée = `@finance`.**
+- Nécessite un **nom de contenant** (« rouleau », « sac », « carton ») — dérivation i18n depuis `pack_unit`/
+  `sale_unit`, ou colonne additive `pack_container`. À trancher.
+
+### DÉCISION 2 — Canal déterminé par la CATÉGORIE (automatique, zéro coche manuelle)
+Le canal (**affilié possible** vs **grossiste seul**) découle **automatiquement de la catégorie** du produit
+(plus de toggle `affiliate_enabled` manuel à la finalisation).
+- **PEUVENT aller en AFFILIÉ (dropshipping COD)** : textile/vêtements **(produits finis)**, cosmétique,
+  électronique, gadgets/accessoires.
+- **GROSSISTE UNIQUEMENT (jamais affilié)** : agroalimentaire, **TISSU BRUT** (au mètre/rouleau),
+  matières premières, et **tout le reste par défaut**.
+- **Nuance taxonomie clé** : **TEXTILE FINI (vêtements) = affilié OUI** ; **TISSU BRUT (au mètre) = grossiste
+  seul** → il faut **distinguer ces deux dans la taxonomie** (sous-catégories séparées).
+- **À CADRER** : table de mapping `catégorie → canal(aux)` (source de vérité), application **à la
+  création/finalisation ET au miroir d'approbation** (cohérence des 2 flux, cf. audit P1-6), migration de
+  la taxonomie pour séparer textile fini / tissu brut, et reprise des produits existants. Affichage pur côté
+  canal, mais `affiliate_enabled` pilote la commission COD → **vérifier avec `@finance`**.
+
+### DÉCISION 3 — Paliers dégressifs = GROSSISTE UNIQUEMENT
+Les **paliers** sont réservés au **canal grossiste**. **L'affilié ne voit JAMAIS les paliers** (cohérent
+2-canaux : affilié = vente à l'unité, pas de volume).
+- Confirme le constat d'audit **P1-3** : ne PAS ajouter le hook économie côté affilié (c'est **voulu**).
+- Reste ouvert (audit **P1-2**, 💶 `@finance`) : **reporter les paliers fournisseur** (`supplier_product_moq_tiers`)
+  → `products.wholesale_tiers` (conversion FX + marge) pour le canal **grossiste**, aujourd'hui jamais reportés.
+
+### NOUVEAU — Cartes de FAMILLES / filtres catégories (navigation « rayons de magasin »)
+Créer de **grandes familles visuelles** de navigation sur le catalogue (comme des rayons) pour que le
+**grossiste ne se perde pas** : ex. **Agroalimentaire, Textile, Électronique, Matières premières, Bricolage…**
+Le grossiste **filtre par famille**.
+- **À CADRER** : taxonomie des **familles** (regroupement des catégories existantes), **UI cartes/filtres**
+  (catalogue grossiste + affilié), et **lien avec la règle canal-par-catégorie (Décision 2)** — une famille
+  peut conditionner le canal. i18n FR/AR/EN obligatoire, RTL. Chantier `@architect` + `@frontend`.
+
+---
+
 ## 📏 UNITÉS DE VENTE MULTIPLES (besoin Abdou — à CADRER, rien codé)
 > Gravé le **2026-06-18**. Chantier à concevoir (touche affichage + extraction IA + peut-être
 > calcul paliers). **NE PAS construire maintenant.**
