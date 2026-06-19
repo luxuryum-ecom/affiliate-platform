@@ -224,6 +224,26 @@ même niveau technique). Pistes à cadrer, par ordre de praticité à évaluer :
 
 ---
 
+## 💬 BOT TELEGRAM CONVERSATIONNEL (fournisseurs analphabètes / descriptions incomplètes) — besoin Abdou, à CADRER, rien codé
+> Gravé le **2026-06-19**. Chantier `@architect`. **NE PAS construire maintenant.**
+
+Beaucoup de fournisseurs sont **peu lettrés** et envoient juste une **PHOTO sans description**, ou une
+description **confuse/incomplète**. Aujourd'hui l'IA extrait **passivement** ce qu'elle trouve ; si le
+prix/l'unité manque, le produit est **incomplet**.
+
+**IDÉE** : rendre le bot **CONVERSATIONNEL** — quand une info essentielle manque ou est ambiguë (prix
+absent, unité pas claire, nom vague, photo seule), le bot **RÉPOND au fournisseur** sur Telegram pour
+lui demander de préciser (« Quel est le prix ? », « Ça se vend au kg ou à la pièce ? », « Combien
+d'unités dans le carton ? »). Le bot **attend la réponse**, **complète** le produit, et **confirme**.
+Gérer aussi : signaler **poliment** ce qui cloche, accepter des **réponses vocales/courtes**, rester
+**simple** pour un public peu lettré.
+
+**À CADRER** : machine à états du dialogue (quoi demander, dans quel ordre), gestion des réponses,
+quelles infos sont **'essentielles' vs 'optionnelles'**, langue (**darija/arabe/français**), intégration
+avec l'**extraction IA actuelle**. Chantier `@architect`. **NE PAS construire maintenant.**
+
+---
+
 ## 📏 UNITÉS DE VENTE MULTIPLES (besoin Abdou — à CADRER, rien codé)
 > Gravé le **2026-06-18**. Chantier à concevoir (touche affichage + extraction IA + peut-être
 > calcul paliers). **NE PAS construire maintenant.**
