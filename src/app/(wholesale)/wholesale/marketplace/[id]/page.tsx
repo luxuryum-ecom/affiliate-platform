@@ -6,6 +6,7 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
 import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { formatMAD, formatQty } from '@/lib/utils'
 import SampleRequestClient from './SampleRequestClient'
 import type {
   Profile,
@@ -118,7 +119,6 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
     video:         '🎥',
   }
 
-  const numLocale = locale === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-MA'
 
   return (
     <div className="theme-dark min-h-screen bg-bg">
@@ -228,14 +228,14 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted">{t('infoMoq')}</span>
-                <span className="font-medium text-foreground">{product.min_quantity} {product.unit}</span>
+                <span className="font-medium text-foreground">{formatQty(product.min_quantity)}{product.unit?.trim() ? ` ${product.unit.trim()}` : ''}</span>
               </div>
               {product.stock_quantity != null && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted">{t('infoStock')}</span>
                   <span className={`font-medium ${product.stock_quantity > 0 ? 'text-success-fg' : 'text-danger-fg'}`}>
                     {product.stock_quantity > 0
-                      ? `${product.stock_quantity.toLocaleString(numLocale)} ${product.unit}`
+                      ? `${formatQty(product.stock_quantity)}${product.unit?.trim() ? ` ${product.unit.trim()}` : ''}`
                       : t('infoStockOut')
                     }
                   </span>
@@ -251,7 +251,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                 <span className="text-muted">{isMorocco ? t('infoPriceMorocco') : t('infoPriceImport')}</span>
                 <span className="font-bold text-foreground text-base">
                   {product.suggested_wholesale_price_mad != null
-                    ? `${product.suggested_wholesale_price_mad.toLocaleString(numLocale)} MAD`
+                    ? formatMAD(product.suggested_wholesale_price_mad)
                     : t('infoOnQuote')
                   }
                 </span>
@@ -275,16 +275,16 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                     unitPrice={directUnitPrice}
                     minQty={directMinQty}
                     stockCount={directStock}
-                    unit={product.unit}
+                    unit={product.unit?.trim() ?? ''}
                     locale={locale}
                     tDirect={{
-                      stockNote: t('directStockNote', { moq: directMinQty, unit: product.unit }),
+                      stockNote: t('directStockNote', { moq: directMinQty, unit: product.unit?.trim() ?? '' }),
                       qtyLabel: t('directQtyLabel'),
                       qtyMin: t('directQtyMin', { min: directMinQty }),
                       unitPrice: t('directUnitPrice'),
                       subtotal: t('directSubtotal'),
                       stockAvailable: directStock != null && directStock > 0
-                        ? t('directStockAvailable', { count: directStock.toLocaleString(numLocale), unit: product.unit })
+                        ? t('directStockAvailable', { count: formatQty(directStock), unit: product.unit?.trim() ?? '' })
                         : '',
                       outOfStock: t('directOutOfStock'),
                       stockOk: t('directStockOk'),

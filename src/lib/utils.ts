@@ -138,3 +138,11 @@ export function formatCurrency(amount: number, currency: string = 'MAD'): string
 export function formatMAD(amount: number): string {
   return formatCurrency(amount, 'MAD')
 }
+
+/** Format a plain QUANTITY (no currency) with bidi isolation + latin digits.
+ *  Pour les nombres NON monétaires (MOQ, stock…) affichés à côté d'une unité en
+ *  contexte RTL : l'isolat FSI/PDI empêche le réordonnancement. N'AJOUTE PAS « MAD »
+ *  (≠ formatMAD) — c'est une quantité, pas un montant. */
+export function formatQty(n: number): string {
+  return `⁨${new Intl.NumberFormat('fr-MA').format(n)}⁩`
+}

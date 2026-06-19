@@ -741,7 +741,7 @@ function MarketplaceProductCard({
     ? `/wholesale/products/${product.id}`
     : `/wholesale/marketplace/${product.id}`
   const waText = encodeURIComponent(
-    `Bonjour, je souhaite un devis grossiste pour : ${displayName} (MOQ : ${product.min_quantity} ${product.unit ?? 'u.'})`
+    `Bonjour, je souhaite un devis grossiste pour : ${displayName} (MOQ : ${product.min_quantity}${product.unit?.trim() ? ` ${product.unit.trim()}` : ''})`
   )
   const waUrl = `https://wa.me/${whatsappPhone}?text=${waText}`
 
@@ -810,7 +810,7 @@ function MarketplaceProductCard({
 
         {/* MOQ + delivery */}
         <div className="flex gap-1 flex-wrap">
-          <MOQChip qty={product.min_quantity} unit={product.unit ?? 'u.'} />
+          <MOQChip qty={product.min_quantity} unit={product.unit ?? ''} />
           <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-surface-2 text-muted border border-line font-medium">
             🚚 {deliveryLabel}
           </span>
