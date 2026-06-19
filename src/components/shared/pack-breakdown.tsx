@@ -5,7 +5,7 @@
 
 import { getTranslations } from 'next-intl/server'
 import { formatMAD } from '@/lib/utils'
-import { packPerUnitPrice, resolveUnitLabel } from '@/lib/units'
+import { packPerUnitPrice, resolveUnitLabel, resolvePackUnitLabel } from '@/lib/units'
 
 export async function PackBreakdown({
   price,
@@ -25,13 +25,17 @@ export async function PackBreakdown({
   const t = await getTranslations('units')
   // Unité de vente (« carton ») si posée, sinon « Lot » générique.
   const unitLabel = saleUnit ? resolveUnitLabel(saleUnit, t) : t('lot')
+  // Conditionnement traduit + accordé : PLURIEL pour la composition (« de 50 boîtes »),
+  // SINGULIER pour le prix/unité (« / boîte »). Terme inconnu → texte brut conservé.
+  const packUnitPlural = resolvePackUnitLabel(packUnit, packSize, t)
+  const packUnitSingular = resolvePackUnitLabel(packUnit, 1, t)
 
   return (
     <p className="text-xs text-muted">
       {/* size en string → chiffres latins garantis (pas de format locale) */}
-      {t('packComposition', { unit: unitLabel, size: String(packSize), packUnit })}
+      {t('packComposition', { unit: unitLabel, size: String(packSize), packUnit: packUnitPlural })}
       {' — '}
-      {t('packPerUnit', { perUnit: formatMAD(per), packUnit })}
+      {t('packPerUnit', { perUnit: formatMAD(per), packUnit: packUnitSingular })}
     </p>
   )
 }

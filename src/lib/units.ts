@@ -50,6 +50,52 @@ export function priceWithUnit(priceFormatted: string, unitLabel: string | null |
   return unitLabel ? `${priceFormatted} / ${unitLabel}` : priceFormatted
 }
 
+// ── Unités de CONDITIONNEMENT (pack_unit) — affichage pur, traduit + accordé ────
+// Le pack_unit est du texte LIBRE (saisi admin / extrait IA). S'il correspond à une
+// unité CONNUE, on l'affiche traduit (i18n) ET accordé en nombre (pluriel) ; sinon
+// on garde le texte BRUT tel quel (fallback sûr). N'ALTÈRE JAMAIS la valeur stockée.
+
+export const PACK_UNITS = ['boite', 'sac', 'carton', 'piece', 'paquet', 'kg', 'metre'] as const
+export type PackUnit = (typeof PACK_UNITS)[number]
+/** Clé i18n d'une unité de conditionnement (namespace 'units'). */
+export type PackUnitKey = `pu_${PackUnit}`
+
+// Variantes FR / arabe / darija / EN courantes → clé canonique. Inconnu → texte brut.
+const PACK_UNIT_ALIASES: Record<string, PackUnit> = {
+  boite: 'boite', 'boîte': 'boite', boites: 'boite', 'boîtes': 'boite', box: 'boite', boxes: 'boite', 'علبة': 'boite', 'علب': 'boite',
+  sac: 'sac', sacs: 'sac', sachet: 'sac', sachets: 'sac', bag: 'sac', bags: 'sac', 'كيس': 'sac', 'أكياس': 'sac',
+  carton: 'carton', cartons: 'carton', caisse: 'carton', caisses: 'carton', 'كرطونة': 'carton', 'صندوق': 'carton',
+  piece: 'piece', 'pièce': 'piece', pieces: 'piece', 'pièces': 'piece', pcs: 'piece', pc: 'piece', 'قطعة': 'piece',
+  paquet: 'paquet', paquets: 'paquet', pack: 'paquet', packs: 'paquet', 'حزمة': 'paquet',
+  kg: 'kg', kilo: 'kg', kilos: 'kg', kilogramme: 'kg', 'كغ': 'kg', 'كيلو': 'kg',
+  metre: 'metre', 'mètre': 'metre', metres: 'metre', 'mètres': 'metre', meter: 'metre', meters: 'metre', 'متر': 'metre',
+}
+
+/**
+ * Normalise un nom d'unité de conditionnement brut vers l'enum canonique.
+ * Inconnu / vide / null → null (l'appelant gardera alors le texte brut).
+ */
+export function normalizePackUnit(raw: string | null | undefined): PackUnit | null {
+  if (!raw) return null
+  return PACK_UNIT_ALIASES[raw.trim().toLowerCase()] ?? null
+}
+
+/**
+ * Libellé d'affichage d'une unité de conditionnement, traduit + accordé au nombre.
+ * - unité CONNUE → traduction i18n `pu_<canonique>` (pluriel géré par ICU selon `count`) ;
+ * - terme LIBRE inconnu → texte brut tel quel (fallback sûr, jamais d'erreur).
+ * `t` = traducteur du namespace 'units'. AFFICHAGE PUR — n'altère jamais le stocké.
+ */
+export function resolvePackUnitLabel(
+  raw: string | null | undefined,
+  count: number,
+  t: (key: PackUnitKey, values?: { count: number }) => string,
+): string {
+  const canon = normalizePackUnit(raw)
+  if (!canon) return (raw ?? '').trim()
+  return t(`pu_${canon}`, { count })
+}
+
 // ── Conditionnement DESCRIPTIF (P3) — prix/unité-de-cond. DÉRIVÉ à l'affichage ──
 // JAMAIS stocké, JAMAIS facturé. On facture toujours au prix de l'unité de vente.
 

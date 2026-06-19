@@ -7,7 +7,14 @@
     "carton": "carton",
     "lot": "Pack",
     "packComposition": "{unit} of {size} {packUnit}",
-    "packPerUnit": "≈ {perUnit} / {packUnit}"
+    "packPerUnit": "≈ {perUnit} / {packUnit}",
+    "pu_boite": "{count, plural, one {box} other {boxes}}",
+    "pu_sac": "{count, plural, one {bag} other {bags}}",
+    "pu_carton": "{count, plural, one {carton} other {cartons}}",
+    "pu_piece": "{count, plural, one {piece} other {pieces}}",
+    "pu_paquet": "{count, plural, one {pack} other {packs}}",
+    "pu_kg": "kg",
+    "pu_metre": "{count, plural, one {meter} other {meters}}"
   },
   "errors": {
     "unauthenticated": "Session expired, please sign in again.",

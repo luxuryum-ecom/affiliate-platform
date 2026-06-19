@@ -4,7 +4,10 @@ import {
   resolveUnitLabel,
   priceWithUnit,
   packPerUnitPrice,
+  normalizePackUnit,
+  resolvePackUnitLabel,
   type SaleUnit,
+  type PackUnitKey,
 } from '@/lib/units'
 
 // traducteur factice : renvoie la clé en MAJUSCULE pour vérifier le mapping
@@ -67,5 +70,44 @@ describe('packPerUnitPrice — conditionnement DÉRIVÉ (P3)', () => {
     expect(packPerUnitPrice(200, 0)).toBeNull()
     expect(packPerUnitPrice(0, 50)).toBeNull()
     expect(packPerUnitPrice(null, 50)).toBeNull()
+  })
+})
+
+describe('normalizePackUnit — unité de conditionnement (affichage pur)', () => {
+  it('variantes FR/AR/darija/EN connues → clé canonique', () => {
+    expect(normalizePackUnit('boîte')).toBe('boite')
+    expect(normalizePackUnit('Boîtes')).toBe('boite')
+    expect(normalizePackUnit('علبة')).toBe('boite')
+    expect(normalizePackUnit('box')).toBe('boite')
+    expect(normalizePackUnit('sac')).toBe('sac')
+    expect(normalizePackUnit('كيس')).toBe('sac')
+    expect(normalizePackUnit('caisse')).toBe('carton')
+    expect(normalizePackUnit('كرطونة')).toBe('carton')
+    expect(normalizePackUnit('pièce')).toBe('piece')
+    expect(normalizePackUnit('  KG ')).toBe('kg')
+  })
+  it('terme libre inconnu / vide / null → null (fallback texte brut)', () => {
+    expect(normalizePackUnit('bidon-bizarre')).toBeNull()
+    expect(normalizePackUnit('')).toBeNull()
+    expect(normalizePackUnit(null)).toBeNull()
+    expect(normalizePackUnit(undefined)).toBeNull()
+  })
+})
+
+describe('resolvePackUnitLabel — traduction + accord (pluriel)', () => {
+  // traducteur factice : encode clé + count pour vérifier l'aiguillage (sans i18n réel)
+  const tk = (key: PackUnitKey, values?: { count: number }) => `${key}#${values?.count}`
+  it('unité connue → passe par la clé i18n avec le bon count', () => {
+    expect(resolvePackUnitLabel('boîte', 50, tk)).toBe('pu_boite#50') // pluriel
+    expect(resolvePackUnitLabel('boîte', 1, tk)).toBe('pu_boite#1') // singulier
+    expect(resolvePackUnitLabel('كرطونة', 12, tk)).toBe('pu_carton#12')
+  })
+  it('terme libre inconnu → texte brut, JAMAIS traduit', () => {
+    expect(resolvePackUnitLabel('bidon-bizarre', 50, tk)).toBe('bidon-bizarre')
+    expect(resolvePackUnitLabel('  Truc  ', 3, tk)).toBe('Truc') // trim, brut conservé
+  })
+  it('null/vide → chaîne vide (rien d’affiché)', () => {
+    expect(resolvePackUnitLabel(null, 5, tk)).toBe('')
+    expect(resolvePackUnitLabel('', 5, tk)).toBe('')
   })
 })
