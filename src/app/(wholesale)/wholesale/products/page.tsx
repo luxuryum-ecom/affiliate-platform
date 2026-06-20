@@ -6,7 +6,8 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { WholesaleCatalogCard } from '@/components/wholesale/wholesale-catalog-card'
 import { formatMAD } from '@/lib/utils'
-import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
+import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES, CATEGORY_ICONS, resolveCategoryLabel } from '@/lib/taxonomy'
+import { CategoryRail, type CategoryChip } from '@/components/shared/category-rail'
 import type { WholesaleCatalogRow, WholesaleCartItem } from '@/types/database'
 
 export async function generateMetadata() {
@@ -37,9 +38,10 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [t, tc, profileResult, catalogResult, cartResult] = await Promise.all([
+  const [t, tc, tCat, profileResult, catalogResult, cartResult] = await Promise.all([
     getTranslations('wholesale.products'),
     getTranslations('wholesale.common'),
+    getTranslations('categories'),
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
       .from('wholesale_catalog_read')
@@ -106,6 +108,22 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
   )
 
   const subcategoryOptions = filters.category ? getSubcategories(filters.category) : []
+
+  // Construction des chips CategoryRail côté serveur — aucune fonction passée au composant.
+  const allHref = filters.tab ? `/wholesale/products?tab=${filters.tab}` : '/wholesale/products'
+  const chips: CategoryChip[] = PRODUCT_CATEGORIES.map((cat) => {
+    const sp = new URLSearchParams()
+    if (filters.tab) sp.set('tab', filters.tab)
+    sp.set('category', cat)
+    if (filters.q) sp.set('q', filters.q)
+    return {
+      value: cat,
+      label: resolveCategoryLabel(cat, tCat),
+      icon: CATEGORY_ICONS[cat] ?? '📦',
+      isActive: filters.category === cat,
+      href: `/wholesale/products?${sp.toString()}`,
+    }
+  })
 
   // Helper: build a tab href preserving current filters
   function tabHref(tab: string) {
@@ -189,6 +207,14 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
             </span>
           </Link>
         </div>
+
+        {/* Rayons — navigation par famille */}
+        <CategoryRail
+          chips={chips}
+          allHref={allHref}
+          allLabel={tCat('all')}
+          isAllActive={!filters.category}
+        />
 
         {/* ── Filters ─────────────────────────────────────────────────────────── */}
         <MarketplaceFilters filterTitle={t('filterTitle')}>

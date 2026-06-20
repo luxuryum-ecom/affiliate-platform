@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { MozounaLogo, OriginBadge, VerifiedBadge, FeaturedBadge, MOQChip } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
-import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
+import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES, CATEGORY_ICONS } from '@/lib/taxonomy'
 import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
@@ -667,15 +667,7 @@ function CountrySourceSection({
 
 // ─── Marketplace product card ─────────────────────────────────────────────────
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'Textile':              '👗',
-  'Matières premières':   '🧵',
-  'Chaussures':           '👟',
-  'Cosmétique & hygiène': '💄',
-  'Alimentaire':          '🥗',
-  'Maison & packaging':   '📦',
-  'Artisanat':            '🧶',
-}
+// CATEGORY_ICONS importé depuis taxonomy.ts
 
 type MoqTierRow = { min_quantity: number; unit_price_usd: number }
 

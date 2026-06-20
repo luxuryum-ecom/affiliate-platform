@@ -163,6 +163,39 @@ export function getOriginConfig(country: string): OriginConfig {
   )
 }
 
+// ─── Category icons (emoji) ───────────────────────────────────────────────────
+// Toutes les 12 catégories canoniques. Réutilisé par CategoryRail.
+export const CATEGORY_ICONS: Record<string, string> = {
+  'Textile':              '👗',
+  'Matières premières':   '🧵',
+  'Chaussures':           '👟',
+  'Cosmétique & hygiène': '💄',
+  'Alimentaire':          '🥗',
+  'Maison & packaging':   '📦',
+  'Artisanat':            '🧶',
+  'Électronique & gadgets': '📱',
+  'Sport & Fitness':      '🏋️',
+  'Jouets & enfants':     '🧸',
+  'Accessoires & maroquinerie': '👜',
+  'Autres':               '🔧',
+}
+
+/**
+ * Résout le libellé localisé d'une catégorie canonique.
+ * Retourne le nom canonique lui-même si la traduction est absente (fallback safe).
+ * Usage côté serveur uniquement (passe `t` de getTranslations('categories')).
+ */
+export function resolveCategoryLabel(
+  canonicalName: string,
+  t: (key: string) => string,
+): string {
+  try {
+    return t(canonicalName)
+  } catch {
+    return canonicalName
+  }
+}
+
 // ─── Trust badges ──────────────────────────────────────────────────────────────
 
 // Trust badges = réassurance premium → accent OR unifié (signature), plus de
