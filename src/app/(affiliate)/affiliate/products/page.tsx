@@ -196,7 +196,9 @@ export default async function AffiliateProductsPage({
                           saleUnit={product.sale_unit}
                         />
                       </div>
-                      <p className="text-[10px] text-success-fg mt-0.5">{t('priceAllInclusiveShort')}</p>
+                      {/* #5 — dé-emphase : neutre (et non vert) pour que le GAIN reste le seul
+                          point vert mis en avant. Couleur only, taille de carte inchangée. */}
+                      <p className="text-[10px] text-muted mt-0.5">{t('priceAllInclusiveShort')}</p>
                     </div>
 
                     {/* CTA — cible tactile ≥44px (flex centering + min-h) ; texte/couleur/
