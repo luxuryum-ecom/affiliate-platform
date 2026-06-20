@@ -8,6 +8,8 @@ import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } fr
 import { priceWithUnit, resolveUnitLabel } from '@/lib/units'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { getTranslations } from 'next-intl/server'
+import { PRODUCT_CATEGORIES, CATEGORY_ICONS, resolveCategoryLabel } from '@/lib/taxonomy'
+import { CategoryRail, type CategoryChip } from '@/components/shared/category-rail'
 import type { Product } from '@/types/database'
 
 export async function generateMetadata() {
@@ -15,11 +17,18 @@ export async function generateMetadata() {
   return { title: t('metaTitle') }
 }
 
-export default async function AffiliateProductsPage() {
+export default async function AffiliateProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>
+}) {
   const supabase = await createClient()
   const t = await getTranslations('affiliate.products')
   const tCommon = await getTranslations('affiliate.common')
   const tUnits = await getTranslations('units')
+  const tCat = await getTranslations('categories')
+  const params = await searchParams
+  const activeCategory = params.category ?? null
 
   const {
     data: { user },
@@ -33,15 +42,35 @@ export default async function AffiliateProductsPage() {
     .eq('id', user.id)
     .single() as { data: { full_name: string } | null; error: unknown }
 
-  const productsRes = await supabase
+  const productsQuery = supabase
     .from('products')
     .select('*')
     .eq('active', true)
     .eq('approval_status', 'approved')
     .eq('affiliate_enabled', true)
-    .order('created_at', { ascending: false }) as unknown as { data: Product[] | null; error: unknown }
+    .order('created_at', { ascending: false })
+
+  if (activeCategory) {
+    productsQuery.eq('category', activeCategory)
+  }
+
+  const productsRes = await productsQuery as unknown as { data: Product[] | null; error: unknown }
 
   const list = productsRes.data ?? []
+
+  // Construction des chips côté serveur — aucune fonction passée au composant.
+  const allHref = '/affiliate/products'
+  const chips: CategoryChip[] = PRODUCT_CATEGORIES.map((cat) => {
+    const sp = new URLSearchParams()
+    sp.set('category', cat)
+    return {
+      value: cat,
+      label: resolveCategoryLabel(cat, tCat),
+      icon: CATEGORY_ICONS[cat] ?? '📦',
+      isActive: activeCategory === cat,
+      href: `/affiliate/products?${sp.toString()}`,
+    }
+  })
 
   // Aperçu commission au prix catalogue = prix_vente − capital.
   // Capital inclut déjà DELIVERY_PROVISION_MAD → on passe la même provision
@@ -70,6 +99,14 @@ export default async function AffiliateProductsPage() {
         <div className="mb-6 rounded-xl border border-gold-300 bg-accent-soft px-4 py-3">
           <p className="text-sm font-semibold text-accent-fg">💰 {t('catalogBanner')}</p>
         </div>
+
+        {/* Rayons — familles de produits */}
+        <CategoryRail
+          chips={chips}
+          allHref={allHref}
+          allLabel={tCat('all')}
+          isAllActive={activeCategory === null}
+        />
 
         {list.length === 0 ? (
           <div className="bg-surface rounded-xl border border-line p-12 text-center">

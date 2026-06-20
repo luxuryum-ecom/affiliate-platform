@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { convertToMad, composePricing, buildSupplierPricing, isAwaitingFxRate, applyPlatformMargin } from '@/lib/supplier-pricing'
+import { convertToMad, composePricing, buildSupplierPricing, isAwaitingFxRate, applyPlatformMargin, buildMirrorTiers } from '@/lib/supplier-pricing'
 
 // Faux client Supabase minimal pour tester l'orchestration sans DB réelle.
 // Chaîne .from(table).select().eq().maybeSingle() + .rpc('fx_rate_to_mad').
@@ -237,5 +237,46 @@ describe('applyPlatformMargin', () => {
   it('base null → null', () => {
     expect(applyPlatformMargin(null, true, 'percentage', 15)).toBeNull()
     expect(applyPlatformMargin(null, false, 'fixed', 50)).toBeNull()
+  })
+})
+
+describe('buildMirrorTiers (report paliers fournisseur → grossiste MAD, D3)', () => {
+  it('convertit FX + marge %, ENTIER MAD, trié + max_qty borné (getWholesaleTier correct)', () => {
+    const r = buildMirrorTiers(
+      [{ min_quantity: 1, unit_price_usd: 10 }, { min_quantity: 100, unit_price_usd: 8 }],
+      10, true, 'percentage', 25,
+    )
+    expect(r).toEqual([
+      { min_qty: 1, max_qty: 99, price_per_unit: 125 }, // 10×10=100 +25% = 125
+      { min_qty: 100, price_per_unit: 100 },            // 8×10=80 +25% = 100, dernier ouvert
+    ])
+  })
+
+  it('marge OFF → ENTIER MAD (Math.round), biais ½-centime de convertToMad écarté', () => {
+    const r = buildMirrorTiers([{ min_quantity: 1, unit_price_usd: 10.4 }], 1, false, 'percentage', 0)
+    expect(r).toEqual([{ min_qty: 1, price_per_unit: 10 }]) // 10,40 → 10 entier, jamais 10,40 facturé
+    expect(Number.isInteger(r[0].price_per_unit)).toBe(true)
+  })
+
+  it('palier non convertible (taux null / prix ≤ 0) ÉCARTÉ — jamais de MAD fabriqué', () => {
+    expect(buildMirrorTiers([{ min_quantity: 1, unit_price_usd: 5 }], null, true, 'percentage', 25)).toEqual([])
+    expect(buildMirrorTiers([{ min_quantity: 1, unit_price_usd: 0 }], 10, true, 'percentage', 25)).toEqual([])
+  })
+
+  it('min_qty non entier / doublon ÉCARTÉS', () => {
+    const r = buildMirrorTiers(
+      [
+        { min_quantity: 1.5, unit_price_usd: 9 },
+        { min_quantity: 10, unit_price_usd: 8 },
+        { min_quantity: 10, unit_price_usd: 7 },
+      ],
+      10, false, 'percentage', 0,
+    )
+    expect(r).toEqual([{ min_qty: 10, price_per_unit: 80 }]) // 1.5 écarté ; doublon 10 → 1er gardé
+  })
+
+  it('vide / null → []', () => {
+    expect(buildMirrorTiers([], 10, true, 'percentage', 25)).toEqual([])
+    expect(buildMirrorTiers(null, 10, true, 'percentage', 25)).toEqual([])
   })
 })
