@@ -45,8 +45,33 @@ export const CATEGORY_TAXONOMY = {
     'Cadeaux',
     'Décoration artisanale',
   ],
-  'Autres': [
+  // Catégorie parente dédiée (D2, 2026-06-20) — produits finis grand public = canal affilié.
+  'Électronique & gadgets': [
     'Électronique',
+    'Téléphonie & accessoires',
+    'Gadgets',
+    'Audio',
+  ],
+  'Sport & Fitness': [
+    'Fitness',
+    'Yoga',
+    'Sport de plein air',
+    'Accessoires sport',
+  ],
+  'Jouets & enfants': [
+    'Jouets',
+    'Jeux éducatifs',
+    'Peluches',
+    'Loisirs créatifs',
+  ],
+  'Accessoires & maroquinerie': [
+    'Sacs',
+    'Maroquinerie',
+    'Bijoux',
+    'Lunettes',
+    'Ceintures',
+  ],
+  'Autres': [
     'Accessoires',
     'Divers',
   ],
@@ -58,6 +83,37 @@ export const PRODUCT_CATEGORIES = Object.keys(CATEGORY_TAXONOMY) as ProductCateg
 
 export function getSubcategories(category: string): readonly string[] {
   return (CATEGORY_TAXONOMY as Record<string, readonly string[]>)[category] ?? []
+}
+
+// ─── CANAL PAR CATÉGORIE (D2) — décision figée 2026-06-20 ─────────────────────
+// Quelles catégories PEUVENT aller en canal AFFILIÉ (dropshipping COD). Tout le
+// reste (matières premières/tissu brut, agroalimentaire, divers) = GROSSISTE seul.
+// Résolution FAIL-CLOSED : catégorie inconnue/vide → grossiste (jamais affilié).
+// NB : `affiliate_enabled=true` exige AUSSI le capital affilié (mig 073) — ce flag
+// ne fait qu'AUTORISER le canal, il ne dérive aucun montant.
+const AFFILIATE_ALLOWED_CATEGORIES: ReadonlySet<string> = new Set([
+  'Textile',
+  'Chaussures',
+  'Cosmétique & hygiène',
+  'Maison & packaging',
+  'Artisanat',
+  'Électronique & gadgets',
+  'Sport & Fitness',
+  'Jouets & enfants',
+  'Accessoires & maroquinerie',
+])
+
+/** Catégorie connue de la taxonomie ? (allowlist serveur — défense en profondeur). */
+export function isValidCategory(category: string | null | undefined): category is ProductCategory {
+  return !!category && (PRODUCT_CATEGORIES as readonly string[]).includes(category)
+}
+
+/**
+ * Le canal AFFILIÉ est-il autorisé pour cette catégorie ? FAIL-CLOSED :
+ * catégorie vide/inconnue/non listée → false (grossiste seul). Jamais l'inverse.
+ */
+export function isAffiliateAllowedCategory(category: string | null | undefined): boolean {
+  return !!category && AFFILIATE_ALLOWED_CATEGORIES.has(category)
 }
 
 // ─── Origin country visual config ─────────────────────────────────────────────
