@@ -246,15 +246,13 @@
 - Dans la fiche produit, afficher les **créatives (photos / vidéos) DÉJÀ disponibles** pour ce produit, que l'affilié peut **télécharger / utiliser** pour ses pubs **Meta / TikTok**.
 - Nécessite une **bibliothèque de créatives liée aux produits**.
 
-**PALIER 3 — Génération de créatives IA À LA DEMANDE** *(projet dédié — monétisation / passive income)*
-- **Génération IA payante par crédits**, directement dans la fiche produit : l'affilié génère **photo / vidéo IA en un clic**, paie en **crédits** → **nouvelle source de revenu récurrente** pour Abdou.
-- **INFRASTRUCTURE EXISTANTE À RÉUTILISER** (machine à créatives déjà en place) :
-  - **n8n** sur **VPS Hostinger `72.62.188.150`**
-  - **Remotion** dans `/root/remotion-ads/`
-  - template **`OldMoneyAd_v2`**
-  - **API PM2** sur **port `3333`**
-- **À CADRER SÉPARÉMENT (vrai module business)** : modèle de **prix / crédits**, **paiement**, **coût par génération IA** (chaque génération coûte de l'argent à Abdou → **marge à définir**), **file d'attente**, **connexion plateforme ↔ n8n**.
-- ⚠️ **NE PAS mélanger avec les paliers 1-2.** Module à part entière, à planifier séparément (process argent / `@finance` pour la partie crédits/paiement).
+**PALIER 3 (RÉVISÉ) — Studio de créatives IA payant** *(module dédié — monétisation / passive income plateforme)* — *révisé le 2026-06-20*
+- **CIBLE** : **affiliés ET grossistes** (pas seulement les affiliés) — chacun peut générer ses créatives pub selon sa demande.
+- **PRODUIT** : une **galerie** + une option **« créer une vidéo / image IA »** directement dans l'app, en **libre-service**.
+- **MODÈLE DE REVENU** : facturation **À CHAQUE génération** (par vidéo / par image) → **revenu récurrent** pour Abdou. Modèle **crédits** ou **paiement à l'unité** — **à cadrer**.
+- **STACK TECHNIQUE = À DÉFINIR SELON RENTABILITÉ** (ne plus figer l'ancienne infra) : options à évaluer = **API Claude** (texte / script créatif) + un **générateur vidéo / image** (ex. **Higgsfield**, ou autre) ; l'**ancienne infra n8n + Remotion + Hostinger** reste **une option parmi d'autres**. Le choix final dépendra du **COÛT par génération vs prix facturé** (**marge**).
+- **ARGUMENT DE VENTE / VISION** : **tout-en-un dans une seule app** — sourcing produit + stock + livraison + emballage + **CRÉATION DE PUB**. Le **combo complet** qui différencie Mozouna.
+- **À CADRER SÉPARÉMENT (module business dédié, NE PAS mélanger avec paliers 1-2)** : modèle **prix / crédits**, **paiement**, **coût par génération** (**marge**), **file d'attente**, **connexion plateforme ↔ outil de génération**. **Process argent → audit `@finance` obligatoire avant tout code.**
 
 ### 🧭 FILTRE PAR NICHE / CATÉGORIE — catalogue affilié (idée Abdou, pour scaler avec plusieurs niches)
 > Consigné le **2026-06-16**. **Rien n'est codé.** Affichage uniquement (pas d'argent touché). À faire **après les chantiers en cours**.
