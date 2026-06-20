@@ -1,3 +1,110 @@
+# FEUILLE DE ROUTE — SaaS d'affiliation Mozouna
+
+> **Réorganisée le 2026-06-20 en 3 ÉTAPES claires.** ZÉRO suppression : **tout**
+> l'historique détaillé d'origine est conservé **verbatim** sous
+> « 📚 ARCHIVE / HISTORIQUE DÉTAILLÉ » en bas de ce fichier. Le sommaire ci-dessous
+> **indexe** ces sections. Statuts croisés avec `ETAT_SYSTEME.md` (registre de vérité).
+>
+> Légende : ✅ Fait (en prod) · 🔄 En cours / partiel · ⬜ À faire / à cadrer.
+
+---
+
+## 🧭 SOMMAIRE — 3 ÉTAPES
+
+### ÉTAPE 1 — Vitrine crédible ✅ **FAIT**
+> Photos + prix clair + incitation affilié. Commits `90ddaeb` / `aec0689` / `3803a01`,
+> mergé `d274b9f`, poussé sur `main`. Preuves Playwright FR/AR/EN (`e2e/vitrine-proofs.spec.ts`).
+
+- ✅ Photos fournisseur propagées au miroir catalogue (`90ddaeb`) — `buildSupplierMirror` copie `photos → media/images` (@finance+@security GO)
+- ✅ Prix à l'unité + total du contenant — **D1** (`aec0689`) — `priceWithUnit` + `PackBreakdown` sur cartes affilié
+- ✅ Incitation affilié « 💰 Tu gagnes / vente » bloc or (`3803a01`) — réutilise `calculateNetAffiliateCommission`
+- ✅ Description publique dédupliquée — `getMeaningfulDescription` sur `/products/[id]`
+- ✅ *(Socle vitrine déjà en prod, rangé ici)* : hook profit affilié (`ba4b2af`) · wording « Tu vends, tu encaisses » (`842acce`) · catalogue affilié 2 niveaux + thème noir & or + grille responsive + placeholder thémé · badges i18n (`0b18d10`) · marketplace RTL/format (`b007baa`) · P2 cosmétiques (`c14e172`) · unités de vente P1→P4 (mig 079/080) · conditionnement + RTL (`c1975c3`/`8ed3557`/`3dd81f2`/`75aff16`)
+
+### ÉTAPE 2 — Publication propre 🔄 *(à construire — touche l'argent, circuit @finance)*
+> Ranger la publication des produits dans les bons canaux, sans doublon ni re-saisie.
+
+- ⬜ **Canal auto par catégorie — D2** : textile fini = affilié ; tissu brut + agro + matières premières = grossiste seul (plus de toggle manuel). → @finance *(détail : ARCHIVE « DÉCISIONS MÉTIER 19/06 » + BLOC C)*
+- ⬜ **Rayons / familles de navigation** (Agroalimentaire, Textile, Électronique, Matières premières…) pour que le grossiste ne se perde pas
+- ⬜ **Report des paliers fournisseur** → `products.wholesale_tiers` (conversion FX + marge), aujourd'hui jamais reportés — **D3** volet ouvert → @finance
+- ⬜ **Coordonner les 2 flux de publication** (Approuver = prix B2B vs Finaliser = prix affilié) → modèle propre + **Option 3** (écran de finalisation intégré à l'approbation)
+- ⬜ **Taxonomie** : séparer **textile fini** / **tissu brut** (prérequis de D2)
+- ⬜ **Backfill catégories** des produits internes créés avant le fix
+- ⬜ **Traduction IA du contenu produit** (nom + description en AR/EN à l'approbation, stockées, affichées selon la langue)
+
+### ÉTAPE 3 — Échelle ⬜ *(plus tard — un seul chantier à la fois)*
+> Industrialiser l'entrée produit, les commandes et la logistique.
+
+- ⬜ **Import multi-produits** : album Telegram (`media_group_id`) · vrai `.xlsx` · IA appliquée au bulk · extraction catalogue PDF
+- ⬜ **Bot Telegram conversationnel** (relance le fournisseur quand une info manque)
+- 🔄 **Gestion commandes « Deliveroo » B2B** : LOTs 1-4 ✅ (FSM, assignation, lien fournisseur, moteur cash livraison) · **LOT 5** alertes visuelles retard/bloqué ⬜ · **LOT 6** cloche notifications UI ⬜ (notif assignée/admin/pays déjà en prod) · automatisation + escalade hiérarchique (worker cron) ⬜
+- 🔄 **Agents de sourcing par pays** (SECTION 2) : `agent_countries` (mig 078) ✅ · perf/alertes/compte-rendu ⬜
+- ⬜ Stock multi-entrepôt par pays · commande sourcing 2 lignes · branchement courier API · transport DDP variable/auto-calculé
+- ⬜ **Commande directe SANS lien d'affiliation** (saisie manuelle + import Sheet/CSV) — B1
+- ⬜ **WMS** — traçabilité stock par scan QR · **Relevés/rapports partenaires** PDF + QR de vérification
+- ⬜ Système d'abonnement / paiement automatique (Stripe)
+
+---
+
+## 🔒 DÉCISIONS FIGÉES — NE JAMAIS ROUVRIR
+> Gravées avec Abdou. Toute évolution les respecte ; ce qui touche l'argent passe par
+> `@finance` + `@security` + GO Abdou. *(Sources détaillées dans l'ARCHIVE + `ETAT_SYSTEME.md`.)*
+
+- **Capital affilié (mig 073)** : prix catalogue = coût usine + marge plateforme + **emballage 10 + confirmation 10 + provision livraison 35** ; `commission = prix_vente − capital` ; au prix catalogue la commission = **0 pile**.
+- **Provision livraison = 35** (fixe, incluse dans le capital, comptée **une seule fois**). Plancher livraison par ville = **Casablanca 25 / national 35**. **La livraison est TOUJOURS payée par l'affilié, JAMAIS zéro.**
+- **D1** — Prix affiché à l'**UNITÉ + TOTAL du contenant** (« 40 MAD/m — Rouleau de 100 m : 4 000 MAD »).
+- **D2** — Canal déterminé par la **CATÉGORIE** (affilié possible vs grossiste seul). Textile fini = affilié OUI ; tissu brut (au mètre) = grossiste seul.
+- **D3** — **Paliers dégressifs = GROSSISTE UNIQUEMENT.** L'affilié ne voit JAMAIS les paliers.
+- **2 CANAUX = 2 MODÈLES ÉCONOMIQUES SÉPARÉS** : grossiste = paliers dégressifs, **zéro frais COD** ; affilié = capital COD (emballage/confirmation/livraison), **zéro palier**, **marge plateforme > 0 OBLIGATOIRE** (« commission incluse » interdite en affilié). **Paliers = grossiste-only, frais COD = affilié-only — JAMAIS mélangés.**
+- **Marge fournisseur (Option B)** = **affichage vitrine marketplace UNIQUEMENT**, jamais le prix facturé (le facturé vient TOUJOURS du miroir catalogue).
+- **Stock** : on ne bloque **JAMAIS** une commande pour stock indisponible → livraison **sur commande**. Blocage = force majeure seulement (+ excuse WhatsApp). Afficher tous les paliers même au-dessus du stock = **voulu**.
+- **Livraison/ramassage** : **Mozouna ne supporte JAMAIS ce coût de sa poche** — 3 cas exclusifs (refacturé client / fournisseur facture / fournisseur offert).
+- **Argent** : `numeric`/centimes entiers, **zéro `parseFloat`** sur l'argent ; ledger append-only + idempotence ; snapshots de commande immuables.
+
+---
+
+## 🔧 DETTES TECHNIQUES & GO-LIVE PUBLIC
+> Ni features ni étapes produit, mais à solder avant ouverture grand public.
+> *(Détail complet : ARCHIVE « SECTION 3 — DETTES », « GO-LIVE PUBLIC », « BLOC B ».)*
+
+- ⬜ **Dette 073 (authenticated)** : `factory_cost_mad`/coût/marge lisibles par tout utilisateur authentifié → vue redacted + policy resserrée **sans casser le calcul de commission serveur** (chantier dédié, cartographie exhaustive des reads `products`)
+- ⬜ Rate-limiting sur `placeOrder` (flux public COD)
+- ⬜ Durcir la confiance `metadata.role` au signup (rôle non auto-déclarable)
+- ⬜ Signatures webhooks + logs d'audit
+- ⬜ Import CSV `publishBulkImport` : idempotence + reporting des lignes échouées
+- ⬜ **Ménage secrets de test** : comptes `TelegramTest2026!`/`AgentDemo2026!`/`AdminTest2026!` + authtoken ngrok à régénérer
+- ⬜ Test d'intégration DB de l'idempotence réelle de `create_payout`
+- ⬜ Stratégie i18n du **contenu DB** (noms/descriptions produits)
+- 🔄 Logistique B2B grossiste = manuelle par commande (pas de moteur auto)
+- 🔄 Merge/PR vers `main` (à jour ce jour ; process « un lot à la fois, GO explicite »)
+- ✅ Dette 012 (anon `factory_cost`) fermée (vue `products_public_read`, mig 072) · ✅ Dette UX recensée (8 points) corrigée · ✅ Régression design `stockAvailable` + blindage qualité (husky/smoke/CI)
+
+---
+
+## 📦 BACKLOG / VISION — *(ne pas construire maintenant, conçu un à la fois)*
+> Idées et grands chantiers conservés intacts. Détail complet dans l'ARCHIVE.
+
+- **VISION marketplace affiliation multi-partenaires** (cœur financier 3-4 parties)
+- **VIS-CANAL** — contrôle de visibilité produit par canal (levier monétisation/exclusivité)
+- **PREMIUM-DIRECT** — plan « accès direct fournisseur » (~10 000 DH/mois)
+- **SECTION 1** — refonte parcours fournisseur (ajout produit sans rien taper, IA)
+- **SECTION 2bis-B** — fidélité grossistes (points/cadeaux, même prix de vente) → @finance
+- **Galerie créatives** (Palier 2) + **génération créatives IA par crédits** (Palier 3, n8n/Remotion)
+- **Filtre par niche/catégorie** (catalogue affilié) · **facturation à la sous-unité** (vendre « à la boîte »)
+- **Nouveau secteur — grossistes locaux Maroc** (B2B local)
+- **BACKLOG B1-B5** : saisie manuelle commande affilié · précommande usine · sourcing par upload photo · affichage par secteur · comptes fournisseurs via bot
+- **Choix code-barres vs QR** (au moment du WMS)
+
+---
+---
+
+# 📚 ARCHIVE / HISTORIQUE DÉTAILLÉ (verbatim — NE RIEN SUPPRIMER)
+
+> ⬇️ Ci-dessous : **l'intégralité du contenu d'origine** de la feuille de route, conservé
+> **mot pour mot** (états de session, lots Deliveroo détaillés, audits, journal purge money,
+> dette UX, transport DDP, PHASES, ROADMAP multi-pays, BACKLOG, VISION, SECTION 3 dettes).
+> Le sommaire en tête de fichier indexe ces sections. **Aucune ligne n'a été retirée.**
+
 # FEUILLE DE ROUTE — Finir le SaaS d'affiliation comme un pro
 
 **Principe :** une phase à la fois. Chaque phase finit par un checkpoint où **tu valides** avant de passer à la suite. On ne reconstruit jamais ce qui marche.
