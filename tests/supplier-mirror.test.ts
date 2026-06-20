@@ -18,6 +18,8 @@ const base: SupplierMirrorInput = {
   pack_size: null,
   pack_unit: null,
   photos: null,
+  category: null,
+  subcategory: null,
 }
 
 describe('buildSupplierMirror', () => {
@@ -102,6 +104,31 @@ describe('buildSupplierMirror', () => {
   it('unité brute normalisée (« le mètre » → metre)', () => {
     const d = buildSupplierMirror({ ...base, unit: 'le mètre' })
     expect(d.create && d.row.sale_unit).toBe('metre')
+  })
+
+  it('CANAL D2 — un miroir est TOUJOURS grossiste : affiliate_enabled=false explicite (jamais le défaut true)', () => {
+    const d = buildSupplierMirror(base)
+    expect(d.create).toBe(true)
+    if (!d.create) return
+    expect(d.row.affiliate_enabled).toBe(false)
+    // même pour une catégorie « affilié possible » : un miroir n'a pas de capital → grossiste.
+    const dAff = buildSupplierMirror({ ...base, category: 'Textile' })
+    expect(dAff.create && dAff.row.affiliate_enabled).toBe(false)
+  })
+
+  it('CANAL D2 — catégorie/sous-catégorie reportées au miroir (NOT NULL → "" si absentes)', () => {
+    const d = buildSupplierMirror({ ...base, category: 'Alimentaire', subcategory: 'Épices' })
+    expect(d.create).toBe(true)
+    if (!d.create) return
+    expect(d.row.category).toBe('Alimentaire')
+    expect(d.row.subcategory).toBe('Épices')
+    // absentes → chaîne vide (colonne products NOT NULL DEFAULT '')
+    const dNull = buildSupplierMirror(base)
+    expect(dNull.create && dNull.row.category).toBe('')
+    expect(dNull.create && dNull.row.subcategory).toBe('')
+    // l'argent reste INTACT
+    expect(d.row.sell_price).toBe(120)
+    expect(d.row.factory_cost_mad).toBe(100)
   })
 
   it('PHOTOS reportées au miroir : media (jsonb [{url,type:image}]) + images (legacy) — AFFICHAGE PUR', () => {

@@ -218,7 +218,7 @@ export async function approveSupplierProduct(
   const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
   const { data: existing } = (await supabase
     .from('supplier_products')
-    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos')
+    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos, category, subcategory')
     .eq('id', id)
     .single()) as {
     data: {
@@ -231,6 +231,8 @@ export async function approveSupplierProduct(
       pack_size: number | null
       pack_unit: string | null
       photos: string[] | null
+      category: string | null
+      subcategory: string | null
     } | null
     error: unknown
   }
@@ -284,6 +286,9 @@ export async function approveSupplierProduct(
       pack_unit: existing.pack_unit,
       // AFFICHAGE PUR — propage les photos fournisseur au catalogue (sinon initiales).
       photos: existing.photos,
+      // CANAL D2 — catégorie canonique reportée au miroir (rangement/rayons grossiste).
+      category: existing.category,
+      subcategory: existing.subcategory,
     })
     if (mirror.create) {
       // P0-1 — l'index unique sur products.source_supplier_product_id est PARTIEL

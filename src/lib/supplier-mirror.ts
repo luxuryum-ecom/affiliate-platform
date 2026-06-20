@@ -35,6 +35,9 @@ export interface SupplierMirrorInput {
   pack_unit: string | null
   /** Photos fournisseur (text[] d'URLs) — AFFICHAGE PUR, propagées au catalogue. */
   photos: string[] | null
+  /** Catégorie/sous-catégorie fournisseur (canoniques) — reportées au miroir (D2). */
+  category: string | null
+  subcategory: string | null
 }
 
 /** Ligne `products` à UPSERT. Colonnes minimales : suffisantes pour findCatalogLink + checkout. */
@@ -48,6 +51,13 @@ export interface MirrorRow {
   availability_type: 'local_stock'
   approval_status: 'approved'
   active: true
+  // CANAL (D2) — un miroir = canal GROSSISTE only (prix grossiste, AUCUN capital affilié).
+  // `affiliate_enabled=false` EXPLICITE (jamais le défaut `true` de la colonne) → ferme la
+  // fuite : un miroir ne doit JAMAIS apparaître au catalogue affilié ni être facturé en COD
+  // affilié sur une base sans capital. Catégorie reportée pour le rangement/rayons.
+  affiliate_enabled: false
+  category: string
+  subcategory: string
   // Unité de vente + conditionnement — AFFICHAGE PUR (aucun calcul). null = pièce / aucun cond.
   sale_unit: string | null
   pack_size: number | null
@@ -120,6 +130,11 @@ export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
       availability_type: 'local_stock',
       approval_status: 'approved',
       active: true,
+      // CANAL GROSSISTE only — jamais affilié sans capital. Catégorie canonique reportée
+      // (NOT NULL DEFAULT '' en base → '' si non classé, le fail-closed canal = grossiste).
+      affiliate_enabled: false,
+      category: sp.category ?? '',
+      subcategory: sp.subcategory ?? '',
       // AFFICHAGE PUR — reporté tel quel, comme le flux Finaliser. Aucun calcul.
       sale_unit: saleUnit === 'piece' ? null : saleUnit,
       pack_size: sp.pack_size ?? null,
