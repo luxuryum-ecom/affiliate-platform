@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
-import { buildSupplierPricing, applyPlatformMargin } from '@/lib/supplier-pricing'
+import { buildSupplierPricing, applyPlatformMargin, buildMirrorTiers } from '@/lib/supplier-pricing'
 import { checkProductLimit } from '@/lib/product-limit'
 import { buildSupplierMirror } from '@/lib/supplier-mirror'
 import { parseMoneyInput } from '@/lib/money'
@@ -218,7 +218,7 @@ export async function approveSupplierProduct(
   const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
   const { data: existing } = (await supabase
     .from('supplier_products')
-    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos, category, subcategory')
+    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos, category, subcategory, fx_rate_source_to_mad, supplier_product_moq_tiers(min_quantity, unit_price_usd)')
     .eq('id', id)
     .single()) as {
     data: {
@@ -233,6 +233,8 @@ export async function approveSupplierProduct(
       photos: string[] | null
       category: string | null
       subcategory: string | null
+      fx_rate_source_to_mad: number | null
+      supplier_product_moq_tiers: { min_quantity: number; unit_price_usd: number }[] | null
     } | null
     error: unknown
   }
@@ -289,6 +291,16 @@ export async function approveSupplierProduct(
       // CANAL D2 — catégorie canonique reportée au miroir (rangement/rayons grossiste).
       category: existing.category,
       subcategory: existing.subcategory,
+      // PALIERS D3 (ARGENT) — paliers source fournisseur convertis FX+marge en ENTIER MAD,
+      // même chaîne que final_wholesale_price_mad (marge une fois, biais ½-cent écarté),
+      // bornés pour getWholesaleTier. Grossiste-only. Pas de palier source → [] (prix unique).
+      wholesale_tiers: buildMirrorTiers(
+        existing.supplier_product_moq_tiers,
+        existing.fx_rate_source_to_mad,
+        apply_platform_margin,
+        platform_margin_type as PlatformMarginType,
+        marginValueNum,
+      ),
     })
     if (mirror.create) {
       // P0-1 — l'index unique sur products.source_supplier_product_id est PARTIEL

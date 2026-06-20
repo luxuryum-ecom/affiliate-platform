@@ -20,6 +20,7 @@ const base: SupplierMirrorInput = {
   photos: null,
   category: null,
   subcategory: null,
+  wholesale_tiers: [],
 }
 
 describe('buildSupplierMirror', () => {
@@ -129,6 +130,17 @@ describe('buildSupplierMirror', () => {
     // l'argent reste INTACT
     expect(d.row.sell_price).toBe(120)
     expect(d.row.factory_cost_mad).toBe(100)
+  })
+
+  it('PALIERS D3 — wholesale_tiers (déjà convertis) reportés tels quels au miroir ; [] par défaut', () => {
+    const tiers = [
+      { min_qty: 1, max_qty: 99, price_per_unit: 120 },
+      { min_qty: 100, price_per_unit: 100 },
+    ]
+    const d = buildSupplierMirror({ ...base, wholesale_tiers: tiers })
+    expect(d.create && d.row.wholesale_tiers).toEqual(tiers)
+    const dNone = buildSupplierMirror(base)
+    expect(dNone.create && dNone.row.wholesale_tiers).toEqual([]) // pas de palier → prix unique
   })
 
   it('PHOTOS reportées au miroir : media (jsonb [{url,type:image}]) + images (legacy) — AFFICHAGE PUR', () => {

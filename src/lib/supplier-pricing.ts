@@ -4,7 +4,7 @@
 // Devise sans taux / prix absent / conversion absurde → suggested_*_mad = NULL.
 
 import type { createClient } from '@/lib/supabase/server'
-import type { PlatformMarginType } from '@/types/database'
+import type { PlatformMarginType, WholesaleTier } from '@/types/database'
 import { getRateToMad } from '@/lib/fx'
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>
@@ -95,6 +95,55 @@ export function applyPlatformMargin(
   if (!apply || value == null || value <= 0) return base
   const raw = type === 'percentage' ? base * (1 + value / 100) : base + value
   return Math.round(raw)
+}
+
+/** Palier source fournisseur (table supplier_product_moq_tiers) — prix en devise source. */
+export type MirrorTierInput = { min_quantity: number; unit_price_usd: number }
+
+/**
+ * REPORT DES PALIERS FOURNISSEUR → paliers grossiste MAD du miroir (D3, Sub-lot 2).
+ * PUR, testable. Pour chaque palier source : `convertToMad(unit_price_usd, fxRate)`
+ * (coût MAD) → `applyPlatformMargin(...)` (marge appliquée UNE fois, même chaîne que le
+ * prix de base) → **`Math.round` ENTIER MAD** (jamais la sortie 2-décimales de
+ * convertToMad dont le biais ½-centime est tagué HORS-LEDGER — condition @finance, car
+ * `price_per_unit` est un prix RÉELLEMENT FACTURÉ au grossiste via `getWholesaleTier`).
+ *
+ * Garde-fous : palier non convertible (taux/prix absent → null) ÉCARTÉ (jamais de MAD
+ * fabriqué) ; min_qty entier ≥ 1 ; prix entier > 0 ; doublons de min_qty écartés ; tri
+ * croissant ; max 20. **`max_qty` borné = (min_qty du palier suivant − 1)** pour que
+ * `getWholesaleTier` (.find sur tableau trié croissant) serve le BON palier (volume →
+ * prix dégressif) et non le premier (le plus cher). Dernier palier ouvert.
+ *
+ * Marge = applyPlatformMargin ⇒ sell ≥ coût converti (jamais de vente à perte au palier).
+ * D3 : ces paliers ne sont lus QUE par les surfaces grossiste (jamais affilié).
+ */
+export function buildMirrorTiers(
+  moqTiers: MirrorTierInput[] | null | undefined,
+  fxRate: number | null,
+  apply: boolean,
+  type: PlatformMarginType,
+  value: number | null,
+): WholesaleTier[] {
+  const out: { min_qty: number; price_per_unit: number }[] = []
+  const seen = new Set<number>()
+  for (const t of moqTiers ?? []) {
+    const minQty = t?.min_quantity
+    if (typeof minQty !== 'number' || !Number.isInteger(minQty) || minQty < 1) continue
+    if (seen.has(minQty)) continue
+    const costMad = convertToMad(t?.unit_price_usd ?? null, fxRate) // null → palier écarté
+    const sellRaw = applyPlatformMargin(costMad, apply, type, value) // null si coût null
+    if (sellRaw == null) continue
+    const price = Math.round(sellRaw) // ENTIER MAD — zéro biais facturé
+    if (!Number.isFinite(price) || price <= 0) continue
+    seen.add(minQty)
+    out.push({ min_qty: minQty, price_per_unit: price })
+  }
+  out.sort((a, b) => a.min_qty - b.min_qty)
+  // Bornage max_qty = (min_qty suivant − 1) ; dernier palier ouvert. Anti-chevauchement
+  // garanti (prev.max < cur.min) → getWholesaleTier renvoie le palier volume correct.
+  return out.slice(0, 20).map((tier, i, arr) =>
+    i < arr.length - 1 ? { ...tier, max_qty: arr[i + 1].min_qty - 1 } : tier,
+  )
 }
 
 /**
