@@ -1,0 +1,236 @@
+[
+  {
+    "test": "P1-cards-per-row-p1-affilie-catalogue-fr-mobile",
+    "status": "PASS",
+    "details": {
+      "cardsPerRow": 2,
+      "expected": 2,
+      "totalCards": 21
+    }
+  },
+  {
+    "test": "P1-cta-p1-affilie-catalogue-fr-mobile",
+    "status": "PASS",
+    "details": {
+      "height": 44,
+      "text": "Voir / Promouvoir"
+    }
+  },
+  {
+    "test": "P1-commission-block-p1-affilie-catalogue-fr-mobile",
+    "status": "INFO",
+    "details": {
+      "found": false
+    }
+  },
+  {
+    "test": "overflow-P1-fr-mobile",
+    "status": "PASS",
+    "details": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "test": "P1-rtl-p1-affilie-catalogue-ar-mobile",
+    "status": "PASS",
+    "details": {
+      "dir": "rtl"
+    }
+  },
+  {
+    "test": "P1-cards-per-row-p1-affilie-catalogue-ar-mobile",
+    "status": "PASS",
+    "details": {
+      "cardsPerRow": 2,
+      "expected": 2,
+      "totalCards": 21
+    }
+  },
+  {
+    "test": "P1-cta-p1-affilie-catalogue-ar-mobile",
+    "status": "PASS",
+    "details": {
+      "height": 44,
+      "text": "عرض / ترويج"
+    }
+  },
+  {
+    "test": "P1-commission-block-p1-affilie-catalogue-ar-mobile",
+    "status": "INFO",
+    "details": {
+      "found": false
+    }
+  },
+  {
+    "test": "overflow-P1-ar-mobile",
+    "status": "PASS",
+    "details": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "test": "P1-cards-per-row-p1-affilie-catalogue-en-mobile",
+    "status": "PASS",
+    "details": {
+      "cardsPerRow": 2,
+      "expected": 2,
+      "totalCards": 21
+    }
+  },
+  {
+    "test": "P1-cta-p1-affilie-catalogue-en-mobile",
+    "status": "PASS",
+    "details": {
+      "height": 44,
+      "text": "View / Promote"
+    }
+  },
+  {
+    "test": "P1-commission-block-p1-affilie-catalogue-en-mobile",
+    "status": "INFO",
+    "details": {
+      "found": false
+    }
+  },
+  {
+    "test": "overflow-P1-en-mobile",
+    "status": "PASS",
+    "details": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "test": "P1-cards-per-row-p1-affilie-catalogue-fr-desktop",
+    "status": "PASS",
+    "details": {
+      "cardsPerRow": 4,
+      "expected": 4,
+      "totalCards": 21
+    }
+  },
+  {
+    "test": "P1-cta-p1-affilie-catalogue-fr-desktop",
+    "status": "PASS",
+    "details": {
+      "height": 44,
+      "text": "Voir / Promouvoir"
+    }
+  },
+  {
+    "test": "P1-commission-block-p1-affilie-catalogue-fr-desktop",
+    "status": "INFO",
+    "details": {
+      "found": false
+    }
+  },
+  {
+    "test": "P2-stats-2x2-fr",
+    "status": "WARN",
+    "details": {
+      "y0": 127,
+      "y1": 561,
+      "y2": 1255.75,
+      "y3": 1255.75,
+      "cellCount": 6
+    }
+  },
+  {
+    "test": "overflow-P2-fr",
+    "status": "PASS",
+    "details": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "test": "P2-stats-2x2-ar",
+    "status": "WARN",
+    "details": {
+      "y0": 127,
+      "y1": 561,
+      "y2": 1215.75,
+      "y3": 1215.75,
+      "cellCount": 6
+    }
+  },
+  {
+    "test": "overflow-P2-ar",
+    "status": "PASS",
+    "details": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "test": "P3-stock-badge-fr",
+    "status": "PASS",
+    "details": {
+      "hasStockMaroc": true,
+      "hasOldLabel": false,
+      "snippet": "M\n\nMozouna Group\n\nCOD · Maroc\nFR\nAR\nEN\nStock Maroc\n1000 en stock\nPull ref 5\n\nPull en maille old money\n\n⁨149,00 MAD⁩\n/ unité\n🚚\n\nLivraison estimée\n\n2–5 jours ouvrables\n\nPartout au Maroc · paiement à la réception\n\nCommander en COD\nQuantité\n−\n1\n+\nTotal : ⁨149,00 MAD⁩\nNom complet *\nTéléphone *\nVille *\nAdresse de livraison *\nRemarques (optionnel)\n💵 Paiement à la livraison (COD) — ⁨149,00 MAD⁩\nCommander en COD\nou\n💬\nCommander via WhatsApp\n\nEn commandant, vous acceptez d'être contacté(e) pour confirme"
+    }
+  },
+  {
+    "test": "overflow-P3-fr",
+    "status": "PASS",
+    "details": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "test": "P3-stock-badge-ar",
+    "status": "WARN",
+    "details": {
+      "badgeCount": 0
+    }
+  },
+  {
+    "test": "overflow-P3-ar",
+    "status": "PASS",
+    "details": {
+      "scrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "test": "P4-profile-select-ar",
+    "status": "WARN",
+    "details": {
+      "error": "select[name=buyer_purchase_profile] not found"
+    }
+  },
+  {
+    "test": "P4-volume-select-ar",
+    "status": "WARN",
+    "details": {
+      "error": "select[name=buyer_volume_tier] not found"
+    }
+  },
+  {
+    "test": "P4-profile-select-en",
+    "status": "WARN",
+    "details": {
+      "error": "select[name=buyer_purchase_profile] not found"
+    }
+  },
+  {
+    "test": "P4-volume-select-en",
+    "status": "WARN",
+    "details": {
+      "error": "select[name=buyer_volume_tier] not found"
+    }
+  },
+  {
+    "test": "P5-stock-maroc-label",
+    "status": "FAIL",
+    "details": {
+      "hasStockMaroc": true,
+      "hasLocalLabel": true,
+      "snippet": "M\n\nMozouna Group\n\nPlateforme B2B Maroc\n\nFR\nAR\nEN\nDéconnexion\nMarketplace fournisseurs\n\nProduits sélectionnés de nos fournisseurs vérifiés. Stock local disponible ou import sur mesure.\n\nChoisissez votre source d'achat\n\nSélectionnez un pays pour filtrer les produits disponibles\n\n🇲🇦\nMAROC — STOCK LOCAL DISPONIBLE\n\nFournisseurs locaux · Livraison 24–72h · Aucune douane\n\n✓ Livraison 24–72h\n✓ Aucune douane\n✓ Paiement flexible\nVoir le stock Maroc →\n📦 488 produits disponibles\n✓ 13 fournisseurs vérifiés\n🚚 311 en livraison 24–72h\n🔒 Paiement sécurisé\n\n🌍 IMPORTATION INTERNATIONALE\n\n🇹🇷\n\nTurquie\n\nTextile & prêt-à-porter\n\nImport 7–14 j · MOQ souple\n\n🇨🇳\n\nChine\n\nGros volume · Prix usine\n\nMaritime & aérien · 20–45 j\n\n🇪🇬\n\nÉgypte\n\nCoton & textile\n\nPrix avantageux · Stock variable\n\n🇦🇪\n\nDubai\n\nHub"
+    }
+  }
+]
