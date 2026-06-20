@@ -5,6 +5,8 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
+import { priceWithUnit, resolveUnitLabel } from '@/lib/units'
+import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
@@ -17,6 +19,7 @@ export default async function AffiliateProductsPage() {
   const supabase = await createClient()
   const t = await getTranslations('affiliate.products')
   const tCommon = await getTranslations('affiliate.common')
+  const tUnits = await getTranslations('units')
 
   const {
     data: { user },
@@ -134,8 +137,25 @@ export default async function AffiliateProductsPage() {
                       )}
                       <p className="text-[11px] text-faint mt-0.5">
                         {t('catalogPrice')}&nbsp;:{' '}
-                        <span className="text-muted tabular-nums">{formatMAD(product.sell_price)}</span>
+                        {/* Suffixe d'unité AJOUTÉ seulement si sale_unit posé → produit
+                            sans unité (NULL) = affichage strictement identique à avant. */}
+                        <span className="text-muted tabular-nums">
+                          {priceWithUnit(
+                            formatMAD(product.sell_price),
+                            product.sale_unit ? resolveUnitLabel(product.sale_unit, tUnits) : null,
+                          )}
+                        </span>
                       </p>
+                      {/* Conditionnement descriptif (D1) — « contenant de N — ≈ X/unité ».
+                          Rien si pack_size/pack_unit non posés (produit à la pièce inchangé). */}
+                      <div className="mt-0.5 text-[10px]">
+                        <PackBreakdown
+                          price={product.sell_price}
+                          packSize={product.pack_size}
+                          packUnit={product.pack_unit}
+                          saleUnit={product.sale_unit}
+                        />
+                      </div>
                       <p className="text-[10px] text-success-fg mt-0.5">{t('priceAllInclusiveShort')}</p>
                     </div>
 
