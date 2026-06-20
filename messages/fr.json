@@ -319,6 +319,7 @@
       "availStock": "Stock Maroc",
       "catalogPrice": "Prix catalogue",
       "baseCommission": "Commission de base",
+      "earnPerSaleLabel": "💰 Tu gagnes / vente",
       "adjustPrice": "💡 Ajoute ta marge",
       "customPriceActive": "Prix personnalisé actif",
       "feeConfirmation": "Confirmation",

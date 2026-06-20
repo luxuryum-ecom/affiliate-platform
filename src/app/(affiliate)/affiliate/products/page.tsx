@@ -125,13 +125,16 @@ export default async function AffiliateProductsPage() {
                       {product.name}
                     </h3>
 
-                    {/* Commission — the number that matters for the affiliate */}
+                    {/* Incitation affilié — le gain par vente mis en avant (or signature).
+                        Réutilise calculateNetAffiliateCommission (zéro nouveau calcul). */}
                     <div className="mt-auto pt-1">
-                      <p className="text-[11px] text-faint">{t('baseCommission')}</p>
                       {baseCommission != null && baseCommission > 0 ? (
-                        <p className="text-lg font-bold text-success-fg tabular-nums leading-tight">
-                          {formatMAD(baseCommission)}
-                        </p>
+                        <div className="rounded-lg bg-accent-soft border border-gold-300 px-2.5 py-1.5">
+                          <p className="text-[11px] font-medium text-accent-fg">{t('earnPerSaleLabel')}</p>
+                          <p className="text-xl font-extrabold text-success-fg tabular-nums leading-tight">
+                            {formatMAD(baseCommission)}
+                          </p>
+                        </div>
                       ) : (
                         <p className="text-sm font-medium text-accent-fg">{t('adjustPrice')}</p>
                       )}
