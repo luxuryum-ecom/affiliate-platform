@@ -21,16 +21,19 @@
 - ✅ Description publique dédupliquée — `getMeaningfulDescription` sur `/products/[id]`
 - ✅ *(Socle vitrine déjà en prod, rangé ici)* : hook profit affilié (`ba4b2af`) · wording « Tu vends, tu encaisses » (`842acce`) · catalogue affilié 2 niveaux + thème noir & or + grille responsive + placeholder thémé · badges i18n (`0b18d10`) · marketplace RTL/format (`b007baa`) · P2 cosmétiques (`c14e172`) · unités de vente P1→P4 (mig 079/080) · conditionnement + RTL (`c1975c3`/`8ed3557`/`3dd81f2`/`75aff16`)
 
-### ÉTAPE 2 — Publication propre 🔄 *(à construire — touche l'argent, circuit @finance)*
-> Ranger la publication des produits dans les bons canaux, sans doublon ni re-saisie.
+### ÉTAPE 2 — Publication propre ✅ **FAIT**
+> Canal par catégorie + report paliers + rayons. Mergé `9862f96` (`--no-ff` ; sub-lots
+> `17e4af7`/`42d98e4`/`cef7342`/`1794496`), poussé sur `main`. **@finance + @security GO ×2**
+> sur chaque sub-lot argent. **Preuve runtime end-to-end** (approbation réelle → miroir :
+> `affiliate_enabled=false` + paliers FX+marge entier MAD bornés). **Aucune migration** (flag TS + colonnes existantes).
 
-- ⬜ **Canal auto par catégorie — D2** : textile fini = affilié ; tissu brut + agro + matières premières = grossiste seul (plus de toggle manuel). → @finance *(détail : ARCHIVE « DÉCISIONS MÉTIER 19/06 » + BLOC C)*
-- ⬜ **Rayons / familles de navigation** (Agroalimentaire, Textile, Électronique, Matières premières…) pour que le grossiste ne se perde pas
-- ⬜ **Report des paliers fournisseur** → `products.wholesale_tiers` (conversion FX + marge), aujourd'hui jamais reportés — **D3** volet ouvert → @finance
-- ⬜ **Coordonner les 2 flux de publication** (Approuver = prix B2B vs Finaliser = prix affilié) → modèle propre + **Option 3** (écran de finalisation intégré à l'approbation)
-- ⬜ **Taxonomie** : séparer **textile fini** / **tissu brut** (prérequis de D2)
-- ⬜ **Backfill catégories** des produits internes créés avant le fix
-- ⬜ **Traduction IA du contenu produit** (nom + description en AR/EN à l'approbation, stockées, affichées selon la langue)
+- ✅ **Canal auto par catégorie — D2** (`42d98e4`) : `affiliate_enabled` forcé SERVEUR par la catégorie (fail-closed), allowlist anti-POST, **fix fuite miroir** (`affiliate_enabled=false` explicite). Taxonomie = 12 catégories (+ Électronique & gadgets / Sport & Fitness / Jouets & enfants / Accessoires & maroquinerie, toutes affilié, validées Abdou).
+- ✅ **Rayons / familles + filtres** (`1794496`) : rail des 12 familles (icônes + libellés traduits) + filtre `?category=` sur catalogue affilié **et** grossiste interne, i18n FR/AR/EN + RTL.
+- ✅ **Report des paliers fournisseur → `products.wholesale_tiers`** (`cef7342`, D3) : `buildMirrorTiers` (FX+marge, **entier MAD**, `max_qty` bornés), **grossiste-only**.
+- ✅ **Coordination des 2 flux** : Approuver = miroir grossiste (catégorie+paliers+canal) ; Finaliser = affilié si la catégorie l'autorise (anti-doublon P0-1 + anti-double-marge `isMirrorProduct` intacts).
+- ✅ **Normalisation catégories** (`17e4af7`) : 117 lignes legacy → taxonomie canonique (backup avant, prérequis D2).
+- ⬜ **(SUIVI → ÉTAPE 2b)** Traduction IA du contenu produit (nom+desc AR/EN à l'approbation) — lot dédié : migration `name_ar/en`+`desc_*` + fonction de traduction + affichage + coût IA. **Sorti volontairement de l'Étape 2.**
+- ⬜ **(SUIVI)** Paliers du flux **Finaliser** = encore en **saisie manuelle admin** (l'auto-report FX+marge ne couvre que le flux Approuver/miroir) → **pré-remplir plus tard**, circuit @finance.
 
 ### ÉTAPE 3 — Échelle ⬜ *(plus tard — un seul chantier à la fois)*
 > Industrialiser l'entrée produit, les commandes et la logistique.
@@ -73,6 +76,7 @@
 - ⬜ Signatures webhooks + logs d'audit
 - ⬜ Import CSV `publishBulkImport` : idempotence + reporting des lignes échouées
 - ⬜ **Ménage secrets de test** : comptes `TelegramTest2026!`/`AgentDemo2026!`/`AdminTest2026!` + authtoken ngrok à régénérer
+- ⬜ **Rotation `SUPABASE_SERVICE_ROLE_KEY`** : la clé a été codée en clair dans un fichier de test local le 2026-06-20 (JAMAIS poussée — GitHub push protection l'a bloquée, commit réécrit) ; régénérer par prudence avant go-live (Supabase Dashboard → API keys + `.env.local` + Vercel). Cf. [[project-dette-rotation-service-role-key]].
 - ⬜ Test d'intégration DB de l'idempotence réelle de `create_payout`
 - ⬜ Stratégie i18n du **contenu DB** (noms/descriptions produits)
 - 🔄 Logistique B2B grossiste = manuelle par commande (pas de moteur auto)

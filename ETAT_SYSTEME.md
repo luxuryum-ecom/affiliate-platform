@@ -7,13 +7,19 @@
 >
 > **🩺 RÈGLE DIAGNOSTIC — déploiement d'abord.** Si l'agent voit le **bon comportement dans le code** (vérifié runtime sur build local) mais que l'utilisateur voit **autre chose en prod**, **VÉRIFIER LE DÉPLOIEMENT VERCEL EN PREMIER** (souvent en retard sur `main` / cache). Ne PAS conclure « ergonomie » ou « non reproduit » avant ça. Trancher en **forçant un redeploy** : `git commit --allow-empty -m "chore: force redeploy" && git push` sur `main`. Cas réel : recherche grossiste « Pull ref 5 » = 0 en prod alors que le code était correct → déploiement périmé (résolu par `6dc0244`).
 
-**Dernière synchro :** 2026-06-18 — `main` @ `c300e4a` — 77 migrations (001→077).
+**Dernière synchro :** 2026-06-20 — `main` @ `f1f5f95` — 80 migrations (001→080).
 
 ---
 
 ## 🧭 POINT DE REPRISE — fin de session 2026-06-18 (à lire en premier)
 
 ### ✅ EN PROD (confirmé, validé runtime)
+- **ÉTAPE 2 « Publication propre » EN PROD** (merge `9862f96`, **pas de migration** — flag TS + colonnes existantes) :
+  1. **Canal par catégorie D2** (`42d98e4`) — `affiliate_enabled` forcé SERVEUR selon la catégorie (`isAffiliateAllowedCategory` **fail-closed** dans `src/lib/taxonomy.ts`), allowlist anti-POST (`isValidCategory`), **fix fuite miroir** : `buildSupplierMirror` pose `affiliate_enabled=false` EXPLICITE + copie `category`/`subcategory` (avant : défaut `true` → un miroir grossiste fuyait au catalogue affilié sans capital). Taxonomie portée à **12 catégories** (+ Électronique & gadgets / Sport & Fitness / Jouets & enfants / Accessoires & maroquinerie, toutes affilié). Backfill : 2 produits Alimentaire → grossiste (0 miroir fuyant en prod).
+  2. **Report paliers fournisseur → `products.wholesale_tiers`** (`cef7342`, D3) — `buildMirrorTiers` (`supplier-pricing.ts`) convertit `supplier_product_moq_tiers` (devise source) via FX (`convertToMad`) + marge (`applyPlatformMargin`) en **ENTIER MAD** (jamais le biais ½-cent), `max_qty` **bornés** pour que `getWholesaleTier` serve le bon palier volume. **Grossiste-only** (miroir `affiliate_enabled=false`). Reporté à l'approbation.
+  3. **Rayons/familles + filtres catégorie** (`1794496`) — `CategoryRail` (Server Component pur) + filtre serveur `?category=` sur `/affiliate/products` ET `/wholesale/products` ; `CATEGORY_ICONS` + `resolveCategoryLabel` dans `taxonomy.ts` ; i18n namespace `categories` **FR/AR/EN parité 58 clés** + RTL.
+  4. **Normalisation catégories** (`17e4af7`) — 117 lignes legacy (« Mode & Textile », « Electronique »…) → taxonomie canonique (script `normalize-categories.mjs`, backup avant). Prérequis de D2.
+  **@finance + @security GO ×2** sur chaque sub-lot argent. **Preuve runtime END-TO-END** : approbation réelle d'un produit fournisseur via l'UI admin → miroir `affiliate_enabled=false`, catégorie reportée, `sell_price=125` (=100 +25%), paliers `[{1,max99,125},{100,100}]` entier MAD (8/8 PASS, données nettoyées). **ZÉRO montant existant modifié** (capital 073 intact), D3 respecté. tsc 0 / 239 tests (+14) / build / smoke 20/20. **Suivis** : (a) traduction IA du contenu produit = **ÉTAPE 2b** (lot dédié) ; (b) paliers du flux **Finaliser** encore en **saisie manuelle** (auto-report = flux Approuver/miroir uniquement, pré-remplissage futur @finance).
 - **Catalogue grossiste UNIFIÉ** (2 onglets Disponible/À importer, interne+fournisseur fusionnés & cloisonnés, noir & or) — `d379ca1` / mig. 075.
 - **Marketplace grossiste GLOBAL** (inclut produits internes Mozouna + fournisseurs, source invisible) + **filtres pays** (Chine/Turquie/Égypte/Dubai) corrigés — `8ab5189` / `c908809`.
 - **Hook profit affilié** (simulateur gain temps réel, prix conseillé ×1,25) — `ba4b2af`.
