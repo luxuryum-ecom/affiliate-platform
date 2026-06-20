@@ -40,6 +40,10 @@ reconstruire ni doublonner l'existant**.
    Pas de gros lot fourre-tout : c'est ce qui a noyé la régression.
 5. **CHANGEMENTS FINANCIERS** (ledger, commissions, devises, livraison, COD) : circuit complet
    **`@finance` + `@security-reviewer` + validation Abdou** AVANT commit. Inchangé, rappelé ici.
+6. **TRAÇABILITÉ — AUCUN CHANTIER NON TRACÉ.** Toute étape — **terminée OU faite à moitié** — doit
+   être **immédiatement reflétée** dans **`FEUILLE_DE_ROUTE.md` ET `ETAT_SYSTEME.md`** avec son
+   **statut clair** (**✅ fait** / **🔄 en cours-partiel** / **⬜ à faire**), **AVANT de passer à
+   autre chose**. Un travail à moitié fait mais non noté = travail perdu : on ne le tolère pas.
 
 ## 🧭 AUTONOMIE DE DÉCISION
 > But : avancer sans interruptions inutiles. Abdou n'est sollicité que sur ce qui compte vraiment.
