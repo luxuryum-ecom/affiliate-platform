@@ -199,8 +199,9 @@ export default async function AffiliateProductsPage({
                       <p className="text-[10px] text-success-fg mt-0.5">{t('priceAllInclusiveShort')}</p>
                     </div>
 
-                    {/* CTA */}
-                    <span className="mt-1 w-full text-center text-xs font-medium px-3 py-2 rounded-lg bg-primary text-primary-foreground group-hover:opacity-90 transition-opacity">
+                    {/* CTA — cible tactile ≥44px (flex centering + min-h) ; texte/couleur/
+                        position/action INCHANGÉS (toujours bg-primary, w-full, en bas de carte). */}
+                    <span className="mt-1 w-full flex items-center justify-center min-h-[44px] text-xs font-medium px-3 py-2 rounded-lg bg-primary text-primary-foreground group-hover:opacity-90 transition-opacity">
                       {t('viewPromote')}
                     </span>
                   </div>
