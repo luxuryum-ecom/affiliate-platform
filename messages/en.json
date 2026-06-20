@@ -319,6 +319,7 @@
       "availStock": "Morocco stock",
       "catalogPrice": "Catalog price",
       "baseCommission": "Base commission",
+      "earnPerSaleLabel": "💰 You earn / sale",
       "adjustPrice": "💡 Add your margin",
       "customPriceActive": "Custom price active",
       "feeConfirmation": "Confirmation",

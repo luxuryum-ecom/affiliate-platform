@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatMAD } from '@/lib/utils'
-import { getProductCoverUrl, getProductGalleryUrls } from '@/lib/product-media'
+import { getProductCoverUrl, getProductGalleryUrls, getMeaningfulDescription } from '@/lib/product-media'
 import { getDeliveryEstimate } from '@/lib/order-analytics'
 import { CodOrderForm } from '@/components/customer/cod-order-form'
 import { ProductGallery } from '@/components/customer/product-gallery'
@@ -76,6 +76,9 @@ export default async function PublicProductPage({ params, searchParams }: Params
 
   const coverUrl = getProductCoverUrl(product)
   const galleryUrls = getProductGalleryUrls(product)
+  // Affichage pur : masque une description qui ne fait que répéter le nom (comme la
+  // fiche affilié). Filtre déjà éprouvé — aucune donnée transformée.
+  const meaningfulDescription = getMeaningfulDescription(product.name, product.description)
   const delivery = getDeliveryEstimate(product.availability_type)
 
   const inStock = product.stock_count > 0
@@ -134,10 +137,10 @@ export default async function PublicProductPage({ params, searchParams }: Params
               {/* product.name is DB content — not translatable */}
               <h1 className="text-2xl font-bold text-foreground leading-tight">{product.name}</h1>
 
-              {product.description && (
+              {meaningfulDescription && (
                 <p className="text-sm text-muted mt-3 leading-relaxed whitespace-pre-line">
                   {/* product.description is DB content — not translatable */}
-                  {product.description}
+                  {meaningfulDescription}
                 </p>
               )}
             </div>

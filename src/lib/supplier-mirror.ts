@@ -13,6 +13,8 @@
 // (non finalisé) garde son unité au catalogue. ZÉRO impact sur l'argent (sell/factory/marge).
 
 import { normalizeSaleUnit } from '@/lib/units'
+import { isValidMediaUrl } from '@/lib/product-media'
+import type { MediaItem } from '@/types/database'
 
 /** Entrée minimale issue d'un supplier_product pour décider/construire le miroir. */
 export interface SupplierMirrorInput {
@@ -31,6 +33,8 @@ export interface SupplierMirrorInput {
   /** Conditionnement descriptif (affichage pur). */
   pack_size: number | null
   pack_unit: string | null
+  /** Photos fournisseur (text[] d'URLs) — AFFICHAGE PUR, propagées au catalogue. */
+  photos: string[] | null
 }
 
 /** Ligne `products` à UPSERT. Colonnes minimales : suffisantes pour findCatalogLink + checkout. */
@@ -48,6 +52,12 @@ export interface MirrorRow {
   sale_unit: string | null
   pack_size: number | null
   pack_unit: string | null
+  // Photos — AFFICHAGE PUR. media = canonical (jsonb [{url,type}]), images = legacy dérivé,
+  // exactement comme upsertProduct. OPTIONNELS : posés UNIQUEMENT si le fournisseur a des
+  // photos valides → à la ré-approbation (UPDATE), l'absence de ces champs préserve une
+  // galerie éventuellement curée côté admin (on n'écrase jamais avec du vide).
+  media?: MediaItem[]
+  images?: string[]
 }
 
 export type MirrorSkipReason =
@@ -82,6 +92,20 @@ export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
   // implicite (inchangé). Identique au flux Finaliser. Aucun impact argent.
   const saleUnit = normalizeSaleUnit(sp.unit)
 
+  // Photos — AFFICHAGE PUR : on ne garde que les URLs http(s) valides (même filtre que le
+  // form admin). text[] fournisseur → media jsonb + images legacy, sans aucune transformation
+  // d'argent. Vide → champs omis (cf. MirrorRow : ne jamais écraser une galerie curée).
+  const validPhotos = (sp.photos ?? [])
+    .map((u) => (typeof u === 'string' ? u.trim() : ''))
+    .filter((u) => isValidMediaUrl(u))
+  const photoCols =
+    validPhotos.length > 0
+      ? {
+          media: validPhotos.map((url) => ({ url, type: 'image' as const })),
+          images: validPhotos,
+        }
+      : {}
+
   return {
     create: true,
     row: {
@@ -100,6 +124,7 @@ export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
       sale_unit: saleUnit === 'piece' ? null : saleUnit,
       pack_size: sp.pack_size ?? null,
       pack_unit: sp.pack_unit ?? null,
+      ...photoCols,
     },
   }
 }

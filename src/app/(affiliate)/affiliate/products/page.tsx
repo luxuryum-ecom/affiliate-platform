@@ -5,6 +5,8 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
+import { priceWithUnit, resolveUnitLabel } from '@/lib/units'
+import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
 
@@ -17,6 +19,7 @@ export default async function AffiliateProductsPage() {
   const supabase = await createClient()
   const t = await getTranslations('affiliate.products')
   const tCommon = await getTranslations('affiliate.common')
+  const tUnits = await getTranslations('units')
 
   const {
     data: { user },
@@ -122,20 +125,40 @@ export default async function AffiliateProductsPage() {
                       {product.name}
                     </h3>
 
-                    {/* Commission — the number that matters for the affiliate */}
+                    {/* Incitation affilié — le gain par vente mis en avant (or signature).
+                        Réutilise calculateNetAffiliateCommission (zéro nouveau calcul). */}
                     <div className="mt-auto pt-1">
-                      <p className="text-[11px] text-faint">{t('baseCommission')}</p>
                       {baseCommission != null && baseCommission > 0 ? (
-                        <p className="text-lg font-bold text-success-fg tabular-nums leading-tight">
-                          {formatMAD(baseCommission)}
-                        </p>
+                        <div className="rounded-lg bg-accent-soft border border-gold-300 px-2.5 py-1.5">
+                          <p className="text-[11px] font-medium text-accent-fg">{t('earnPerSaleLabel')}</p>
+                          <p className="text-xl font-extrabold text-success-fg tabular-nums leading-tight">
+                            {formatMAD(baseCommission)}
+                          </p>
+                        </div>
                       ) : (
                         <p className="text-sm font-medium text-accent-fg">{t('adjustPrice')}</p>
                       )}
                       <p className="text-[11px] text-faint mt-0.5">
                         {t('catalogPrice')}&nbsp;:{' '}
-                        <span className="text-muted tabular-nums">{formatMAD(product.sell_price)}</span>
+                        {/* Suffixe d'unité AJOUTÉ seulement si sale_unit posé → produit
+                            sans unité (NULL) = affichage strictement identique à avant. */}
+                        <span className="text-muted tabular-nums">
+                          {priceWithUnit(
+                            formatMAD(product.sell_price),
+                            product.sale_unit ? resolveUnitLabel(product.sale_unit, tUnits) : null,
+                          )}
+                        </span>
                       </p>
+                      {/* Conditionnement descriptif (D1) — « contenant de N — ≈ X/unité ».
+                          Rien si pack_size/pack_unit non posés (produit à la pièce inchangé). */}
+                      <div className="mt-0.5 text-[10px]">
+                        <PackBreakdown
+                          price={product.sell_price}
+                          packSize={product.pack_size}
+                          packUnit={product.pack_unit}
+                          saleUnit={product.sale_unit}
+                        />
+                      </div>
                       <p className="text-[10px] text-success-fg mt-0.5">{t('priceAllInclusiveShort')}</p>
                     </div>
 

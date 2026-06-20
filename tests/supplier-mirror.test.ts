@@ -17,6 +17,7 @@ const base: SupplierMirrorInput = {
   unit: null,
   pack_size: null,
   pack_unit: null,
+  photos: null,
 }
 
 describe('buildSupplierMirror', () => {
@@ -101,6 +102,42 @@ describe('buildSupplierMirror', () => {
   it('unité brute normalisée (« le mètre » → metre)', () => {
     const d = buildSupplierMirror({ ...base, unit: 'le mètre' })
     expect(d.create && d.row.sale_unit).toBe('metre')
+  })
+
+  it('PHOTOS reportées au miroir : media (jsonb [{url,type:image}]) + images (legacy) — AFFICHAGE PUR', () => {
+    const photos = ['https://cdn.x/a.jpg', 'https://cdn.x/b.png']
+    const d = buildSupplierMirror({ ...base, photos })
+    expect(d.create).toBe(true)
+    if (!d.create) return
+    expect(d.row.media).toEqual([
+      { url: 'https://cdn.x/a.jpg', type: 'image' },
+      { url: 'https://cdn.x/b.png', type: 'image' },
+    ])
+    expect(d.row.images).toEqual(photos) // legacy dérivé identique
+    // l'argent reste INTACT (hors périmètre)
+    expect(d.row.sell_price).toBe(120)
+    expect(d.row.factory_cost_mad).toBe(100)
+  })
+
+  it('PHOTOS : URLs invalides/vides filtrées (même filtre que le form admin)', () => {
+    const d = buildSupplierMirror({
+      ...base,
+      photos: ['  https://cdn.x/ok.jpg  ', '', 'pas-une-url', 'ftp://x/y.jpg'],
+    })
+    expect(d.create).toBe(true)
+    if (!d.create) return
+    expect(d.row.images).toEqual(['https://cdn.x/ok.jpg']) // trim + seules http(s)
+    expect(d.row.media).toEqual([{ url: 'https://cdn.x/ok.jpg', type: 'image' }])
+  })
+
+  it('PHOTOS absentes (null/[]/que des invalides) → media/images OMIS (jamais écrasés à la ré-approbation)', () => {
+    const dNull = buildSupplierMirror(base)
+    expect(dNull.create && 'media' in dNull.row).toBe(false)
+    expect(dNull.create && 'images' in dNull.row).toBe(false)
+    const dEmpty = buildSupplierMirror({ ...base, photos: [] })
+    expect(dEmpty.create && 'media' in dEmpty.row).toBe(false)
+    const dInvalid = buildSupplierMirror({ ...base, photos: ['', 'nope'] })
+    expect(dInvalid.create && 'media' in dInvalid.row).toBe(false)
   })
 
   it('NON-RÉGRESSION : sans unité (null/pcs) → sale_unit null, pack null/null = inchangé', () => {

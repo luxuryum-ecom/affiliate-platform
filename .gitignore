@@ -40,6 +40,9 @@ next-env.d.ts
 # Vercel
 .vercel
 
+# Supabase CLI scratch (never commit)
+supabase/.temp/
+
 # Playwright (smoke tests)
 /test-results
 /playwright-report
