@@ -261,7 +261,8 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
         {/* Stats */}
         <div className="mt-6">
           <p className="text-xs font-semibold text-muted mb-2">{t('statsTitle')}</p>
-          <div className="grid grid-cols-4 gap-2">
+          {/* Mobile : 2×2 pour ne pas serrer les valeurs MAD ; desktop (sm+) INCHANGÉ = 4 colonnes. */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { value: String(clicks), label: t('statsClicks') },
               { value: String(orders), label: t('statsOrders') },

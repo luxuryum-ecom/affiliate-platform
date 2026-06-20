@@ -36,6 +36,8 @@ export function ProductCardImage({ src, alt, category }: ProductCardImageProps) 
     <img
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
       onError={() => setErrored(true)}
     />

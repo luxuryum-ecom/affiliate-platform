@@ -3,10 +3,10 @@
 import { useActionState, useState } from 'react'
 import { requestSupplierProductQuote, type SupplierProductState } from '@/app/actions/supplier-products'
 import {
-  PURCHASE_PROFILE_LABELS,
-  VOLUME_TIER_LABELS,
   BUYER_PURCHASE_PROFILES,
   BUYER_VOLUME_TIERS,
+  type BuyerPurchaseProfile,
+  type BuyerVolumeTier,
 } from '@/lib/rfq-buyer-intake'
 
 const initial: SupplierProductState = { error: null }
@@ -38,6 +38,16 @@ interface TQuote {
   submitting: string
   cta: string
   success: string
+  // Labels d'OPTIONS du sélecteur (i18n) — profils d'activité + paliers de volume.
+  // Résolus côté serveur (parent), passés en strings → jamais de fonction au client.
+  profilePhysical: string
+  profileSocial: string
+  profileEcom: string
+  profileImporter: string
+  vol1: string
+  vol2: string
+  vol3: string
+  vol4: string
   // Mode d'expédition — uniquement pour les produits importés (showShippingMode).
   shippingLabel?: string
   shippingNone?: string
@@ -57,6 +67,21 @@ interface Props {
 export function MarketplaceQuoteForm({ supplierProductId, minQuantity, showShippingMode = false, tQuote }: Props) {
   const [state, action, isPending] = useActionState(requestSupplierProductQuote, initial)
   const [open, setOpen] = useState(false)
+
+  // Labels d'options résolus i18n (depuis tQuote, strings serveur) — remplacent les
+  // constantes FR en dur (PURCHASE_PROFILE_LABELS / VOLUME_TIER_LABELS).
+  const profileLabel: Record<BuyerPurchaseProfile, string> = {
+    physical_store: tQuote.profilePhysical,
+    social_reseller: tQuote.profileSocial,
+    wholesaler: tQuote.profileEcom,
+    importer: tQuote.profileImporter,
+  }
+  const volumeLabel: Record<BuyerVolumeTier, string> = {
+    test_20_50: tQuote.vol1,
+    small_100_300: tQuote.vol2,
+    active_500_1000: tQuote.vol3,
+    importer_1000_plus: tQuote.vol4,
+  }
 
   if (state?.success) {
     return (
@@ -108,7 +133,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, showShipp
           <option value="">{tQuote.activityPlaceholder}</option>
           {BUYER_PURCHASE_PROFILES.map((value) => (
             <option key={value} value={value}>
-              {PURCHASE_PROFILE_LABELS[value]}
+              {profileLabel[value]}
             </option>
           ))}
         </select>
@@ -125,7 +150,7 @@ export function MarketplaceQuoteForm({ supplierProductId, minQuantity, showShipp
           <option value="">{tQuote.volumePlaceholder}</option>
           {BUYER_VOLUME_TIERS.map((value) => (
             <option key={value} value={value}>
-              {VOLUME_TIER_LABELS[value]}
+              {volumeLabel[value]}
             </option>
           ))}
         </select>

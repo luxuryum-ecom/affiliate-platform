@@ -603,7 +603,7 @@ function CountrySourceSection({
             </div>
           </div>
           <div className="flex-shrink-0">
-            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap">
+            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 transition-opacity sm:whitespace-nowrap">
               {t('moroccoHeroCta')}
             </span>
           </div>
