@@ -7,13 +7,19 @@
 >
 > **🩺 RÈGLE DIAGNOSTIC — déploiement d'abord.** Si l'agent voit le **bon comportement dans le code** (vérifié runtime sur build local) mais que l'utilisateur voit **autre chose en prod**, **VÉRIFIER LE DÉPLOIEMENT VERCEL EN PREMIER** (souvent en retard sur `main` / cache). Ne PAS conclure « ergonomie » ou « non reproduit » avant ça. Trancher en **forçant un redeploy** : `git commit --allow-empty -m "chore: force redeploy" && git push` sur `main`. Cas réel : recherche grossiste « Pull ref 5 » = 0 en prod alors que le code était correct → déploiement périmé (résolu par `6dc0244`).
 
-**Dernière synchro :** 2026-06-20 — `main` @ `f1f5f95` — 80 migrations (001→080).
+**Dernière synchro :** 2026-06-20 — `main` @ `cd2801f` — 80 migrations (001→080).
 
 ---
 
 ## 🧭 POINT DE REPRISE — fin de session 2026-06-18 (à lire en premier)
 
 ### ✅ EN PROD (confirmé, validé runtime)
+- **LOT « Mobile + finitions vitrine » EN PROD** (merge `267beee`, **pas de migration, affichage pur**) :
+  - **A5 mobile** (`3d07571`) : lazy-load `<img>` marketplace (`product-card-image`) ; cible tactile CTA carte affilié ≥44px (texte/couleur/position **inchangés**) ; stats fiche affilié `grid-cols-2 sm:grid-cols-4` (2×2 mobile, desktop identique) ; CTA hero marketplace `sm:whitespace-nowrap` (wrap mobile/AR). **Nombre de cartes/ligne, taille des cartes : INCHANGÉS** (vérifié runtime : 2 mobile / 4 desktop, zéro débordement FR/AR/EN).
+  - **A4 wording** (`696ab44` + fix `992fcb0`) : « Stock local Maroc » (trompeur) → « **Stock Maroc — livraison rapide** » (badges/trust/availability) / « **Stock Maroc** » (filtres/chips) / titre hero « **MAROC — STOCK DISPONIBLE** ». **48 remplacements FR/AR/EN** (27 + 21 au fix PHASE C). Plus aucun « stock local »/« local stock »/« مخزون محلي ». (`supplierTypeMorocco = "Local Maroc"` = type fournisseur, laissé.)
+  - **A3 i18n sélecteur** (`696ab44`) : labels d'options du sélecteur activité (4 profils) + volume (4 paliers) du form de devis marketplace étaient en **français en dur** (`rfq-buyer-intake.ts`) → 8 clés i18n (`quoteFormProfile*`/`quoteFormVol*`) FR/AR/EN, résolues **serveur** (parent `marketplace/[id]`) passées en strings au form client (zéro fonction au client). Vérifié runtime : options traduites AR/EN, zéro français. Constantes conservées pour l'admin.
+  - **Carte affilié #5** (`35aa5d6`) : ligne « tout compris » neutralisée (text-muted, plus verte) → le bloc gain reste l'accent. **#6** (encadré gris) = obsolète (déjà vert lisible). **#7** (badges stock séparés) = déjà groupés sur fiche affilié ET publique.
+  - **Preuves** : captures Playwright mobile 390 + desktop 1280, FR/AR/EN + RTL (`.mobile-proofs/`, commit `cd2801f`). tsc 0 / build / 239 tests / smoke 20/20 à chaque commit. **Note méthode** : la PHASE C a rattrapé un FAIL réel (titre hero « STOCK LOCAL » manqué) → corrigé + re-vérifié.
 - **ÉTAPE 2 « Publication propre » EN PROD** (merge `9862f96`, **pas de migration** — flag TS + colonnes existantes) :
   1. **Canal par catégorie D2** (`42d98e4`) — `affiliate_enabled` forcé SERVEUR selon la catégorie (`isAffiliateAllowedCategory` **fail-closed** dans `src/lib/taxonomy.ts`), allowlist anti-POST (`isValidCategory`), **fix fuite miroir** : `buildSupplierMirror` pose `affiliate_enabled=false` EXPLICITE + copie `category`/`subcategory` (avant : défaut `true` → un miroir grossiste fuyait au catalogue affilié sans capital). Taxonomie portée à **12 catégories** (+ Électronique & gadgets / Sport & Fitness / Jouets & enfants / Accessoires & maroquinerie, toutes affilié). Backfill : 2 produits Alimentaire → grossiste (0 miroir fuyant en prod).
   2. **Report paliers fournisseur → `products.wholesale_tiers`** (`cef7342`, D3) — `buildMirrorTiers` (`supplier-pricing.ts`) convertit `supplier_product_moq_tiers` (devise source) via FX (`convertToMad`) + marge (`applyPlatformMargin`) en **ENTIER MAD** (jamais le biais ½-cent), `max_qty` **bornés** pour que `getWholesaleTier` serve le bon palier volume. **Grossiste-only** (miroir `affiliate_enabled=false`). Reporté à l'approbation.

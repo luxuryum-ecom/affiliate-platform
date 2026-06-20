@@ -205,9 +205,9 @@
 
 ### 🧾 Contenu & infos de la carte affilié
 4. **Description redondante** : le titre et la description répètent le nom du produit (« Sac Cuir Artisan Cabas » écrit 2 fois) → nettoyer, éviter la répétition.
-5. **Hiérarchie de l'info à revoir** : pour l'affilié, mettre en avant ce qui compte le plus (**sa commission / son prix de vente**), ne pas noyer ces infos.
-6. **Bloc Confirmation/Emballage (encadré gris) peu lisible** → améliorer lisibilité / hiérarchie.
-7. **Alignement des infos stock** : le badge « Stock Maroc » (haut) et l'info « Stock : X unités » (bas) sont séparés → **regrouper les infos liées**, améliorer l'alignement.
+5. ✅ **FAIT** (lot mobile-vitrine, `35aa5d6` + incitation Étape 1) — gain mis en avant (bloc or « Tu gagnes »), ligne « tout compris » neutralisée pour ne plus noyer l'info clé.
+6. ✅ **RÉSOLU/OBSOLÈTE** — l'« encadré gris » n'existe plus : c'est aujourd'hui un encadré **vert** « tout inclus » déjà lisible (décision Abdou : ne pas toucher).
+7. ✅ **DÉJÀ GROUPÉ** — sur la fiche affilié ET la fiche publique, « Stock Maroc » + « Stock : X unités » sont déjà dans un même conteneur flex (vérifié runtime).
 
 ### 💸 Logique frais (valeurs corrigées par Abdou — à implémenter via process argent / `@finance`)
 > ⚠️ **Touche le calcul de commission** → circuit `@finance` + `@security-reviewer` + validation Abdou AVANT tout commit. Affichage seul interdit ici tant que la logique n'est pas validée.
@@ -556,9 +556,9 @@ construire maintenant.
 - **A0** ✅ **[FAIT]** Bug serveur `/wholesale/marketplace/[id]` (digest 3098525211) → mergé `main` `894fa06`, en prod.
 - **A1** Règle métier Maroc (qty ≤ stock → **commande directe** / qty > stock → **devis / confirmation équipe**, **jamais « pas disponible »**) + Import (Chine / Turquie / Égypte / Dubai) → **toujours devis** + mention « transport calculé après, variable » + **supprimer la contradiction UI** (bloc « Commander » + message rouge affichés ensemble). → cf. RETOURS TEST pt 2 + « CHANTIER TRANSPORT DDP » (≈ L318) + DETTE UX [P0] (≈ L148).
 - **A2** Prix = fournisseur + commission, **hors cargo**, mention « hors transport » + **vérifier cohérence prix fiche ↔ panier**. → cf. RETOURS TEST pt 3 + LOT T0/T1 transport (≈ L333).
-- **A3** i18n sélecteur type d'activité (Boutique physique / Instagram-Facebook / E-commerce / Importateur) reste en FR en arabe → traduire FR/AR/EN. → cf. RETOURS TEST pt 4.
-- **A4** « Stock local Maroc » trompeur → reformuler. → cf. RETOURS TEST pt 5.
-- **A5** **EXPÉRIENCE MOBILE & DESIGN** (90 % du trafic = mobile, priorité haute) : → cf. RETOURS TEST pt 6 + SECTION 4 perfs (≈ L357) + GO-LIVE pt 7 optim images (≈ L126).
+- **A3** ✅ **FAIT** (lot mobile-vitrine, `696ab44`) — i18n sélecteur type d'activité + volumes FR/AR/EN (8 clés, résolu serveur).
+- **A4** ✅ **FAIT** (`696ab44` + fix `992fcb0`) — « Stock local Maroc » → « Stock Maroc — livraison rapide »/« Stock Maroc » (48 remplacements FR/AR/EN).
+- **A5** ✅ **FAIT** (`3d07571`) — polish mobile (cible tactile ≥44px, stats 2×2, lazy-load, wrap AR ; cartes/ligne + taille inchangées, desktop intact). *(Optim images approfondie via `next/image` reste différée — risque URLs Supabase signées.)*
   - (a) images produits/hero non adaptées/optimisées sur mobile → cadrage + compression + composant `next/image`.
   - (b) organisation, hiérarchie visuelle et design général à hisser au standard d'un SaaS international.
   - (c) cohérence du design sur toutes les pages clés (fiche produit, marketplace, catalogue, dashboards).
