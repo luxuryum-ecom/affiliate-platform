@@ -192,13 +192,17 @@
 > Toutes en ⬜. **Affichage pur** sauf mention. Plusieurs dépendent des **catégories dynamiques**
 > (chantier en cours) → à faire APRÈS. Aucune ne rouvre de règle financière (prix export = prix grossiste).
 
-- ⬜ **UX-G1 — Refonte dashboard grossiste** : hiérarchiser (mettre en avant l'action principale
-  *commander / parcourir*, reléguer le reste) ; **retirer le « Total dépensé 0,00 MAD »** démotivant
-  pour un nouveau compte ; ajouter un **point d'entrée export clair**. *Affichage pur.*
-- ⬜ **UX-G2 — Wording des 2 boutons du profil grossiste** : bouton local = **« Stock Maroc »** ;
-  bouton hub mondial = **« Marché mondial »** (Maroc + Chine + Turquie + Égypte + Dubaï). Bonus :
-  **drapeaux sous « Marché mondial »**. Badge catalogue local = **« Disponible au Maroc — livraison
-  rapide »**. *Affichage pur.*
+- 🔄 **UX-G1 + UX-G2 — Refonte dashboard grossiste en HUB 3 ZONES** *(branche `feat/dashboard-grossiste-hub`, session 2026-06-21, affichage pur, 0 argent, 0 migration)*.
+  **Carto existant** (`src/app/(wholesale)/wholesale/dashboard/page.tsx`, server component, 10 blocs à plat) :
+  navbar · welcome · stats×4 (Total orders / En cours / Panier / **Total dépensé**) · catalogue→`/products` ·
+  panier→`/cart` · commandes→`/orders` · marketplace→`/marketplace` · devis→`/quote-requests` (+3 compteurs) ·
+  échantillons→`/samples` (badge) · sourcing→`/sourcing` (badge) · compte→`/account`. **Tous les liens validés existants.**
+  **PLAN — réorganisation en 3 zones, mobile-first 390px, thème noir&or via tokens (`bg-primary`=or #c9a227 dark, `gold-300/500`), AUCUN lien changé de cible :**
+  - **ZONE 1 ACHETER** (haut) : 2 boutons or `Stock Maroc`→`/products` + `Marché mondial`→`/marketplace` (drapeaux 🇲🇦🇨🇳🇹🇷🇪🇬🇦🇪 sous le nom) ; entrée mise en avant `Sourcing intelligent`→`/sourcing` (flux existant remonté, badge Nouveau).
+  - **ZONE 2 MON ACTIVITÉ** : 2 chips chiffres réels (En cours=pendingOrders, Panier=cartItemCount→`/cart`) ; liens Mes commandes→`/orders`, Mes devis→`/quote-requests` (+3 compteurs préservés), Mes échantillons→`/samples` (badge pendingSampleCount préservé).
+  - **ZONE 3 MON COMPTE** : seul lien réel `Mon compte & facturation`→`/account` (profil ICE/RC/adresse). **Aucune fausse feature** (pas de fidélité/Bronze, pas de Mes factures).
+  - **RETIRÉ** : stat « Total dépensé ». **i18n** : nouvelles clés zone*/buyLocal*/buyGlobal* FR/AR/EN, reste réutilise clés existantes.
+  - **Décision prise seule** : conserver les 3 compteurs devis + badge échantillons (chiffres réels existants) dans Zone 2 plutôt que les supprimer → aucune perte de donnée. Tokens sémantiques conservés (pas de couleur en dur) → pas de casse light/dark.
 - ⬜ **UX-M1 — Restructuration marketplace en 3 zones (priorité mobile)** : Zone 1 *Stock Maroc*
   (1 carte + 1 bouton) / Zone 2 *Importer depuis* (pays en cartes 2 colonnes) / Zone 3 *Sourcing +
   produits*. **Supprimer** la rangée de 6 badges répétitifs + les stats en double. Thème noir & or.
