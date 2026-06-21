@@ -188,6 +188,21 @@
 - **BACKLOG B1-B5** : saisie manuelle commande affilié · précommande usine · sourcing par upload photo · affichage par secteur · comptes fournisseurs via bot
 - **Choix code-barres vs QR** (au moment du WMS)
 
+#### ⬜ FIDÉLITÉ GROSSISTE PAR PALIERS + POINTS PONDÉRÉS MARGE — *(GROS LOT, `@finance` OBLIGATOIRE ; développe la ligne « SECTION 2bis-B » ci-dessus)*
+> Programme de fidélité **B2B**, conçu pour être **AUTO-FINANCÉ** et **protéger la marge**. **Rien n'est codé.**
+> Lot dédié à cadrer avec **`@finance` + `@architect`** AVANT tout code. **Statut ⬜.**
+
+- **PALIERS (tiers)** : **Bronze / Argent / Or / Platine** selon le **CA ET la MARGE** générés par le grossiste sur une période (**trimestre / an**).
+- **POINTS pondérés par la marge** : chaque commande rapporte des points **proportionnels à la MARGE générée** (pas juste le CA) → pousse les grossistes vers les **produits rentables**. **RÈGLE CLÉ** : la **valeur des récompenses** est **toujours alignée sur des seuils de marge** — **jamais offrir un cadeau qui dépasse la marge générée**.
+- **AUTO-FINANCEMENT** : seuils fixés **juste au-dessus du point de rentabilité** → l'achat supplémentaire pour débloquer la récompense **paie la récompense**. **Minimum d'achat** pour participer (protège la marge).
+- **RÉCOMPENSES échelonnées** : petits paliers = **coupons / bons d'achat partenaires / livraison offerte** ; gros paliers (top grossistes) = **téléphone, billet d'avion, Omra, voyage**.
+- **AVANTAGE COMPTABLE** : cadeaux passés en **frais / dépenses déductibles**.
+- **PARTENAIRES** : sous-système **coupons / bons d'achat** chez des partenaires.
+- **AFFICHAGE** : zone **« Mon compte / Fidélité »** du dashboard grossiste (**place déjà prévue** par la refonte HUB 3 zones) — **niveau actuel, points, prochain palier, barre de progression**.
+- **⚠️ POINTS SENSIBLES (argent réel)** : calcul **sur marge par commande** (donnée capital / coût usine **déjà en base**), récompenses à **forte valeur** (Omra / billet), **ratio points ↔ valeur**, **intégration comptable**. **`@finance` doit cadrer le ratio AVANT tout code** et garantir que le programme reste **profit-positif** (chaque récompense **< marge incrémentale générée**).
+- **Cible** : grossistes à **fort CA / marge**, fidélisation **long terme**.
+- **Dépend de** : commandes + **données de marge**, profil grossiste.
+
 ### 🛍️ AMÉLIORATIONS UX GROSSISTE / MARKETPLACE / EXPORT — *(décidées session 2026-06-21)*
 > Toutes en ⬜. **Affichage pur** sauf mention. Plusieurs dépendent des **catégories dynamiques**
 > (chantier en cours) → à faire APRÈS. Aucune ne rouvre de règle financière (prix export = prix grossiste).
