@@ -303,6 +303,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/premium',
               },
+              {
+                title: t('categoriesTitle'),
+                description: t('categoriesDesc'),
+                badge: null,
+                href: '/admin/categories',
+              },
             ].map((action) => (
               <div
                 key={action.title}

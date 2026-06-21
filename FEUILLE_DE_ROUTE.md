@@ -78,8 +78,21 @@
 - ⬜ **Lot séparé (NON-financier) — Affichage dynamique** : filtres `?category=`, forms admin/supplier,
   rails/grilles, unification des 3 `CATEGORY_ICONS` → lire la base au lieu de `taxonomy.ts`. Pas de circuit
   financier (aucune décision de canal). À faire après le panneau admin.
-- ⬜ **Sous-lot 4 — Panneau admin CRUD** (`actions/categories.ts`, `/admin/categories`, i18n FR/AR/EN)
-  + **audit immuable** des toggles `affiliate_allowed`. Circuit financier sur le toggle de canal.
+- 🔄 **Sous-lot 4 — Panneau admin CRUD** (commité sur branche, non mergé). `/admin/categories`
+  (Server Component) + `category-actions.tsx` (Client) + `actions/categories.ts` + migration **082**.
+  Créer/éditer/traduire (FR/AR/EN)/activer-désactiver/réordonner catégories + sous-catégories.
+  **Point sensible `affiliate_allowed` (canal D2)** verrouillé : RPC `set_category_affiliate_allowed`
+  (SECURITY DEFINER, gate admin, booléen explicite) = SEUL chemin ; trigger bloque tout rôle client ;
+  **audit immuable append-only** `category_channel_audit` (qui/quand/ancien→nouveau, RLS admin-read +
+  trigger anti-UPDATE/DELETE). `'Autres'` protégée (suppression + désactivation). Nouvelle catégorie naît
+  grossiste (fail-closed). CRUD via RLS admin-only (jamais service_role exposé). i18n FR/AR/EN + RTL.
+  **Circuit ROUGE complet** : @finance GO + @security GO sur le code réel + **preuves runtime en session
+  admin** (toggle+restore audité, UPDATE direct bloqué, audit immuable 2 couches, RPC anon refusée,
+  'Autres' protégée, canaux figés inchangés). 4 checks verts (tsc 0 / build / 263 tests / smoke 20/20).
+  **Suivis MINEURS @security (non bloquants)** : (a) `getCategoryChannelAudit` N+1 sur la page → batcher ;
+  (b) `updateCategory` ne re-vérifie pas l'existence de l'id (0 ligne → ok silencieux) ; (c) valider
+  `image_url` en zod `url()` côté action. **Suivi @finance** : `category_channel_audit.changed_by` est
+  `ON DELETE SET NULL` → si rétention nominative exigée (conformité), stocker un libellé acteur en plus.
 - ⬜ **Sous-lot 5 (option)** — retrait progressif du figé / nettoyage i18n (garder le fallback codé).
 
 **CONDITIONS OBLIGATOIRES avant tout sous-lot touchant D2 (3/4) — verdicts @security + @finance :**
