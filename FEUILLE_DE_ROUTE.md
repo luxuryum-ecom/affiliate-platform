@@ -175,6 +175,34 @@
 - **BACKLOG B1-B5** : saisie manuelle commande affilié · précommande usine · sourcing par upload photo · affichage par secteur · comptes fournisseurs via bot
 - **Choix code-barres vs QR** (au moment du WMS)
 
+### 🛍️ AMÉLIORATIONS UX GROSSISTE / MARKETPLACE / EXPORT — *(décidées session 2026-06-21)*
+> Toutes en ⬜. **Affichage pur** sauf mention. Plusieurs dépendent des **catégories dynamiques**
+> (chantier en cours) → à faire APRÈS. Aucune ne rouvre de règle financière (prix export = prix grossiste).
+
+- ⬜ **UX-G1 — Refonte dashboard grossiste** : hiérarchiser (mettre en avant l'action principale
+  *commander / parcourir*, reléguer le reste) ; **retirer le « Total dépensé 0,00 MAD »** démotivant
+  pour un nouveau compte ; ajouter un **point d'entrée export clair**. *Affichage pur.*
+- ⬜ **UX-G2 — Wording des 2 boutons du profil grossiste** : bouton local = **« Stock Maroc »** ;
+  bouton hub mondial = **« Marché mondial »** (Maroc + Chine + Turquie + Égypte + Dubaï). Bonus :
+  **drapeaux sous « Marché mondial »**. Badge catalogue local = **« Disponible au Maroc — livraison
+  rapide »**. *Affichage pur.*
+- ⬜ **UX-M1 — Restructuration marketplace en 3 zones (priorité mobile)** : Zone 1 *Stock Maroc*
+  (1 carte + 1 bouton) / Zone 2 *Importer depuis* (pays en cartes 2 colonnes) / Zone 3 *Sourcing +
+  produits*. **Supprimer** la rangée de 6 badges répétitifs + les stats en double. Thème noir & or.
+  **Reporté APRÈS les catégories dynamiques** (dépend de l'affichage des catégories). *Affichage pur.*
+- ⬜ **UX-M2 — Filtre PAYS × CATÉGORIE sur marketplace** + réutiliser les **grandes cartes-images de
+  rayon** (navigation à l'image pour acheteurs étrangers). **Dépend des catégories dynamiques.**
+  *Affichage pur.*
+- ⬜ **CAT-AFF — Lot affichage dynamique des catégories** (filtres `?category=` / forms admin+supplier /
+  rails / grilles / unif. des 3 `CATEGORY_ICONS`) : lire la base au lieu de `taxonomy.ts`. **Sorti
+  volontairement du sous-lot 3 (D2)** pour rester **non-financier**. À faire **après le panneau admin**
+  (sous-lot 4). *Affichage pur, aucun circuit financier.*
+- ⬜ **EXPORT-VISION — Marketplace = vitrine Maroc + hubs vers le monde** : **prix export = MÊME prix
+  grossiste qu'au Maroc** (confirmé Abdou, pas de @finance lourd). Idées : badge **« Stock Maroc —
+  disponible à l'international / livraison mondiale »** ; **détection du pays de l'acheteur** pour
+  adapter le wording (*Import vers [pays]*). ⚠️ La **détection pays = lot dédié plus profond** (touche
+  profil / inscription), à cadrer séparément.
+
 ---
 ---
 
