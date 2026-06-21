@@ -1,22 +1,20 @@
 // ─── Passe IA UNIQUE (Haiku) — extraction fiche produit depuis photo+légende ──
 // Une seule requête par produit soumis (pas de boucle). Modèle économique Haiku.
-// Sortie forcée via tool-use (structurée + robuste). Taxonomie en cache (prompt
-// caching) car stable d'un appel à l'autre.
+// Sortie forcée via tool-use (structurée + robuste). La taxonomie autorisée est
+// lue DEPUIS LA BASE au runtime (sous-lot 2, cache + fallback fail-closed) et
+// injectée dans le prompt (toujours mis en cache Anthropic car stable).
 
 import Anthropic from '@anthropic-ai/sdk'
-import { CATEGORY_TAXONOMY } from '@/lib/taxonomy'
+import { getCategoryContext } from '@/lib/categories'
 import { aiExtractionRawSchema, buildCleanExtraction, type CleanExtraction } from './schema'
 
 const MODEL = 'claude-haiku-4-5'
 
-function renderTaxonomy(): string {
-  return Object.entries(CATEGORY_TAXONOMY)
-    .map(([cat, subs]) => `- ${cat} : ${(subs as readonly string[]).join(', ')}`)
-    .join('\n')
-}
-
-// Stable → mis en cache. (Construit une fois au chargement du module.)
-const SYSTEM_INSTRUCTIONS = `Tu es un assistant d'extraction de fiches produit pour une marketplace B2B marocaine.
+// Le bloc taxonomie est désormais lu DEPUIS LA BASE au runtime (sous-lot 2), avec
+// fallback fail-closed sur taxonomy.ts. Le prompt est construit par appel ; il reste
+// stable d'un appel à l'autre (DB stable) → prompt caching Anthropic toujours actif.
+function buildSystemInstructions(taxonomyBlock: string): string {
+  return `Tu es un assistant d'extraction de fiches produit pour une marketplace B2B marocaine.
 On te donne UNE photo de produit et une légende courte écrite par un fournisseur (français, arabe ou darija).
 Extrait une fiche produit structurée en appelant l'outil "record_product".
 
@@ -53,7 +51,8 @@ Règles STRICTES :
   Si AUCUN conditionnement de nature différente n'est mentionné → pack_size = null ET pack_unit = null. Ne JAMAIS inventer.
 
 Catégories et sous-catégories autorisées :
-${renderTaxonomy()}`
+${taxonomyBlock}`
+}
 
 const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
   name: 'record_product',
@@ -124,12 +123,16 @@ export async function extractProductFromTelegram(input: ExtractInput): Promise<C
 
   const client = new Anthropic({ apiKey })
 
+  // Taxonomie lue depuis la base (fail-closed → taxonomy.ts si DB injoignable/vide).
+  const { source: taxonomySource, promptBlock } = await getCategoryContext()
+  const systemInstructions = buildSystemInstructions(promptBlock)
+
   const captionText = input.caption?.trim()
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 1024,
     system: [
-      { type: 'text', text: SYSTEM_INSTRUCTIONS, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: systemInstructions, cache_control: { type: 'ephemeral' } },
     ],
     tools: [RECORD_PRODUCT_TOOL],
     tool_choice: { type: 'tool', name: 'record_product' },
@@ -158,5 +161,5 @@ export async function extractProductFromTelegram(input: ExtractInput): Promise<C
   if (!toolUse) throw new Error('Réponse IA sans tool_use')
 
   const validated = aiExtractionRawSchema.parse(toolUse.input)
-  return buildCleanExtraction(validated)
+  return buildCleanExtraction(validated, taxonomySource)
 }

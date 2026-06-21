@@ -60,8 +60,13 @@
   des 12 catégories + 48 sous-cats (9 parents `affiliate_allowed=true`). **Table INERTE** : rien dans
   l'app ne la lit, `taxonomy.ts` reste la source runtime. Test `tests/categories-seed-parity.test.ts`
   (parse le SQL ↔ taxonomy.ts, octet-pour-octet noms + flag, 12 valides / 9 affiliées / 48 sous-cats).
-- ⬜ **Sous-lot 2 — Couche lecture serveur + IA avec fallback `taxonomy.ts`** (`src/lib/categories/`,
-  `extract.ts`/`schema.ts` lisent la DB, fallback codé fail-closed, cache). Ne touche PAS D2 ni l'UI.
+- 🔄 **Sous-lot 2 — Couche lecture serveur + IA avec fallback `taxonomy.ts`** (commité sur branche,
+  non mergé). `src/lib/categories/read.ts` (cœur testable, fetcher injectable, fallback fail-closed) +
+  `index.ts` (`unstable_cache` tag `categories`, `getCategoryContext`). Sanitizers `schema.ts` rendus
+  paramétrables par `TaxonomySource` (défaut = `taxonomy.ts`, **purs/synchrones, tests inchangés**).
+  `extract.ts` lit la taxonomie DB au runtime (prompt + normalisation). **D2 NON touché**, UI NON touchée.
+  Fail-closed prouvé (tests : throw/vide → `taxonomy.ts`, jamais d'élargissement) + lecture live DB
+  vérifiée (origin `db`, 12 cat, 9 affiliés). 4 checks verts (tsc 0 / build / 255 tests +11 / smoke 20/20).
 - ⬜ 🔴 **Sous-lot 3 — Bascule décision D2** (`products.ts:119-128`) + filtres/forms/UI + unif. des 3
   `CATEGORY_ICONS`. **FINANCIER/SÉCURITÉ — circuit `@finance` + `@security` + GO Abdou AVANT commit.**
 - ⬜ **Sous-lot 4 — Panneau admin CRUD** (`actions/categories.ts`, `/admin/categories`, i18n FR/AR/EN)
