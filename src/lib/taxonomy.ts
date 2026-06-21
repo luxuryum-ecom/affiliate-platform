@@ -180,6 +180,25 @@ export const CATEGORY_ICONS: Record<string, string> = {
   'Autres':               '🔧',
 }
 
+// ─── Category cover images (self-hosted WebP) ─────────────────────────────────
+// Grandes images-rayons pour la navigation visuelle (clients peu lettrés).
+// Fichiers dans public/categories/ (cf. CREDITS.md). Affichage pur, zéro logique.
+// L'emoji CATEGORY_ICONS reste le fallback (cf. CategoryCard, couche de repli CSS).
+export const CATEGORY_IMAGES: Record<string, string> = {
+  'Textile':                    '/categories/textile.webp',
+  'Matières premières':         '/categories/matieres-premieres.webp',
+  'Chaussures':                 '/categories/chaussures.webp',
+  'Cosmétique & hygiène':       '/categories/cosmetique-hygiene.webp',
+  'Alimentaire':                '/categories/alimentaire.webp',
+  'Maison & packaging':         '/categories/maison-packaging.webp',
+  'Artisanat':                  '/categories/artisanat.webp',
+  'Électronique & gadgets':     '/categories/electronique-gadgets.webp',
+  'Sport & Fitness':            '/categories/sport-fitness.webp',
+  'Jouets & enfants':           '/categories/jouets-enfants.webp',
+  'Accessoires & maroquinerie': '/categories/accessoires-maroquinerie.webp',
+  'Autres':                     '/categories/autres.webp',
+}
+
 /**
  * Résout le libellé localisé d'une catégorie canonique.
  * Retourne le nom canonique lui-même si la traduction est absente (fallback safe).

@@ -6,8 +6,9 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { WholesaleCatalogCard } from '@/components/wholesale/wholesale-catalog-card'
 import { formatMAD } from '@/lib/utils'
-import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES, CATEGORY_ICONS, resolveCategoryLabel } from '@/lib/taxonomy'
+import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES, CATEGORY_ICONS, CATEGORY_IMAGES, resolveCategoryLabel } from '@/lib/taxonomy'
 import { CategoryRail, type CategoryChip } from '@/components/shared/category-rail'
+import { CategoryShowcase, type CategoryCardData } from '@/components/shared/category-showcase'
 import type { WholesaleCatalogRow, WholesaleCartItem } from '@/types/database'
 
 export async function generateMetadata() {
@@ -125,6 +126,17 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
     }
   })
 
+  // Grandes cartes-rayons (navigation visuelle, EN HAUT) — mêmes liens que les chips
+  // (onglet + recherche préservés, ciblent le ?category= déjà fonctionnel du catalogue).
+  const categoryCards: CategoryCardData[] = chips.map((chip) => ({
+    value: chip.value,
+    label: chip.label,
+    href: chip.href,
+    image: CATEGORY_IMAGES[chip.value] ?? '',
+    icon: chip.icon,
+    isActive: chip.isActive,
+  }))
+
   // Helper: build a tab href preserving current filters
   function tabHref(tab: string) {
     const params = new URLSearchParams()
@@ -177,6 +189,23 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
             </Link>
           )}
         </div>
+
+        {/* ── Cartes-rayons (navigation visuelle, EN HAUT pour clients peu lettrés) ── */}
+        <section aria-label={t('categoryShowcaseTitle')} className="mb-6">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">{t('categoryShowcaseTitle')}</h2>
+              <p className="text-xs text-muted mt-0.5">{t('categoryShowcaseSubtitle')}</p>
+            </div>
+            <Link
+              href="/wholesale/products/categories"
+              className="shrink-0 text-xs font-medium text-gold-400 hover:underline whitespace-nowrap"
+            >
+              {t('categoryShowcaseSeeAll')}
+            </Link>
+          </div>
+          <CategoryShowcase cards={categoryCards} layout="scroll" />
+        </section>
 
         {/* ── Tabs ────────────────────────────────────────────────────────────── */}
         <div className="flex gap-1 mb-5 border-b border-line">
