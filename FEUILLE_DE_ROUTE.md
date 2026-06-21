@@ -192,7 +192,7 @@
 > Toutes en ⬜. **Affichage pur** sauf mention. Plusieurs dépendent des **catégories dynamiques**
 > (chantier en cours) → à faire APRÈS. Aucune ne rouvre de règle financière (prix export = prix grossiste).
 
-- 🔄 **UX-G1 + UX-G2 — Refonte dashboard grossiste en HUB 3 ZONES** *(branche `feat/dashboard-grossiste-hub`, session 2026-06-21, affichage pur, 0 argent, 0 migration)*.
+- ✅ **UX-G1 + UX-G2 — Refonte dashboard grossiste en HUB 3 ZONES** *(EN PROD, merge `--no-ff` de `feat/dashboard-grossiste-hub`, session 2026-06-21, affichage pur, 0 argent, 0 migration ; rendu thème clair assumé = règle dashboards clairs)*.
   **Carto existant** (`src/app/(wholesale)/wholesale/dashboard/page.tsx`, server component, 10 blocs à plat) :
   navbar · welcome · stats×4 (Total orders / En cours / Panier / **Total dépensé**) · catalogue→`/products` ·
   panier→`/cart` · commandes→`/orders` · marketplace→`/marketplace` · devis→`/quote-requests` (+3 compteurs) ·
