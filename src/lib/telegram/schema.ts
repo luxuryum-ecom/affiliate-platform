@@ -207,22 +207,47 @@ function parsePriceString(raw: string): number | null {
 }
 
 /**
+ * Source de taxonomie pour la normalisation : liste des catégories valides +
+ * résolution des sous-catégories. Permet de brancher soit la taxonomie FIGÉE
+ * (`taxonomy.ts`, défaut), soit une source dynamique (base de données, sous-lot 2)
+ * SANS rendre les sanitizers asynchrones ni casser leur testabilité pure.
+ */
+export type TaxonomySource = {
+  categories: readonly string[]
+  getSubcategories: (category: string) => readonly string[]
+}
+
+/** Source par défaut = taxonomie figée du code (fail-closed, toujours disponible). */
+const STATIC_TAXONOMY: TaxonomySource = {
+  categories: PRODUCT_CATEGORIES,
+  getSubcategories,
+}
+
+/**
  * Catégorie → toujours une valeur de la taxonomie. Inconnue/vide → 'Autres'.
  * Empêche toute écriture d'une catégorie hors taxonomie.
+ * `source` permet d'utiliser la taxonomie DB (sous-lot 2) ; défaut = code figé.
  */
-export function normalizeCategory(raw: string | null | undefined): string {
+export function normalizeCategory(
+  raw: string | null | undefined,
+  source: TaxonomySource = STATIC_TAXONOMY,
+): string {
   if (!raw) return 'Autres'
   const trimmed = raw.trim().toLowerCase()
-  const match = PRODUCT_CATEGORIES.find((c) => c.toLowerCase() === trimmed)
+  const match = source.categories.find((c) => c.toLowerCase() === trimmed)
   return match ?? 'Autres'
 }
 
 /**
  * Sous-catégorie → doit appartenir à la catégorie. Inconnue/vide → ''.
  */
-export function normalizeSubcategory(category: string, raw: string | null | undefined): string {
+export function normalizeSubcategory(
+  category: string,
+  raw: string | null | undefined,
+  source: TaxonomySource = STATIC_TAXONOMY,
+): string {
   if (!raw) return ''
-  const subs = getSubcategories(category)
+  const subs = source.getSubcategories(category)
   const trimmed = raw.trim().toLowerCase()
   const match = subs.find((s) => s.toLowerCase() === trimmed)
   return match ?? ''
@@ -249,12 +274,15 @@ export type CleanExtraction = {
 // Plafond anti-absurde du conditionnement (nb d'unités par lot).
 const MAX_PACK_SIZE = 1_000_000
 
-export function buildCleanExtraction(raw: AiExtractionRaw): CleanExtraction {
-  const category = normalizeCategory(raw.category)
+export function buildCleanExtraction(
+  raw: AiExtractionRaw,
+  source: TaxonomySource = STATIC_TAXONOMY,
+): CleanExtraction {
+  const category = normalizeCategory(raw.category, source)
   return {
     product_name: raw.product_name.trim().slice(0, 200),
     category,
-    subcategory: normalizeSubcategory(category, raw.subcategory),
+    subcategory: normalizeSubcategory(category, raw.subcategory, source),
     description: raw.description?.trim() ? raw.description.trim().slice(0, 2000) : null,
     price_source: sanitizeExtractedPrice(raw.price),
     stock_quantity: sanitizeNonNegativeInt(raw.stock_quantity, MAX_STOCK_QUANTITY),

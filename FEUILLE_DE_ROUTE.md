@@ -36,6 +36,94 @@
 - ⬜ **(SUIVI → ÉTAPE 2b)** Traduction IA du contenu produit (nom+desc AR/EN à l'approbation) — lot dédié : migration `name_ar/en`+`desc_*` + fonction de traduction + affichage + coût IA. **Sorti volontairement de l'Étape 2.**
 - ⬜ **(SUIVI)** Paliers du flux **Finaliser** = encore en **saisie manuelle admin** (l'auto-report FX+marge ne couvre que le flux Approuver/miroir) → **pré-remplir plus tard**, circuit @finance.
 
+### 🏗️ CHANTIER EN COURS — Catégories dynamiques en base + panneau admin 🔄
+> Branche `feat/categories-dynamiques`. **Objectif scalabilité mondiale** : sortir les
+> catégories du code (`src/lib/taxonomy.ts`, figé au build) vers une **table DB éditable**
+> + **panneau admin** pour créer/éditer/traduire/désactiver une catégorie SANS déploiement
+> (encaisser des fournisseurs de tous pays : nouvelle branche métier = 2 clics, plus de
+> produits noyés dans « Autres »). **PHASE A (cartographie + plan + verdicts) faite, GO Abdou.**
+>
+> **RÈGLE D'OR DU CHANTIER** : migration **ADDITIVE et réversible**, ne JAMAIS casser
+> l'existant. Les 12 catégories + tous les produits fonctionnent **exactement pareil** pendant
+> et après. **STOP avant merge.**
+>
+> **Décisions tranchées (Abdou)** : (1) slug = **nom canonique FR actuel** (match exact
+> `products.category`, zéro backfill) ; (2) **table unique self-référencée** (`parent_id`) ;
+> (3) i18n **hybride** (12 seed gardent leurs clés JSON, nouvelles via colonnes DB) ;
+> (4) **fallback `taxonomy.ts` codé conservé EN PERMANENCE** comme filet fail-closed.
+
+**Découpage en sous-lots** (chacun : 4 checks verts + checkpoint Abdou) :
+- 🔄 **Sous-lot 1 — Table + migration + seed INERTE + test de parité** (`feat/categories-dynamiques`).
+  Migration **081** : table `categories` (self-réf, slug nom canonique, `label_fr/ar/en`, `icon`,
+  `image_url`, `affiliate_allowed` DEFAULT false, `active`, `sort_order`, `parent_id`). RLS : SELECT
+  ouvert (non sensible), **aucune écriture client** → mutations service_role only. Seed **copie exacte**
+  des 12 catégories + 48 sous-cats (9 parents `affiliate_allowed=true`). **Table INERTE** : rien dans
+  l'app ne la lit, `taxonomy.ts` reste la source runtime. Test `tests/categories-seed-parity.test.ts`
+  (parse le SQL ↔ taxonomy.ts, octet-pour-octet noms + flag, 12 valides / 9 affiliées / 48 sous-cats).
+- 🔄 **Sous-lot 2 — Couche lecture serveur + IA avec fallback `taxonomy.ts`** (commité sur branche,
+  non mergé). `src/lib/categories/read.ts` (cœur testable, fetcher injectable, fallback fail-closed) +
+  `index.ts` (`unstable_cache` tag `categories`, `getCategoryContext`). Sanitizers `schema.ts` rendus
+  paramétrables par `TaxonomySource` (défaut = `taxonomy.ts`, **purs/synchrones, tests inchangés**).
+  `extract.ts` lit la taxonomie DB au runtime (prompt + normalisation). **D2 NON touché**, UI NON touchée.
+  Fail-closed prouvé (tests : throw/vide → `taxonomy.ts`, jamais d'élargissement) + lecture live DB
+  vérifiée (origin `db`, 12 cat, 9 affiliés). 4 checks verts (tsc 0 / build / 255 tests +11 / smoke 20/20).
+- 🔄 🔴 **Sous-lot 3 — Bascule décision D2** (commité sur branche, non mergé). `products.ts:115-135`
+  lit `getChannelDecision()` (lecture base FRAÎCHE non cachée, fail-closed) au lieu de `taxonomy.ts`.
+  Décision POSITIVE (`affiliateAllowed === true`, zéro `?? true`). `taxonomy.ts` conservé en fallback ;
+  `supplier-mirror.ts` non touché (garde `!isMirrorProduct` intacte). **PÉRIMÈTRE STRICT D2** : filtres/
+  forms/UI + unif. icônes **SORTIS** vers un lot séparé NON-financier (décision Abdou). **Circuit complet
+  respecté** : @finance GO + @security GO sur le code réel + preuve de parité (12 canaux identiques
+  avant/après, octet pour octet, live prod 0 divergence : Alimentaire/Matières premières/Autres grossiste,
+  9 affiliées affiliées) + GO Abdou. 4 checks verts (tsc 0 / build / 263 tests +8 / smoke 20/20).
+- ⬜ **Lot séparé (NON-financier) — Affichage dynamique** : filtres `?category=`, forms admin/supplier,
+  rails/grilles, unification des 3 `CATEGORY_ICONS` → lire la base au lieu de `taxonomy.ts`. Pas de circuit
+  financier (aucune décision de canal). À faire après le panneau admin.
+- 🔄 **Sous-lot 4 — Panneau admin CRUD** (commité sur branche, non mergé). `/admin/categories`
+  (Server Component) + `category-actions.tsx` (Client) + `actions/categories.ts` + migration **082**.
+  Créer/éditer/traduire (FR/AR/EN)/activer-désactiver/réordonner catégories + sous-catégories.
+  **Point sensible `affiliate_allowed` (canal D2)** verrouillé : RPC `set_category_affiliate_allowed`
+  (SECURITY DEFINER, gate admin, booléen explicite) = SEUL chemin ; trigger bloque tout rôle client ;
+  **audit immuable append-only** `category_channel_audit` (qui/quand/ancien→nouveau, RLS admin-read +
+  trigger anti-UPDATE/DELETE). `'Autres'` protégée (suppression + désactivation). Nouvelle catégorie naît
+  grossiste (fail-closed). CRUD via RLS admin-only (jamais service_role exposé). i18n FR/AR/EN + RTL.
+  **Circuit ROUGE complet** : @finance GO + @security GO sur le code réel + **preuves runtime en session
+  admin** (toggle+restore audité, UPDATE direct bloqué, audit immuable 2 couches, RPC anon refusée,
+  'Autres' protégée, canaux figés inchangés). 4 checks verts (tsc 0 / build / 263 tests / smoke 20/20).
+  **Suivis MINEURS @security (non bloquants)** : (a) `getCategoryChannelAudit` N+1 sur la page → batcher ;
+  (b) `updateCategory` ne re-vérifie pas l'existence de l'id (0 ligne → ok silencieux) ; (c) valider
+  `image_url` en zod `url()` côté action. **Suivi @finance** : `category_channel_audit.changed_by` est
+  `ON DELETE SET NULL` → si rétention nominative exigée (conformité), stocker un libellé acteur en plus.
+- ⬜ **Sous-lot 5 (option)** — retrait progressif du figé / nettoyage i18n (garder le fallback codé).
+
+**CONDITIONS OBLIGATOIRES avant tout sous-lot touchant D2 (3/4) — verdicts @security + @finance :**
+1. **Décision D2 = positive** : `affiliate_enabled` autorisé **uniquement** si `affiliate_allowed === true`
+   sur ligne `active=true`. Tout le reste (DB down/vide, ligne absente, bool null, slug inactif) → `false`.
+   **Jamais `?? true`, jamais `!isBlocked`** (la base est fail-OPEN par défaut : `affiliate_enabled NOT NULL
+   DEFAULT true`, mig 007 — toute la sûreté repose sur le code).
+2. **Fallback codé fail-closed permanent** : si DB injoignable/vide → repli sur `AFFILIATE_ALLOWED_CATEGORIES`
+   (9 cats), jamais plus permissif. **Prouvé par test** (DB down + table vide).
+3. **Décision D2 non-cachée** : lecture fraîche (ou TTL≈0) du flag pour l'écriture produit. Cache réservé
+   à l'affichage.
+4. **Toggle = invalidation synchrone bloquante** avant retour succès ; resserrement `true→false` prioritaire
+   (test : toggle false → création immédiate refuse l'affilié).
+5. **`active=true` filtré des DEUX côtés** (`isValidCategory` dynamique ET décision D2), même source.
+6. **`affiliate_allowed` non mutable hors server action** : pas de policy UPDATE client → service_role only.
+7. **Parité testée séparément** : 12 valides (anti-POST) ET 9 affiliées ; échec si divergence d'un caractère.
+   Jointure D2 par **nom canonique == `products.category`** (octet-pour-octet, accents/casse/espaces).
+8. **Catégories système protégées** : `'Autres'` (fail-safe `normalizeCategory`) + tout slug référencé par des
+   `products` → non supprimables / non désactivables. Désactivation ne mute **aucun** `products.affiliate_enabled`.
+9. **Audit immuable append-only** de chaque toggle `affiliate_allowed` (acteur, timestamp, ancien→nouveau,
+   motif). Aucune mutation sans ligne d'audit corrélée. À concevoir AVANT le panneau admin.
+10. **Garde miroir préservée** : le panneau admin ne peut JAMAIS forcer `affiliate_enabled=true` sur un produit
+    `source_supplier_product_id != null` (`!isMirrorProduct` reste la dernière barrière, anti double-marge 14/06).
+11. **Pas de re-dérivation rétroactive** : passer une catégorie `false→true` ne recalcule/réécrit aucun capital
+    ni commission de produits existants sans re-save explicite et tracé.
+12. **service_role jamais au client** (règle d'or 6) : lecture via client anon/auth (RLS SELECT), mutations en
+    service_role cantonnées aux server actions.
+> **Dettes signalées hors-scope (NE PAS aggraver)** : (a) `products.ts:184-187` permet déjà `marge=0` en affilié
+> sans blocage (règle « marge>0 » non appliquée) — dette finance pré-existante ; (b) `affiliate_enabled NOT NULL
+> DEFAULT true` (mig 007) fail-OPEN base — envisager `DEFAULT false` à terme.
+
 ### ÉTAPE 3 — Échelle ⬜ *(plus tard — un seul chantier à la fois)*
 > Industrialiser l'entrée produit, les commandes et la logistique.
 
@@ -99,6 +187,34 @@
 - **Nouveau secteur — grossistes locaux Maroc** (B2B local)
 - **BACKLOG B1-B5** : saisie manuelle commande affilié · précommande usine · sourcing par upload photo · affichage par secteur · comptes fournisseurs via bot
 - **Choix code-barres vs QR** (au moment du WMS)
+
+### 🛍️ AMÉLIORATIONS UX GROSSISTE / MARKETPLACE / EXPORT — *(décidées session 2026-06-21)*
+> Toutes en ⬜. **Affichage pur** sauf mention. Plusieurs dépendent des **catégories dynamiques**
+> (chantier en cours) → à faire APRÈS. Aucune ne rouvre de règle financière (prix export = prix grossiste).
+
+- ⬜ **UX-G1 — Refonte dashboard grossiste** : hiérarchiser (mettre en avant l'action principale
+  *commander / parcourir*, reléguer le reste) ; **retirer le « Total dépensé 0,00 MAD »** démotivant
+  pour un nouveau compte ; ajouter un **point d'entrée export clair**. *Affichage pur.*
+- ⬜ **UX-G2 — Wording des 2 boutons du profil grossiste** : bouton local = **« Stock Maroc »** ;
+  bouton hub mondial = **« Marché mondial »** (Maroc + Chine + Turquie + Égypte + Dubaï). Bonus :
+  **drapeaux sous « Marché mondial »**. Badge catalogue local = **« Disponible au Maroc — livraison
+  rapide »**. *Affichage pur.*
+- ⬜ **UX-M1 — Restructuration marketplace en 3 zones (priorité mobile)** : Zone 1 *Stock Maroc*
+  (1 carte + 1 bouton) / Zone 2 *Importer depuis* (pays en cartes 2 colonnes) / Zone 3 *Sourcing +
+  produits*. **Supprimer** la rangée de 6 badges répétitifs + les stats en double. Thème noir & or.
+  **Reporté APRÈS les catégories dynamiques** (dépend de l'affichage des catégories). *Affichage pur.*
+- ⬜ **UX-M2 — Filtre PAYS × CATÉGORIE sur marketplace** + réutiliser les **grandes cartes-images de
+  rayon** (navigation à l'image pour acheteurs étrangers). **Dépend des catégories dynamiques.**
+  *Affichage pur.*
+- ⬜ **CAT-AFF — Lot affichage dynamique des catégories** (filtres `?category=` / forms admin+supplier /
+  rails / grilles / unif. des 3 `CATEGORY_ICONS`) : lire la base au lieu de `taxonomy.ts`. **Sorti
+  volontairement du sous-lot 3 (D2)** pour rester **non-financier**. À faire **après le panneau admin**
+  (sous-lot 4). *Affichage pur, aucun circuit financier.*
+- ⬜ **EXPORT-VISION — Marketplace = vitrine Maroc + hubs vers le monde** : **prix export = MÊME prix
+  grossiste qu'au Maroc** (confirmé Abdou, pas de @finance lourd). Idées : badge **« Stock Maroc —
+  disponible à l'international / livraison mondiale »** ; **détection du pays de l'acheteur** pour
+  adapter le wording (*Import vers [pays]*). ⚠️ La **détection pays = lot dédié plus profond** (touche
+  profil / inscription), à cadrer séparément.
 
 ---
 ---

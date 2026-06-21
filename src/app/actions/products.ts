@@ -26,7 +26,7 @@ import { getLogisticsSettings } from './logistics'
 import { getRateToMad } from '@/lib/fx'
 import { parseMoneyInput } from '@/lib/money'
 import { parseRateInput, parsePercentInput } from '@/lib/rate'
-import { isValidCategory, isAffiliateAllowedCategory } from '@/lib/taxonomy'
+import { getChannelDecision } from '@/lib/categories'
 
 export type ProductFormState = { error: string | null }
 
@@ -112,20 +112,25 @@ export async function upsertProduct(
   const source_notes = ((formData.get('source_notes') as string)?.trim()) || null
   const submitted_via = (formData.get('submitted_via') as string) || 'admin_dashboard'
 
-  // ── CANAL PAR CATÉGORIE (D2) — décision figée, validation SERVEUR ────────────
+  // ── CANAL PAR CATÉGORIE (D2) — décision SERVEUR, source = BASE (sous-lot 3) ───
+  // La source des catégories est désormais la table `categories` (mig 081), lue
+  // FRAÎCHE (non cachée) et FAIL-CLOSED : toute erreur/base vide → repli sur la
+  // taxonomie figée `taxonomy.ts` (jamais d'élargissement du canal affilié).
+  const channel = await getChannelDecision()
   // Allowlist (défense en profondeur @security) : une catégorie NON VIDE doit
-  // appartenir à la taxonomie (anti-POST direct d'une valeur arbitraire). Vide =
-  // toléré (produit non classé → traité comme grossiste par le fail-closed ci-dessous).
-  if (category !== null && !isValidCategory(category)) {
+  // appartenir à la taxonomie ACTIVE (anti-POST direct d'une valeur arbitraire ou
+  // d'une catégorie désactivée). Vide = toléré (produit non classé → grossiste).
+  if (category !== null && !channel.isValidCategory(category)) {
     return { error: `Catégorie inconnue : « ${category} ». Choisissez une catégorie de la liste.` }
   }
-  // Le canal AFFILIÉ n'est autorisé que pour les catégories grand public (taxonomy.ts)
-  // et jamais pour import_on_demand. FAIL-CLOSED : catégorie vide/grossiste-seul/inconnue
-  // → `affiliate_enabled` forcé false côté SERVEUR, inconditionnel (ignore le toggle form,
-  // anti-POST). N'altère AUCUN montant : ce flag ne fait qu'AUTORISER le canal affilié
-  // (la dérivation capital `isAffiliateLocalStock` en dépend → un grossiste garde son prix).
+  // Le canal AFFILIÉ n'est autorisé que pour les catégories `affiliate_allowed=true`
+  // et jamais pour import_on_demand. Décision POSITIVE : `affiliate_enabled` vaut le
+  // toggle form UNIQUEMENT si la catégorie autorise vraiment l'affilié (=== true),
+  // sinon forcé false côté SERVEUR (ignore le toggle, anti-POST). N'altère AUCUN
+  // montant : ce flag ne fait qu'AUTORISER le canal (la dérivation capital
+  // `isAffiliateLocalStock` en dépend → un grossiste garde son prix).
   const affiliate_enabled =
-    availability_type === 'import_on_demand' || !isAffiliateAllowedCategory(category)
+    availability_type === 'import_on_demand' || !channel.isAffiliateAllowed(category)
       ? false
       : affiliate_enabled_raw
 
