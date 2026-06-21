@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { MozounaLogo, OriginBadge, VerifiedBadge, FeaturedBadge, MOQChip } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
-import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES, CATEGORY_ICONS } from '@/lib/taxonomy'
+import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES, CATEGORY_ICONS, CATEGORY_IMAGES, resolveCategoryLabel } from '@/lib/taxonomy'
+import { CategoryRail, type CategoryChip } from '@/components/shared/category-rail'
+import { CategoryShowcase, type CategoryCardData } from '@/components/shared/category-showcase'
 import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
@@ -58,6 +60,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   ])
 
   const tCommon = await getTranslations('wholesale.common')
+  const tCat = await getTranslations('categories')
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
 
@@ -205,6 +208,41 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     filters.in_stock || filters.max_lead_time
   )
 
+  // ── Navigation par catégorie (rail + cartes-rayons) ─────────────────────────
+  // Liens construits SERVEUR (RÈGLE ABSOLUE #2) : préserve les filtres en cours,
+  // (re)positionne `category`, abandonne `subcategory` (dépend de la catégorie).
+  // Cible le `?category=` DÉJÀ fonctionnel — aucune nouvelle logique de données.
+  function buildCategoryHref(category: string | null): string {
+    const sp = new URLSearchParams()
+    if (filters.q) sp.set('q', filters.q)
+    if (filters.origin) sp.set('origin', filters.origin)
+    if (filters.availability) sp.set('availability', filters.availability)
+    if (filters.supplier_type) sp.set('supplier_type', filters.supplier_type)
+    if (filters.max_moq) sp.set('max_moq', filters.max_moq)
+    if (filters.in_stock) sp.set('in_stock', filters.in_stock)
+    if (filters.max_lead_time) sp.set('max_lead_time', filters.max_lead_time)
+    if (category) sp.set('category', category)
+    const qs = sp.toString()
+    return qs ? `/wholesale/marketplace?${qs}` : '/wholesale/marketplace'
+  }
+
+  const categoryAllHref = buildCategoryHref(null)
+  const categoryChips: CategoryChip[] = PRODUCT_CATEGORIES.map((cat) => ({
+    value: cat,
+    label: resolveCategoryLabel(cat, tCat),
+    icon: CATEGORY_ICONS[cat] ?? '📦',
+    isActive: filters.category === cat,
+    href: buildCategoryHref(cat),
+  }))
+  const categoryCards: CategoryCardData[] = PRODUCT_CATEGORIES.map((cat) => ({
+    value: cat,
+    label: resolveCategoryLabel(cat, tCat),
+    href: buildCategoryHref(cat),
+    image: CATEGORY_IMAGES[cat] ?? '',
+    icon: CATEGORY_ICONS[cat] ?? '📦',
+    isActive: filters.category === cat,
+  }))
+
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
@@ -238,6 +276,23 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           <h1 className="text-xl font-bold text-foreground">{t('pageTitle')}</h1>
           <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
+
+        {/* ── Cartes-rayons (navigation visuelle, EN HAUT pour clients peu lettrés) ── */}
+        <section aria-label={t('categoryShowcaseTitle')} className="mb-6">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">{t('categoryShowcaseTitle')}</h2>
+              <p className="text-xs text-muted mt-0.5">{t('categoryShowcaseSubtitle')}</p>
+            </div>
+            <Link
+              href="/wholesale/marketplace/categories"
+              className="shrink-0 text-xs font-medium text-gold-400 hover:underline whitespace-nowrap"
+            >
+              {t('categoryShowcaseSeeAll')}
+            </Link>
+          </div>
+          <CategoryShowcase cards={categoryCards} layout="scroll" />
+        </section>
 
         {/* ── Country source section ───────────────────────────────────────────── */}
         <CountrySourceSection
@@ -428,6 +483,16 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           </div>
         </form>
         </MarketplaceFilters>
+
+        {/* ── Rail catégories (filtre rapide, réutilise ?category=) ─────────────── */}
+        <div className="mt-5">
+          <CategoryRail
+            chips={categoryChips}
+            allHref={categoryAllHref}
+            allLabel={tCat('all')}
+            isAllActive={!filters.category}
+          />
+        </div>
 
         {/* ── Result count ─────────────────────────────────────────────────────── */}
         <p className="text-sm text-muted mb-4">
