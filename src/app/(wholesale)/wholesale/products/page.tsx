@@ -64,6 +64,12 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
   // ── Tab ────────────────────────────────────────────────────────────────────
   const activeTab = filters.tab === 'import' ? 'import' : 'local'
 
+  // ── Mode entrée vs rayon ───────────────────────────────────────────────────
+  // Sans ?category= → page d'ENTRÉE : grande grille de tous les rayons en images
+  // (porte d'entrée pour commerçant peu lettré). Avec ?category= → DANS un rayon :
+  // rail compact des autres rayons en haut + produits filtrés (pas de grande grille).
+  const inAisle = !!filters.category
+
   // ── Filters (applied in memory after single DB fetch) ─────────────────────
   let rows = allRows
 
@@ -190,22 +196,18 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
           )}
         </div>
 
-        {/* ── Cartes-rayons (navigation visuelle, EN HAUT pour clients peu lettrés) ── */}
-        <section aria-label={t('categoryShowcaseTitle')} className="mb-6">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <div>
+        {/* ── ENTRÉE du catalogue : grande grille de tous les rayons en images ──
+            (uniquement hors rayon ; dans un rayon, c'est le rail compact ci-dessous
+            qui sert de navigation inter-rayons → les produits remontent direct) */}
+        {!inAisle && (
+          <section aria-label={t('categoryShowcaseTitle')} className="mb-6">
+            <div className="mb-3">
               <h2 className="text-base font-semibold text-foreground">{t('categoryShowcaseTitle')}</h2>
               <p className="text-xs text-muted mt-0.5">{t('categoryShowcaseSubtitle')}</p>
             </div>
-            <Link
-              href="/wholesale/products/categories"
-              className="shrink-0 text-xs font-medium text-gold-400 hover:underline whitespace-nowrap"
-            >
-              {t('categoryShowcaseSeeAll')}
-            </Link>
-          </div>
-          <CategoryShowcase cards={categoryCards} layout="scroll" />
-        </section>
+            <CategoryShowcase cards={categoryCards} layout="grid" />
+          </section>
+        )}
 
         {/* ── Tabs ────────────────────────────────────────────────────────────── */}
         <div className="flex gap-1 mb-5 border-b border-line">
@@ -237,13 +239,16 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
           </Link>
         </div>
 
-        {/* Rayons — navigation par famille */}
-        <CategoryRail
-          chips={chips}
-          allHref={allHref}
-          allLabel={tCat('all')}
-          isAllActive={!filters.category}
-        />
+        {/* Rayons — navigation par famille (rail compact des AUTRES rayons,
+            uniquement DANS un rayon ; en entrée c'est la grande grille qui guide) */}
+        {inAisle && (
+          <CategoryRail
+            chips={chips}
+            allHref={allHref}
+            allLabel={tCat('all')}
+            isAllActive={!filters.category}
+          />
+        )}
 
         {/* ── Filters ─────────────────────────────────────────────────────────── */}
         <MarketplaceFilters filterTitle={t('filterTitle')}>
