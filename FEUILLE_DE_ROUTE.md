@@ -215,6 +215,21 @@
   disponible à l'international / livraison mondiale »** ; **détection du pays de l'acheteur** pour
   adapter le wording (*Import vers [pays]*). ⚠️ La **détection pays = lot dédié plus profond** (touche
   profil / inscription), à cadrer séparément.
+- ⬜ **CAT-IA-SUGGEST — Détection & suggestion de catégorie par l'IA à l'ingestion** (Telegram + upload
+  catalogue). *Dépend du chantier **catégories dynamiques** (FAIT).* Lot dédié à cadrer (**@architect +
+  @security** pour le rôle superviseur).
+  - À l'ingestion, l'IA vérifie si le produit correspond à une **catégorie existante** (lecture base) →
+    si oui, elle le **lie**.
+  - Si **AUCUNE catégorie ne correspond**, au lieu de tomber dans « Autres », l'IA **PROPOSE une nouvelle
+    catégorie** (ex. « Électroménager », « Construction/BTP ») et met le produit dans une **FILE DE
+    VALIDATION** en attente.
+  - Un **VALIDEUR** — l'admin (Abdou) **OU un SUPERVISEUR dédié** (nouveau rôle avec droit de valider les
+    catégories) — voit la suggestion dans un panneau et **tranche** : créer la nouvelle catégorie, ou
+    ranger le produit dans une catégorie existante.
+  - **But** : encaisser un max de fournisseurs sans rien perdre dans « Autres », tout en gardant une liste
+    de catégories **PROPRE** (zéro doublon, validation humaine).
+  - ⚠️ **Implique** : une **file de suggestions de catégories** + un **nouveau rôle « superviseur »**
+    (droits intermédiaires). Le **toggle `affiliate_allowed` reste réservé à l'admin** (sensible/argent).
 
 ---
 ---
