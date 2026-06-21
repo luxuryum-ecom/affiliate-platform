@@ -36,6 +36,67 @@
 - ⬜ **(SUIVI → ÉTAPE 2b)** Traduction IA du contenu produit (nom+desc AR/EN à l'approbation) — lot dédié : migration `name_ar/en`+`desc_*` + fonction de traduction + affichage + coût IA. **Sorti volontairement de l'Étape 2.**
 - ⬜ **(SUIVI)** Paliers du flux **Finaliser** = encore en **saisie manuelle admin** (l'auto-report FX+marge ne couvre que le flux Approuver/miroir) → **pré-remplir plus tard**, circuit @finance.
 
+### 🏗️ CHANTIER EN COURS — Catégories dynamiques en base + panneau admin 🔄
+> Branche `feat/categories-dynamiques`. **Objectif scalabilité mondiale** : sortir les
+> catégories du code (`src/lib/taxonomy.ts`, figé au build) vers une **table DB éditable**
+> + **panneau admin** pour créer/éditer/traduire/désactiver une catégorie SANS déploiement
+> (encaisser des fournisseurs de tous pays : nouvelle branche métier = 2 clics, plus de
+> produits noyés dans « Autres »). **PHASE A (cartographie + plan + verdicts) faite, GO Abdou.**
+>
+> **RÈGLE D'OR DU CHANTIER** : migration **ADDITIVE et réversible**, ne JAMAIS casser
+> l'existant. Les 12 catégories + tous les produits fonctionnent **exactement pareil** pendant
+> et après. **STOP avant merge.**
+>
+> **Décisions tranchées (Abdou)** : (1) slug = **nom canonique FR actuel** (match exact
+> `products.category`, zéro backfill) ; (2) **table unique self-référencée** (`parent_id`) ;
+> (3) i18n **hybride** (12 seed gardent leurs clés JSON, nouvelles via colonnes DB) ;
+> (4) **fallback `taxonomy.ts` codé conservé EN PERMANENCE** comme filet fail-closed.
+
+**Découpage en sous-lots** (chacun : 4 checks verts + checkpoint Abdou) :
+- 🔄 **Sous-lot 1 — Table + migration + seed INERTE + test de parité** (`feat/categories-dynamiques`).
+  Migration **081** : table `categories` (self-réf, slug nom canonique, `label_fr/ar/en`, `icon`,
+  `image_url`, `affiliate_allowed` DEFAULT false, `active`, `sort_order`, `parent_id`). RLS : SELECT
+  ouvert (non sensible), **aucune écriture client** → mutations service_role only. Seed **copie exacte**
+  des 12 catégories + 48 sous-cats (9 parents `affiliate_allowed=true`). **Table INERTE** : rien dans
+  l'app ne la lit, `taxonomy.ts` reste la source runtime. Test `tests/categories-seed-parity.test.ts`
+  (parse le SQL ↔ taxonomy.ts, octet-pour-octet noms + flag, 12 valides / 9 affiliées / 48 sous-cats).
+- ⬜ **Sous-lot 2 — Couche lecture serveur + IA avec fallback `taxonomy.ts`** (`src/lib/categories/`,
+  `extract.ts`/`schema.ts` lisent la DB, fallback codé fail-closed, cache). Ne touche PAS D2 ni l'UI.
+- ⬜ 🔴 **Sous-lot 3 — Bascule décision D2** (`products.ts:119-128`) + filtres/forms/UI + unif. des 3
+  `CATEGORY_ICONS`. **FINANCIER/SÉCURITÉ — circuit `@finance` + `@security` + GO Abdou AVANT commit.**
+- ⬜ **Sous-lot 4 — Panneau admin CRUD** (`actions/categories.ts`, `/admin/categories`, i18n FR/AR/EN)
+  + **audit immuable** des toggles `affiliate_allowed`. Circuit financier sur le toggle de canal.
+- ⬜ **Sous-lot 5 (option)** — retrait progressif du figé / nettoyage i18n (garder le fallback codé).
+
+**CONDITIONS OBLIGATOIRES avant tout sous-lot touchant D2 (3/4) — verdicts @security + @finance :**
+1. **Décision D2 = positive** : `affiliate_enabled` autorisé **uniquement** si `affiliate_allowed === true`
+   sur ligne `active=true`. Tout le reste (DB down/vide, ligne absente, bool null, slug inactif) → `false`.
+   **Jamais `?? true`, jamais `!isBlocked`** (la base est fail-OPEN par défaut : `affiliate_enabled NOT NULL
+   DEFAULT true`, mig 007 — toute la sûreté repose sur le code).
+2. **Fallback codé fail-closed permanent** : si DB injoignable/vide → repli sur `AFFILIATE_ALLOWED_CATEGORIES`
+   (9 cats), jamais plus permissif. **Prouvé par test** (DB down + table vide).
+3. **Décision D2 non-cachée** : lecture fraîche (ou TTL≈0) du flag pour l'écriture produit. Cache réservé
+   à l'affichage.
+4. **Toggle = invalidation synchrone bloquante** avant retour succès ; resserrement `true→false` prioritaire
+   (test : toggle false → création immédiate refuse l'affilié).
+5. **`active=true` filtré des DEUX côtés** (`isValidCategory` dynamique ET décision D2), même source.
+6. **`affiliate_allowed` non mutable hors server action** : pas de policy UPDATE client → service_role only.
+7. **Parité testée séparément** : 12 valides (anti-POST) ET 9 affiliées ; échec si divergence d'un caractère.
+   Jointure D2 par **nom canonique == `products.category`** (octet-pour-octet, accents/casse/espaces).
+8. **Catégories système protégées** : `'Autres'` (fail-safe `normalizeCategory`) + tout slug référencé par des
+   `products` → non supprimables / non désactivables. Désactivation ne mute **aucun** `products.affiliate_enabled`.
+9. **Audit immuable append-only** de chaque toggle `affiliate_allowed` (acteur, timestamp, ancien→nouveau,
+   motif). Aucune mutation sans ligne d'audit corrélée. À concevoir AVANT le panneau admin.
+10. **Garde miroir préservée** : le panneau admin ne peut JAMAIS forcer `affiliate_enabled=true` sur un produit
+    `source_supplier_product_id != null` (`!isMirrorProduct` reste la dernière barrière, anti double-marge 14/06).
+11. **Pas de re-dérivation rétroactive** : passer une catégorie `false→true` ne recalcule/réécrit aucun capital
+    ni commission de produits existants sans re-save explicite et tracé.
+12. **service_role jamais au client** (règle d'or 6) : lecture via client anon/auth (RLS SELECT), mutations en
+    service_role cantonnées aux server actions.
+> **Dettes signalées hors-scope (NE PAS aggraver)** : (a) `products.ts:184-187` permet déjà `marge=0` en affilié
+> sans blocage (règle « marge>0 » non appliquée) — dette finance pré-existante ; (b) `affiliate_enabled NOT NULL
+> DEFAULT true` (mig 007) fail-OPEN base — envisager `DEFAULT false` à terme.
+
 ### ÉTAPE 3 — Échelle ⬜ *(plus tard — un seul chantier à la fois)*
 > Industrialiser l'entrée produit, les commandes et la logistique.
 
