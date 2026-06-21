@@ -67,8 +67,17 @@
   `extract.ts` lit la taxonomie DB au runtime (prompt + normalisation). **D2 NON touché**, UI NON touchée.
   Fail-closed prouvé (tests : throw/vide → `taxonomy.ts`, jamais d'élargissement) + lecture live DB
   vérifiée (origin `db`, 12 cat, 9 affiliés). 4 checks verts (tsc 0 / build / 255 tests +11 / smoke 20/20).
-- ⬜ 🔴 **Sous-lot 3 — Bascule décision D2** (`products.ts:119-128`) + filtres/forms/UI + unif. des 3
-  `CATEGORY_ICONS`. **FINANCIER/SÉCURITÉ — circuit `@finance` + `@security` + GO Abdou AVANT commit.**
+- 🔄 🔴 **Sous-lot 3 — Bascule décision D2** (commité sur branche, non mergé). `products.ts:115-135`
+  lit `getChannelDecision()` (lecture base FRAÎCHE non cachée, fail-closed) au lieu de `taxonomy.ts`.
+  Décision POSITIVE (`affiliateAllowed === true`, zéro `?? true`). `taxonomy.ts` conservé en fallback ;
+  `supplier-mirror.ts` non touché (garde `!isMirrorProduct` intacte). **PÉRIMÈTRE STRICT D2** : filtres/
+  forms/UI + unif. icônes **SORTIS** vers un lot séparé NON-financier (décision Abdou). **Circuit complet
+  respecté** : @finance GO + @security GO sur le code réel + preuve de parité (12 canaux identiques
+  avant/après, octet pour octet, live prod 0 divergence : Alimentaire/Matières premières/Autres grossiste,
+  9 affiliées affiliées) + GO Abdou. 4 checks verts (tsc 0 / build / 263 tests +8 / smoke 20/20).
+- ⬜ **Lot séparé (NON-financier) — Affichage dynamique** : filtres `?category=`, forms admin/supplier,
+  rails/grilles, unification des 3 `CATEGORY_ICONS` → lire la base au lieu de `taxonomy.ts`. Pas de circuit
+  financier (aucune décision de canal). À faire après le panneau admin.
 - ⬜ **Sous-lot 4 — Panneau admin CRUD** (`actions/categories.ts`, `/admin/categories`, i18n FR/AR/EN)
   + **audit immuable** des toggles `affiliate_allowed`. Circuit financier sur le toggle de canal.
 - ⬜ **Sous-lot 5 (option)** — retrait progressif du figé / nettoyage i18n (garder le fallback codé).

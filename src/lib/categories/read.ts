@@ -127,3 +127,37 @@ export async function loadCategoryContext(
     return buildContext(staticTree(), 'fallback')
   }
 }
+
+// ─── DÉCISION DE CANAL D2 (financier) — lecture FRAÎCHE, non cachée ───────────
+// Réservé à la décision d'écriture produit (products.ts). Conditions @finance/
+// @security : (3) lecture NON cachée → on appelle loadCategoryContext avec le
+// fetcher direct (fetchCategoryRows), JAMAIS le wrapper caché de index.ts.
+// (1) décision POSITIVE : affilié autorisé UNIQUEMENT si affiliateAllowed === true.
+// (2) fail-closed : DB down/vide/inconnue → grossiste (jamais d'élargissement).
+// (5) `active` filtré : seules les catégories actives sont dans l'arbre.
+
+export type ChannelDecision = {
+  /** D'où vient la décision : 'db' (lecture fraîche réussie) ou 'fallback' (taxonomy.ts). */
+  origin: 'db' | 'fallback'
+  /** Catégorie connue ET active (anti-POST). Vide/inconnue/inactive → false. */
+  isValidCategory: (category: string | null | undefined) => boolean
+  /** Canal AFFILIÉ autorisé. POSITIF : true UNIQUEMENT si affiliateAllowed === true. */
+  isAffiliateAllowed: (category: string | null | undefined) => boolean
+}
+
+/**
+ * Décision de canal D2 (fraîche + fail-closed) pour l'écriture produit.
+ * Mappe sur le NOM canonique (== products.category). `fetcher` injectable (tests).
+ */
+export async function getChannelDecision(
+  fetcher: () => Promise<CategoryRow[]> = fetchCategoryRows,
+): Promise<ChannelDecision> {
+  const ctx = await loadCategoryContext(fetcher)
+  const bySlug = new Map(ctx.tree.map((n) => [n.slug, n]))
+  return {
+    origin: ctx.origin,
+    isValidCategory: (category) => !!category && bySlug.has(category),
+    isAffiliateAllowed: (category) =>
+      !!category && bySlug.get(category)?.affiliateAllowed === true,
+  }
+}
