@@ -7,7 +7,7 @@
 >
 > **🩺 RÈGLE DIAGNOSTIC — déploiement d'abord.** Si l'agent voit le **bon comportement dans le code** (vérifié runtime sur build local) mais que l'utilisateur voit **autre chose en prod**, **VÉRIFIER LE DÉPLOIEMENT VERCEL EN PREMIER** (souvent en retard sur `main` / cache). Ne PAS conclure « ergonomie » ou « non reproduit » avant ça. Trancher en **forçant un redeploy** : `git commit --allow-empty -m "chore: force redeploy" && git push` sur `main`. Cas réel : recherche grossiste « Pull ref 5 » = 0 en prod alors que le code était correct → déploiement périmé (résolu par `6dc0244`).
 
-**Dernière synchro :** 2026-06-22 — `main` @ `9e1e4b0` — 82 migrations (001→082).
+**Dernière synchro :** 2026-06-22 — `main` @ `cbc1aaa` — 85 migrations (001→085).
 
 ---
 
@@ -75,9 +75,9 @@
 - **Note `@backend-db` (non bloquant, PRÉ-EXISTANT)** : `__source` est présent dans le payload **RSC inline** (valeur `supplier`/`internal`, **aucune donnée sensible**, jamais visible/attribut). Exclusion totale = reconstruire l'objet passé à la carte sans `__source` (passer `productUrl` calculé). À cadrer si voulu.
 - **MERGÉ EN PROD `9e1e4b0` (GO Abdou).**
 
-### 🔄 BRANCHE PRÊTE (NON MERGÉE) — CAT-IA-SUGGEST + permissions modulables (2026-06-22)
-- **Branche `feat/cat-ia-suggest`** — **construite, 4 checks verts à chaque sous-lot, @security GO ×2, runtime @tester PASS — NON MERGÉE (attend GO Abdou).** **Non-financier** (canal D2 / prix / capital INTOUCHÉS).
-- **⚠️ Migrations 083/084/085 DÉJÀ APPLIQUÉES en prod (DB)** via `db push` depuis la branche (additives : tables + fonctions, zéro mutation de données). `main` reste `9e1e4b0` (code non mergé) → tables/fonctions inertes tant que le code n'est pas en prod. Backup avant push.
+### ✅ EN PROD — CAT-IA-SUGGEST + permissions modulables (merge `--no-ff` `cbc1aaa`, 2026-06-22)
+- **Branche `feat/cat-ia-suggest` MERGÉE dans `main` (`cbc1aaa`, poussée `origin/main`)** — 4 checks verts à chaque sous-lot, @security GO ×2, runtime @tester PASS. **Non-financier** (canal D2 / prix / capital INTOUCHÉS).
+- **Migrations 083/084/085 appliquées en prod (DB)** (additives : tables + fonctions, zéro mutation de données). Backup avant push.
 - **Objectif** : quand l'IA d'ingestion ne trouve AUCUNE catégorie correspondante, au lieu du seul fallback `'Autres'`, elle **PROPOSE** une nouvelle catégorie et range le produit dans une **FILE DE VALIDATION** (le produit garde `'Autres'`, **filet intouché**, jamais bloqué). Un **valideur** (permission modulable) tranche : créer la catégorie OU ranger dans une existante OU rejeter.
 - **L1 — Fondation permissions modulables** (`95a823c`, **mig 083**) : table `staff_permissions` (capacité attribuable/retirable) + `staff_permission_audit` (append-only immuable) + `has_capability()` (SECURITY DEFINER, admin = toutes) + RPC `grant_/revoke_staff_permission` (admin-only, auditées) + helper `requireCapability()`. **@security GO** (aucun P0/P1). Capacité initiale `validate_categories`. Conçu pour héberger d'autres capacités (ex. `assign_sourcing_country` du lot suivant).
 - **L2 — File de validation DB** (`592c8e0`, **mig 084**) : table `category_suggestions` (sidecar, idempotent 1 pending/produit) + RLS lecture = `has_capability` / insertion = service_role (ingestion) / écriture = RPC seulement + RPC `validator_create_category` (slug=label_fr, **`affiliate_allowed=false` forcé**), `validator_resolve_suggestion` (cat existante active), `validator_reject_suggestion`.
@@ -307,7 +307,7 @@
 ---
 
 ## ⏸️ BRANCHES NON MERGÉES (état git au 2026-06-22)
-- `feat/cat-ia-suggest` — **CAT-IA-SUGGEST + permissions modulables, PRÊTE, attend GO Abdou pour merge.** 6 commits (doc `0f7c89c` + L1-L5). **Migrations 083/084/085 déjà appliquées en prod** (additives). 4 checks verts / sous-lot, @security GO ×2, runtime @tester PASS. Voir « BRANCHE PRÊTE » en haut du fichier. Non poussée sur `origin` (locale).
 - `feat/dette-factory-cost-authenticated` — chantier **différé (option C)**, pas dans `main` mais **poussé sur `origin`** (sauvegardé).
+- *(`feat/cat-ia-suggest` MERGÉE `cbc1aaa` 2026-06-22 — CAT-IA-SUGGEST + permissions modulables EN PROD, voir section dédiée plus haut.)*
 
 > Toutes les autres `feat/*` et `fix/*` listées par `git branch --merged main` sont **mergées et en prod**.

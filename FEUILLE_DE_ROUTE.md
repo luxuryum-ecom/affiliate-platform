@@ -167,6 +167,7 @@
 - ⬜ **Ménage secrets de test** : comptes `TelegramTest2026!`/`AgentDemo2026!`/`AdminTest2026!` + authtoken ngrok à régénérer
 - ⬜ **Rotation `SUPABASE_SERVICE_ROLE_KEY`** : la clé a été codée en clair dans un fichier de test local le 2026-06-20 (JAMAIS poussée — GitHub push protection l'a bloquée, commit réécrit) ; régénérer par prudence avant go-live (Supabase Dashboard → API keys + `.env.local` + Vercel). Cf. [[project-dette-rotation-service-role-key]].
 - ⬜ Test d'intégration DB de l'idempotence réelle de `create_payout`
+- ⬜ **Dette test CAT-IA-SUGGEST** : scénarios C (créer) & D (rejeter) de `e2e/cat-ia-suggest.spec.ts` = faux négatifs (Playwright + `next start` perd la session SSR après `revalidatePath`) → ajouter un **re-login `beforeEach`**. Les RPC sous-jacentes sont validées en DB (invariant `affiliate_allowed=false` confirmé). Hors gate `pnpm smoke`.
 - ⬜ Stratégie i18n du **contenu DB** (noms/descriptions produits)
 - 🔄 Logistique B2B grossiste = manuelle par commande (pas de moteur auto)
 - 🔄 Merge/PR vers `main` (à jour ce jour ; process « un lot à la fois, GO explicite »)
@@ -203,8 +204,8 @@
 - **Cible** : grossistes à **fort CA / marge**, fidélisation **long terme**.
 - **Dépend de** : commandes + **données de marge**, profil grossiste.
 
-#### 🔄 CAT-IA-SUGGEST + PERMISSIONS MODULABLES — *(branche `feat/cat-ia-suggest`, PRÊTE, attend GO Abdou — NON MERGÉE)*
-> Construit en 5 sous-lots (L1-L5), 4 checks verts / sous-lot, **@security GO ×2**, **runtime @tester PASS (12/14, 2 faux négatifs d'infra de test)**. **Non-financier.** Détail complet dans `ETAT_SYSTEME.md` → « BRANCHE PRÊTE ».
+#### ✅ CAT-IA-SUGGEST + PERMISSIONS MODULABLES — *(EN PROD, merge `--no-ff` `cbc1aaa`, 2026-06-22)*
+> Construit en 5 sous-lots (L1-L5), 4 checks verts / sous-lot, **@security GO ×2**, **runtime @tester PASS (12/14, 2 faux négatifs d'infra de test)**. **Non-financier.** **MERGÉ + poussé `origin/main`.** Détail complet dans `ETAT_SYSTEME.md` → section dédiée.
 
 - **Quoi** : à l'ingestion, si l'IA ne trouve **aucune** catégorie, elle **propose** une nouvelle catégorie → **file de validation** (le produit garde `'Autres'`, **filet intouché**, jamais bloqué). Un **valideur** (permission modulable) tranche : créer / ranger / rejeter.
 - **Fondation** : système de **permissions attribuables/retirables** par l'admin en 1 clic, réversible (table `staff_permissions` + audit immuable + `has_capability` + RPC grant/revoke admin-only + `requireCapability`). Capacité initiale `validate_categories`. **Conçu pour héberger d'autres permissions** (→ AFFECTATION SOURCING ci-dessous).
