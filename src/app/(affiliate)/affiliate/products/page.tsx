@@ -8,7 +8,7 @@ import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } fr
 import { priceWithUnit, resolveUnitLabel } from '@/lib/units'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { getTranslations } from 'next-intl/server'
-import { PRODUCT_CATEGORIES, CATEGORY_ICONS, resolveCategoryLabel } from '@/lib/taxonomy'
+import { getCategoryDisplayList } from '@/lib/categories/display'
 import { CategoryRail, type CategoryChip } from '@/components/shared/category-rail'
 import type { Product } from '@/types/database'
 
@@ -30,9 +30,10 @@ export default async function AffiliateProductsPage({
   const params = await searchParams
   const activeCategory = params.category ?? null
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const [cats, { data: { user } }] = await Promise.all([
+    getCategoryDisplayList(),
+    supabase.auth.getUser(),
+  ])
 
   if (!user) redirect('/login')
 
@@ -60,14 +61,14 @@ export default async function AffiliateProductsPage({
 
   // Construction des chips côté serveur — aucune fonction passée au composant.
   const allHref = '/affiliate/products'
-  const chips: CategoryChip[] = PRODUCT_CATEGORIES.map((cat) => {
+  const chips: CategoryChip[] = cats.map((cat) => {
     const sp = new URLSearchParams()
-    sp.set('category', cat)
+    sp.set('category', cat.value)
     return {
-      value: cat,
-      label: resolveCategoryLabel(cat, tCat),
-      icon: CATEGORY_ICONS[cat] ?? '📦',
-      isActive: activeCategory === cat,
+      value: cat.value,
+      label: cat.label,
+      icon: cat.icon,
+      isActive: activeCategory === cat.value,
       href: `/affiliate/products?${sp.toString()}`,
     }
   })

@@ -3,7 +3,8 @@
 import { useActionState, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { submitSupplierProduct, type SupplierProductState } from '@/app/actions/supplier-products'
-import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES } from '@/lib/taxonomy'
+import { ORIGIN_COUNTRIES } from '@/lib/taxonomy'
+import type { CategoryDisplay } from '@/lib/categories/display'
 
 const initial: SupplierProductState = { error: null }
 
@@ -13,13 +14,13 @@ const LABEL = 'block text-sm font-medium text-muted mb-1'
 const HELPER = 'mt-1 text-xs text-faint'
 const SECTION = 'text-xs font-semibold text-faint uppercase tracking-widest mb-3 pb-1 border-b border-line'
 
-export function SubmitProductForm({ currency }: { currency?: string }) {
+export function SubmitProductForm({ currency, categories = [] }: { currency?: string; categories?: CategoryDisplay[] }) {
   const t = useTranslations('supplier.submitProductForm')
   const [state, action, isPending] = useActionState(submitSupplierProduct, initial)
   const [supplierType, setSupplierType] = useState<'morocco' | 'international'>('morocco')
   const [category, setCategory] = useState('')
 
-  const subcategories = getSubcategories(category)
+  const subcategories = categories.find((c) => c.value === category)?.subcategories ?? []
 
   return (
     <form action={action} className="space-y-6">
@@ -104,8 +105,8 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
               className={INPUT}
             >
               <option value="">{t('categoryPlaceholder')}</option>
-              {PRODUCT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+              {categories.map((cat) => (
+                <option key={cat.value} value={cat.value}>{cat.label}</option>
               ))}
             </select>
           </div>
@@ -119,7 +120,7 @@ export function SubmitProductForm({ currency }: { currency?: string }) {
               >
                 <option value="">{t('subcategoryPlaceholder')}</option>
                 {subcategories.map((sub) => (
-                  <option key={sub} value={sub}>{sub}</option>
+                  <option key={sub.value} value={sub.value}>{sub.label}</option>
                 ))}
               </select>
             ) : (

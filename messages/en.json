@@ -1255,7 +1255,22 @@
       "cardCtaQuote": "Request a quote →",
       "cardCtaWhatsapp": "WhatsApp quote",
       "cardDeliveryOnQuote": "On quote",
-      "cardDeliveryDays": "{days} d"
+      "cardDeliveryDays": "{days} d",
+      "zone1Title": "Morocco stock — available now",
+      "zone2Title": "Import from",
+      "zone3Title": "Sourcing & supplier catalogue",
+      "countryTurkey": "Turkey",
+      "countryTurkeyTagline": "Textiles & ready-to-wear",
+      "countryTurkeyNote": "Import 7–14 d · Flexible MOQ",
+      "countryChina": "China",
+      "countryChinaTagline": "High volume · Factory prices",
+      "countryChinaNote": "Sea & air · 20–45 d",
+      "countryEgypt": "Egypt",
+      "countryEgyptTagline": "Cotton & textiles",
+      "countryEgyptNote": "Competitive prices · Variable stock",
+      "countryDubai": "Dubai",
+      "countryDubaiTagline": "Multi-origin logistics hub",
+      "countryDubaiNote": "Consolidated order · Re-export"
     },
     "marketplaceDetail": {
       "metaTitle": "{name} — Wholesale Marketplace",

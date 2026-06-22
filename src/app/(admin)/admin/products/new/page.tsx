@@ -6,6 +6,7 @@ import { getTariffs } from '@/app/actions/tariffs'
 import { getRatesMap } from '@/lib/fx'
 import { getTranslations } from 'next-intl/server'
 import { normalizeSaleUnit } from '@/lib/units'
+import { getCategoryDisplayList } from '@/lib/categories/display'
 import type { Product } from '@/types/database'
 
 export async function generateMetadata() {
@@ -30,10 +31,11 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
 
   const { from_supplier } = await searchParams
 
-  const [profileResult, tariffs, rates] = await Promise.all([
+  const [profileResult, tariffs, rates, categories] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     getTariffs(),
     getRatesMap(supabase),
+    getCategoryDisplayList(),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
@@ -116,6 +118,7 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
             sourceSupplierProductId={sourceSupplierProductId}
             tariffs={tariffs}
             rates={rates}
+            categories={categories}
           />
         </div>
       </main>

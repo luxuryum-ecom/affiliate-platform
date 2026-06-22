@@ -1,26 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-
-export const CATEGORY_ICONS: Record<string, string> = {
-  'Textile':              '👗',
-  'Matières premières':   '🧵',
-  'Chaussures':           '👟',
-  'Cosmétique & hygiène': '💄',
-  'Alimentaire':          '🥗',
-  'Maison & packaging':   '📦',
-  'Artisanat':            '🧶',
-}
+import { CATEGORY_ICONS } from '@/lib/taxonomy'
 
 interface ProductCardImageProps {
   src: string
   alt: string
   category?: string
+  fallbackIcon?: string
 }
 
-export function ProductCardImage({ src, alt, category }: ProductCardImageProps) {
+export function ProductCardImage({ src, alt, category, fallbackIcon }: ProductCardImageProps) {
   const [errored, setErrored] = useState(false)
-  const icon = (category && CATEGORY_ICONS[category]) ?? '🏷️'
+  const icon = fallbackIcon ?? (category && CATEGORY_ICONS[category]) ?? '🏷️'
 
   if (errored) {
     return (

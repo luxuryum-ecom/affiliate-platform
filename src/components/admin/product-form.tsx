@@ -13,7 +13,7 @@ import { parseMoneyInput } from '@/lib/money'
 import { parseRateInput, parsePercentInput } from '@/lib/rate'
 import type { Product, WholesaleTier, ProductApprovalStatus, MediaItem, ImportTariff, TariffMode, ImportShippingMode, PlatformMarginType } from '@/types/database'
 import { SHIPPING_MODE_LABELS, unitFromShippingMode } from '@/lib/tariff-utils'
-import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
+import type { CategoryDisplay } from '@/lib/categories/display'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,11 +91,13 @@ interface ProductFormProps {
    * jamais en édition d'un produit existant. Plomberie UI — aucune logique d'argent.
    */
   sourceSupplierProductId?: string
+  /** Liste des catégories résolue côté serveur (affichage dynamique). Sérialisable. */
+  categories?: CategoryDisplay[]
 }
 
 const initialState: ProductFormState = { error: null }
 
-export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierProductId }: ProductFormProps) {
+export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierProductId, categories = [] }: ProductFormProps) {
   const t = useTranslations('admin.productForm')
   const tc = useTranslations('admin.common')
   const tUnits = useTranslations('units')
@@ -117,7 +119,7 @@ export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierP
   // ── Taxonomy (migration 039) ────────────────────────────────────────────────
   const [productCategory, setProductCategory] = useState<string>(product?.category ?? '')
   const [productSubcategory, setProductSubcategory] = useState<string>(product?.subcategory ?? '')
-  const subcategoryOptions = getSubcategories(productCategory)
+  const subcategoryOptions = categories.find((c) => c.value === productCategory)?.subcategories ?? []
 
   // ── Import-on-demand fields (migrations 019 + 020 + 022) ────────────────
   const [importOriginCountry, setImportOriginCountry] = useState<string>(
@@ -431,19 +433,19 @@ export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierP
                 const newCat = e.target.value
                 setProductCategory(newCat)
                 // Reset subcategory only if it no longer belongs to the new category
-                const newSubs = getSubcategories(newCat) as readonly string[]
-                if (newSubs.length > 0 && !newSubs.includes(productSubcategory)) {
+                const newSubs = categories.find((c) => c.value === newCat)?.subcategories ?? []
+                if (newSubs.length > 0 && !newSubs.some((s) => s.value === productSubcategory)) {
                   setProductSubcategory('')
                 }
               }}
               className={INPUT}
             >
               <option value="">{t('categoryPlaceholder')}</option>
-              {productCategory && !(PRODUCT_CATEGORIES as readonly string[]).includes(productCategory) && (
+              {productCategory && !categories.some((c) => c.value === productCategory) && (
                 <option value={productCategory}>{productCategory} ({t('legacyValue')})</option>
               )}
-              {PRODUCT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+              {categories.map((cat) => (
+                <option key={cat.value} value={cat.value}>{cat.label}</option>
               ))}
             </select>
           </div>
@@ -460,11 +462,11 @@ export function ProductForm({ product, tariffs = [], rates = {}, sourceSupplierP
               >
                 <option value="">{t('subcategoryPlaceholder')}</option>
                 {/* Preserve legacy value if it doesn't match any current option */}
-                {productSubcategory && !(subcategoryOptions as readonly string[]).includes(productSubcategory) && (
+                {productSubcategory && !subcategoryOptions.some((s) => s.value === productSubcategory) && (
                   <option value={productSubcategory}>{productSubcategory} ({t('legacyValue')})</option>
                 )}
                 {subcategoryOptions.map((sub) => (
-                  <option key={sub} value={sub}>{sub}</option>
+                  <option key={sub.value} value={sub.value}>{sub.label}</option>
                 ))}
               </select>
             ) : (

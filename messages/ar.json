@@ -1255,7 +1255,22 @@
       "cardCtaQuote": "طلب عرض سعر ←",
       "cardCtaWhatsapp": "عرض سعر واتساب",
       "cardDeliveryOnQuote": "حسب الطلب",
-      "cardDeliveryDays": "{days} ي"
+      "cardDeliveryDays": "{days} ي",
+      "zone1Title": "مخزون المغرب — متاح الآن",
+      "zone2Title": "استيراد من",
+      "zone3Title": "التوريد وكتالوج الموردين",
+      "countryTurkey": "تركيا",
+      "countryTurkeyTagline": "النسيج والملابس الجاهزة",
+      "countryTurkeyNote": "استيراد 7–14 يومًا · MOQ مرن",
+      "countryChina": "الصين",
+      "countryChinaTagline": "حجم كبير · سعر المصنع",
+      "countryChinaNote": "بحري وجوي · 20–45 يومًا",
+      "countryEgypt": "مصر",
+      "countryEgyptTagline": "القطن والنسيج",
+      "countryEgyptNote": "أسعار مناسبة · مخزون متغير",
+      "countryDubai": "دبي",
+      "countryDubaiTagline": "مركز لوجستي متعدد المنشأ",
+      "countryDubaiNote": "طلب مجمّع · إعادة تصدير"
     },
     "marketplaceDetail": {
       "metaTitle": "{name} — سوق الجملة",
