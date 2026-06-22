@@ -203,6 +203,12 @@
 - **Cible** : grossistes à **fort CA / marge**, fidélisation **long terme**.
 - **Dépend de** : commandes + **données de marge**, profil grossiste.
 
+#### ⬜ AFFECTATION AGENTS DE SOURCING PAR PAYS — *(LOT DÉDIÉ, à faire JUSTE APRÈS `feat/cat-ia-suggest` ; NON-FINANCIER)*
+> **Dépend du** système de rôles/permissions modulables construit dans **CAT-IA-SUGGEST**. **Rien codé. Statut ⬜.**
+
+- **AFFECTATION AGENTS DE SOURCING PAR PAYS** — l'admin **affecte un agent à un pays** (Chine / Turquie / Égypte / Dubaï) ; les **demandes de sourcing de ce pays arrivent automatiquement à l'agent affecté**. **Réaffectable à tout moment** (un agent passe de Chine à Turquie **en un clic**, le flux suit). Repose sur le **système de rôles/permissions modulables de CAT-IA-SUGGEST**. **Non-financier. Lot dédié.**
+- **Note carto (à confirmer en cadrage)** : une table `agent_countries` (N agents/pays ET N pays/agent, RLS admin-only, mig **078**) existe DÉJÀ et alimente la **notif superviseur pays** EN PROD (`257ae51`) ; ce lot ajoute l'**UI admin d'affectation/réaffectation** et le **routage des demandes de sourcing** par-dessus, en réutilisant les permissions modulables. À ne PAS reconstruire — cf. `ETAT_SYSTEME.md` (notif superviseur pays).
+
 ### 🛍️ AMÉLIORATIONS UX GROSSISTE / MARKETPLACE / EXPORT — *(décidées session 2026-06-21)*
 > Toutes en ⬜. **Affichage pur** sauf mention. Plusieurs dépendent des **catégories dynamiques**
 > (chantier en cours) → à faire APRÈS. Aucune ne rouvre de règle financière (prix export = prix grossiste).
