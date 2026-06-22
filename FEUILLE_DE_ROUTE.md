@@ -239,6 +239,20 @@
 - **⬜ WMS-5 — DOSSIER COMMANDE GROS AUDITÉ + QR PROTÉGÉ** *(`@finance` + `@security` OBLIGATOIRE)* : **QR par commande gros** donnant accès aux **détails** (quantité, prix, **commission**, **fournisseur**, qui a **confirmé/validé/sourcé**, règlement, livraison). **⚠️ Données ULTRA-SENSIBLES** (commission/marge/identité fournisseur) **protégées par permission** — **jamais exposées au scan non autorisé**, **rien de sensible dans le QR/URL** (le QR porte un identifiant opaque, les données restent derrière une autorisation serveur).
 - **Dépendances** : WMS-1 → (WMS-2, WMS-3) → WMS-4 ; WMS-5 indépendant côté flux mais **gros + argent**. **S'appuie sur** les **permissions modulables** (CAT-IA-SUGGEST) pour qui-scanne-quoi et qui-voit-quoi.
 
+#### ⬜ SYSTÈME DE RÔLES À 2 ÉTAGES — *(étend les permissions modulables ; volets non-financiers d'abord)*
+> Étend le système de permissions modulables existant (`staff_permissions`, mig 083). **Rien codé. Statut ⬜.**
+
+- **SYSTÈME DE RÔLES À 2 ÉTAGES** — étend les permissions modulables existantes. **Étage 1 = SUPERVISEUR DE VOLET** (main complète sur un domaine). **Étage 2 = TÂCHE FINE** (une capacité précise). Volets : **Commandes** (confirmer COD/affilié/gros = statut, non-financier), **Sourcing** (par pays, déjà fait), **Stock** (via WMS, plus tard), **Finance** (séparé, `@finance`). L'admin attribue/retire soit un rôle de volet, soit des tâches fines, par salarié. **Audit immuable.** Repose sur `staff_permissions` (mig 083).
+
+#### ⬜ GARDIEN IA — SURVEILLANCE 24/24 + 3 POUVOIRS — *(vision sommet, en COURONNEMENT ; `@finance` + `@security`)*
+> Se branche sur tous les volets une fois construits. **Rien codé. Statut ⬜.**
+
+- **GARDIEN IA — SURVEILLANCE 24/24 + 3 POUVOIRS** (vision sommet, se branche sur tous les volets une fois construits ; `@finance` + `@security`).
+  - **POUVOIR 1 — SUPPLÉANCE** : si un superviseur humain ne fait pas sa tâche dans un délai défini, l'agent IA la fait à sa place (ou signale qu'il l'a faite).
+  - **POUVOIR 2 — CALCULS AUTOMATIQUES EXACTS** : tous les chiffres (stock théorique vs réel, montants, commissions, écarts) calculés par le système, jamais à la main, exacts.
+  - **POUVOIR 3 — BLOQUER + TRACER + ALERTER** : à toute anomalie (fraude, complot, écart stock, anomalie argent, retard), l'IA **BLOQUE l'action AVANT qu'elle passe** (pas constater après), identifie la **SOURCE** (quel salarié/transporteur/fournisseur), et envoie une **NOTIFICATION PERSO à l'admin seul**.
+  - **NOTE D'ARCHITECTURE** : chaque volet (rôles, WMS, Finance) doit, dès sa construction, produire des **calculs exacts** et des **événements horodatés/tracés** que le Gardien consommera. **Ordre : rôles → WMS → Finance → Gardien en couronnement.**
+
 ### 🛍️ AMÉLIORATIONS UX GROSSISTE / MARKETPLACE / EXPORT — *(décidées session 2026-06-21)*
 > Toutes en ⬜. **Affichage pur** sauf mention. Plusieurs dépendent des **catégories dynamiques**
 > (chantier en cours) → à faire APRÈS. Aucune ne rouvre de règle financière (prix export = prix grossiste).
