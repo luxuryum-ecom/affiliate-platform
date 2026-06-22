@@ -309,6 +309,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/categories',
               },
+              {
+                title: t('permissionsTitle'),
+                description: t('permissionsDesc'),
+                badge: null,
+                href: '/admin/permissions',
+              },
             ].map((action) => (
               <div
                 key={action.title}

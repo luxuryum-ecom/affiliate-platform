@@ -49,6 +49,9 @@ Règles STRICTES :
     ✅ « tissu au mètre, rouleau de 100 m » → unit="metre", pack_size=null, pack_unit=null (vendu AU MÈTRE ; JAMAIS « mètre de 100 mètres » ; le « rouleau » peut être ignoré).
     ❌ INTERDIT (redondant) « tissu au mètre, rouleau de 100 m » → unit="metre", pack_size=100, pack_unit="mètre".
   Si AUCUN conditionnement de nature différente n'est mentionné → pack_size = null ET pack_unit = null. Ne JAMAIS inventer.
+- "suggested_category" : NOUVELLE catégorie proposée, UNIQUEMENT si AUCUNE catégorie de la liste ci-dessous ne convient vraiment au produit.
+  Dans ce cas : mets "category"="Autres" ET propose dans "suggested_category" un nom de catégorie COURT, générique et réutilisable (1 à 3 mots, ex. "Électroménager", "Quincaillerie", "Animalerie"), pas un nom de produit.
+  Si une catégorie de la liste convient → "suggested_category"=null (NE propose RIEN). Ne propose jamais un nom déjà présent dans la liste. En cas de doute → null.
 
 Catégories et sous-catégories autorisées :
 ${taxonomyBlock}`
@@ -90,6 +93,11 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
         type: ['string', 'null'],
         description: 'Conditionnement : nom de l\'unité du lot (ex. "boîte") si mentionné, sinon null.',
       },
+      suggested_category: {
+        type: ['string', 'null'],
+        description:
+          'NOUVELLE catégorie proposée (1-3 mots, générique) UNIQUEMENT si aucune catégorie de la liste ne convient (alors category="Autres"). Sinon null.',
+      },
     },
     required: [
       'product_name',
@@ -102,6 +110,7 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       'unit',
       'pack_size',
       'pack_unit',
+      'suggested_category',
     ],
   } as Anthropic.Tool['input_schema'],
 }

@@ -1,6 +1,8 @@
+import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCategoriesAdmin, getCategoryChannelAudit } from '@/app/actions/categories'
+import { getPendingSuggestions } from '@/app/actions/category-suggestions'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import {
   CategoryRowActions,
@@ -262,11 +264,15 @@ export default async function AdminCategoriesPage() {
     .single()
   const adminProfile = profileRes.data as { full_name: string } | null
 
-  const t  = await getTranslations('admin.categories')
-  const ta = await getTranslations('admin.categoryActions')
-  const tc = await getTranslations('admin.common')
+  const t   = await getTranslations('admin.categories')
+  const ta  = await getTranslations('admin.categoryActions')
+  const tc  = await getTranslations('admin.common')
+  const tcs = await getTranslations('admin.categorySuggestions')
 
-  const categories = await getCategoriesAdmin()
+  const [categories, pendingSuggestions] = await Promise.all([
+    getCategoriesAdmin(),
+    getPendingSuggestions(),
+  ])
 
   const parents = categories.filter((c) => c.parent_id === null)
   const subs    = categories.filter((c) => c.parent_id !== null)
@@ -288,9 +294,22 @@ export default async function AdminCategoriesPage() {
       <main className="mx-auto max-w-5xl space-y-8 px-4 py-10">
 
         {/* Page header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
+            <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
+          </div>
+          <Link
+            href="/admin/categories/suggestions"
+            className="inline-flex items-center gap-2 rounded-lg border border-gold-400 bg-gold-400/10 px-4 py-2 text-sm font-medium text-gold-400 hover:bg-gold-400/20 transition-colors shrink-0"
+          >
+            {tcs('suggestionsLink')}
+            {pendingSuggestions.length > 0 && (
+              <span className="rounded-full bg-gold-400 px-2 py-0.5 text-xs font-bold text-white tabular-nums">
+                {tcs('suggestionsBadgeLabel', { count: pendingSuggestions.length })}
+              </span>
+            )}
+          </Link>
         </div>
 
         {/* Stats */}
