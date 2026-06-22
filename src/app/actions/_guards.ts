@@ -35,3 +35,48 @@ export async function requireAdmin({ allowAgent = false }: { allowAgent?: boolea
 
   return { supabase, error: null, userId: user.id }
 }
+
+/**
+ * Capacités modulables connues (mig 083 staff_permissions, allowlist CHECK + RPC).
+ * Union littérale → toute typo est bloquée au compile-time (finding @security P2-2).
+ * AJOUTER une capacité ici ET dans la migration (CHECK + allowlist RPC) ET le code.
+ */
+export type StaffCapability = 'validate_categories'
+
+/**
+ * Guard for a granular, admin-grantable capability (mig 083 staff_permissions).
+ * Admin passes unconditionally (superuser). Otherwise the `has_capability` RPC
+ * (SECURITY DEFINER) checks the caller's staff_permissions row for `capability`.
+ *
+ * Usage:
+ *   const { supabase, error, userId, isAdmin } = await requireCapability('validate_categories')
+ *   if (error || !userId) return { error: error ?? 'Permission requise.' }
+ */
+export async function requireCapability(capability: StaffCapability) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { supabase, error: 'Non authentifié.', userId: null, isAdmin: false }
+
+  const { data: profile } = (await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()) as { data: { role: string } | null; error: unknown }
+
+  if (profile?.role === 'admin') {
+    return { supabase, error: null, userId: user.id, isAdmin: true }
+  }
+
+  const { data: hasCap } = (await supabase.rpc('has_capability', {
+    p_capability: capability,
+  })) as { data: boolean | null; error: unknown }
+
+  if (!hasCap) {
+    return { supabase, error: 'Permission requise.', userId: null, isAdmin: false }
+  }
+
+  return { supabase, error: null, userId: user.id, isAdmin: false }
+}
