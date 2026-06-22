@@ -130,7 +130,8 @@ export default async function StaffPermissionsPage() {
             </div>
           ) : (
             <div className="rounded-xl border border-line bg-surface overflow-hidden">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-line bg-surface-2">
                     <th className="px-4 py-3 text-left text-xs font-semibold text-faint uppercase tracking-wide">
@@ -180,6 +181,7 @@ export default async function StaffPermissionsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </section>
