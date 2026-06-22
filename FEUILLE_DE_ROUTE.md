@@ -203,6 +203,15 @@
 - **Cible** : grossistes à **fort CA / marge**, fidélisation **long terme**.
 - **Dépend de** : commandes + **données de marge**, profil grossiste.
 
+#### 🔄 CAT-IA-SUGGEST + PERMISSIONS MODULABLES — *(branche `feat/cat-ia-suggest`, PRÊTE, attend GO Abdou — NON MERGÉE)*
+> Construit en 5 sous-lots (L1-L5), 4 checks verts / sous-lot, **@security GO ×2**, **runtime @tester PASS (12/14, 2 faux négatifs d'infra de test)**. **Non-financier.** Détail complet dans `ETAT_SYSTEME.md` → « BRANCHE PRÊTE ».
+
+- **Quoi** : à l'ingestion, si l'IA ne trouve **aucune** catégorie, elle **propose** une nouvelle catégorie → **file de validation** (le produit garde `'Autres'`, **filet intouché**, jamais bloqué). Un **valideur** (permission modulable) tranche : créer / ranger / rejeter.
+- **Fondation** : système de **permissions attribuables/retirables** par l'admin en 1 clic, réversible (table `staff_permissions` + audit immuable + `has_capability` + RPC grant/revoke admin-only + `requireCapability`). Capacité initiale `validate_categories`. **Conçu pour héberger d'autres permissions** (→ AFFECTATION SOURCING ci-dessous).
+- **Panneaux** : `/admin/categories/suggestions` (file, valideur) + `/admin/permissions` (admin attribue/retire) — i18n FR/AR/EN + RTL + mobile.
+- **🛑 Argent/canal INTOUCHÉ** : nouvelle catégorie **naît `affiliate_allowed=false`** (confirmé DB) ; le toggle canal D2 reste **admin-only** (RPC `set_category_affiliate_allowed` mig 082). Migrations 083/084/085 **déjà appliquées en prod** (additives) ; `main` non mergé.
+- **Décisions prises seule** (non-financières) : (a) suggestion = **sidecar** (table dédiée, pas de pollution de `categories`) ; (b) permissions = **table générique dédiée** (pas l'extension de `team_members`) ; (c) écriture valideur via **RPC SECURITY DEFINER capability-gated** (pas d'élargissement RLS de base) ; (d) lecture file = **RPC redacted** (mig 085) car l'agent n'a pas la RLS `supplier_products`. **Dette test** : re-login `beforeEach` aux scénarios C/D de `e2e/cat-ia-suggest.spec.ts`.
+
 #### ⬜ AFFECTATION AGENTS DE SOURCING PAR PAYS — *(LOT DÉDIÉ, à faire JUSTE APRÈS `feat/cat-ia-suggest` ; NON-FINANCIER)*
 > **Dépend du** système de rôles/permissions modulables construit dans **CAT-IA-SUGGEST**. **Rien codé. Statut ⬜.**
 
