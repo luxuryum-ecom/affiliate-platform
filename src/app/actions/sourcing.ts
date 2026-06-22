@@ -53,14 +53,29 @@ export async function submitSourcingRequest(
   if (!quantityRaw || quantityRaw <= 0) return fail('Quantité invalide.')
   if (!budgetRaw   || budgetRaw  <= 0) return fail('Budget cible invalide.')
 
+  // Derive ISO code from FR label (mig 086 — pure server-side, no client change)
+  const COUNTRY_CODE_MAP: Record<string, string> = {
+    'Chine':   'CN',
+    'Turquie': 'TR',
+    'Égypte':  'EG',
+    'Egypte':  'EG',
+    'Dubai':   'AE',
+    'Dubaï':   'AE',
+    'Maroc':   'MA',
+  }
+  const targetCountryCode: string | null = targetCountry
+    ? (COUNTRY_CODE_MAP[targetCountry] ?? null)
+    : null
+
   const { error } = await supabase.from('sourcing_requests').insert({
-    wholesaler_id:     user.id,
-    product_name:      productName,
+    wholesaler_id:      user.id,
+    product_name:       productName,
     category,
-    quantity:          quantityRaw,
-    target_budget_mad: budgetRaw,
-    target_country:    targetCountry,
-    delivery_deadline: deadlineRaw,
+    quantity:           quantityRaw,
+    target_budget_mad:  budgetRaw,
+    target_country:     targetCountry,
+    target_country_code: targetCountryCode,
+    delivery_deadline:  deadlineRaw,
     notes,
   })
 
