@@ -338,6 +338,22 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
       })
       .eq('id', productId)
 
+    // CAT-IA-SUGGEST — l'IA n'a trouvé AUCUNE catégorie correspondante et a proposé
+    // un nouveau libellé (alors category='Autres', le filet). On range la proposition
+    // dans la FILE DE VALIDATION (un valideur tranchera). BEST-EFFORT : un échec ici
+    // ne bloque JAMAIS l'ingestion ; le produit reste utilisable sur 'Autres'.
+    // Idempotent : index unique partiel (1 suggestion en attente par produit).
+    if (clean.category === 'Autres' && clean.suggested_category) {
+      const { error: sugErr } = await admin.from('category_suggestions').insert({
+        supplier_product_id: productId,
+        proposed_label: clean.suggested_category,
+        source: 'telegram_ai',
+      })
+      if (sugErr && sugErr.code !== UNIQUE_VIOLATION) {
+        console.error('category_suggestion insert:', sugErr.message)
+      }
+    }
+
     await markInbound(admin, messageKey, {
       status: 'inserted',
       supplier_product_id: productId,

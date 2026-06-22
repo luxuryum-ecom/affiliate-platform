@@ -79,6 +79,10 @@ export const aiExtractionRawSchema = z.object({
   // (« carton de 50 boîtes » → pack_size 50, pack_unit « boîte »). Absent → null.
   pack_size: z.union([z.number(), z.string(), z.null()]).optional(),
   pack_unit: z.union([z.string(), z.null()]).optional(),
+  // Catégorie PROPOSÉE (CAT-IA-SUGGEST) : nom d'une NOUVELLE catégorie suggérée par
+  // l'IA UNIQUEMENT quand aucune catégorie existante ne convient (→ category='Autres').
+  // Sert à alimenter la file de validation ; ne crée RIEN automatiquement. Absent → null.
+  suggested_category: z.union([z.string(), z.null()]).optional(),
 })
 
 export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
@@ -239,6 +243,32 @@ export function normalizeCategory(
 }
 
 /**
+ * Catégorie PROPOSÉE (CAT-IA-SUGGEST) → label d'une NOUVELLE catégorie à proposer
+ * dans la file de validation, OU null. Renvoie une proposition UNIQUEMENT si :
+ *  - la catégorie résolue est 'Autres' (aucune existante ne correspond) ; ET
+ *  - le label proposé est non vide, n'est pas 'Autres' lui-même, et ne correspond
+ *    à AUCUNE catégorie existante (sinon ce serait un doublon — on n'en propose pas).
+ * Fonction PURE : ne crée rien, ne décide rien — juste un signal nettoyé. Le filet
+ * 'Autres' (normalizeCategory) reste INTOUCHÉ ; le produit n'est jamais bloqué.
+ */
+export function sanitizeSuggestedCategory(
+  raw: string | null | undefined,
+  resolvedCategory: string,
+  source: TaxonomySource = STATIC_TAXONOMY,
+): string | null {
+  // Une vraie catégorie a matché → aucune proposition nécessaire.
+  if (resolvedCategory !== 'Autres') return null
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const lower = trimmed.toLowerCase()
+  if (lower === 'autres') return null
+  // Déjà une catégorie existante (case-insensitive) → pas un nouveau besoin.
+  if (source.categories.some((c) => c.toLowerCase() === lower)) return null
+  return trimmed.slice(0, 60)
+}
+
+/**
  * Sous-catégorie → doit appartenir à la catégorie. Inconnue/vide → ''.
  */
 export function normalizeSubcategory(
@@ -269,6 +299,11 @@ export type CleanExtraction = {
   /** Conditionnement DESCRIPTIF (P3). null si non détecté ou incomplet. */
   pack_size: number | null
   pack_unit: string | null
+  /**
+   * Catégorie PROPOSÉE (CAT-IA-SUGGEST). Non-null SEULEMENT si category='Autres'
+   * ET l'IA a proposé un nouveau libellé inédit → alimente la file de validation.
+   */
+  suggested_category: string | null
 }
 
 // Plafond anti-absurde du conditionnement (nb d'unités par lot).
@@ -290,6 +325,8 @@ export function buildCleanExtraction(
     // Réutilise le helper P1 (FR/AR/darija → enum, inconnu/null → 'piece', jamais d'erreur).
     unit: normalizeSaleUnit(raw.unit),
     ...normalizePack(raw.pack_size, raw.pack_unit),
+    // Proposition de catégorie (seulement si category résolue = 'Autres' + label inédit).
+    suggested_category: sanitizeSuggestedCategory(raw.suggested_category, category, source),
   }
 }
 

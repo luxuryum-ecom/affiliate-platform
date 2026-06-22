@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   normalizeCategory,
   normalizeSubcategory,
+  sanitizeSuggestedCategory,
   buildCleanExtraction,
   aiExtractionRawSchema,
 } from '@/lib/telegram/schema'
@@ -44,7 +45,77 @@ describe('normalizeSubcategory', () => {
   })
 })
 
+// CAT-IA-SUGGEST — proposition de NOUVELLE catégorie (file de validation).
+describe('sanitizeSuggestedCategory', () => {
+  it('propose un nouveau libellé inédit quand la catégorie résolue = Autres', () => {
+    expect(sanitizeSuggestedCategory('Électroménager', 'Autres')).toBe('Électroménager')
+    expect(sanitizeSuggestedCategory('  Quincaillerie  ', 'Autres')).toBe('Quincaillerie')
+  })
+
+  it('ne propose RIEN si une vraie catégorie a matché (≠ Autres)', () => {
+    expect(sanitizeSuggestedCategory('Électroménager', 'Textile')).toBeNull()
+  })
+
+  it('ignore vide / null / « Autres » lui-même', () => {
+    expect(sanitizeSuggestedCategory(null, 'Autres')).toBeNull()
+    expect(sanitizeSuggestedCategory('', 'Autres')).toBeNull()
+    expect(sanitizeSuggestedCategory('   ', 'Autres')).toBeNull()
+    expect(sanitizeSuggestedCategory('Autres', 'Autres')).toBeNull()
+    expect(sanitizeSuggestedCategory('  autres ', 'Autres')).toBeNull()
+  })
+
+  it('ne propose pas un doublon d\'une catégorie existante (insensible à la casse)', () => {
+    expect(sanitizeSuggestedCategory('Textile', 'Autres')).toBeNull()
+    expect(sanitizeSuggestedCategory('  chaussures ', 'Autres')).toBeNull()
+  })
+
+  it('borne la longueur à 60 caractères', () => {
+    const long = 'X'.repeat(100)
+    expect(sanitizeSuggestedCategory(long, 'Autres')).toHaveLength(60)
+  })
+})
+
 describe('buildCleanExtraction (intégration nettoyage)', () => {
+  it('surface suggested_category quand catégorie inconnue + proposition inédite', () => {
+    const clean = buildCleanExtraction({
+      product_name: 'Mixeur 500W',
+      category: 'Électroménager', // inconnue → Autres
+      subcategory: '',
+      description: 'Petit électroménager.',
+      price: 300,
+      suggested_category: 'Électroménager',
+    })
+    expect(clean.category).toBe('Autres')
+    expect(clean.suggested_category).toBe('Électroménager')
+  })
+
+  it('suggested_category = null si une vraie catégorie a matché', () => {
+    const clean = buildCleanExtraction({
+      product_name: 'T-shirt',
+      category: 'Textile',
+      subcategory: 'Homme',
+      description: 'x',
+      price: 50,
+      suggested_category: 'Habillement', // ignorée : Textile a matché
+    })
+    expect(clean.category).toBe('Textile')
+    expect(clean.suggested_category).toBeNull()
+  })
+
+  it('suggested_category = null quand absent du payload IA', () => {
+    const clean = buildCleanExtraction({
+      product_name: 'X',
+      category: 'Voitures', // inconnue → Autres, mais pas de proposition
+      subcategory: '',
+      description: 'x',
+      price: null,
+    })
+    expect(clean.category).toBe('Autres')
+    expect(clean.suggested_category).toBeNull()
+  })
+})
+
+describe('buildCleanExtraction (intégration nettoyage — base)', () => {
   it('nettoie une fiche avec catégorie inconnue + prix string', () => {
     const clean = buildCleanExtraction({
       product_name: '  Sac en cuir  ',
