@@ -44,6 +44,12 @@ reconstruire ni doublonner l'existant**.
    être **immédiatement reflétée** dans **`FEUILLE_DE_ROUTE.md` ET `ETAT_SYSTEME.md`** avec son
    **statut clair** (**✅ fait** / **🔄 en cours-partiel** / **⬜ à faire**), **AVANT de passer à
    autre chose**. Un travail à moitié fait mais non noté = travail perdu : on ne le tolère pas.
+7. **RÈGLE ABSOLUE — SECRETS DANS LES TESTS :** @tester (et tout agent) n'écrit JAMAIS de vraie
+   clé/secret en dur dans un fichier (test, script, ou code). Toujours via process.env (ex:
+   process.env.SUPABASE_SERVICE_ROLE_KEY). Aucune valeur réelle de clé ne doit apparaître dans le
+   code, les specs e2e, ou les commits. Si un test a besoin d'une clé, il la lit depuis
+   l'environnement. Violation = incident sécurité (déjà survenu 2026-06-20 et 2026-06-22). Avant
+   tout commit touchant des tests/scripts, vérifier qu'aucun secret réel n'y figure.
 
 ## 🧭 AUTONOMIE DE DÉCISION
 > But : avancer sans interruptions inutiles. Abdou n'est sollicité que sur ce qui compte vraiment.
