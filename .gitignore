@@ -16,6 +16,11 @@ build/
 .env.production.local
 **/.env
 **/.env.local
+# Backups d'éditeur (nano/vim) des fichiers env — contiennent des clés en clair
+.env*.save
+.env.local.save
+*.env.save
+**/.env*.save
 
 # Debug logs
 npm-debug.log*
