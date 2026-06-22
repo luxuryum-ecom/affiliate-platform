@@ -209,6 +209,29 @@ export default async function AdminDashboardPage() {
           ))}
         </div>
 
+        {/* Agent quick actions */}
+        {!isAdmin && (
+          <div className="mb-8">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-faint">
+              {t('agentActionsSection')}
+            </h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="bg-surface rounded-xl border border-line p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-1">
+                  {t('mySourcingTitle')}
+                </h3>
+                <p className="text-xs text-muted mb-4">{t('mySourcingDesc')}</p>
+                <Link
+                  href="/admin/sourcing/my-requests"
+                  className="inline-block text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  {t('open')} {arrow}
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Quick actions */}
           {isAdmin && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -314,6 +337,12 @@ export default async function AdminDashboardPage() {
                 description: t('permissionsDesc'),
                 badge: null,
                 href: '/admin/permissions',
+              },
+              {
+                title: t('agentSourcingTitle'),
+                description: t('agentSourcingDesc'),
+                badge: null,
+                href: '/admin/sourcing/agents',
               },
             ].map((action) => (
               <div

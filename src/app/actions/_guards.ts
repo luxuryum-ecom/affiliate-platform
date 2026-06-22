@@ -40,8 +40,11 @@ export async function requireAdmin({ allowAgent = false }: { allowAgent?: boolea
  * Capacités modulables connues (mig 083 staff_permissions, allowlist CHECK + RPC).
  * Union littérale → toute typo est bloquée au compile-time (finding @security P2-2).
  * AJOUTER une capacité ici ET dans la migration (CHECK + allowlist RPC) ET le code.
+ *
+ * 'validate_categories'     — valider la file de suggestions de catégories (mig 083)
+ * 'manage_country_sourcing' — accès aux demandes de sourcing filtrées par pays (mig 086)
  */
-export type StaffCapability = 'validate_categories'
+export type StaffCapability = 'validate_categories' | 'manage_country_sourcing'
 
 /**
  * Guard for a granular, admin-grantable capability (mig 083 staff_permissions).
