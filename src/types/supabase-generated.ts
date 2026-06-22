@@ -3994,6 +3994,7 @@ export type Database = {
       }
       can_assign_orders: { Args: { uid: string }; Returns: boolean }
       client_currency_for: { Args: { p_label: string }; Returns: string }
+      confirm_cod_order: { Args: { p_order_id: string }; Returns: boolean }
       create_payout: {
         Args: {
           p_affiliate_id: string

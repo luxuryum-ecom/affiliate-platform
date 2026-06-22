@@ -1,47 +1,63 @@
 'use client'
 
+/**
+ * CapabilitySwitch — toggle factorisé, data-driven, optimiste.
+ *
+ * Remplace permission-toggle.tsx ET capability-toggle.tsx (quasi-clones).
+ * Le composant importe lui-même les server actions — aucune fonction n'est
+ * passée en prop (règle CLAUDE.md absolue : jamais de callback en prop CC).
+ *
+ * kind='capability' → appelle setStaffPermission({ userId, capability, enabled })
+ * kind='volet'      → appelle setVoletSupervisor({ userId, volet, enabled })
+ *
+ * Pattern optimiste : flip immédiat → revalidatePath → useEffect resynce depuis prop.
+ * Rollback sur erreur réseau OU erreur retournée par l'action.
+ */
+
 import { useState, useTransition, useEffect } from 'react'
-import { setValidateCategoriesPermission } from '@/app/actions/staff-permissions'
-import type { ActionState } from '@/types/orders'
+import { setStaffPermission, setVoletSupervisor } from '@/app/actions/staff-permissions'
 
-const INITIAL: ActionState = { error: null, success: false }
-
-// ─── Styles (miroir suggestion-actions.tsx) ──────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const BTN_ON =
   'inline-flex items-center gap-2 rounded-lg border border-gold-400 bg-gold-400/10 px-3 py-1.5 text-xs font-semibold text-gold-500 hover:bg-gold-400/20 transition-colors'
 const BTN_OFF =
   'inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-2 transition-colors'
 
-// ─── Types des labels passés depuis le Server Component ──────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToggleLabels = {
+export type SwitchLabels = {
   grantLabel: string
   revokeLabel: string
   pendingLabel: string
-  successGrant: string
-  successRevoke: string
   errorFallback: string
   statusActive: string
   statusInactive: string
 }
 
-// ─── Toggle par salarié ───────────────────────────────────────────────────────
+export type CapabilitySwitchProps = {
+  userId: string
+  currentlyEnabled: boolean
+  labels: SwitchLabels
+} & (
+  | { kind: 'capability'; capabilityOrVolet: string }
+  | { kind: 'volet'; capabilityOrVolet: string }
+)
 
-export function PermissionToggle({
+// ─── Composant ───────────────────────────────────────────────────────────────
+
+export function CapabilitySwitch({
   userId,
   currentlyEnabled,
   labels,
-}: {
-  userId: string
-  currentlyEnabled: boolean
-  labels: ToggleLabels
-}) {
+  kind,
+  capabilityOrVolet,
+}: CapabilitySwitchProps) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Optimistic local state — flips immediately on click.
-  // Resynced from prop after revalidatePath completes (RSC re-renders parent).
+  // État optimiste local — flip immédiat au clic.
+  // Resynced depuis la prop quand revalidatePath déclenche un re-rendu RSC parent.
   const [optimisticEnabled, setOptimisticEnabled] = useState(currentlyEnabled)
 
   useEffect(() => {
@@ -51,17 +67,27 @@ export function PermissionToggle({
   function handleClick() {
     setError(null)
     const nextEnabled = !optimisticEnabled
-    // Optimistic flip — immediate visual feedback.
+    // Flip optimiste — retour visuel immédiat.
     setOptimisticEnabled(nextEnabled)
 
     startTransition(async () => {
       try {
-        const formData = new FormData()
-        formData.set('user_id', userId)
-        formData.set('enabled', String(nextEnabled))
-        const result = await setValidateCategoriesPermission(INITIAL, formData)
+        let result
+        if (kind === 'volet') {
+          result = await setVoletSupervisor({
+            userId,
+            volet: capabilityOrVolet as Parameters<typeof setVoletSupervisor>[0]['volet'],
+            enabled: nextEnabled,
+          })
+        } else {
+          result = await setStaffPermission({
+            userId,
+            capability: capabilityOrVolet,
+            enabled: nextEnabled,
+          })
+        }
         if (result?.error) {
-          // Rollback to previous state.
+          // Rollback sur refus serveur.
           setOptimisticEnabled(!nextEnabled)
           setError(result.error || labels.errorFallback)
         }
@@ -95,6 +121,7 @@ export function PermissionToggle({
         <button
           type="button"
           onClick={handleClick}
+          disabled={isPending}
           className={`${optimisticEnabled ? BTN_ON : BTN_OFF} ${isPending ? 'opacity-60' : ''}`}
         >
           {isPending

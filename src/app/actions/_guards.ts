@@ -41,10 +41,18 @@ export async function requireAdmin({ allowAgent = false }: { allowAgent?: boolea
  * Union littérale → toute typo est bloquée au compile-time (finding @security P2-2).
  * AJOUTER une capacité ici ET dans la migration (CHECK + allowlist RPC) ET le code.
  *
- * 'validate_categories'     — valider la file de suggestions de catégories (mig 083)
- * 'manage_country_sourcing' — accès aux demandes de sourcing filtrées par pays (mig 086)
+ * 'validate_categories'      — valider la file de suggestions de catégories (mig 083)
+ * 'manage_country_sourcing'  — accès aux demandes de sourcing filtrées par pays (mig 086)
+ * 'confirm_cod_orders'       — confirmation des commandes COD (mig 087)
+ * 'confirm_affiliate_orders' — confirmation des commandes affiliés (mig 087)
+ * 'confirm_wholesale_orders' — confirmation des commandes grossistes B2B (mig 087)
  */
-export type StaffCapability = 'validate_categories' | 'manage_country_sourcing'
+export type StaffCapability =
+  | 'validate_categories'
+  | 'manage_country_sourcing'
+  | 'confirm_cod_orders'
+  | 'confirm_affiliate_orders'
+  | 'confirm_wholesale_orders'
 
 /**
  * Guard for a granular, admin-grantable capability (mig 083 staff_permissions).
