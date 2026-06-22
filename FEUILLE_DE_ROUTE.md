@@ -222,13 +222,40 @@
   (1 carte + 1 bouton) / Zone 2 *Importer depuis* (pays en cartes 2 colonnes) / Zone 3 *Sourcing +
   produits*. **Supprimer** la rangée de 6 badges répétitifs + les stats en double. Thème noir & or.
   **Reporté APRÈS les catégories dynamiques** (dépend de l'affichage des catégories). *Affichage pur.*
-- ⬜ **UX-M2 — Filtre PAYS × CATÉGORIE sur marketplace** + réutiliser les **grandes cartes-images de
-  rayon** (navigation à l'image pour acheteurs étrangers). **Dépend des catégories dynamiques.**
+- 🔄 **UX-M2 — Filtre PAYS × CATÉGORIE sur marketplace** + réutiliser les **grandes cartes-images de
+  rayon** (navigation à l'image pour acheteurs étrangers). **CONSTRUIT sur branche
+  `feat/categories-affichage-marketplace`** (Partie 2, voir ci-dessous) — **EN ATTENTE DE MERGE (GO Abdou).**
   *Affichage pur.*
-- ⬜ **CAT-AFF — Lot affichage dynamique des catégories** (filtres `?category=` / forms admin+supplier /
+- 🔄 **CAT-AFF — Lot affichage dynamique des catégories** (filtres `?category=` / forms admin+supplier /
   rails / grilles / unif. des 3 `CATEGORY_ICONS`) : lire la base au lieu de `taxonomy.ts`. **Sorti
-  volontairement du sous-lot 3 (D2)** pour rester **non-financier**. À faire **après le panneau admin**
-  (sous-lot 4). *Affichage pur, aucun circuit financier.*
+  volontairement du sous-lot 3 (D2)** pour rester **non-financier**. **CONSTRUIT sur branche
+  `feat/categories-affichage-marketplace`** (Partie 1, voir ci-dessous) — **EN ATTENTE DE MERGE (GO Abdou).**
+  *Affichage pur, aucun circuit financier.*
+
+> 🔄 **LOT `feat/categories-affichage-marketplace` — CONSTRUIT, 4 checks verts + runtime PASS, NON MERGÉ (2026-06-22).**
+> **Affichage pur, zéro argent, zéro migration. Canal D2 / `getChannelDecision` / `isValidCategory` / capital INTOUCHÉS.**
+> **PARTIE 1 (CAT-AFF)** : enrichissement du chemin de lecture public `src/lib/categories/read.ts`
+> (ajoute `label_fr/ar/en/icon/image_url`, colonnes déjà seedées mig 081, RLS SELECT ouverte → **0 migration**) ;
+> nouveau résolveur **server-only** `src/lib/categories/display.ts` (`getCategoryDisplayList`/`subcategoriesOf`)
+> → liste 100 % sérialisable. Ordre de fallback **non-régressif** : label `i18n → DB(locale) → slug`, icône
+> `CATEGORY_ICONS figé → DB → 📦`, image `CATEGORY_IMAGES → DB → ∅` → **les 12 catégories seedées rendent
+> pixel-identique**, une catégorie créée en admin apparaît partout avec ses libellé/icône/image DB. Consommateurs
+> branchés : `/affiliate/products`, `/wholesale/products`, `/wholesale/products/categories`, **forms admin
+> (`product-form` via parents `new`+`[id]/edit`) et supplier (`submit-product-form` via `products/new`)** — les
+> Client Components reçoivent la liste en **prop sérialisable** (RÈGLE #2 ✅, legacy value préservée).
+> **Unification des 3 `CATEGORY_ICONS`** en une source canonique (`taxonomy.ts`) : `product-card-image.tsx`
+> (prop optionnelle `fallbackIcon`) + `branding.tsx` (icônes alignées sur le canonique, volontaire).
+> **PARTIE 2 (UX-M2)** : refonte `src/app/(wholesale)/wholesale/marketplace/page.tsx` en **3 zones** mobile-first
+> (ZONE 1 Stock Maroc · ZONE 2 Importer depuis = 4 pays en `grid-cols-2` mobile · ZONE 3 Sourcing + nav catégorie
+> en grandes cartes-images + grille produit, **filtre combiné PAYS×CATÉGORIE** `?origin=…&category=…`).
+> **SUPPRIMÉS** : rangée de 6 badges trust répétitifs + stats en double. Libellés pays passés en i18n
+> (`countryTurkey/China/Egypt/Dubai*` FR/AR/EN). **PROTÉGÉ/INTACT** : `MarketplaceProductCard` (cartes/CTA/prix),
+> sources de données, discriminant `__source` server-only, routage détail. Thème noir & or conservé.
+> **Vérif** : tsc 0 / build OK / **263 tests** (dont parité D2 + seed + read) / smoke **20/20** ; `@tester` runtime
+> **PASS** mobile 390px FR/AR/EN + RTL (`dir=rtl` OK, 0 débordement), 22 captures `.nav-proofs/cat-marketplace/`.
+> **Note `@backend-db` (non bloquant, pré-existant)** : `__source` apparaît dans le payload RSC inline (valeur
+> `supplier`/`internal`, **pas de donnée sensible**, jamais visible/attribut) — si exclusion totale souhaitée,
+> reconstruire l'objet passé à la carte sans `__source` (passer `productUrl` déjà calculé). **NE PAS MERGER sans GO.**
 - ⬜ **EXPORT-VISION — Marketplace = vitrine Maroc + hubs vers le monde** : **prix export = MÊME prix
   grossiste qu'au Maroc** (confirmé Abdou, pas de @finance lourd). Idées : badge **« Stock Maroc —
   disponible à l'international / livraison mondiale »** ; **détection du pays de l'acheteur** pour

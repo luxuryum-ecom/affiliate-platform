@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { CategoryShowcase, type CategoryCardData } from '@/components/shared/category-showcase'
-import { PRODUCT_CATEGORIES, CATEGORY_ICONS, CATEGORY_IMAGES, resolveCategoryLabel } from '@/lib/taxonomy'
+import { getCategoryDisplayList } from '@/lib/categories/display'
 
 export async function generateMetadata() {
   const t = await getTranslations('wholesale.products')
@@ -21,18 +21,18 @@ export default async function WholesaleCategoriesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [t, tCat, tCommon] = await Promise.all([
+  const [t, tCommon, cats] = await Promise.all([
     getTranslations('wholesale.products'),
-    getTranslations('categories'),
     getTranslations('wholesale.common'),
+    getCategoryDisplayList(),
   ])
 
-  const cards: CategoryCardData[] = PRODUCT_CATEGORIES.map((cat) => ({
-    value: cat,
-    label: resolveCategoryLabel(cat, tCat),
-    href: `/wholesale/products?category=${encodeURIComponent(cat)}`,
-    image: CATEGORY_IMAGES[cat] ?? '',
-    icon: CATEGORY_ICONS[cat] ?? '📦',
+  const cards: CategoryCardData[] = cats.map((cat) => ({
+    value: cat.value,
+    label: cat.label,
+    href: `/wholesale/products?category=${encodeURIComponent(cat.value)}`,
+    image: cat.image ?? '',
+    icon: cat.icon,
     isActive: false,
   }))
 

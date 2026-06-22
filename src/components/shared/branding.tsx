@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server'
-import { getOriginConfig, TRUST_BADGES, PRODUCT_CATEGORIES } from '@/lib/taxonomy'
+import { getOriginConfig, TRUST_BADGES, PRODUCT_CATEGORIES, CATEGORY_ICONS as CANONICAL_CATEGORY_ICONS } from '@/lib/taxonomy'
 
 // AFFICHAGE PUR — i18n FR/AR/EN. Ces composants sont des SERVER COMPONENTS (tous leurs
 // usages sont des pages serveur) : ils résolvent leurs libellés via getTranslations
@@ -161,16 +161,6 @@ export async function FastResponseBadge() {
 
 // ─── Supplier logo block ───────────────────────────────────────────────────────
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'Textile':              '👗',
-  'Matières premières':   '🧱',
-  'Chaussures':           '👟',
-  'Cosmétique & hygiène': '💄',
-  'Alimentaire':          '🥗',
-  'Maison & packaging':   '🏠',
-  'Artisanat':            '🎨',
-}
-
 export function SupplierLogoBlock({
   supplierType,
   category,
@@ -180,7 +170,7 @@ export function SupplierLogoBlock({
   category?: string
   size?: 'sm' | 'md'
 }) {
-  const icon = (category && CATEGORY_ICONS[category]) ?? (supplierType === 'morocco' ? '🇲🇦' : '🌍')
+  const icon = (category && CANONICAL_CATEGORY_ICONS[category]) ?? (supplierType === 'morocco' ? '🇲🇦' : '🌍')
   const dim = size === 'sm' ? 'w-7 h-7 text-sm' : 'w-9 h-9 text-base'
   const bg = 'bg-surface-2 border-line' // neutre (plus de vert/bleu) — l'icône différencie
   return (

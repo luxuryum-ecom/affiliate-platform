@@ -1255,7 +1255,22 @@
       "cardCtaQuote": "Demander un devis →",
       "cardCtaWhatsapp": "Devis WhatsApp",
       "cardDeliveryOnQuote": "Sur devis",
-      "cardDeliveryDays": "{days} j"
+      "cardDeliveryDays": "{days} j",
+      "zone1Title": "Stock Maroc — disponible maintenant",
+      "zone2Title": "Importer depuis",
+      "zone3Title": "Sourcing & catalogue fournisseurs",
+      "countryTurkey": "Turquie",
+      "countryTurkeyTagline": "Textile & prêt-à-porter",
+      "countryTurkeyNote": "Import 7–14 j · MOQ souple",
+      "countryChina": "Chine",
+      "countryChinaTagline": "Gros volume · Prix usine",
+      "countryChinaNote": "Maritime & aérien · 20–45 j",
+      "countryEgypt": "Égypte",
+      "countryEgyptTagline": "Coton & textile",
+      "countryEgyptNote": "Prix avantageux · Stock variable",
+      "countryDubai": "Dubai",
+      "countryDubaiTagline": "Hub logistique multi-origines",
+      "countryDubaiNote": "Commande groupée · Réexportation"
     },
     "marketplaceDetail": {
       "metaTitle": "{name} — Marketplace Grossiste",

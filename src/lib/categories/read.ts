@@ -18,6 +18,9 @@ import {
 } from '@/lib/taxonomy'
 import type { TaxonomySource } from '@/lib/telegram/schema'
 
+/** Libellés localisés d'une catégorie (table `categories`). */
+export type CategoryLabels = { fr: string; ar: string; en: string }
+
 /** Ligne brute de la table `categories` (colonnes lues). */
 export type CategoryRow = {
   id: string
@@ -26,6 +29,16 @@ export type CategoryRow = {
   affiliate_allowed: boolean
   active: boolean
   sort_order: number
+  // ── Enrichissement AFFICHAGE (additif, optionnel) ───────────────────────────
+  // Lus pour l'UI (libellés localisés / icône / image). ABSENTS du fallback figé
+  // (staticTree) et des fixtures de test → le résolveur d'affichage
+  // (lib/categories/display.ts) retombe alors sur i18n + taxonomy.ts (figé).
+  // Le canal D2 (getChannelDecision) NE LIT JAMAIS ces champs.
+  label_fr?: string | null
+  label_ar?: string | null
+  label_en?: string | null
+  icon?: string | null
+  image_url?: string | null
 }
 
 /** Catégorie parente normalisée + ses sous-catégories actives. */
@@ -34,6 +47,19 @@ export type CategoryNode = {
   /** Canal affilié autorisé (D2). Lecture POSITIVE : true uniquement si === true. */
   affiliateAllowed: boolean
   subcategories: string[]
+  // ── Enrichissement AFFICHAGE (optionnel ; absent en fallback figé) ──────────
+  labels?: CategoryLabels | null
+  icon?: string | null
+  imageUrl?: string | null
+  /** slug sous-cat → libellés localisés (affichage dynamique). */
+  subLabels?: Record<string, CategoryLabels>
+}
+
+/** Extrait les libellés localisés d'une ligne, ou null si aucun n'est présent. */
+function rowLabels(r: CategoryRow): CategoryLabels | null {
+  const { label_fr, label_ar, label_en } = r
+  if (label_fr == null && label_ar == null && label_en == null) return null
+  return { fr: label_fr ?? r.slug, ar: label_ar ?? r.slug, en: label_en ?? r.slug }
 }
 
 export type CategoryContext = {
@@ -66,14 +92,25 @@ export function buildTreeFromRows(rows: CategoryRow[]): CategoryNode[] {
     .filter((r) => r.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order)
   if (parents.length === 0) throw new Error('categories: aucune catégorie parente active')
-  return parents.map((p) => ({
-    slug: p.slug,
-    affiliateAllowed: p.affiliate_allowed === true, // positif, jamais ?? true
-    subcategories: active
+  return parents.map((p) => {
+    const subs = active
       .filter((s) => s.parent_id === p.id)
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((s) => s.slug),
-  }))
+    const subLabels: Record<string, CategoryLabels> = {}
+    for (const s of subs) {
+      const l = rowLabels(s)
+      if (l) subLabels[s.slug] = l
+    }
+    return {
+      slug: p.slug,
+      affiliateAllowed: p.affiliate_allowed === true, // positif, jamais ?? true
+      subcategories: subs.map((s) => s.slug),
+      labels: rowLabels(p),
+      icon: p.icon ?? null,
+      imageUrl: p.image_url ?? null,
+      subLabels,
+    }
+  })
 }
 
 /** Construit le contexte (source + prompt) à partir d'un arbre. PUR. */
@@ -104,7 +141,9 @@ export async function fetchCategoryRows(): Promise<CategoryRow[]> {
   const sb = anonReadClient()
   const { data, error } = await sb
     .from('categories')
-    .select('id,slug,parent_id,affiliate_allowed,active,sort_order')
+    .select(
+      'id,slug,parent_id,affiliate_allowed,active,sort_order,label_fr,label_ar,label_en,icon,image_url',
+    )
     .eq('active', true)
     .order('sort_order')
   if (error) throw error

@@ -10,6 +10,8 @@ import { ProductCardImage } from '@/components/wholesale/product-card-image'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { getCategoryDisplayList } from '@/lib/categories/display'
+import { CategoryShowcase, type CategoryCardData } from '@/components/shared/category-showcase'
 import type { Profile, SupplierProductPublic, SupplierType, WholesaleCatalogRow } from '@/types/database'
 
 export async function generateMetadata() {
@@ -40,7 +42,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [t, locale, profileResult, productsResult, internalResult] = await Promise.all([
+  const [t, locale, profileResult, productsResult, internalResult, cats] = await Promise.all([
     getTranslations('wholesale.marketplace'),
     getLocale(),
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
@@ -55,11 +57,17 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
       .select('id, source, name, description, from_price_mad, min_qty, stock, image, category, subcategory, origin_country, availability_type, is_featured, is_verified, created_at')
       .eq('source', 'internal')
       .order('created_at', { ascending: false }),
+    getCategoryDisplayList(),
   ])
 
   const tCommon = await getTranslations('wholesale.common')
 
   const profile = profileResult.data as Pick<Profile, 'full_name'> | null
+
+  // Build icon map from dynamic category list (fallback to static CATEGORY_ICONS if absent)
+  const catIconMap = new Map<string, string>(
+    cats.map((c) => [c.value, c.icon ?? CATEGORY_ICONS[c.value] ?? '🏷️'])
+  )
 
   type MoqTierRow = { min_quantity: number; unit_price_usd: number }
   type MarketplaceProduct = SupplierProductPublic & {
@@ -205,6 +213,38 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     filters.in_stock || filters.max_lead_time
   )
 
+  // ── ZONE 3 : nav catégorie dynamique ──────────────────────────────────────
+  // Quand un pays est sélectionné : restreindre aux catégories présentes parmi les
+  // produits filtrés par origin (avant filtres supplémentaires). On recalcule depuis
+  // allApproved filtré par origin pour ne pas dépendre des autres filtres actifs.
+  let categoryNavCards: CategoryCardData[]
+  if (filters.origin) {
+    const originLower = filters.origin.toLowerCase()
+    const originProducts = allApproved.filter((p) =>
+      (p.origin_country ?? '').toLowerCase().includes(originLower)
+    )
+    const presentCategorySlugs = new Set(originProducts.map((p) => p.category).filter(Boolean))
+    const filteredCats = cats.filter((c) => presentCategorySlugs.has(c.value))
+    categoryNavCards = filteredCats.map((c) => ({
+      value: c.value,
+      label: c.label,
+      href: `/wholesale/marketplace?origin=${encodeURIComponent(filters.origin!)}&category=${encodeURIComponent(c.value)}`,
+      image: c.image ?? '',
+      icon: c.icon,
+      isActive: filters.category === c.value,
+    }))
+  } else {
+    // Pas de pays sélectionné : toutes les catégories
+    categoryNavCards = cats.map((c) => ({
+      value: c.value,
+      label: c.label,
+      href: `/wholesale/marketplace?category=${encodeURIComponent(c.value)}`,
+      image: c.image ?? '',
+      icon: c.icon,
+      isActive: filters.category === c.value,
+    }))
+  }
+
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
@@ -232,442 +272,405 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
         {/* ── Page title ──────────────────────────────────────────────────────── */}
-        <div className="mb-5">
+        <div>
           <h1 className="text-xl font-bold text-foreground">{t('pageTitle')}</h1>
           <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
 
-        {/* ── Country source section ───────────────────────────────────────────── */}
-        <CountrySourceSection
-          activeOrigin={filters.origin}
-          activeAvailability={filters.availability}
-          totalProducts={totalProductCount}
-          verifiedSuppliers={verifiedSupplierCount}
-          localStockProducts={localStockProductCount}
-          locale={locale}
-          t={t}
-        />
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ZONE 1 — STOCK MAROC                                               */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <section aria-labelledby="zone1-title">
+          <p id="zone1-title" className="text-xs font-semibold text-gold-500 uppercase tracking-wider mb-3">
+            {t('zone1Title')}
+          </p>
+          <MoroccoHeroCard
+            activeAvailability={filters.availability}
+            totalProducts={totalProductCount}
+            verifiedSuppliers={verifiedSupplierCount}
+            localStockProducts={localStockProductCount}
+            t={t}
+          />
+        </section>
 
-        {/* ── Trust strip ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap gap-2 mb-6 pb-5 border-b border-line">
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-accent-soft text-accent-fg border border-gold-300 font-medium">
-            ✓ {t('trustBadgeVerified')}
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
-            🏭 {t('trustBadgeMorocco')}
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
-            🌍 {t('trustBadgeImport')}
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
-            🔒 {t('trustBadgeSecure')}
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
-            🛡 {t('trustBadgeProtected')}
-          </span>
-          <Link
-            href="/wholesale/marketplace?availability=import_on_demand"
-            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium hover:bg-surface transition-colors"
-          >
-            📦 {t('trustBadgeSeeImport')}
-          </Link>
-        </div>
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ZONE 2 — IMPORTER DEPUIS                                           */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <section aria-labelledby="zone2-title" className="pb-6 border-b border-line">
+          <p id="zone2-title" className="text-xs font-semibold text-gold-500 uppercase tracking-wider mb-3">
+            🌍 {t('zone2Title')}
+          </p>
+          <ImportCountryGrid activeOrigin={filters.origin} t={t} />
+        </section>
 
-        {/* ── Filters ─────────────────────────────────────────────────────────── */}
-        <MarketplaceFilters filterTitle={t('filterTitle')}>
-        <form method="GET" className="bg-surface rounded-xl border border-line p-4 shadow-premium">
-          {/* Row 1: keyword + category + subcategory + origin */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-            <div className="lg:col-span-1">
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterSearch')}</label>
-              <input
-                name="q"
-                type="text"
-                defaultValue={filters.q ?? ''}
-                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
-                placeholder={t('filterSearchPlaceholder')}
-              />
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ZONE 3 — SOURCING + FILTRE CATÉGORIE + PRODUITS                   */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <section aria-labelledby="zone3-title">
+          <p id="zone3-title" className="text-xs font-semibold text-gold-500 uppercase tracking-wider mb-3">
+            {t('zone3Title')}
+          </p>
+
+          {/* Sourcing CTA */}
+          <SourcingRequestCta whatsappPhone={whatsappPhone} />
+
+          {/* Nav catégorie en grandes cartes-images */}
+          {categoryNavCards.length > 0 && (
+            <div className="mt-5 mb-5">
+              <CategoryShowcase cards={categoryNavCards} layout="scroll" />
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterCategory')}</label>
-              <select
-                name="category"
-                defaultValue={filters.category ?? ''}
-                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
-              >
-                <option value="">{t('filterCategoryAll')}</option>
-                {PRODUCT_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
+          {/* Filtres avancés */}
+          <MarketplaceFilters filterTitle={t('filterTitle')}>
+            <form method="GET" className="bg-surface rounded-xl border border-line p-4 shadow-premium">
+              {/* Row 1: keyword + subcategory + origin + supplier type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                <div className="lg:col-span-1">
+                  <label className="block text-xs font-medium text-muted mb-1">{t('filterSearch')}</label>
+                  <input
+                    name="q"
+                    type="text"
+                    defaultValue={filters.q ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
+                    placeholder={t('filterSearchPlaceholder')}
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterSubcategory')}</label>
-              {subcategoryOptions.length > 0 ? (
-                <select
-                  name="subcategory"
-                  defaultValue={filters.subcategory ?? ''}
-                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                {/* Catégorie conservée dans le form pour permettre la soumission manuelle
+                    (la nav cartes pose ?category= via href, le form le préserve) */}
+                {filters.origin && (
+                  <input type="hidden" name="origin" value={filters.origin} />
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">{t('filterSubcategory')}</label>
+                  {subcategoryOptions.length > 0 ? (
+                    <select
+                      name="subcategory"
+                      defaultValue={filters.subcategory ?? ''}
+                      className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                    >
+                      <option value="">{t('filterSubcategoryAll')}</option>
+                      {subcategoryOptions.map((sub) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      name="subcategory"
+                      type="text"
+                      defaultValue={filters.subcategory ?? ''}
+                      className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
+                      placeholder={t('filterSubcategoryPlaceholder')}
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">{t('filterOrigin')}</label>
+                  <select
+                    name="origin"
+                    defaultValue={filters.origin ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  >
+                    <option value="">{t('filterOriginAll')}</option>
+                    {ORIGIN_COUNTRIES.map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">{t('filterSupplierType')}</label>
+                  <select
+                    name="supplier_type"
+                    defaultValue={filters.supplier_type ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  >
+                    <option value="">{t('filterSupplierAll')}</option>
+                    <option value="morocco">🇲🇦 {t('filterSupplierMorocco')}</option>
+                    <option value="international">🌍 {t('filterSupplierIntl')}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: availability + MOQ max + lead time max + in stock */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">{t('filterAvailability')}</label>
+                  <select
+                    name="availability"
+                    defaultValue={filters.availability ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  >
+                    <option value="">{t('filterAvailabilityAll')}</option>
+                    <option value="local_stock">{t('filterAvailabilityLocal')}</option>
+                    <option value="import_on_demand">{t('filterAvailabilityImport')}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">{t('filterMaxMoq')}</label>
+                  <input
+                    name="max_moq"
+                    type="number"
+                    min={1}
+                    defaultValue={filters.max_moq ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
+                    placeholder={t('filterMaxMoqPlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">{t('filterMaxLeadTime')}</label>
+                  <input
+                    name="max_lead_time"
+                    type="number"
+                    min={1}
+                    defaultValue={filters.max_lead_time ?? ''}
+                    className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
+                    placeholder={t('filterMaxLeadTimePlaceholder')}
+                  />
+                </div>
+
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      name="in_stock"
+                      type="checkbox"
+                      value="1"
+                      defaultChecked={filters.in_stock === '1'}
+                      className="rounded border-line w-4 h-4 accent-gold-500"
+                    />
+                    <span className="text-xs text-muted font-medium">{t('filterInStock')}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
                 >
-                  <option value="">{t('filterSubcategoryAll')}</option>
-                  {subcategoryOptions.map((sub) => (
-                    <option key={sub} value={sub}>{sub}</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  name="subcategory"
-                  type="text"
-                  defaultValue={filters.subcategory ?? ''}
-                  className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
-                  placeholder={t('filterSubcategoryPlaceholder')}
-                />
+                  {t('filterSubmit')}
+                </button>
+                {isFiltered && (
+                  <Link
+                    href="/wholesale/marketplace"
+                    className="px-4 py-2 border border-line text-muted text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors"
+                  >
+                    {t('filterClear')}
+                  </Link>
+                )}
+              </div>
+            </form>
+          </MarketplaceFilters>
+
+          {/* Result count */}
+          <p className="text-sm text-muted mt-4 mb-4">
+            <span className="font-semibold text-foreground">{products.length}</span>{' '}
+            {isFiltered
+              ? (products.length !== 1 ? t('resultFoundPlural') : t('resultFound'))
+              : (products.length !== 1 ? t('resultAvailablePlural') : t('resultAvailable'))
+            }{' '}
+          </p>
+
+          {/* Product grid */}
+          {products.length === 0 ? (
+            <div className="bg-surface rounded-xl border border-line p-12 text-center">
+              <p className="text-2xl mb-2">🔍</p>
+              <p className="text-sm text-muted">
+                {isFiltered ? t('emptyFiltered') : t('emptyDefault')}
+              </p>
+              {isFiltered && (
+                <Link href="/wholesale/marketplace" className="mt-3 inline-block text-sm text-gold-400 hover:underline">
+                  {t('filterClear')}
+                </Link>
               )}
             </div>
-
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterOrigin')}</label>
-              <select
-                name="origin"
-                defaultValue={filters.origin ?? ''}
-                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
-              >
-                <option value="">{t('filterOriginAll')}</option>
-                {ORIGIN_COUNTRIES.map((o) => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Row 2: supplier type + availability + MOQ max + lead time max + in stock */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterSupplierType')}</label>
-              <select
-                name="supplier_type"
-                defaultValue={filters.supplier_type ?? ''}
-                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
-              >
-                <option value="">{t('filterSupplierAll')}</option>
-                <option value="morocco">🇲🇦 {t('filterSupplierMorocco')}</option>
-                <option value="international">🌍 {t('filterSupplierIntl')}</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterAvailability')}</label>
-              <select
-                name="availability"
-                defaultValue={filters.availability ?? ''}
-                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
-              >
-                <option value="">{t('filterAvailabilityAll')}</option>
-                <option value="local_stock">{t('filterAvailabilityLocal')}</option>
-                <option value="import_on_demand">{t('filterAvailabilityImport')}</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterMaxMoq')}</label>
-              <input
-                name="max_moq"
-                type="number"
-                min={1}
-                defaultValue={filters.max_moq ?? ''}
-                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
-                placeholder={t('filterMaxMoqPlaceholder')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t('filterMaxLeadTime')}</label>
-              <input
-                name="max_lead_time"
-                type="number"
-                min={1}
-                defaultValue={filters.max_lead_time ?? ''}
-                className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400"
-                placeholder={t('filterMaxLeadTimePlaceholder')}
-              />
-            </div>
-
-            <div className="flex items-end pb-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  name="in_stock"
-                  type="checkbox"
-                  value="1"
-                  defaultChecked={filters.in_stock === '1'}
-                  className="rounded border-line w-4 h-4 accent-gold-500"
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {products.map((product) => (
+                <MarketplaceProductCard
+                  key={product.id}
+                  product={product}
+                  isFeatured={product.is_featured}
+                  isVerified={product.is_verified}
+                  locale={locale}
+                  categoryIcon={catIconMap.get(product.category) ?? CATEGORY_ICONS[product.category] ?? '🏷️'}
+                  t={t}
                 />
-                <span className="text-xs text-muted font-medium">{t('filterInStock')}</span>
-              </label>
+              ))}
             </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
-            >
-              {t('filterSubmit')}
-            </button>
-            {isFiltered && (
-              <Link
-                href="/wholesale/marketplace"
-                className="px-4 py-2 border border-line text-muted text-sm font-medium rounded-lg hover:bg-surface-2 transition-colors"
-              >
-                {t('filterClear')}
-              </Link>
-            )}
-          </div>
-        </form>
-        </MarketplaceFilters>
-
-        {/* ── Result count ─────────────────────────────────────────────────────── */}
-        <p className="text-sm text-muted mb-4">
-          <span className="font-semibold text-foreground">{products.length}</span>{' '}
-          {isFiltered
-            ? (products.length !== 1 ? t('resultFoundPlural') : t('resultFound'))
-            : (products.length !== 1 ? t('resultAvailablePlural') : t('resultAvailable'))
-          }{' '}
-        </p>
-
-        {/* ── Product grid ─────────────────────────────────────────────────────── */}
-        {products.length === 0 ? (
-          <div className="bg-surface rounded-xl border border-line p-12 text-center">
-            <p className="text-2xl mb-2">🔍</p>
-            <p className="text-sm text-muted">
-              {isFiltered ? t('emptyFiltered') : t('emptyDefault')}
-            </p>
-            {isFiltered && (
-              <Link href="/wholesale/marketplace" className="mt-3 inline-block text-sm text-gold-400 hover:underline">
-                {t('filterClear')}
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {products.map((product) => (
-              <MarketplaceProductCard
-                key={product.id}
-                product={product}
-                isFeatured={product.is_featured}
-                isVerified={product.is_verified}
-                locale={locale}
-                t={t}
-              />
-            ))}
-          </div>
-        )}
+          )}
+        </section>
       </main>
     </div>
   )
 }
 
-// ─── Country source section ───────────────────────────────────────────────────
-
-const INTERNATIONAL_SOURCES = [
-  {
-    origin: 'Turquie',
-    flag: '🇹🇷',
-    tagline: 'textile',
-    note: 'import-7-14',
-    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
-    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
-    nameCls: 'text-foreground',
-    taglineCls: 'text-muted',
-  },
-  {
-    origin: 'Chine',
-    flag: '🇨🇳',
-    tagline: 'volume',
-    note: 'maritime-20-45',
-    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
-    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
-    nameCls: 'text-foreground',
-    taglineCls: 'text-muted',
-  },
-  {
-    origin: 'Égypte',
-    flag: '🇪🇬',
-    tagline: 'coton',
-    note: 'stock-variable',
-    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
-    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
-    nameCls: 'text-foreground',
-    taglineCls: 'text-muted',
-  },
-  {
-    origin: 'Dubai',
-    flag: '🇦🇪',
-    tagline: 'hub',
-    note: 'groupee',
-    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
-    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
-    nameCls: 'text-foreground',
-    taglineCls: 'text-muted',
-  },
-] as const
-
-// Country display names & taglines per locale — non-translatable proper nouns stay as-is
-const COUNTRY_DISPLAY: Record<string, { name: string; tagline: string; note: string }> = {
-  Turquie: { name: 'Turquie', tagline: 'Textile & prêt-à-porter', note: 'Import 7–14 j · MOQ souple' },
-  Chine:   { name: 'Chine',   tagline: 'Gros volume · Prix usine', note: 'Maritime & aérien · 20–45 j' },
-  Égypte:  { name: 'Égypte',  tagline: 'Coton & textile',          note: 'Prix avantageux · Stock variable' },
-  Dubai:   { name: 'Dubai',   tagline: 'Hub logistique multi-origines', note: 'Commande groupée · Réexportation' },
-}
-
+// ─── Constante WhatsApp ───────────────────────────────────────────────────────
 const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000'
 
+// ─── ZONE 1 : Carte hero Maroc ────────────────────────────────────────────────
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CountrySourceSection({
-  activeOrigin,
+function MoroccoHeroCard({
   activeAvailability,
   totalProducts = 0,
   verifiedSuppliers = 0,
   localStockProducts = 0,
   t,
 }: {
-  activeOrigin?: string
   activeAvailability?: string
   totalProducts?: number
   verifiedSuppliers?: number
   localStockProducts?: number
-  locale: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: any
 }) {
-  const active = activeOrigin?.toLowerCase()
   const moroccoActive = activeAvailability === 'local_stock'
 
   return (
-    <section className="mb-7 pb-6 border-b border-line">
-      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        <div>
-          <h2 className="text-base font-bold text-foreground">{t('sourceTitle')}</h2>
-          <p className="text-xs text-muted mt-0.5">{t('sourceSubtitle')}</p>
-        </div>
-        {active && (
-          <Link
-            href="/wholesale/marketplace"
-            className="text-xs text-muted hover:text-foreground underline underline-offset-2 transition-colors"
-          >
-            {t('sourceViewAll')}
-          </Link>
-        )}
-      </div>
-
-      {/* ── Section 1: Morocco hero ───────────────────────────────────────── */}
-      <Link
-        href="/wholesale/marketplace?availability=local_stock"
-        className={`block rounded-2xl border-2 p-5 mb-4 transition-all duration-200 ${
-          moroccoActive
-            ? 'border-gold-400 bg-accent-soft shadow-gold'
-            : 'border-gold-300 bg-accent-soft hover:border-gold-400 hover:shadow-gold shadow-sm'
-        }`}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <span className="text-5xl leading-none flex-shrink-0">🇲🇦</span>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight">
-                  {t('moroccoHeroTitle')}
-                </h3>
-                {moroccoActive && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface text-accent-fg border border-gold-300">
-                    {t('badgeActive')}
-                  </span>
-                )}
-              </div>
-              <p className="text-muted text-sm font-medium mb-2">
-                {t('moroccoHeroSubtitle')}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
-                  ✓ {t('moroccoTagDelivery')}
+    <Link
+      href="/wholesale/marketplace?availability=local_stock"
+      className={`block rounded-2xl border-2 p-5 transition-all duration-200 ${
+        moroccoActive
+          ? 'border-gold-400 bg-accent-soft shadow-gold'
+          : 'border-gold-300 bg-accent-soft hover:border-gold-400 hover:shadow-gold shadow-sm'
+      }`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <span className="text-5xl leading-none flex-shrink-0">🇲🇦</span>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight">
+                {t('moroccoHeroTitle')}
+              </h2>
+              {moroccoActive && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface text-accent-fg border border-gold-300">
+                  {t('badgeActive')}
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
-                  ✓ {t('moroccoTagNoCustoms')}
-                </span>
-                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
-                  ✓ {t('moroccoTagPayment')}
-                </span>
-              </div>
+              )}
+            </div>
+            <p className="text-muted text-sm font-medium mb-2">
+              {t('moroccoHeroSubtitle')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
+                ✓ {t('moroccoTagDelivery')}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
+                ✓ {t('moroccoTagNoCustoms')}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
+                ✓ {t('moroccoTagPayment')}
+              </span>
+            </div>
+            {/* Un seul rappel de réassurance léger */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface text-muted border border-line font-medium">
+                📦 {t('trustTotalProducts', { count: totalProducts })}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface text-accent-fg border border-gold-300 font-medium">
+                ✓ {t('trustVerifiedSuppliers', { count: verifiedSuppliers })}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface text-muted border border-line font-medium">
+                🚚 {t('trustLocalDelivery', { count: localStockProducts })}
+              </span>
             </div>
           </div>
-          <div className="flex-shrink-0">
-            <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 transition-opacity sm:whitespace-nowrap">
-              {t('moroccoHeroCta')}
-            </span>
-          </div>
         </div>
-      </Link>
-
-      {/* ── Trust metrics strip ──────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
-          📦 {t('trustTotalProducts', { count: totalProducts })}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-accent-soft text-accent-fg border border-gold-300 font-medium">
-          ✓ {t('trustVerifiedSuppliers', { count: verifiedSuppliers })}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
-          🚚 {t('trustLocalDelivery', { count: localStockProducts })}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface-2 text-muted border border-line font-medium">
-          🔒 {t('trustSecurePayment')}
-        </span>
-      </div>
-
-      {/* ── Section 2: International grid ────────────────────────────────── */}
-      <div>
-        <p className="text-xs font-semibold text-gold-500 uppercase tracking-wider mb-3">
-          🌍 {t('intlTitle')}
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {INTERNATIONAL_SOURCES.map((src) => {
-            const isActive = active === src.origin.toLowerCase()
-            const display = COUNTRY_DISPLAY[src.origin]
-            return (
-              <Link
-                key={src.origin}
-                href={`/wholesale/marketplace?origin=${encodeURIComponent(src.origin)}`}
-                className={`rounded-xl border p-3 flex flex-col gap-1 transition-all duration-150 ${
-                  isActive ? src.activeCls : src.inactiveCls
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-2xl leading-none">{src.flag}</span>
-                  {isActive && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-surface text-foreground border border-line">
-                      {t('badgeActive')}
-                    </span>
-                  )}
-                </div>
-                <p className={`text-sm font-bold leading-tight ${src.nameCls}`}>{display.name}</p>
-                <p className={`text-[11px] leading-snug ${src.taglineCls}`}>{display.tagline}</p>
-                <p className="text-[10px] text-muted leading-snug mt-0.5">{display.note}</p>
-              </Link>
-            )
-          })}
+        <div className="flex-shrink-0">
+          <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 transition-opacity sm:whitespace-nowrap">
+            {t('moroccoHeroCta')}
+          </span>
         </div>
-
-        <SourcingRequestCta whatsappPhone={whatsappPhone} />
       </div>
-    </section>
+    </Link>
+  )
+}
+
+// ─── ZONE 2 : Grille pays import ─────────────────────────────────────────────
+
+const INTERNATIONAL_SOURCES = [
+  {
+    origin: 'Turquie',
+    flag: '🇹🇷',
+    nameKey: 'countryTurkey' as const,
+    taglineKey: 'countryTurkeyTagline' as const,
+    noteKey: 'countryTurkeyNote' as const,
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+  },
+  {
+    origin: 'Chine',
+    flag: '🇨🇳',
+    nameKey: 'countryChina' as const,
+    taglineKey: 'countryChinaTagline' as const,
+    noteKey: 'countryChinaNote' as const,
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+  },
+  {
+    origin: 'Égypte',
+    flag: '🇪🇬',
+    nameKey: 'countryEgypt' as const,
+    taglineKey: 'countryEgyptTagline' as const,
+    noteKey: 'countryEgyptNote' as const,
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+  },
+  {
+    origin: 'Dubai',
+    flag: '🇦🇪',
+    nameKey: 'countryDubai' as const,
+    taglineKey: 'countryDubaiTagline' as const,
+    noteKey: 'countryDubaiNote' as const,
+    activeCls: 'border-gold-400 bg-accent-soft ring-2 ring-gold-300',
+    inactiveCls: 'border-line bg-surface hover:border-gold-300 hover:bg-accent-soft',
+  },
+] as const
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ImportCountryGrid({ activeOrigin, t }: { activeOrigin?: string; t: any }) {
+  const active = activeOrigin?.toLowerCase()
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {INTERNATIONAL_SOURCES.map((src) => {
+        const isActive = active === src.origin.toLowerCase()
+        return (
+          <Link
+            key={src.origin}
+            href={`/wholesale/marketplace?origin=${encodeURIComponent(src.origin)}`}
+            className={`rounded-xl border p-3 flex flex-col gap-1 transition-all duration-150 ${
+              isActive ? src.activeCls : src.inactiveCls
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl leading-none">{src.flag}</span>
+              {isActive && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-surface text-foreground border border-line">
+                  {t('badgeActive')}
+                </span>
+              )}
+            </div>
+            <p className="text-sm font-bold leading-tight text-foreground">{t(src.nameKey)}</p>
+            <p className="text-[11px] leading-snug text-muted">{t(src.taglineKey)}</p>
+            <p className="text-[10px] text-muted leading-snug mt-0.5">{t(src.noteKey)}</p>
+          </Link>
+        )
+      })}
+    </div>
   )
 }
 
 // ─── Marketplace product card ─────────────────────────────────────────────────
-
-// CATEGORY_ICONS importé depuis taxonomy.ts
 
 type MoqTierRow = { min_quantity: number; unit_price_usd: number }
 
@@ -676,6 +679,7 @@ function MarketplaceProductCard({
   isFeatured = false,
   isVerified = false,
   locale,
+  categoryIcon,
   t,
 }: {
   product: SupplierProductPublic & {
@@ -693,11 +697,12 @@ function MarketplaceProductCard({
   isFeatured?: boolean
   isVerified?: boolean
   locale: string
+  /** Icône catégorie résolue côté serveur depuis la map dynamique. */
+  categoryIcon: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: any
 }) {
   const displayName = product.public_name || product.product_name
-  const categoryIcon = CATEGORY_ICONS[product.category] ?? '🏷️'
   const isMorocco = product.supplier_type === 'morocco'
   const isLocalStock = product.availability_type === 'local_stock'
   // CTA d'affichage (A1) — décidé UNIQUEMENT sur origine + stock fournisseur (Maroc

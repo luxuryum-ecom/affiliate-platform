@@ -6,7 +6,8 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceFilters } from '@/components/wholesale/marketplace-filters'
 import { WholesaleCatalogCard } from '@/components/wholesale/wholesale-catalog-card'
 import { formatMAD } from '@/lib/utils'
-import { PRODUCT_CATEGORIES, getSubcategories, ORIGIN_COUNTRIES, CATEGORY_ICONS, CATEGORY_IMAGES, resolveCategoryLabel } from '@/lib/taxonomy'
+import { ORIGIN_COUNTRIES } from '@/lib/taxonomy'
+import { getCategoryDisplayList, subcategoriesOf } from '@/lib/categories/display'
 import { CategoryRail, type CategoryChip } from '@/components/shared/category-rail'
 import { CategoryShowcase, type CategoryCardData } from '@/components/shared/category-showcase'
 import type { WholesaleCatalogRow, WholesaleCartItem } from '@/types/database'
@@ -39,10 +40,11 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [t, tc, tCat, profileResult, catalogResult, cartResult] = await Promise.all([
+  const [t, tc, tCat, cats, profileResult, catalogResult, cartResult] = await Promise.all([
     getTranslations('wholesale.products'),
     getTranslations('wholesale.common'),
     getTranslations('categories'),
+    getCategoryDisplayList(),
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase
       .from('wholesale_catalog_read')
@@ -114,34 +116,37 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
     filters.in_stock
   )
 
-  const subcategoryOptions = filters.category ? getSubcategories(filters.category) : []
+  const subcategoryOptions = subcategoriesOf(cats, filters.category)
 
   // Construction des chips CategoryRail côté serveur — aucune fonction passée au composant.
   const allHref = filters.tab ? `/wholesale/products?tab=${filters.tab}` : '/wholesale/products'
-  const chips: CategoryChip[] = PRODUCT_CATEGORIES.map((cat) => {
+  const chips: CategoryChip[] = cats.map((cat) => {
     const sp = new URLSearchParams()
     if (filters.tab) sp.set('tab', filters.tab)
-    sp.set('category', cat)
+    sp.set('category', cat.value)
     if (filters.q) sp.set('q', filters.q)
     return {
-      value: cat,
-      label: resolveCategoryLabel(cat, tCat),
-      icon: CATEGORY_ICONS[cat] ?? '📦',
-      isActive: filters.category === cat,
+      value: cat.value,
+      label: cat.label,
+      icon: cat.icon,
+      isActive: filters.category === cat.value,
       href: `/wholesale/products?${sp.toString()}`,
     }
   })
 
   // Grandes cartes-rayons (navigation visuelle, EN HAUT) — mêmes liens que les chips
   // (onglet + recherche préservés, ciblent le ?category= déjà fonctionnel du catalogue).
-  const categoryCards: CategoryCardData[] = chips.map((chip) => ({
-    value: chip.value,
-    label: chip.label,
-    href: chip.href,
-    image: CATEGORY_IMAGES[chip.value] ?? '',
-    icon: chip.icon,
-    isActive: chip.isActive,
-  }))
+  const categoryCards: CategoryCardData[] = chips.map((chip) => {
+    const cat = cats.find((c) => c.value === chip.value)
+    return {
+      value: chip.value,
+      label: chip.label,
+      href: chip.href,
+      image: cat?.image ?? '',
+      icon: chip.icon,
+      isActive: chip.isActive,
+    }
+  })
 
   // Helper: build a tab href preserving current filters
   function tabHref(tab: string) {
@@ -281,9 +286,9 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
                   className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-gold-400"
                 >
                   <option value="">{t('filterCategoryAll')}</option>
-                  {PRODUCT_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
+                  {cats.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
                     </option>
                   ))}
                 </select>
@@ -301,8 +306,8 @@ export default async function WholesaleProductsPage({ searchParams }: PageProps)
                   >
                     <option value="">{t('filterSubcategoryAll')}</option>
                     {subcategoryOptions.map((sub) => (
-                      <option key={sub} value={sub}>
-                        {sub}
+                      <option key={sub.value} value={sub.value}>
+                        {sub.label}
                       </option>
                     ))}
                   </select>

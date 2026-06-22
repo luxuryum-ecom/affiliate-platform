@@ -7,6 +7,7 @@ import { SubmitProductForm } from '@/components/supplier/submit-product-form'
 import { CountrySetupRequest } from '@/components/supplier/country-setup-request'
 import { getProductLimitStatus } from '@/app/actions/premium'
 import { resolveSupplierCurrency } from '@/lib/supplier-pricing'
+import { getCategoryDisplayList } from '@/lib/categories/display'
 import type { Profile } from '@/types/database'
 
 export async function generateMetadata() {
@@ -19,10 +20,11 @@ export default async function SupplierProductNewPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileResult, limitStatus, currency] = await Promise.all([
+  const [profileResult, limitStatus, currency, categories] = await Promise.all([
     supabase.from('profiles').select('full_name, country_setup_requested').eq('id', user.id).single(),
     getProductLimitStatus(user.id),
     resolveSupplierCurrency(supabase, user.id),
+    getCategoryDisplayList(),
   ])
 
   const profile = profileResult.data as Pick<Profile, 'full_name' | 'country_setup_requested'> | null
@@ -87,7 +89,7 @@ export default async function SupplierProductNewPage() {
               {currency === null ? (
                 <CountrySetupRequest alreadyRequested={profile?.country_setup_requested ?? false} />
               ) : (
-                <SubmitProductForm currency={currency} />
+                <SubmitProductForm currency={currency} categories={categories} />
               )}
             </div>
           </>

@@ -5,6 +5,7 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTariffs } from '@/app/actions/tariffs'
 import { getRatesMap } from '@/lib/fx'
 import { getTranslations } from 'next-intl/server'
+import { getCategoryDisplayList } from '@/lib/categories/display'
 import type { Product } from '@/types/database'
 
 interface EditProductPageProps {
@@ -31,11 +32,12 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   const tc = await getTranslations('admin.common')
   const tp = await getTranslations('admin.products')
 
-  const [profileResult, productResult, tariffs, rates] = await Promise.all([
+  const [profileResult, productResult, tariffs, rates, categories] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('products').select('*').eq('id', id).single(),
     getTariffs(),
     getRatesMap(supabase),
+    getCategoryDisplayList(),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
@@ -69,7 +71,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         </div>
 
         <div className="bg-surface rounded-xl border border-line p-6">
-          <ProductForm product={product} tariffs={tariffs} rates={rates} />
+          <ProductForm product={product} tariffs={tariffs} rates={rates} categories={categories} />
         </div>
       </main>
     </div>
