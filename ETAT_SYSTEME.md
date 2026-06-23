@@ -212,6 +212,18 @@
 
 ---
 
+## 📦 WMS-1 — STOCK CENTRAL UNIFIÉ — *(branche `feat/wms-1-stock-central` PRÊTE, NON MERGÉE ; OPTION A)*
+> Construit 2026-06-23. **Socle WMS** (prérequis WMS-2..5). **AFFICHAGE/STOCK uniquement — ZÉRO impact argent** (@finance GO). **MERGE + `db push` prod EN ATTENTE GO ABDOU.**
+
+- **CARTO** : l'existant couvrait déjà compteur central `products.stock_count` (`001:35`), décrément **atomique** `reserve_stock` (`004:70`, `FOR UPDATE`), réintégration `restore_stock`. **Manquait** : ledger mouvements append-only, attribution canal, capacité stock. `supplier_products.stock_quantity` = stock fournisseur déclaré (jamais décrémenté par les ventes).
+- **DÉCISION MÉTIER = OPTION A** (Abdou) : **on ne refuse JAMAIS une vente** ; `stock_count` peut passer négatif (backorder tracé) ; chaque mouvement journalisé + attribué au canal ; **alerte admin si oversell**. Aligne le code sur la règle gravée L201-211 (supprime le blocage latent `insufficient_stock` à la confirmation). **Unification colonne écartée** (non nécessaire).
+- **LIVRÉ** (migrations **092/093/094**) : table append-only `stock_movements` (RLS deny par défaut, SELECT admin/`has_capability('manage_stock')`, **aucune policy INSERT/UPDATE/DELETE** + trigger immutable → insert seulement via DEFINER) ; `record_stock_movement` (REVOKE authenticated = pas de forge ledger) ; `reserve_stock`/`restore_stock` étendus (canal/order/actor, ne refusent plus, journalisent, oversell→`notifications event='stock_oversell'` sans PII) ; `confirm_cod_order` (088) + `transition_wholesale_order_status` (065) **ne RAISE plus** `insufficient_stock` (UPDATE statut/financier **inchangé**) ; `adjust_stock_manual` gardé `manage_stock`, actor=`auth.uid()` ; capacité `manage_stock` + volet `stock` câblés. Canal **`ecom_perso` provisionné (enum) NON câblé = WMS-2**.
+- **AUDITS** : **@finance GO** (CREATE OR REPLACE 088/065 byte-identiques hors retrait du RAISE ; aucun calcul argent ne lit `stock_count` ; idempotence préservée ; ledger financier distinct). **@security GO zéro P0** (P1-A forge ledger, P1-B alerte oversell affilié morte par FK, P2-B actor falsifiable → **corrigés**).
+- **@tester 7/7 PASS runtime** (Supabase LOCAL, valeurs réelles) : décrément (10→7) ; **anti-race no-lost-update** (5, 2× concurrent ×3 → final **-1 exact**, 2 mouvements dont 1 `oversell`) ; never-refuse (2, qty5 → -3 sans exception) ; alerte oversell **affilié** (`order_id` colonne NULL + uuid dans `payload`) **ET gros** (`order_id` colonne rempli, FK OK) ; réintégration ; forge `record_stock_movement` via anon **bloquée 401** ; actor non falsifiable. **4 checks verts** (tsc 0 / build / vitest 305 / smoke 20/20).
+- **REPORTÉ** : (1) incohérence Option A — pré-checks de **création** de commande (`orders.ts:93/354`, `cart.ts:60/135/164`) refusent encore si `stock_count < quantity` → à arbitrer (relâcher partout vs avertissement) ; (2) régénérer `supabase-generated.ts` après migration prod ; (3) WMS-2 (synchro Egrow) = câblage réel du canal `ecom_perso`.
+
+---
+
 ## 🔔 NOTIFICATIONS — cas « Deliveroo » fournisseur (TRANCHÉ)
 
 | Feature | Statut | Commit / Branche | Preuve (fichier clé) |

@@ -500,7 +500,7 @@ export async function updateOrderStatus(
   // ── Fetch current state ───────────────────────────────────────────────────
   const { data: order } = (await supabase
     .from('orders')
-    .select('status, quantity, product_id, cod_expected')
+    .select('status, quantity, product_id, cod_expected, affiliate_id')
     .eq('id', orderId)
     .single()) as {
     data: {
@@ -508,6 +508,7 @@ export async function updateOrderStatus(
       quantity: number
       product_id: string
       cod_expected: number | null
+      affiliate_id: string | null
     } | null
     error: unknown
   }
@@ -532,18 +533,32 @@ export async function updateOrderStatus(
   const needsReserve     = newStatus === 'confirmed' && prev === 'pending_confirmation'
   const needsRestore     = ['cancelled', 'returned'].includes(newStatus) && wasStockReserved
 
+  // WMS-1 OPTION A : reserve/restore étendu, canal discriminé, never-refuse.
+  // Les signatures RPC ont été étendues en mig 093 (p_channel, p_order_id, etc.).
+  // On ne vérifie plus la valeur de retour de reserve_stock (solde peut être négatif).
+  const stockChannel = order.affiliate_id ? 'affiliate' : 'ecom_perso'
+
   if (needsReserve) {
-    const { data: reserved } = (await supabase.rpc('reserve_stock', {
-      p_product_id: order.product_id,
-      p_qty: order.quantity,
-    })) as { data: boolean; error: unknown }
-    if (!reserved) return fail('Stock insuffisant pour confirmer la commande.')
+    await supabase.rpc('reserve_stock', {
+      p_product_id:  order.product_id,
+      p_qty:         order.quantity,
+      p_channel:     stockChannel,
+      p_order_id:    orderId,
+      p_order_type:  'affiliate',
+      p_actor:       userId,
+    })
+    // Ne pas vérifier le retour : OPTION A = on ne refuse jamais pour stock.
   }
 
   if (needsRestore) {
     await supabase.rpc('restore_stock', {
-      p_product_id: order.product_id,
-      p_qty: order.quantity,
+      p_product_id:  order.product_id,
+      p_qty:         order.quantity,
+      p_channel:     stockChannel,
+      p_reason:      'restore',
+      p_order_id:    orderId,
+      p_order_type:  'affiliate',
+      p_actor:       userId,
     })
   }
 
