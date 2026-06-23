@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
 import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: PageProps) {
   const t = await getTranslations('affiliate.products')
   const supabase = await createClient()
   const { data } = await supabase
-    .from('products')
+    .from('products_catalog_read') // dette 073 — vue redacted (nom seul, zéro coût/marge)
     .select('name')
     .eq('id', id)
     .single() as { data: { name: string } | null; error: unknown }
@@ -47,8 +48,11 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
     .eq('id', user.id)
     .single() as { data: { full_name: string } | null; error: unknown }
 
+  // DETTE 073 — coût/marge lus via service_role server-side UNIQUEMENT (calcul commission
+  // affichée) ; seul le résultat est rendu, jamais le coût/marge. Calcul INCHANGÉ.
+  const admin = createAdminClient()
   const [productRes, customPriceRes, clicksRes, ordersRes, commissionsRes] = await Promise.all([
-    supabase
+    admin
       .from('products')
       .select('*')
       .eq('id', id)

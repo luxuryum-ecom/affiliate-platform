@@ -34,7 +34,7 @@ export default async function NewAffiliateOrderPage() {
   const [profileRes, productsRes, allCities] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user!.id).single(),
     supabase
-      .from('products')
+      .from('products_catalog_read') // dette 073 — vue redacted (zéro coût/marge)
       .select('id, name, sell_price, commission_amount, delivery_fee_mad, confirmation_fee_mad, packaging_fee_mad')
       .eq('active', true)
       .eq('approval_status', 'approved')

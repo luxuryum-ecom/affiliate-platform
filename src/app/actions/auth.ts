@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { isSupplierCountryCode } from '@/lib/supplier-countries'
+import { notifyAdminNewSignup } from '@/lib/notifications/new-signup'
 import type { Profile } from '@/types/database'
 
 // Format E.164 : « + » suivi d'un indicatif (1er chiffre non nul) puis 6 à 14
@@ -84,6 +85,10 @@ export async function signUp(
     return { error: error.message }
   }
 
+  // PARTIE 3 — notif admin best-effort : un nouvel inscrit (pending) attend validation
+  // dans /admin/users. N'altère jamais le signup (try/catch interne). Zéro PII sensible.
+  await notifyAdminNewSignup({ role, fullName: full_name })
+
   redirect('/pending')
 }
 
@@ -140,4 +145,56 @@ export async function signOut(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect('/login')
+}
+
+export type PasswordResetState = { sent: boolean; error: string | null }
+
+export async function requestPasswordReset(
+  _prevState: PasswordResetState,
+  formData: FormData
+): Promise<PasswordResetState> {
+  const email = (formData.get('email') as string)?.trim()
+
+  if (!email) {
+    return { sent: false, error: 'Email requis.' }
+  }
+
+  const supabase = await createClient()
+
+  // Best-effort : on appelle resetPasswordForEmail même si le compte n'existe pas.
+  // Supabase ne retourne pas d'erreur dans ce cas — anti-énumération de comptes.
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
+  })
+
+  // Toujours retourner sent=true, quelle que soit l'existence du compte.
+  return { sent: true, error: null }
+}
+
+export type UpdatePasswordState = { success: boolean; error: string | null }
+
+export async function updatePassword(
+  _prevState: UpdatePasswordState,
+  formData: FormData
+): Promise<UpdatePasswordState> {
+  const password = formData.get('password') as string
+  const confirm = formData.get('confirm') as string
+
+  if (!password || password.length < 8) {
+    return { success: false, error: 'Le mot de passe doit contenir au moins 8 caractères.' }
+  }
+
+  if (password !== confirm) {
+    return { success: false, error: 'Les mots de passe ne correspondent pas.' }
+  }
+
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  redirect('/login?reset=1')
 }

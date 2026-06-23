@@ -31,9 +31,17 @@ export function LoginForm() {
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-muted mb-1">
-          {t('passwordLabel')}
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-muted">
+            {t('passwordLabel')}
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs text-gold-400 underline underline-offset-2 hover:opacity-80"
+          >
+            {tl('forgotLink')}
+          </Link>
+        </div>
         <input
           id="password"
           name="password"

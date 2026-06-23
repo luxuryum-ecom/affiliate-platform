@@ -9,9 +9,9 @@
  * 4. Gate capability (retrait → redirection)
  * 5. i18n + mobile RTL (AR) + EN
  *
- * Comptes :
- * - agent-demo@affipartner.ma / AgentTest2026!
- * - admin@affipartner.ma      / AdminTest2026!
+ * Comptes (identifiants via process.env — voir .env.local, règle #7) :
+ * - SMOKE_AGENT_EMAIL / SMOKE_AGENT_PASSWORD
+ * - SMOKE_ADMIN_EMAIL / SMOKE_ADMIN_PASSWORD
  *
  * Données de test :
  * - CN : "Lunettes test-CN" (target_country_code=CN)
@@ -30,10 +30,12 @@ const PROOFS_DIR = path.resolve(
   '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-proofs/sourcing-affectation',
 )
 
-const AGENT_EMAIL = 'agent-demo@affipartner.ma'
-const AGENT_PASSWORD = 'AgentTest2026!'
-const ADMIN_EMAIL = 'admin@affipartner.ma'
-const ADMIN_PASSWORD = 'AdminTest2026!'
+// Secrets de test via process.env (règle #7 — jamais de mot de passe en dur).
+// Renseigner SMOKE_AGENT_PASSWORD / SMOKE_ADMIN_PASSWORD dans .env.local.
+const AGENT_EMAIL = process.env.SMOKE_AGENT_EMAIL ?? 'agent-demo@affipartner.ma'
+const AGENT_PASSWORD = process.env.SMOKE_AGENT_PASSWORD ?? ''
+const ADMIN_EMAIL = process.env.SMOKE_ADMIN_EMAIL ?? 'admin@affipartner.ma'
+const ADMIN_PASSWORD = process.env.SMOKE_ADMIN_PASSWORD ?? ''
 const AGENT_ID = 'cebd5f07-55a7-44ee-9638-43348d4de75c'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://owvtfzxvirttrbcsiveg.supabase.co'

@@ -67,7 +67,7 @@ export async function saveAffiliateProductPrice(
   const priceNum = Number(price)
 
   const { data: product } = (await supabase
-    .from('products')
+    .from('products_catalog_read') // dette 073 — vue redacted (zéro coût/marge)
     .select('sell_price, affiliate_enabled, active, approval_status')
     .eq('id', productId)
     .single()) as {

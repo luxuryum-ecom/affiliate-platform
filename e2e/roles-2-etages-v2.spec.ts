@@ -8,7 +8,7 @@
  *   - COD (affiliate_id IS NULL)      : COD_ORDER_ID (créée en setup)
  *   - AFFILIÉ (affiliate_id NOT NULL) : AFFILIATE_ORDER_ID = 88c25be9...
  *
- * AGENT TEST : agent-demo@affipartner.ma / AgentTest2026!
+ * AGENT TEST : agent-demo@affipartner.ma (mot de passe via SMOKE_AGENT_PASSWORD, règle #7)
  *   AGENT_ID = cebd5f07-55a7-44ee-9638-43348d4de75c
  *   État initial : manage_country_sourcing UNIQUEMENT
  *   Capacités accordées/retirées par chaque scénario.
@@ -35,7 +35,7 @@ const ADMIN_EMAIL    = process.env.SMOKE_ADMIN_EMAIL    ?? ''
 const ADMIN_PASSWORD = process.env.SMOKE_ADMIN_PASSWORD ?? ''
 
 const AGENT_EMAIL    = 'agent-demo@affipartner.ma'
-const AGENT_PASSWORD = 'AgentTest2026!'
+const AGENT_PASSWORD = process.env.SMOKE_AGENT_PASSWORD ?? '' // règle #7 — via env
 const AGENT_ID       = 'cebd5f07-55a7-44ee-9638-43348d4de75c'
 
 // Commande affiliée (affiliate_id NOT NULL) — test EXISTANTE

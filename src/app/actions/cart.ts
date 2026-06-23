@@ -37,7 +37,7 @@ export async function addToCart(
     return { error: 'Quantité invalide.', success: false }
 
   const { data: product } = (await supabase
-    .from('products')
+    .from('products_catalog_read') // dette 073 — vue redacted (zéro coût/marge)
     .select('stock_count, availability_type')
     .eq('id', productId)
     .eq('active', true)

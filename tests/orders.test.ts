@@ -57,10 +57,18 @@ describe('createAffiliateOrder — D4 blocage commission négative', () => {
         onInsert: (table) => inserted.push(table),
         resolve: (table) => {
           if (table === 'profiles') return { data: { role: 'affiliate', status: 'approved' }, error: null }
-          if (table === 'products') return { data: product({ sell_price: 100, factory_cost_mad: 100 }), error: null }
           if (table === 'orders') return { data: { id: 'o1' }, error: null }
           return { data: null, error: null }
         },
+      }),
+    )
+    // dette 073 — le coût/marge est lu via service_role (createAdminClient)
+    mocked(createAdminClient).mockReturnValue(
+      makeClient({
+        resolve: (table) =>
+          table === 'products'
+            ? { data: product({ sell_price: 100, factory_cost_mad: 100 }), error: null }
+            : { data: null, error: null },
       }),
     )
     // commission = 100 - 100 - 0 - 35 - 10 - 10 = -55
@@ -77,10 +85,17 @@ describe('createAffiliateOrder — D4 blocage commission négative', () => {
         getUser: () => ({ data: { user: { id: 'aff1' } } }),
         resolve: (table) => {
           if (table === 'profiles') return { data: { role: 'affiliate', status: 'approved' }, error: null }
-          if (table === 'products') return { data: product({ sell_price: 100, factory_cost_mad: 30 }), error: null }
           if (table === 'orders') return { data: { id: 'o1' }, error: null }
           return { data: null, error: null }
         },
+      }),
+    )
+    mocked(createAdminClient).mockReturnValue(
+      makeClient({
+        resolve: (table) =>
+          table === 'products'
+            ? { data: product({ sell_price: 100, factory_cost_mad: 30 }), error: null }
+            : { data: null, error: null },
       }),
     )
     // commission = 100 - 30 - 0 - 35 - 10 - 10 = 15 > 0
@@ -102,11 +117,18 @@ describe('createAffiliateOrder — garde factory_cost_mad null (fail closed)', (
         onInsert: (table) => inserted.push(table),
         resolve: (table) => {
           if (table === 'profiles') return { data: { role: 'affiliate', status: 'approved' }, error: null }
-          // factory_cost_mad absent → null
-          if (table === 'products') return { data: product({ sell_price: 200, factory_cost_mad: null }), error: null }
           if (table === 'orders') return { data: { id: 'o1' }, error: null }
           return { data: null, error: null }
         },
+      }),
+    )
+    // factory_cost_mad absent → null, lu via service_role
+    mocked(createAdminClient).mockReturnValue(
+      makeClient({
+        resolve: (table) =>
+          table === 'products'
+            ? { data: product({ sell_price: 200, factory_cost_mad: null }), error: null }
+            : { data: null, error: null },
       }),
     )
     const res = await createAffiliateOrder(emptyOrderState, fd({ product_id: 'p1', quantity: '1', sell_price: '200', order_source: 'manual', ...customer }))

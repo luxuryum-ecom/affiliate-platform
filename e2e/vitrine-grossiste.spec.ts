@@ -26,13 +26,15 @@ test.describe.configure({ mode: 'serial' })
 const BASE_URL   = 'http://localhost:3000'
 const PROOFS_DIR = '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-proofs/vitrine-grossiste'
 
-// Comptes test (mots de passe jetables — comptes de test mozouna.test, aucune valeur financière ; cf. scripts/seed-niche-test-buyers.mjs)
+// Comptes test JETABLES (mozouna.test, créés/supprimés par scripts/seed-niche-test-buyers.mjs).
+// Mot de passe via NICHE_TEST_PASSWORD (même fallback que le seed pour rester synchronisés ; règle #7).
+const NICHE_TEST_PASSWORD = process.env.NICHE_TEST_PASSWORD ?? 'NicheTest2026!'
 const BUYER_A_EMAIL    = 'niche-test-a@mozouna.test'
-const BUYER_A_PASSWORD = 'NicheTest2026!'
+const BUYER_A_PASSWORD = NICHE_TEST_PASSWORD
 const BUYER_A_NICHE    = 'Textile'
 
 const BUYER_B_EMAIL    = 'niche-test-b@mozouna.test'
-const BUYER_B_PASSWORD = 'NicheTest2026!'
+const BUYER_B_PASSWORD = NICHE_TEST_PASSWORD
 const BUYER_B_NICHE    = 'Cosmétique & hygiène'
 
 // Cold-start : aucun historique
