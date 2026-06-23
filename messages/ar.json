@@ -3403,6 +3403,80 @@
       "errorFallback": "حدث خطأ.",
       "suggestionsLink": "اقتراحات الذكاء الاصطناعي",
       "suggestionsBadgeLabel": "{count} معلّق"
+    },
+    "permissionsV2": {
+      "metaTitle": "أذونات الموظفين v2 — الإدارة",
+      "pageTitle": "لوحة الأذونات",
+      "subtitle": "امنح أو اسحب الصلاحيات القابلة للتخصيص من الوكلاء الداخليين المعتمدين، مُجمَّعةً حسب القطاع المهني.",
+      "sectionStaff": "الوكلاء المعتمدون",
+      "emptyStaff": "لا يوجد وكلاء معتمدون",
+      "emptyStaffDesc": "اعتمد حسابات الوكلاء من إدارة المستخدمين لتخصيص الصلاحيات.",
+      "sectionAudit": "سجل المراجعة",
+      "emptyAudit": "لا توجد إجراءات مسجّلة",
+      "emptyAuditDesc": "ستظهر هنا عمليات منح الأذونات وسحبها.",
+      "supervisorLabel": "مشرف",
+      "fineTasks": "المهام التفصيلية",
+      "grant": "تفعيل",
+      "revoke": "إلغاء التفعيل",
+      "pending": "جارٍ التنفيذ…",
+      "successGrant": "تم منح الصلاحية.",
+      "successRevoke": "تم سحب الصلاحية.",
+      "errorFallback": "حدث خطأ.",
+      "statusActive": "مفعَّل",
+      "statusInactive": "غير مفعَّل",
+      "auditGranted": "منح",
+      "auditRevoked": "سحب",
+      "auditSentence": "{actor} {action} «{capability}» إلى {user}",
+      "volet": {
+        "commandes": "الطلبات",
+        "sourcing": "التوريد حسب الدولة",
+        "categories": "الفئات"
+      },
+      "cap": {
+        "confirm_cod_orders": {
+          "label": "تأكيد طلبات الدفع عند الاستلام",
+          "desc": "يتيح تأكيد طلبات الدفع عند الاستلام (COD) المعلَّقة."
+        },
+        "confirm_affiliate_orders": {
+          "label": "تأكيد طلبات التسويق بالعمولة",
+          "desc": "يتيح تأكيد الطلبات الواردة عبر قناة التسويق بالعمولة."
+        },
+        "confirm_wholesale_orders": {
+          "label": "تأكيد طلبات الجملة",
+          "desc": "يتيح تأكيد الطلبات الواردة عبر قناة البيع بالجملة (B2B)."
+        },
+        "manage_country_sourcing": {
+          "label": "إدارة التوريد حسب الدولة",
+          "desc": "يمنح الوصول إلى طلبات التوريد مُفلتَرةً حسب الدول المعيَّنة للوكيل."
+        },
+        "validate_categories": {
+          "label": "التحقق من الفئات",
+          "desc": "يتيح إنشاء الفئات وتنظيمها في كتالوج المنتجات."
+        }
+      }
+    },
+    "ordersConfirm": {
+      "metaTitle": "تأكيد الطلبات — المشرف",
+      "pageTitle": "تأكيد الطلبات",
+      "subtitle": "الطلبات المنتظرة للتأكيد التي لديك صلاحية معالجتها.",
+      "emptyCod": "لا توجد طلبات COD منتظرة للتأكيد.",
+      "emptyAffiliate": "لا توجد طلبات شركاء منتظرة للتأكيد.",
+      "emptyWholesale": "لا توجد طلبات الجملة منتظرة للتأكيد.",
+      "sectionCod": "طلبات COD",
+      "sectionAffiliate": "طلبات الشركاء",
+      "sectionWholesale": "طلبات الجملة",
+      "colRef": "المرجع",
+      "colCustomer": "العميل",
+      "colProduct": "المنتج",
+      "colCity": "المدينة",
+      "colDate": "التاريخ",
+      "colStatus": "الحالة",
+      "btnConfirm": "تأكيد",
+      "confirming": "جارٍ...",
+      "successConfirm": "تم تأكيد الطلب.",
+      "errorStockInsufficient": "المخزون غير كافٍ.",
+      "errorGeneric": "حدث خطأ أثناء التأكيد.",
+      "accessDenied": "ليس لديك الصلاحيات اللازمة للوصول إلى هذه الصفحة."
     }
   },
   "notifications": {

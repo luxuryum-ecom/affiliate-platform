@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import { requireAdmin } from '@/app/actions/_guards'
 import { getAgentCountryAssignments } from '@/app/actions/agent-countries'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
-import { CapabilityToggle } from './capability-toggle'
-import type { CapabilityToggleLabels } from './capability-toggle'
+import { CapabilitySwitch } from '../../_components/capability-switch'
+import type { SwitchLabels } from '../../_components/capability-switch'
 import { CountryCheckboxes } from './country-checkboxes'
 
 export async function generateMetadata() {
@@ -22,14 +22,13 @@ export default async function AgentSourcingPage() {
     getTranslations('admin.common'),
   ])
 
-  const toggleLabels: CapabilityToggleLabels = {
-    grantLabel:     t('grant'),
-    revokeLabel:    t('revoke'),
-    pendingLabel:   t('pending'),
-    successGrant:   t('successGrant'),
-    successRevoke:  t('successRevoke'),
-    errorFallback:  t('errorFallback'),
-    statusActive:   t('statusActive'),
+  // Labels toggle résolus côté serveur — strings uniquement vers Client Component
+  const switchLabels: SwitchLabels = {
+    grantLabel: t('grant'),
+    revokeLabel: t('revoke'),
+    pendingLabel: t('pending'),
+    errorFallback: t('errorFallback'),
+    statusActive: t('statusActive'),
     statusInactive: t('statusInactive'),
   }
 
@@ -93,10 +92,13 @@ export default async function AgentSourcingPage() {
                       <p className="mb-1.5 text-xs font-medium text-muted">
                         {t('capabilityLabel')}
                       </p>
-                      <CapabilityToggle
+                      {/* Toggle factorisé — kind='capability', manage_country_sourcing */}
+                      <CapabilitySwitch
+                        kind="capability"
                         userId={agent.id}
+                        capabilityOrVolet="manage_country_sourcing"
                         currentlyEnabled={agent.has_capability}
-                        labels={toggleLabels}
+                        labels={switchLabels}
                       />
                     </div>
 

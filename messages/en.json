@@ -3403,6 +3403,80 @@
       "errorFallback": "An error occurred.",
       "suggestionsLink": "AI Suggestions",
       "suggestionsBadgeLabel": "{count} pending"
+    },
+    "permissionsV2": {
+      "metaTitle": "Staff permissions v2 — Administration",
+      "pageTitle": "Permissions panel",
+      "subtitle": "Grant or revoke granular capabilities to approved internal agents, by business volet.",
+      "sectionStaff": "Approved agents",
+      "emptyStaff": "No approved agents",
+      "emptyStaffDesc": "Approve agent accounts from user management to assign capabilities.",
+      "sectionAudit": "Audit log",
+      "emptyAudit": "No actions recorded",
+      "emptyAuditDesc": "Permission grants and revocations will appear here.",
+      "supervisorLabel": "Supervisor",
+      "fineTasks": "Fine-grained tasks",
+      "grant": "Enable",
+      "revoke": "Disable",
+      "pending": "Processing…",
+      "successGrant": "Capability granted.",
+      "successRevoke": "Capability revoked.",
+      "errorFallback": "An error occurred.",
+      "statusActive": "Enabled",
+      "statusInactive": "Disabled",
+      "auditGranted": "granted",
+      "auditRevoked": "revoked",
+      "auditSentence": "{actor} {action} \"{capability}\" to {user}",
+      "volet": {
+        "commandes": "Orders",
+        "sourcing": "Country sourcing",
+        "categories": "Categories"
+      },
+      "cap": {
+        "confirm_cod_orders": {
+          "label": "Confirm COD orders",
+          "desc": "Allows confirming pending Cash On Delivery (COD) orders."
+        },
+        "confirm_affiliate_orders": {
+          "label": "Confirm affiliate orders",
+          "desc": "Allows confirming orders from the affiliate channel."
+        },
+        "confirm_wholesale_orders": {
+          "label": "Confirm wholesale orders",
+          "desc": "Allows confirming orders from the B2B/wholesale channel."
+        },
+        "manage_country_sourcing": {
+          "label": "Manage country sourcing",
+          "desc": "Grants access to sourcing requests filtered by the agent's assigned countries."
+        },
+        "validate_categories": {
+          "label": "Validate categories",
+          "desc": "Allows creating and organising categories in the product catalogue."
+        }
+      }
+    },
+    "ordersConfirm": {
+      "metaTitle": "Order Confirmation — Supervisor",
+      "pageTitle": "Order Confirmation",
+      "subtitle": "Pending orders you are authorized to confirm.",
+      "emptyCod": "No COD orders pending confirmation.",
+      "emptyAffiliate": "No affiliate orders pending confirmation.",
+      "emptyWholesale": "No wholesale orders pending confirmation.",
+      "sectionCod": "COD Orders",
+      "sectionAffiliate": "Affiliate Orders",
+      "sectionWholesale": "Wholesale Orders",
+      "colRef": "Ref.",
+      "colCustomer": "Customer",
+      "colProduct": "Product",
+      "colCity": "City",
+      "colDate": "Date",
+      "colStatus": "Status",
+      "btnConfirm": "Confirm",
+      "confirming": "Processing…",
+      "successConfirm": "Order confirmed.",
+      "errorStockInsufficient": "Insufficient stock.",
+      "errorGeneric": "Error confirming order.",
+      "accessDenied": "You do not have the required permissions to access this page."
     }
   },
   "notifications": {

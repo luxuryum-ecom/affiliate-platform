@@ -458,8 +458,41 @@ export async function updateOrderStatus(
     returnReason?: string
   }
 ): Promise<ActionState> {
-  const { supabase, error: authError } = await requireAdmin({ allowAgent: true })
-  if (authError) return fail(authError)
+  const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
+  if (authError || !userId) return fail(authError ?? 'Non authentifié.')
+
+  // ── DURCISSEMENT NON-ADMIN ────────────────────────────────────────────────
+  // Un agent (role='agent') qui appelle cette action ne peut PAS passer un statut
+  // financier ou critique. Il doit passer par confirmOrderAsSupervisor à la place.
+  // L'admin (isAdmin via requireAdmin) a un accès 100 % inchangé.
+  const { data: callerProfile } = (await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single()) as { data: { role: string } | null; error: unknown }
+
+  const isAdmin = callerProfile?.role === 'admin'
+
+  if (!isAdmin) {
+    // Les non-admins ne peuvent ni atteindre delivered (déclencheur commission), ni
+    // écrire cod_received, ni shipped, ni returned, ni cancelled via cette action large.
+    // Ils DOIVENT utiliser confirmOrderAsSupervisor (action étroite gated par capacité).
+    const FORBIDDEN_FOR_NON_ADMIN: string[] = [
+      'delivered', 'shipped', 'returned', 'cancelled',
+    ]
+    if (FORBIDDEN_FOR_NON_ADMIN.includes(newStatus)) {
+      return fail('Accès refusé : cette transition est réservée aux administrateurs.')
+    }
+    if (options?.codReceived != null) {
+      return fail('Accès refusé : l\'encaissement COD est réservé aux administrateurs.')
+    }
+    // Seul newStatus = 'confirmed' depuis pending_confirmation reste possible pour
+    // un non-admin, via la capacité confirm_cod_orders / confirm_affiliate_orders.
+    // On délègue la vérification de capacité à confirmOrderAsSupervisor ; si quelqu'un
+    // appelle updateOrderStatus directement avec confirmed, on bloque aussi ici pour
+    // forcer l'usage de l'action étroite (garde-fou de surface d'attaque).
+    return fail('Accès refusé : utilisez l\'action de confirmation superviseur.')
+  }
 
   // ── Fetch current state ───────────────────────────────────────────────────
   const { data: order } = (await supabase
@@ -825,6 +858,20 @@ export async function updateWholesaleOrderStatus(
 ): Promise<ActionState> {
   const { supabase, error: authError, userId } = await requireAdmin({ allowAgent: true })
   if (authError || !userId) return fail(authError ?? 'errors.unauthenticated')
+
+  // ── DURCISSEMENT NON-ADMIN ────────────────────────────────────────────────
+  // Un agent (role='agent') ne peut PAS appeler cette action large — il doit passer
+  // par confirmWholesaleAsSupervisor (action étroite gated par confirm_wholesale_orders).
+  // L'admin a un accès 100 % inchangé.
+  const { data: callerProfileWs } = (await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single()) as { data: { role: string } | null; error: unknown }
+
+  if (callerProfileWs?.role !== 'admin') {
+    return fail('errors.admin_only')
+  }
 
   // ── FSM guard côté action (fail-fast UX) — le RPC re-valide côté DB ──────
   // On lit le statut courant pour fournir un retour rapide avant le round-trip RPC.

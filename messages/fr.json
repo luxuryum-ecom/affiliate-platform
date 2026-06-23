@@ -3403,6 +3403,80 @@
       "errorFallback": "Une erreur est survenue.",
       "suggestionsLink": "Suggestions IA",
       "suggestionsBadgeLabel": "{count} en attente"
+    },
+    "permissionsV2": {
+      "metaTitle": "Permissions salariés v2 — Administration",
+      "pageTitle": "Panneau des permissions",
+      "subtitle": "Attribuez ou retirez les capacités modulables aux agents internes approuvés, par volet métier.",
+      "sectionStaff": "Agents approuvés",
+      "emptyStaff": "Aucun agent approuvé",
+      "emptyStaffDesc": "Approuvez des comptes agents depuis la gestion des utilisateurs pour leur attribuer des capacités.",
+      "sectionAudit": "Journal d'audit",
+      "emptyAudit": "Aucune action enregistrée",
+      "emptyAuditDesc": "Les attributions et retraits de permissions apparaîtront ici.",
+      "supervisorLabel": "Superviseur",
+      "fineTasks": "Tâches fines",
+      "grant": "Activer",
+      "revoke": "Désactiver",
+      "pending": "En cours…",
+      "successGrant": "Capacité accordée.",
+      "successRevoke": "Capacité retirée.",
+      "errorFallback": "Une erreur est survenue.",
+      "statusActive": "Activé",
+      "statusInactive": "Désactivé",
+      "auditGranted": "accordé",
+      "auditRevoked": "retiré",
+      "auditSentence": "{actor} a {action} « {capability} » à {user}",
+      "volet": {
+        "commandes": "Commandes",
+        "sourcing": "Sourcing pays",
+        "categories": "Catégories"
+      },
+      "cap": {
+        "confirm_cod_orders": {
+          "label": "Confirmer les commandes COD",
+          "desc": "Permet de confirmer les commandes Cash On Delivery (COD) en attente."
+        },
+        "confirm_affiliate_orders": {
+          "label": "Confirmer les commandes affiliés",
+          "desc": "Permet de confirmer les commandes issues du canal affilié."
+        },
+        "confirm_wholesale_orders": {
+          "label": "Confirmer les commandes gros",
+          "desc": "Permet de confirmer les commandes du canal B2B/gros."
+        },
+        "manage_country_sourcing": {
+          "label": "Gérer le sourcing pays",
+          "desc": "Donne accès aux demandes de sourcing filtrées par les pays affectés à l'agent."
+        },
+        "validate_categories": {
+          "label": "Valider les catégories",
+          "desc": "Permet de créer et de ranger des catégories dans le catalogue produits."
+        }
+      }
+    },
+    "ordersConfirm": {
+      "metaTitle": "Confirmation des commandes — Superviseur",
+      "pageTitle": "Confirmation des commandes",
+      "subtitle": "Commandes en attente de confirmation que vous êtes autorisé à traiter.",
+      "emptyCod": "Aucune commande COD en attente de confirmation.",
+      "emptyAffiliate": "Aucune commande affiliée en attente de confirmation.",
+      "emptyWholesale": "Aucune commande grossiste en attente de confirmation.",
+      "sectionCod": "Commandes COD",
+      "sectionAffiliate": "Commandes affiliés",
+      "sectionWholesale": "Commandes grossistes",
+      "colRef": "Réf.",
+      "colCustomer": "Client",
+      "colProduct": "Produit",
+      "colCity": "Ville",
+      "colDate": "Date",
+      "colStatus": "Statut",
+      "btnConfirm": "Confirmer",
+      "confirming": "En cours…",
+      "successConfirm": "Commande confirmée.",
+      "errorStockInsufficient": "Stock insuffisant.",
+      "errorGeneric": "Erreur lors de la confirmation.",
+      "accessDenied": "Vous n'avez pas les permissions nécessaires pour accéder à cette page."
     }
   },
   "notifications": {
