@@ -159,9 +159,10 @@
 > Ni features ni étapes produit, mais à solder avant ouverture grand public.
 > *(Détail complet : ARCHIVE « SECTION 3 — DETTES », « GO-LIVE PUBLIC », « BLOC B ».)*
 
-- ⬜ **Dette 073 (authenticated)** : `factory_cost_mad`/coût/marge lisibles par tout utilisateur authentifié → vue redacted + policy resserrée **sans casser le calcul de commission serveur** (chantier dédié, cartographie exhaustive des reads `products`)
-- ⬜ Rate-limiting sur `placeOrder` (flux public COD)
-- ⬜ Durcir la confiance `metadata.role` au signup (rôle non auto-déclarable)
+- 🔄 **Dette 073 (authenticated)** — **ADRESSÉE sur `feat/durcissement-beta-vitrine` (PRÊTE, non mergée)** : vue redacted `products_catalog_read` (mig 089, appliquée) + 10 reads non-admin repointés (calcul commission via service_role, INCHANGÉ) + policy SELECT `products` → staff-only (mig **091, à appliquer AU MERGE**). @security+@finance GO. Détail : `ETAT_SYSTEME.md`.
+- ⬜ Rate-limiting sur `placeOrder` (flux public COD) *(note : routes auth/reset couvertes par le rate-limit natif GoTrue)*
+- 🔄 **Durcir la confiance `metadata.role` au signup** — **ADRESSÉE sur `feat/durcissement-beta-vitrine`** : trigger `handle_new_user` durci (mig 090, appliquée) = allowlist DB {affiliate,wholesaler,supplier}, admin/agent non auto-déclarables.
+- 🔄 **Reset mot de passe self-service** — **CONSTRUIT sur `feat/durcissement-beta-vitrine`** (`/forgot-password` + `/auth/callback` + `/reset-password`, anti-énumération, i18n FR/AR/EN). Note ops : ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` à l'allowlist Redirect URLs Supabase.
 - ⬜ Signatures webhooks + logs d'audit
 - ⬜ Import CSV `publishBulkImport` : idempotence + reporting des lignes échouées
 - ⬜ **Ménage secrets de test** : comptes `TelegramTest2026!`/`AgentDemo2026!`/`AdminTest2026!` + authtoken ngrok à régénérer

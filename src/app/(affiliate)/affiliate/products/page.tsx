@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl } from '@/lib/product-media'
@@ -43,7 +44,12 @@ export default async function AffiliateProductsPage({
     .eq('id', user.id)
     .single() as { data: { full_name: string } | null; error: unknown }
 
-  const productsQuery = supabase
+  // DETTE 073 — lecture coût/marge (pour le calcul de commission AFFICHÉE) via
+  // service_role server-side UNIQUEMENT (bypasse RLS, jamais exposé au client) ; seul le
+  // RÉSULTAT (commission) est rendu. La policy base-table sera admin-only (mig 091) → la
+  // page n'expose plus aucun coût/marge. Calcul INCHANGÉ (mêmes entrées, même helper).
+  const admin = createAdminClient()
+  const productsQuery = admin
     .from('products')
     .select('*')
     .eq('active', true)

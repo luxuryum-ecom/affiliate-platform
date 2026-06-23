@@ -1612,7 +1612,8 @@
       "submitting": "Connexion…",
       "submit": "Se connecter",
       "noAccount": "Pas encore de compte ?",
-      "signupLink": "S'inscrire"
+      "signupLink": "S'inscrire",
+      "forgotLink": "Mot de passe oublié ?"
     },
     "signup": {
       "metaTitle": "Inscription — Mozouna Group",
@@ -1671,6 +1672,30 @@
           "Accès à la gestion de vos produits et aux demandes de devis"
         ]
       }
+    },
+    "forgotPassword": {
+      "metaTitle": "Mot de passe oublié — Mozouna Group",
+      "title": "Mot de passe oublié",
+      "intro": "Saisissez votre adresse email. Si un compte existe, vous recevrez un lien de réinitialisation.",
+      "submit": "Envoyer le lien",
+      "submitting": "Envoi en cours…",
+      "sent": "Si un compte est associé à cet email, un lien de réinitialisation vient d’être envoyé. Vérifiez votre boîte de réception.",
+      "backToLogin": "Retour à la connexion"
+    },
+    "resetPassword": {
+      "metaTitle": "Nouveau mot de passe — Mozouna Group",
+      "title": "Choisir un nouveau mot de passe",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "8 caractères minimum",
+      "confirmLabel": "Confirmer le mot de passe",
+      "confirmPlaceholder": "Répétez le mot de passe",
+      "submit": "Enregistrer le mot de passe",
+      "submitting": "Enregistrement…",
+      "success": "Mot de passe mis à jour avec succès. Vous pouvez maintenant vous connecter.",
+      "mismatch": "Les mots de passe ne correspondent pas.",
+      "tooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+      "expired": "Ce lien est expiré ou invalide. Demandez un nouveau lien de réinitialisation.",
+      "requestNew": "Demander un nouveau lien"
     }
   },
   "admin": {

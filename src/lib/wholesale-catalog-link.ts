@@ -47,7 +47,7 @@ export async function findCatalogLink(
   // insensible au renommage (contrairement au match nom).
   if (product.id) {
     const { data: linked } = (await supabase
-      .from('products')
+      .from('products_catalog_read') // dette 073 — vue redacted (cols catalog-link sûres)
       .select(CATALOG_SELECT)
       .eq('source_supplier_product_id', product.id)
       .eq('active', true)
@@ -61,7 +61,7 @@ export async function findCatalogLink(
   const lookupName = lookupNameOf(product)
 
   const { data } = (await supabase
-    .from('products')
+    .from('products_catalog_read') // dette 073 — vue redacted (cols catalog-link sûres)
     .select(CATALOG_SELECT)
     .eq('active', true)
     .eq('approval_status', 'approved')
@@ -88,7 +88,7 @@ export async function findCatalogLinks(
   if (products.length === 0) return result
 
   const { data } = (await supabase
-    .from('products')
+    .from('products_catalog_read') // dette 073 — vue redacted (cols catalog-link sûres)
     .select(CATALOG_SELECT)
     .eq('active', true)
     .eq('approval_status', 'approved')

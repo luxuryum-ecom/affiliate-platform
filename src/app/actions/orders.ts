@@ -316,7 +316,10 @@ export async function createAffiliateOrder(
   if (!['whatsapp', 'phone', 'manual', 'sheet_import', 'api'].includes(orderSource))
     return { error: 'Source invalide.', success: false, orderId: null }
 
-  const { data: product } = (await supabase
+  // DETTE 073 — coût/marge (factory_cost_mad, platform_margin_*) lus via service_role
+  // server-side UNIQUEMENT pour le calcul de commission ; jamais renvoyés au client.
+  // Calcul de commission INCHANGÉ. (La policy base-table devient admin-only, mig 091.)
+  const { data: product } = (await createAdminClient()
     .from('products')
     .select(
       'id, sell_price, stock_count, active, approval_status, affiliate_enabled, availability_type, name, confirmation_fee_mad, packaging_fee_mad, delivery_fee_mad, factory_cost_mad, platform_margin_type, platform_margin_value'

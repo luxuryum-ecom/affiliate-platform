@@ -1612,7 +1612,8 @@
       "submitting": "Signing in…",
       "submit": "Sign in",
       "noAccount": "No account yet?",
-      "signupLink": "Sign up"
+      "signupLink": "Sign up",
+      "forgotLink": "Forgot your password?"
     },
     "signup": {
       "metaTitle": "Sign up — Mozouna Group",
@@ -1671,6 +1672,30 @@
           "Access to managing your products and quote requests"
         ]
       }
+    },
+    "forgotPassword": {
+      "metaTitle": "Forgot password — Mozouna Group",
+      "title": "Forgot your password",
+      "intro": "Enter your email address. If an account exists, you will receive a reset link.",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "sent": "If an account is associated with this email, a reset link has been sent. Check your inbox.",
+      "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "metaTitle": "New password — Mozouna Group",
+      "title": "Choose a new password",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "8 characters minimum",
+      "confirmLabel": "Confirm password",
+      "confirmPlaceholder": "Repeat the password",
+      "submit": "Save password",
+      "submitting": "Saving…",
+      "success": "Password updated successfully. You can now sign in.",
+      "mismatch": "Passwords do not match.",
+      "tooShort": "Password must be at least 8 characters.",
+      "expired": "This link has expired or is invalid. Request a new reset link.",
+      "requestNew": "Request a new link"
     }
   },
   "admin": {

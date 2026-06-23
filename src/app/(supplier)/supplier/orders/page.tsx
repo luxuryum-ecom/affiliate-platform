@@ -85,7 +85,7 @@ export default async function SupplierOrdersPage() {
   const productNames: Map<string, string> = new Map()
   if (productIds.length > 0) {
     const { data: productsData } = (await supabase
-      .from('products')
+      .from('products_catalog_read') // dette 073 — vue redacted (id/nom seuls)
       .select('id, name')
       .in('id', productIds)) as { data: ProductNameRow[] | null; error: unknown }
     for (const p of productsData ?? []) {

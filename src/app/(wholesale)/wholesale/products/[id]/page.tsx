@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Params) {
   const supabase = await createClient()
   const t = await getTranslations('wholesale.productDetail')
   const { data } = await supabase
-    .from('products')
+    .from('products_catalog_read') // dette 073 — vue redacted (nom seul)
     .select('name')
     .eq('id', id)
     .single() as { data: { name: string } | null; error: unknown }
@@ -44,7 +44,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   const [profileResult, productResult] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('products').select('*').eq('id', id).eq('active', true).eq('approval_status', 'approved').single(),
+    supabase.from('products_catalog_read').select('*').eq('id', id).eq('active', true).eq('approval_status', 'approved').single(), // dette 073 — vue redacted (zéro coût/marge)
   ])
 
   const profile = profileResult.data as { full_name: string } | null
