@@ -12,6 +12,7 @@ import { SourcingRequestCta } from '@/components/wholesale/sourcing-request-cta'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
 import { getCategoryDisplayList } from '@/lib/categories/display'
 import { CategoryShowcase, type CategoryCardData } from '@/components/shared/category-showcase'
+import { detectBuyerNiche } from '@/lib/wholesale/detect-niche'
 import type { Profile, SupplierProductPublic, SupplierType, WholesaleCatalogRow } from '@/types/database'
 
 export async function generateMetadata() {
@@ -42,7 +43,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [t, locale, profileResult, productsResult, internalResult, cats] = await Promise.all([
+  const [t, locale, profileResult, productsResult, internalResult, cats, nicheResult] = await Promise.all([
     getTranslations('wholesale.marketplace'),
     getLocale(),
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
@@ -58,6 +59,9 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
       .eq('source', 'internal')
       .order('created_at', { ascending: false }),
     getCategoryDisplayList(),
+    // PERSONNALISATION — niche du grossiste depuis SON comportement (RLS, lecture seule,
+    // zéro argent). Cold-start → topNiche null → fallback neutre (aucun reclassement).
+    detectBuyerNiche(supabase),
   ])
 
   const tCommon = await getTranslations('wholesale.common')
@@ -68,6 +72,13 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const catIconMap = new Map<string, string>(
     cats.map((c) => [c.value, c.icon ?? CATEGORY_ICONS[c.value] ?? '🏷️'])
   )
+
+  // ── PERSONNALISATION — niche détectée (catégorie dominante du comportement) ──
+  // Sert UNIQUEMENT à : (a) le boost de tri (ré-ordonnancement affichage), (b) la
+  // bannière de tête. Aucune donnée produit/prix modifiée. Cold-start → null.
+  const niche = nicheResult.topNiche
+  const nicheLabel = niche ? (cats.find((c) => c.value === niche)?.label ?? niche) : null
+  const nicheIcon = niche ? (catIconMap.get(niche) ?? CATEGORY_ICONS[niche] ?? '🎯') : null
 
   type MoqTierRow = { min_quantity: number; unit_price_usd: number }
   type MarketplaceProduct = SupplierProductPublic & {
@@ -146,10 +157,15 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   // Merge internal + supplier before any filter/sort
   let products: MarketplaceProduct[] = [...internalProducts, ...supplierProducts]
 
-  // Premium suppliers first
+  // Premium suppliers first — + boost NICHE (ré-ordonnancement affichage UNIQUEMENT).
+  // Le boost niche (+10, borné) remonte les produits de la niche détectée EN TÊTE, mais
+  // SEULEMENT quand aucun filtre catégorie/origine n'est actif (sinon on respecte le tri
+  // premium d'origine et on ne masque rien de la vue filtrée). À l'intérieur de la niche,
+  // l'ordre premium (vérifié/featured) reste appliqué. Aucune donnée/prix touché.
+  const applyNicheBoost = !!niche && !filters.category && !filters.origin
   products.sort((a, b) => {
-    const scoreA = (a.is_verified ? 2 : 0) + (a.is_featured ? 1 : 0)
-    const scoreB = (b.is_verified ? 2 : 0) + (b.is_featured ? 1 : 0)
+    const scoreA = (a.is_verified ? 2 : 0) + (a.is_featured ? 1 : 0) + (applyNicheBoost && a.category === niche ? 10 : 0)
+    const scoreB = (b.is_verified ? 2 : 0) + (b.is_featured ? 1 : 0) + (applyNicheBoost && b.category === niche ? 10 : 0)
     return scoreB - scoreA
   })
 
@@ -278,6 +294,16 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
           <h1 className="text-xl font-bold text-foreground">{t('pageTitle')}</h1>
           <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
         </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* BANNIÈRE PERSONNALISÉE (P3) — adaptée à la niche détectée          */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <NichePromoBanner
+          nicheLabel={nicheLabel}
+          nicheIcon={nicheIcon}
+          nicheValue={niche}
+          t={t}
+        />
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* ZONE 1 — STOCK MAROC                                               */}
@@ -515,7 +541,58 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 // ─── Constante WhatsApp ───────────────────────────────────────────────────────
 const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000'
 
-// ─── ZONE 1 : Carte hero Maroc ────────────────────────────────────────────────
+// ─── BANNIÈRE PERSONNALISÉE (P3) ──────────────────────────────────────────────
+// Affichage UNIQUEMENT. Texte résolu serveur (strings passées au composant).
+// niche détectée → accroche ciblée + lien vers son rayon ; cold-start → générique.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function NichePromoBanner({
+  nicheLabel,
+  nicheIcon,
+  nicheValue,
+  t,
+}: {
+  nicheLabel: string | null
+  nicheIcon: string | null
+  nicheValue: string | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any
+}) {
+  if (nicheLabel && nicheValue) {
+    return (
+      <Link
+        href={`/wholesale/marketplace?category=${encodeURIComponent(nicheValue)}`}
+        className="block rounded-2xl border border-gold-300 bg-accent-soft p-4 shadow-gold hover:border-gold-400 transition-colors"
+        aria-label={t('nichePromoTitle', { niche: nicheLabel })}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-3xl leading-none flex-shrink-0">{nicheIcon ?? '🎯'}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm sm:text-base font-bold text-foreground leading-tight">
+              {t('nichePromoTitle', { niche: nicheLabel })}
+            </p>
+            <p className="text-xs text-muted mt-0.5">{t('nichePromoSubtitle')}</p>
+          </div>
+          <span className="hidden sm:inline-flex items-center gap-1 ms-auto flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground">
+            {t('nichePromoCta')}
+          </span>
+        </div>
+      </Link>
+    )
+  }
+
+  // Cold-start / aucun signal : accroche générique neutre (aucune perso).
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-4">
+      <p className="text-sm sm:text-base font-bold text-foreground leading-tight">
+        {t('nichePromoGenericTitle')}
+      </p>
+      <p className="text-xs text-muted mt-0.5">{t('nichePromoGenericSubtitle')}</p>
+    </div>
+  )
+}
+
+// ─── ZONE 1 : Carte hero Maroc (P1 — refonte design validé) ───────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MoroccoHeroCard({
@@ -537,60 +614,69 @@ function MoroccoHeroCard({
   return (
     <Link
       href="/wholesale/marketplace?availability=local_stock"
-      className={`block rounded-2xl border-2 p-5 transition-all duration-200 ${
+      className={`block rounded-2xl border-2 p-4 sm:p-5 transition-all duration-200 ${
         moroccoActive
           ? 'border-gold-400 bg-accent-soft shadow-gold'
           : 'border-gold-300 bg-accent-soft hover:border-gold-400 hover:shadow-gold shadow-sm'
       }`}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <span className="text-5xl leading-none flex-shrink-0">🇲🇦</span>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight">
-                {t('moroccoHeroTitle')}
-              </h2>
-              {moroccoActive && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface text-accent-fg border border-gold-300">
-                  {t('badgeActive')}
-                </span>
-              )}
-            </div>
-            <p className="text-muted text-sm font-medium mb-2">
-              {t('moroccoHeroSubtitle')}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
-                ✓ {t('moroccoTagDelivery')}
-              </span>
-              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
-                ✓ {t('moroccoTagNoCustoms')}
-              </span>
-              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface text-muted font-medium border border-line">
-                ✓ {t('moroccoTagPayment')}
-              </span>
-            </div>
-            {/* Un seul rappel de réassurance léger */}
-            <div className="flex flex-wrap gap-2 mt-3">
-              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface text-muted border border-line font-medium">
-                📦 {t('trustTotalProducts', { count: totalProducts })}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface text-accent-fg border border-gold-300 font-medium">
-                ✓ {t('trustVerifiedSuppliers', { count: verifiedSuppliers })}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-surface text-muted border border-line font-medium">
-                🚚 {t('trustLocalDelivery', { count: localStockProducts })}
-              </span>
-            </div>
-          </div>
+      {/* En-tête compact : drapeau + titre */}
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-3xl leading-none flex-shrink-0">🇲🇦</span>
+        <h2 className="text-base sm:text-lg font-extrabold text-foreground tracking-tight flex-1 min-w-0">
+          {t('moroccoHeroTitle')}
+        </h2>
+        {moroccoActive && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface text-accent-fg border border-gold-300 flex-shrink-0">
+            {t('badgeActive')}
+          </span>
+        )}
+      </div>
+
+      {/* Avantages asymétriques : tuile large (+ barre or à gauche) | tuile compacte */}
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        <div className="col-span-2 rounded-xl bg-surface border border-line border-s-4 border-s-gold-400 px-3 py-2.5 flex items-center gap-2">
+          <span className="text-lg leading-none flex-shrink-0">⚡</span>
+          <span className="text-xs sm:text-sm font-bold text-foreground leading-tight">
+            {t('moroccoAdvDelivery')}
+          </span>
         </div>
-        <div className="flex-shrink-0">
-          <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 transition-opacity sm:whitespace-nowrap">
-            {t('moroccoHeroCta')}
+        <div className="col-span-1 rounded-xl bg-surface border border-line px-3 py-2.5 flex items-center gap-2">
+          <span className="text-lg leading-none flex-shrink-0">🛡</span>
+          <span className="text-xs sm:text-sm font-bold text-foreground leading-tight">
+            {t('moroccoTagNoCustoms')}
           </span>
         </div>
       </div>
+
+      {/* Bande paiement pleine largeur */}
+      <div className="rounded-xl bg-surface border border-line px-3 py-2.5 mb-4 flex items-center gap-2">
+        <span className="text-lg leading-none flex-shrink-0">💳</span>
+        <span className="text-xs sm:text-sm font-medium text-muted leading-tight">
+          {t('moroccoAdvPayment')}
+        </span>
+      </div>
+
+      {/* 3 chiffres réels alignés, séparés par traits fins */}
+      <div className="flex items-stretch [&>*+*]:border-s [&>*+*]:border-line mb-4">
+        <div className="flex-1 px-2 text-center">
+          <p className="text-xl sm:text-2xl font-extrabold text-foreground leading-none">{totalProducts}</p>
+          <p className="text-[10px] sm:text-xs text-muted mt-1 leading-tight">{t('moroccoStatProducts')}</p>
+        </div>
+        <div className="flex-1 px-2 text-center">
+          <p className="text-xl sm:text-2xl font-extrabold text-accent-fg leading-none">{verifiedSuppliers}</p>
+          <p className="text-[10px] sm:text-xs text-muted mt-1 leading-tight">{t('moroccoStatSuppliers')}</p>
+        </div>
+        <div className="flex-1 px-2 text-center">
+          <p className="text-xl sm:text-2xl font-extrabold text-foreground leading-none">{localStockProducts}</p>
+          <p className="text-[10px] sm:text-xs text-muted mt-1 leading-tight">{t('moroccoStatLocal')}</p>
+        </div>
+      </div>
+
+      {/* Bouton or pleine largeur centré */}
+      <span className="block w-full text-center px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm hover:opacity-90 transition-opacity">
+        {t('moroccoHeroCta')}
+      </span>
     </Link>
   )
 }
