@@ -13,8 +13,8 @@
 
 ## 🧭 POINT DE REPRISE — fin de session 2026-06-18 (à lire en premier)
 
-### 🔄 BRANCHE PRÊTE (non mergée) — VITRINE GROSSISTE INTELLIGENTE (`feat/vitrine-grossiste-perso`, 2026-06-23)
-- **Branche PRÊTE, MERGE EN ATTENTE GO ABDOU.** **AFFICHAGE / PERSONNALISATION UNIQUEMENT — ZÉRO argent** (prix/capital/commissions/canal D2/stock réel INTOUCHÉS). Aucune migration, aucune écriture, lecture seule. 3 parties sur `/wholesale/marketplace` (1 seul fichier UI + 1 helper).
+### ✅ EN PROD — VITRINE GROSSISTE INTELLIGENTE (merge `--no-ff` `1f7dd67`, 2026-06-23)
+- **MERGÉ dans `main` (merge `1f7dd67`, poussé `origin/main`) — GO Abdou.** **AFFICHAGE / PERSONNALISATION UNIQUEMENT — ZÉRO argent** (prix/capital/commissions/canal D2/stock réel INTOUCHÉS). Aucune migration, aucune écriture, lecture seule. 3 parties sur `/wholesale/marketplace` (1 seul fichier UI + 1 helper).
 - **P1 — refonte carte Maroc** (`MoroccoHeroCard`) : avantages asymétriques (tuile large ⚡ « Livraison 24–72h partout au Maroc » + barre or à gauche / tuile 🛡 « Aucune douane » / bande 💳 « Paiement flexible · commande directe sans engagement »), **3 chiffres réels** câblés aux compteurs (totalProducts/verifiedSuppliers/localStockProducts), bouton or pleine largeur. Lien `?availability=local_stock` inchangé.
 - **P2 — reclassement par niche** : `src/lib/wholesale/detect-niche.ts` détecte la catégorie dominante depuis le comportement RÉEL du grossiste (achats ×3 / panier ×2 / devis ×2 / échantillons ×1), **RLS-safe (jamais de buyer_id client, `auth.uid()` seul, pas de service_role)**. Boost de tri **borné (+10), actif UNIQUEMENT sans filtre catégorie/origin** (sinon tri premium d'origine respecté). Cold-start → `null` → fallback neutre. Résolution catégorie via vues `products_public_read` / `supplier_products_wholesaler_read` (sans coût/marge/PII).
 - **P3 — bannière de tête personnalisée** (`NichePromoBanner`) : accroche ciblée « Sélection pour votre activité : {niche} » + lien vers le rayon ; cold-start → accroche générique. 10 clés i18n FR/AR/EN.
