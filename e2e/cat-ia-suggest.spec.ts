@@ -9,9 +9,11 @@
 
 import { test, expect, type Page } from '@playwright/test'
 import { resolve } from 'node:path'
-import { loadEnvLocal } from './env'
+import { getLocalSupabaseEnv } from './assert-local-supabase'
 
-loadEnvLocal()
+// GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role → identifiants
+// Supabase LOCAUX uniquement (jamais .env.local/prod). REFUS fail-fast si non-local.
+const LOCAL = getLocalSupabaseEnv()
 
 // ─── Configuration du test ────────────────────────────────────────────────────
 
@@ -23,8 +25,8 @@ const PRODUCT_ID    = process.env.TEST_PRODUCT_ID    ?? ''
 const SUGGESTION_ID = process.env.TEST_SUGGESTION_ID ?? ''
 
 // Supabase REST API pour vérifications DB directes
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+const SUPABASE_URL = LOCAL.url
+const SERVICE_KEY  = LOCAL.serviceKey
 
 const H = {
   apikey: SERVICE_KEY,

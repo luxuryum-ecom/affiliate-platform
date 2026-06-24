@@ -4,22 +4,27 @@
  * Scénarios navigateur (les vérifs API vue/​signup sont faites par ailleurs).
  * Captures dans .nav-proofs/durcissement-beta/. Secrets via process.env (règle #7).
  *
- * PRÉREQUIS (opt-in, hors `pnpm smoke`) : `./node_modules/.bin/next start -p 3000`
- *   + .env.local (SMOKE_WHOLESALE_*, SMOKE_AFFILIATE_*, SUPABASE_SERVICE_ROLE_KEY…).
+ * PRÉREQUIS (opt-in, hors `pnpm smoke`) : `./node_modules/.bin/next start -p 3000`.
+ *   Connexion Supabase = LOCALE via getLocalSupabaseEnv() (« supabase status »),
+ *   JAMAIS .env.local/prod. Les mots de passe comptes test (SMOKE_*) restent via process.env.
  *   ./node_modules/.bin/playwright test --config=playwright.durcissement.config.ts
  */
 import { test, expect, type Page } from '@playwright/test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { getLocalSupabaseEnv } from './assert-local-supabase'
 
 test.describe.configure({ mode: 'serial' })
 
 const BASE = 'http://localhost:3000'
 const PROOFS = '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-proofs/durcissement-beta'
 
-const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
-const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+// GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role (upsert) →
+// identifiants Supabase LOCAUX uniquement (jamais .env.local/prod). REFUS si non-local.
+const LOCAL = getLocalSupabaseEnv()
+const SUPA = LOCAL.url
+const ANON = LOCAL.anonKey
+const SVC = LOCAL.serviceKey
 const W_EMAIL = process.env.SMOKE_WHOLESALE_EMAIL ?? ''
 const W_PWD = process.env.SMOKE_WHOLESALE_PASSWORD ?? ''
 const A_EMAIL = process.env.SMOKE_AFFILIATE_EMAIL ?? ''

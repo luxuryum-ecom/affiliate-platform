@@ -22,6 +22,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as https from 'node:https'
 import * as http from 'node:http'
+import { getLocalSupabaseEnv } from './assert-local-supabase'
 
 // SÉQUENÇAGE : les tests D/E/F/G partagent l'état DB (commandes, capacités).
 // Forcer l'exécution sérielle pour éviter les races entre afterAll concurrents.
@@ -43,9 +44,12 @@ const AFFILIATE_ORDER_ID = '88c25be9-e69b-42cc-b44f-fba9a7dd6d7b'
 // Commande COD (affiliate_id IS NULL) — créée en setup
 const COD_ORDER_ID       = '0986e5c7-cb2f-4b36-bf67-3e5a4f1f6965'
 
-const SUPA_URL    = process.env.NEXT_PUBLIC_SUPABASE_URL    ?? ''
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY   ?? ''
-const ANON_KEY    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+// GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role → identifiants
+// Supabase LOCAUX uniquement (jamais .env.local/prod). REFUS fail-fast si non-local.
+const LOCAL = getLocalSupabaseEnv()
+const SUPA_URL    = LOCAL.url
+const SERVICE_KEY = LOCAL.serviceKey
+const ANON_KEY    = LOCAL.anonKey
 
 const NAV_TIMEOUT    = 30_000
 const ACTION_TIMEOUT = 10_000
