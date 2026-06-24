@@ -631,19 +631,22 @@ avec l'**extraction IA actuelle**. Chantier `@architect`. **NE PAS construire ma
 > implémentation à cadrer (certaines touchent l'argent → circuit `@finance`). **NE PAS construire
 > sans valider chaque lot.** Réf. constats d'audit : P1-4 (unité/total), P1-6 (canaux), P1-2/P1-3 (paliers).
 
-### DÉCISION 1 — Prix TOUJOURS à l'unité + TOTAL du contenant affiché
-Le prix fournisseur est **TOUJOURS le prix à l'UNITÉ** (mètre, boîte, kg…). L'affichage doit montrer
-**le prix unitaire ET le prix total du contenant** pour ne jamais tromper le grossiste.
-- Ex. : **« 40 MAD / m — Rouleau de 100 m : 4 000 MAD »** ; **« 5,60 MAD / boîte — Carton de 50 boîtes : 280 MAD »**.
-- Le client doit voir **CE QU'IL ACHÈTE** (le contenant) **et COMBIEN AU TOTAL**.
-- ⚠️ **Inversion de sémantique vs l'existant** : aujourd'hui `sell_price` est traité comme le prix du
-  **contenant** (le code dérive `prix ÷ pack_size` dans `PackBreakdown`/`packPerUnitPrice`). La décision
-  pose `sell_price` = **prix UNITAIRE** → le total contenant devient `prix × pack_size` (et non l'inverse).
-  **Impact facturation à clarifier** (`@finance`) : aujourd'hui on facture `sell_price` × quantité. Si
-  `sell_price` devient le prix unitaire mais qu'on vend au contenant (rouleau), il faut décider ce qui est
-  facturé (l'unité ou le contenant). **AFFICHAGE pur d'abord ; tout changement de base facturée = `@finance`.**
-- Nécessite un **nom de contenant** (« rouleau », « sac », « carton ») — dérivation i18n depuis `pack_unit`/
-  `sale_unit`, ou colonne additive `pack_container`. À trancher.
+### DÉCISION 1 — Prix de l'UNITÉ-DE-VENTE + prix sous-pièce dérivé À L'AFFICHAGE
+> ✅ **TRANCHÉ (Abdou, 2026-06-24) — OPTION A : AFFICHAGE UNIQUEMENT, calculs financiers INTOUCHÉS.**
+> `sell_price` reste le **prix de l'UNITÉ-DE-VENTE facturée** (ce que fait déjà le code : `total =
+> sell_price × quantité` ; commission par unité ; `sale_unit`/`pack_size` = affichage pur). On NE change
+> RIEN aux calculs/facturation. On AFFICHE simplement, EN PLUS, le prix par sous-pièce **dérivé** via
+> `pack_size` (`packPerUnitPrice = sell_price ÷ pack_size`) pour ne jamais tromper le grossiste.
+
+L'affichage montre **le prix de l'unité-de-vente ET le prix par sous-pièce dérivé** :
+- Ex. : **« Carton 4 000 MAD — soit ≈ 40 MAD / m (100 m) »** ; **« Carton 280 MAD — soit ≈ 5,60 MAD / boîte (50 boîtes) »**.
+- Le client voit **CE QU'IL ACHÈTE** (l'unité-de-vente facturée) **ET le prix ramené à la sous-pièce**.
+- ✅ **Pas d'inversion de sémantique, pas de changement financier** : la base facturée (`sell_price ×
+  quantité`) est **inchangée**. Le prix sous-pièce est **dérivé uniquement à l'affichage** (jamais stocké,
+  jamais facturé). **Aucun circuit `@finance` requis** (zéro impact code financier).
+- Reste à faire (affichage seulement) : un **nom de contenant** (« rouleau », « sac », « carton ») —
+  dérivation i18n depuis `pack_unit`/`sale_unit`, ou colonne additive `pack_container`. *(option B —
+  facturer à la sous-pièce — écartée : nécessiterait recalibration catalogue + `@finance`.)*
 
 ### DÉCISION 2 — Canal déterminé par la CATÉGORIE (automatique, zéro coche manuelle)
 Le canal (**affilié possible** vs **grossiste seul**) découle **automatiquement de la catégorie** du produit
