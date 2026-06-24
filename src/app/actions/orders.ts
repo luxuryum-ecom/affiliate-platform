@@ -90,8 +90,11 @@ export async function placeOrder(
     return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
   if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
-  if (product.stock_count < quantity)
-    return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
+  // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
+  // Si le stock est insuffisant, la commande passe avec un flag warning='restocking'.
+  // L'alerte oversell est gérée côté SQL par record_anomaly (mig 095).
+  const stockWarning: 'restocking' | undefined =
+    product.stock_count < quantity ? 'restocking' : undefined
 
   // ── Validate affiliate ID if provided ────────────────────────────────────
   let validatedAffiliateId: string | null = null
@@ -249,7 +252,8 @@ export async function placeOrder(
   ]
   await supabase.from('order_signals').insert(signals)
 
-  return { error: null, success: true, orderId: order.id }
+  // WMS-1 : propage le warning restocking si le stock était insuffisant.
+  return { error: null, success: true, orderId: order.id, ...(stockWarning ? { warning: stockWarning } : {}) }
 }
 
 // =============================================================================
@@ -351,8 +355,11 @@ export async function createAffiliateOrder(
     return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
   if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
-  if (product.stock_count < quantity)
-    return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
+  // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
+  // Si le stock est insuffisant, la commande passe avec warning='restocking'.
+  const stockWarningAffiliate: 'restocking' | undefined =
+    product.stock_count < quantity ? 'restocking' : undefined
+
   if (sellPriceNum < product.sell_price)
     return {
       error: `Le prix de vente doit être ≥ ${product.sell_price} MAD (prix de base).`,
@@ -437,7 +444,8 @@ export async function createAffiliateOrder(
 
   revalidatePath('/affiliate/orders')
   revalidatePath('/admin/orders')
-  return { error: null, success: true, orderId: order.id }
+  // WMS-1 : propage le warning restocking si le stock était insuffisant.
+  return { error: null, success: true, orderId: order.id, ...(stockWarningAffiliate ? { warning: stockWarningAffiliate } : {}) }
 }
 
 // =============================================================================

@@ -8,11 +8,17 @@ const fail = (msg: string): ActionState => ({ error: msg, success: false })
 
 // ─── Schéma de validation zod ────────────────────────────────────────────────
 
+// Raisons manuelles autorisées (WMS-1 095).
+// Les raisons 'vente_*' sont RÉSERVÉES au système (reserve_stock) et rejetées par la RPC.
+const MANUAL_REASONS = ['cadeau', 'casse', 'echantillon', 'perte', 'retour', 'reappro'] as const
+export type ManualStockReason = typeof MANUAL_REASONS[number]
+
 const AdjustStockSchema = z.object({
   productId: z.string().uuid({ message: 'ID produit invalide.' }),
   qtyDelta:  z.number().int({ message: 'La quantité doit être un entier.' })
                .refine((v) => v !== 0, { message: 'Le delta ne peut pas être zéro.' }),
   note:      z.string().max(500).optional(),
+  reason:    z.enum(MANUAL_REASONS, { message: 'Raison invalide.' }),
 })
 
 export type AdjustStockInput = z.infer<typeof AdjustStockSchema>
@@ -39,7 +45,7 @@ export async function adjustStock(
     const firstError = parsed.error.issues[0]
     return fail(firstError?.message ?? 'Données invalides.')
   }
-  const { productId, qtyDelta, note } = parsed.data
+  const { productId, qtyDelta, note, reason } = parsed.data
 
   // ── Auth — doit être authentifié ──────────────────────────────────────────
   const supabase = await createClient()
@@ -48,11 +54,13 @@ export async function adjustStock(
 
   // ── Appel RPC SECURITY DEFINER ────────────────────────────────────────────
   // La RPC vérifie has_capability('manage_stock') et journalise en une seule tx.
+  // p_reason est validé ici (zod) ET côté RPC (défense en profondeur).
   const { data: newBalance, error } = (await supabase.rpc('adjust_stock_manual', {
     p_product_id: productId,
     p_qty_delta:  qtyDelta,
     p_actor:      user.id,
     p_note:       note ?? null,
+    p_reason:     reason,
   })) as { data: number | null; error: { message: string } | null }
 
   if (error) {
@@ -65,6 +73,9 @@ export async function adjustStock(
     }
     if (error.message.includes('errors.stock_delta_zero')) {
       return fail('Le delta ne peut pas être zéro.')
+    }
+    if (error.message.includes('errors.invalid_reason')) {
+      return fail('Raison invalide (les raisons vente sont réservées au système).')
     }
     return fail(`Erreur ajustement stock : ${error.message}`)
   }
