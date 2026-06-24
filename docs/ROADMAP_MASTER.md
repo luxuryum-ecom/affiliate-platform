@@ -52,19 +52,21 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 
 > Détail technique complet : `docs/ARCHI_VARIANTES_STOCK.md`. Tout est **additif** (la prod ne casse pas), filet = **double-écriture**.
 
-| # | Étape | Objet | Risque | Audit | Dépend de |
-|---|---|---|---|---|---|
-| **1** | **Créer les variantes** | Table `product_variants` (attributs jsonb) + **variante défaut rétro-remplie** 1:1 sur chaque produit existant ; RLS deny | **NUL** (additif) | @security | — |
-| **2** | **Créer les statuts sur le ledger** | `+ from_status/to_status` (nullable) sur `stock_movements` (7 statuts) + projection recalculée `variant_status_balance` | **NUL** (additif) | @security | 1 |
-| **3** | **Afficher choix taille/couleur** | Sélecteur de variante sur pages produit (caché si 1 seule variante) ; i18n FR/AR/EN résolu serveur | Faible | — | 1 |
-| **4** | **Fonctions stock comprennent variante + statuts** | RPC `reserve/restore_stock`, `adjust_stock_manual`, `record_stock_movement` étendus `p_variant_id`/`p_from_status`/`p_to_status` **DEFAULT NULL** (rétro-compatible) | Moyen | @security | 2 |
-| **5** | **Scan entrée dépôt + retour** | Table `scan_events` (carrier/tracking texte libre, idempotence anti-fraude) + transitions retour (attendu→reçu→dépôt) et endommagé | Moyen | @security | 4 |
-| **6** | **Commandes 3 canaux portent la variante** | `variant_id` sur `orders` / `wholesale_order_items` / panier + transitions de statut (réservé/parti/livré/retour) câblées sur les flux commande | **ÉLEVÉ** | **@finance + @security** | 4 |
-| **7** | **Bascule finale du compteur sur la variante** | Le stock devient la source de vérité au niveau variante ; on **coupe l'ancien** `products.stock_count` une fois le nouveau prouvé | **MAXIMAL** | **@finance + @security + Abdou** | 6 |
+> **LOT A (étapes 1→5) = ✅ FAIT sur la branche `feat/variants-step1` (NON mergée, NON poussée en prod).** Étapes 6-7 = à venir.
 
-- **EN PARALLÈLE (dès étapes 1-2 faites)** : **stock fournisseur multi-modes + fraîcheur** (`stock_mode`, `stock_quantity_updated_at`, « dispo réel » pondéré).
-- **REPORTÉS** : **Egrow / WMS-2** (ecom perso câblé) ; **réconciliation argent transporteur** (attend formats fichiers).
-- **ÉTAT ACTUEL** : carto variantes **FAITE**, carto statuts **FAITE**, **AUCUN build commencé**. Décisions **VALIDÉES** : modèle **ledger (option B)**, **retours scannés**, **réconciliation reportée**, **double-écriture**.
+| # | Étape | Objet | Risque | État |
+|---|---|---|---|---|
+| **1** | **Créer les variantes** | Table `product_variants` (attributs jsonb) + variante défaut rétro-remplie 1:1 ; RLS deny | NUL | ✅ **FAIT** (mig 096) — @security GO · @tester 26/26 |
+| **2** | **Créer les statuts sur le ledger** | `+from_status/to_status/variant_id` (nullable) sur `stock_movements` (7 statuts) + projection `variant_status_balance` (vue security_invoker) | NUL | ✅ **FAIT** (mig 097) — @security GO · @tester 19/19 |
+| **3** | **Afficher choix taille/couleur** | Vue client `product_variants_read` + sélecteur (caché si 1 variante) ; i18n FR/AR/EN | Faible | ✅ **FAIT** (mig 098) — @security GO · @tester 18/18 |
+| **4** | **Fonctions stock comprennent variante + statuts** | RPC `reserve/restore_stock`/`adjust_stock_manual`/`record_stock_movement` + `p_variant_id`/`p_from_status`/`p_to_status` DEFAULT NULL ; **double-écriture** ; trigger auto-variante + mouvement d'ouverture | Moyen | ✅ **FAIT** (mig 099) — @security GO · @tester 58/58 |
+| **5** | **Scan entrée dépôt + retour** | Table `scan_events` (carrier/tracking texte libre, idempotence anti-fraude) + `record_scan` + transitions retour (attendu→reçu→dépôt) et endommagé | Moyen | ✅ **FAIT** (mig 100) — @security GO · @tester 46/46 |
+| **6** | **Commandes 3 canaux portent la variante** | `variant_id` sur `orders`/`wholesale_order_items`/panier + transitions de statut câblées sur les flux commande ; restore→return_expected (staging scanné) | **ÉLEVÉ** | ⬜ à faire — **@finance + @security** |
+| **7** | **Bascule finale du compteur sur la variante** | Le stock devient la source de vérité au niveau variante ; on **coupe l'ancien** `products.stock_count` une fois le nouveau prouvé | **MAXIMAL** | ⬜ à faire — **@finance + @security + Abdou** |
+
+- **EN PARALLÈLE (dès étapes 1-2 faites)** : **stock fournisseur multi-modes + fraîcheur** (`stock_mode`, `stock_quantity_updated_at`, « dispo réel » pondéré). ⬜
+- **REPORTÉS** : **Egrow / WMS-2** (ecom perso câblé) ; **réconciliation argent transporteur** (attend formats fichiers transporteurs + export Egrow).
+- **ÉTAT ACTUEL** : **LOT A (1→5) terminé et committé sur `feat/variants-step1`** (mig 096→100, 4 checks verts à chaque étape, @security GO partout, runtimes LOCAL only via `assertLocalSupabase`). **NON mergé, NON poussé, AUCUN `db push` prod** (GO Abdou requis ; touche le ledger stock → validation finale Abdou par règle 5). Décisions **VALIDÉES** : ledger (option B), retours scannés, réconciliation reportée, double-écriture. **Prochaine** : étape 6 (commandes portent la variante — circuit @finance).
 
 ## 5. RESTE DE LA ROADMAP (après le grand chantier), par priorité
 
@@ -90,4 +92,4 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 
 ## 7. PROCHAINE ÉTAPE EXACTE
 
-➡️ **Lancer le build de l'Étape 1 — créer les variantes (table `product_variants` + variante défaut rétro-remplie), socle additif zéro risque, audit `@security`** — sur une branche dédiée, après GO d'Abdou.
+➡️ **LOT A (étapes 1→5) terminé sur `feat/variants-step1` (non mergé).** Prochaine : décider du **merge du Lot A** (GO Abdou + `db push` prod séquencé : mig 096→100, ledger stock → validation finale Abdou règle 5), PUIS lancer l'**Étape 6 — commandes 3 canaux portent la variante** (circuit **@finance + @security**, ÉLEVÉ : touche les lignes de commande + le staging retour).
