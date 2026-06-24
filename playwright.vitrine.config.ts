@@ -1,14 +1,27 @@
 /**
  * Config Playwright dédiée aux preuves vitrine (QA runtime).
  * Réutilise les storageState existants (e2e/.auth/).
- * Le serveur Next.js doit être déjà lancé sur :3000.
+ *
+ * DURCISSEMENT SÉCURITÉ (incident 2026-06-24) : le spec crée/supprime des données via
+ * service_role ET agit via l'UI (approbation admin → création miroir). Le serveur app est
+ * FORCÉ sur le Supabase LOCAL (next dev + env local injecté + reuseExistingServer:false +
+ * port dédié) → aucune écriture ne peut toucher la prod. La connexion service_role du spec
+ * est elle aussi locale (getLocalSupabaseEnv). loadEnvLocal ne sert qu'aux SMOKE_*.
  */
 import { defineConfig, devices } from '@playwright/test'
 import { loadEnvLocal } from './e2e/env'
+import { getLocalSupabaseEnv } from './e2e/assert-local-supabase'
 
-loadEnvLocal()
+loadEnvLocal() // mots de passe comptes test (SMOKE_*) uniquement
+// Defense-in-depth : purge les vars de connexion PROD injectées par loadEnvLocal (inertes
+// ici car non relues, mais on empêche tout futur helper e2e de les lire). Connexion = locale.
+delete process.env.NEXT_PUBLIC_SUPABASE_URL
+delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+delete process.env.SUPABASE_SERVICE_ROLE_KEY
+const LOCAL = getLocalSupabaseEnv() // connexion Supabase LOCALE garantie (sinon throw)
 
-const BASE_URL = 'http://localhost:3000'
+const PORT = 3204
+const BASE_URL = `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -36,13 +49,17 @@ export default defineConfig({
     },
   ],
 
-  // Serveur DÉJÀ LANCÉ → reuseExistingServer=true, timeout 0.
   webServer: {
-    command: './node_modules/.bin/next start -p 3000',
+    command: `./node_modules/.bin/next dev -p ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: true,
-    timeout: 10_000,
+    reuseExistingServer: false,
+    timeout: 120_000,
     stdout: 'ignore',
     stderr: 'pipe',
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: LOCAL.url,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: LOCAL.anonKey,
+      SUPABASE_SERVICE_ROLE_KEY: LOCAL.serviceKey,
+    },
   },
 })

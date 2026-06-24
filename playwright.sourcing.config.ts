@@ -1,14 +1,33 @@
 /**
  * Configuration Playwright dédiée aux tests sourcing-affectation.
- * Lance un projet chromium autonome sans dépendre du setup smoke existant.
+ *
+ * DURCISSEMENT SÉCURITÉ (incident 2026-06-24) : le serveur app de test est FORCÉ sur
+ * le Supabase LOCAL — les écritures déclenchées via l'UI ne peuvent JAMAIS toucher la prod.
+ *   • getLocalSupabaseEnv() : fail-fast (« REFUS … ») si le local n'est pas dispo.
+ *   • webServer.env injecte l'URL/anon/service LOCAUX → surcharge .env.local (Next ne
+ *     réécrit pas une variable déjà présente dans process.env).
+ *   • next dev (et non next start) → NEXT_PUBLIC_* pris au runtime, pas figés sur un build prod.
+ *   • reuseExistingServer:false → jamais de réutilisation muette d'un serveur pointé prod.
+ *   • port DÉDIÉ → pas de collision avec un dev sur :3000 ; le spec aligne son BASE_URL dessus.
+ * loadEnvLocal() est conservé UNIQUEMENT pour les mots de passe des comptes test (SMOKE_*),
+ * qui ne sont pas la connexion base ; la connexion Supabase est forcée locale ci-dessus.
+ *
  * Usage : npx playwright test --config=playwright.sourcing.config.ts
  */
 import { defineConfig, devices } from '@playwright/test'
 import { loadEnvLocal } from './e2e/env'
+import { getLocalSupabaseEnv } from './e2e/assert-local-supabase'
 
-loadEnvLocal()
+loadEnvLocal() // mots de passe comptes test (SMOKE_*) uniquement
+// Defense-in-depth : purge les vars de connexion PROD injectées par loadEnvLocal (inertes
+// ici car non relues, mais on empêche tout futur helper e2e de les lire). Connexion = locale.
+delete process.env.NEXT_PUBLIC_SUPABASE_URL
+delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+delete process.env.SUPABASE_SERVICE_ROLE_KEY
+const LOCAL = getLocalSupabaseEnv() // connexion Supabase LOCALE garantie (sinon throw)
 
-const BASE_URL = 'http://localhost:3000'
+const PORT = 3201
+const BASE_URL = `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -35,13 +54,17 @@ export default defineConfig({
     },
   ],
 
-  // Réutilise le serveur dev existant (déjà lancé sur 3000)
   webServer: {
-    command: './node_modules/.bin/next dev -p 3000',
+    command: `./node_modules/.bin/next dev -p ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120_000,
     stdout: 'ignore',
     stderr: 'pipe',
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: LOCAL.url,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: LOCAL.anonKey,
+      SUPABASE_SERVICE_ROLE_KEY: LOCAL.serviceKey,
+    },
   },
 })

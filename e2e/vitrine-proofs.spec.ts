@@ -14,7 +14,8 @@ import * as path from 'path'
 import { getLocalSupabaseEnv } from './assert-local-supabase'
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
-const BASE_URL = 'http://localhost:3000'
+// Port LOCAL dédié (serveur playwright.vitrine.config.ts), en dur, sans override — anti-prod.
+const BASE_URL = 'http://localhost:3204'
 
 // GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role → identifiants
 // Supabase LOCAUX uniquement (jamais .env.local/prod). REFUS fail-fast si non-local.

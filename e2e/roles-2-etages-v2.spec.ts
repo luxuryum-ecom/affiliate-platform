@@ -29,7 +29,8 @@ import { getLocalSupabaseEnv } from './assert-local-supabase'
 test.describe.configure({ mode: 'serial' })
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
-const BASE_URL   = 'http://localhost:3000'
+// Port LOCAL dédié (serveur playwright.roles.config.ts), en dur, sans override — anti-prod.
+const BASE_URL   = 'http://localhost:3203'
 const PROOFS_DIR = '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-proofs/roles-2-etages-v2'
 
 const ADMIN_EMAIL    = process.env.SMOKE_ADMIN_EMAIL    ?? ''

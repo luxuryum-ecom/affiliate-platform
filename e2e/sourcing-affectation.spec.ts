@@ -26,7 +26,10 @@ import { getLocalSupabaseEnv } from './assert-local-supabase'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const BASE_URL = 'http://localhost:3000'
+// Port LOCAL dédié = serveur lancé par playwright.sourcing.config.ts. Codé en dur sur
+// localhost (jamais d'override env) : hors ce serveur local, la nav tape un port mort
+// et échoue — impossible d'atteindre la prod.
+const BASE_URL = 'http://localhost:3201'
 const PROOFS_DIR = path.resolve(
   '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-proofs/sourcing-affectation',
 )

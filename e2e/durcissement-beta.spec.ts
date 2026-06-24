@@ -16,7 +16,8 @@ import { getLocalSupabaseEnv } from './assert-local-supabase'
 
 test.describe.configure({ mode: 'serial' })
 
-const BASE = 'http://localhost:3000'
+// Port LOCAL dédié (serveur playwright.durcissement.config.ts), en dur, sans override — anti-prod.
+const BASE = 'http://localhost:3202'
 const PROOFS = '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-proofs/durcissement-beta'
 
 // GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role (upsert) →
