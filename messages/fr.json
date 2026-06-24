@@ -3224,6 +3224,8 @@
       "usersDesc": "Valider ou rejeter les nouveaux comptes.",
       "productsTitle": "Gérer les produits",
       "productsDesc": "Ajouter, modifier ou désactiver des produits.",
+      "stockTitle": "Stock & mouvements",
+      "stockDesc": "Journal des mouvements, ajustements manuels et anomalies.",
       "ordersTitle": "Commandes COD",
       "ordersDesc": "Suivre et mettre à jour les statuts de livraison.",
       "wholesaleOrdersTitle": "Commandes grossiste",
@@ -3469,7 +3471,8 @@
       "volet": {
         "commandes": "Commandes",
         "sourcing": "Sourcing pays",
-        "categories": "Catégories"
+        "categories": "Catégories",
+        "stock": "Stock"
       },
       "cap": {
         "confirm_cod_orders": {
@@ -3491,6 +3494,10 @@
         "validate_categories": {
           "label": "Valider les catégories",
           "desc": "Permet de créer et de ranger des catégories dans le catalogue produits."
+        },
+        "manage_stock": {
+          "label": "Gérer le stock",
+          "desc": "Consulter le journal des mouvements de stock et effectuer des ajustements manuels (cadeau, casse, perte, etc.)."
         }
       }
     },
@@ -3516,6 +3523,64 @@
       "errorStockInsufficient": "Stock insuffisant.",
       "errorGeneric": "Erreur lors de la confirmation.",
       "accessDenied": "Vous n'avez pas les permissions nécessaires pour accéder à cette page."
+    },
+    "stock": {
+      "metaTitle": "Stock & mouvements — Administration",
+      "pageTitle": "Stock & mouvements",
+      "subtitle": "Compteur unique par produit : journal de toutes les sorties/entrées par canal, ajustements manuels et anomalies.",
+      "journalTitle": "Journal des mouvements",
+      "journalEmpty": "Aucun mouvement enregistré.",
+      "anomaliesTitle": "Alertes & anomalies",
+      "anomaliesSubtitle": "Signaux surveillés (préfiguration du Gardien IA).",
+      "anomaliesEmpty": "Aucune anomalie détectée.",
+      "globalAnomaly": "Anomalie globale (tous produits)",
+      "adjustTitle": "Ajuster le stock",
+      "adjustButton": "Ajuster le stock",
+      "chooseProduct": "Choisir un produit…",
+      "chooseReason": "Choisir une raison…",
+      "fieldQty": "Quantité",
+      "qtyHint": "Positif = ajoute au stock, négatif = retire.",
+      "fieldNote": "Note (facultatif)",
+      "fieldProduct": "Produit",
+      "fieldReason": "Raison",
+      "confirmPrompt": "Confirmer : {reason} de {qty} unité(s) sur ce produit ?",
+      "adjustSuccess": "Ajustement effectué — nouveau solde : {balance}",
+      "formIncomplete": "Sélectionnez un produit, une quantité non nulle et une raison.",
+      "filterProduct": "Filtrer par produit",
+      "filterReason": "Filtrer par raison",
+      "allProducts": "Tous les produits",
+      "allReasons": "Toutes les raisons",
+      "clearFilters": "Réinitialiser",
+      "colBalance": "Solde",
+      "by": "par",
+      "systemActor": "Système",
+      "reason": {
+        "vente_affilie": "Vente affilié",
+        "vente_gros": "Vente gros",
+        "vente_ecom": "Vente e-commerce",
+        "cadeau": "Cadeau",
+        "casse": "Casse",
+        "echantillon": "Échantillon",
+        "perte": "Perte",
+        "retour": "Retour",
+        "reappro": "Réapprovisionnement"
+      },
+      "channel": {
+        "affiliate": "Affilié",
+        "wholesale": "Gros",
+        "ecom_perso": "E-commerce",
+        "manual_adjust": "Ajustement manuel",
+        "return": "Retour",
+        "system": "Système"
+      },
+      "anomaly": {
+        "oversell": "Survente (stock négatif)",
+        "abnormal_loss": "Casse/perte anormale",
+        "repeated_adjust": "Ajustements répétés"
+      },
+      "anomalyQty": "Qté",
+      "anomalyStockBefore": "Stock avant",
+      "anomalyShortfall": "Déficit"
     }
   },
   "notifications": {
