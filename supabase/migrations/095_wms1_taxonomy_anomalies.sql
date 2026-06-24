@@ -46,8 +46,9 @@
 --   - stock_anomalies : append-only (trigger UPDATE/DELETE → RAISE), RLS deny.
 --     SELECT : admin OU has_capability('manage_stock').
 --   - record_anomaly : REVOKE authenticated — interne uniquement, aucune RPC cliente.
---   - Qui reçoit les alertes : tous les profils admin (boucle FOR), ou au moins un
---     si aucun admin trouvé (guard IF v_admin_id IS NOT NULL).
+--   - Qui reçoit les alertes : tous les profils admin (boucle FOR sur role='admin').
+--     S'il n'existe aucun admin, l'anomalie est tout de même enregistrée dans
+--     stock_anomalies (l'essentiel) ; seule la notification n'est pas émise (fail-safe).
 --   - Les seuils c_loss_threshold=20 et c_adjust_count_threshold=10 sont des
 --     heuristiques placeholder — voir commentaire dédié.
 --   - La notification anomalie insère order_id=NULL pour respecter la FK
@@ -474,7 +475,7 @@ CREATE POLICY "stock_anomalies: admin or manage_stock read"
 -- Sur le modèle de stock_movements (mig 092).
 
 CREATE OR REPLACE FUNCTION public.stock_anomalies_immutable()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   RAISE EXCEPTION 'stock_anomalies est append-only (ni UPDATE ni DELETE)';
 END;

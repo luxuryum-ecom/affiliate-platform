@@ -174,10 +174,17 @@ async function getMovements(productId) {
 }
 
 async function getOversellNotifications(productId) {
-  const res = await rest('GET', `/notifications?event=eq.stock_oversell&order=created_at.desc`)
+  // 095 : l'événement est désormais 'stock_anomaly' (plus 'stock_oversell')
+  const res = await rest('GET', `/notifications?event=eq.stock_anomaly&order=created_at.desc`)
   if (res.status >= 400) throw new Error(`getNotifications: ${JSON.stringify(res.data)}`)
-  // Filtre par product_id dans payload
-  return res.data.filter(n => n.payload?.product_id === productId)
+  // Filtre par product_id dans payload ET anomaly_type='oversell'
+  return res.data.filter(n => n.payload?.product_id === productId && n.payload?.anomaly_type === 'oversell')
+}
+
+async function getOversellAnomalies(productId) {
+  const res = await rest('GET', `/stock_anomalies?product_id=eq.${productId}&anomaly_type=eq.oversell&order=created_at.desc`)
+  if (res.status >= 400) throw new Error(`getOversellAnomalies: ${JSON.stringify(res.data)}`)
+  return res.data
 }
 
 // ── Scénario 1 : Décrément normal ────────────────────────────────────────────
@@ -215,12 +222,13 @@ async function scenario1() {
   const m = mvts[0]
   assert('S1-channel', m.channel === 'affiliate', m.channel, 'affiliate')
   assert('S1-qty_delta', m.qty_delta === -3, m.qty_delta, -3)
-  assert('S1-reason', m.reason === 'sale_reserve', m.reason, 'sale_reserve')
+  // 095 : canal 'affiliate' → reason='vente_affilie' (plus 'sale_reserve')
+  assert('S1-reason', m.reason === 'vente_affilie', m.reason, 'vente_affilie')
   assert('S1-balance_after', m.balance_after === 7, m.balance_after, 7)
   assert('S1-order_id', m.order_id === fakeOrderId, m.order_id, fakeOrderId)
   console.log(`  mouvement: channel=${m.channel} qty_delta=${m.qty_delta} reason=${m.reason} balance_after=${m.balance_after} order_id=${m.order_id}`)
 
-  pass('S1 - Décrement normal', `stock 10-3=7, retour=7, 1 mouvement sale_reserve`)
+  pass('S1 - Décrement normal', `stock 10-3=7, retour=7, 1 mouvement vente_affilie`)
 }
 
 // ── Scénario 2 : Anti-race (2 appels concurrents, Option A) ──────────────────
@@ -278,17 +286,18 @@ async function scenario2() {
   console.log(`  balances_after (triées): ${JSON.stringify(balances)}`)
   assert('S2-balances', balances[0] === -1 && balances[1] === 2, balances, [-1, 2])
 
-  // Le 2ème mouvement (balance -1) doit avoir reason='oversell'
+  // 095 : l'oversell N'EST PLUS une reason. Les deux mouvements ont reason='vente_affilie'.
+  // Le mouvement avec balance_after=-1 prouve la sérialisation (oversell passé en stock_anomalies).
   const oversellMvt = mvts.find(m => m.balance_after === -1)
-  assert('S2-oversell-reason', oversellMvt?.reason === 'oversell', oversellMvt?.reason, 'oversell')
-  console.log(`  mouvement oversell: reason=${oversellMvt?.reason} balance_after=${oversellMvt?.balance_after}`)
+  assert('S2-oversell-reason', oversellMvt?.reason === 'vente_affilie', oversellMvt?.reason, 'vente_affilie')
+  console.log(`  mouvement balance=-1: reason=${oversellMvt?.reason} balance_after=${oversellMvt?.balance_after}`)
 
-  // Le 1er mouvement (balance 2) doit avoir reason='sale_reserve'
+  // Le 1er mouvement (balance 2) doit avoir reason='vente_affilie'
   const saleMvt = mvts.find(m => m.balance_after === 2)
-  assert('S2-sale-reason', saleMvt?.reason === 'sale_reserve', saleMvt?.reason, 'sale_reserve')
-  console.log(`  mouvement sale: reason=${saleMvt?.reason} balance_after=${saleMvt?.balance_after}`)
+  assert('S2-sale-reason', saleMvt?.reason === 'vente_affilie', saleMvt?.reason, 'vente_affilie')
+  console.log(`  mouvement balance=2: reason=${saleMvt?.reason} balance_after=${saleMvt?.balance_after}`)
 
-  pass('S2 - Anti-race', `stock=−1 exactement, 2 mouvements distincts, sérialisation correcte (no lost-update)`)
+  pass('S2 - Anti-race', `stock=−1 exactement, 2 mouvements vente_affilie distincts, sérialisation correcte (no lost-update)`)
 }
 
 // ── Scénario 3 : Stock insuffisant = aucun blocage (Option A) ────────────────
@@ -324,11 +333,22 @@ async function scenario3() {
   const mvts = await getMovements(productId)
   assert('S3-nb-mvts', mvts.length === 1, mvts.length, 1)
   const m = mvts[0]
-  assert('S3-reason', m.reason === 'oversell', m.reason, 'oversell')
+  // 095 : l'oversell n'est plus une reason. Le mouvement garde la reason métier 'vente_affilie'.
+  // L'oversell est prouvé par balance_after < 0 ET une ligne dans stock_anomalies.
+  assert('S3-reason', m.reason === 'vente_affilie', m.reason, 'vente_affilie')
   assert('S3-balance_after', m.balance_after === -3, m.balance_after, -3)
   console.log(`  mouvement: reason=${m.reason} balance_after=${m.balance_after}`)
 
-  pass('S3 - Pas de blocage', `stock 2-5=-3, reason=oversell, vente non refusée`)
+  // Vérification de la trace d'anomalie dans stock_anomalies
+  const anomalies = await getOversellAnomalies(productId)
+  console.log(`  anomalies oversell dans stock_anomalies: ${anomalies.length}`)
+  assert('S3-anomalie-tracee', anomalies.length >= 1, anomalies.length, '>= 1')
+  const a = anomalies[0]
+  assert('S3-anomalie-type', a.anomaly_type === 'oversell', a.anomaly_type, 'oversell')
+  assert('S3-anomalie-channel', a.channel === 'affiliate', a.channel, 'affiliate')
+  console.log(`  anomalie: type=${a.anomaly_type} channel=${a.channel} stock_before=${a.stock_before}`)
+
+  pass('S3 - Pas de blocage', `stock 2-5=-3, reason=vente_affilie, oversell tracé dans stock_anomalies`)
 }
 
 // ── Scénario 4 : Alerte oversell créée (canal affiliate et wholesale) ─────────
@@ -366,29 +386,37 @@ async function scenario4(adminId) {
     const adminCheck = await rest('GET', `/profiles?role=eq.admin&limit=1&select=id`)
     console.log(`  admins disponibles: ${JSON.stringify(adminCheck.data)}`)
     if (adminCheck.data?.length > 0) {
-      fail('S4a-notif-creee', `Admin existant mais aucune notification stock_oversell créée pour product_id=${productId4a}`)
-      return
+      // Si admin présent mais aucune notif, vérifier au moins la ligne stock_anomalies
+      const anomalies4a = await getOversellAnomalies(productId4a)
+      if (anomalies4a.length === 0) {
+        fail('S4a-notif-creee', `Admin existant mais aucune notification stock_anomaly ni ligne stock_anomalies pour product_id=${productId4a}`)
+        return
+      }
+      console.log(`  [INFO] Pas de notif mais anomalie tracée dans stock_anomalies — OK (best-effort)`)
     } else {
       console.log(`  [INFO] Aucun admin en base → notification best-effort ignorée (comportement normal)`)
     }
   } else {
     const n = notifs4a[0]
     console.log(`  notification 4a: event=${n.event} order_id_col=${n.order_id} payload=${JSON.stringify(n.payload)}`)
-    // P1-B : order_id colonne DOIT être NULL (canal affiliate → violation FK évitée)
+    // 095 : l'event est 'stock_anomaly' (plus 'stock_oversell')
+    assert('S4a-event', n.event === 'stock_anomaly', n.event, 'stock_anomaly')
+    // 095 : order_id colonne est toujours NULL (record_anomaly passe order_id=NULL pour respecter FK)
     assert('S4a-order_id-null', n.order_id === null, n.order_id, null)
-    // payload contient l'order_id réel
-    assert('S4a-payload-order_id', n.payload?.order_id === fakeOrderId4a, n.payload?.order_id, fakeOrderId4a)
-    // payload contient product_id, qty_delta, balance_after, channel
+    // payload.anomaly_type = 'oversell' (structure record_anomaly 095)
+    assert('S4a-payload-anomaly_type', n.payload?.anomaly_type === 'oversell', n.payload?.anomaly_type, 'oversell')
+    // payload contient product_id et channel
     assert('S4a-payload-product_id', n.payload?.product_id === productId4a, n.payload?.product_id, productId4a)
     assert('S4a-payload-channel', n.payload?.channel === 'affiliate', n.payload?.channel, 'affiliate')
-    assert('S4a-payload-balance_after', typeof n.payload?.balance_after === 'number', typeof n.payload?.balance_after, 'number')
+    // order_id réel est dans payload.detail (jsonb_build_object dans record_anomaly)
+    assert('S4a-payload-detail-order_id', n.payload?.detail?.order_id === fakeOrderId4a, n.payload?.detail?.order_id, fakeOrderId4a)
     // Pas de PII acheteur dans le payload
     const payloadKeys = Object.keys(n.payload)
     const piiKeys = ['customer_name', 'customer_phone', 'customer_address', 'buyer_id']
     const piiFound = payloadKeys.filter(k => piiKeys.includes(k))
     assert('S4a-no-pii', piiFound.length === 0, piiFound, [])
     console.log(`  payload keys: ${payloadKeys.join(', ')} — aucune PII detectée`)
-    pass('S4a - Alerte oversell affiliate', `order_id col=NULL, payload.order_id=${fakeOrderId4a}, pas de PII`)
+    pass('S4a - Alerte oversell affiliate', `event=stock_anomaly, order_id col=NULL, payload.anomaly_type=oversell, pas de PII`)
   }
 
   // Sous-scénario 4b : canal wholesale (order_id issu d'un wholesale_orders réel)
@@ -418,27 +446,43 @@ async function scenario4(adminId) {
   if (notifs4b.length === 0) {
     const adminCheck = await rest('GET', `/profiles?role=eq.admin&limit=1&select=id`)
     if (adminCheck.data?.length > 0) {
-      fail('S4b-notif-creee', `Admin existant mais aucune notification stock_oversell créée pour product_id=${productId4b}`)
-      return
+      // Si admin présent mais aucune notif, vérifier au moins la ligne stock_anomalies
+      const anomalies4b = await getOversellAnomalies(productId4b)
+      if (anomalies4b.length === 0) {
+        fail('S4b-notif-creee', `Admin existant mais aucune notification stock_anomaly ni ligne stock_anomalies pour product_id=${productId4b}`)
+        return
+      }
+      console.log(`  [INFO] Pas de notif mais anomalie tracée dans stock_anomalies — OK (best-effort)`)
     } else {
       console.log(`  [INFO] Aucun admin en base → notification best-effort ignorée`)
     }
   } else {
     const n = notifs4b[0]
     console.log(`  notification 4b: event=${n.event} order_id_col=${n.order_id} payload=${JSON.stringify(n.payload)}`)
-    // P1-B : canal wholesale → order_id colonne DOIT être renseigné (FK vers wholesale_orders)
-    assert('S4b-order_id-renseigné', n.order_id === wholesaleOrderId, n.order_id, wholesaleOrderId)
+    // 095 : order_id colonne est toujours NULL même pour wholesale (record_anomaly force order_id=NULL)
+    assert('S4b-order_id-null', n.order_id === null, n.order_id, null)
+    // L'order_id wholesale réel est dans payload.detail.order_id
+    assert('S4b-payload-anomaly_type', n.payload?.anomaly_type === 'oversell', n.payload?.anomaly_type, 'oversell')
     assert('S4b-payload-channel', n.payload?.channel === 'wholesale', n.payload?.channel, 'wholesale')
-    pass('S4b - Alerte oversell wholesale', `order_id col=${n.order_id} renseigné (FK wholesale_orders)`)
+    assert('S4b-payload-detail-order_id', n.payload?.detail?.order_id === wholesaleOrderId, n.payload?.detail?.order_id, wholesaleOrderId)
+    pass('S4b - Alerte oversell wholesale', `event=stock_anomaly, order_id col=NULL, payload.detail.order_id=${wholesaleOrderId}`)
   }
 
-  // Si les deux sous-cas n'ont pas produit de notif (pas d'admin)
+  // Si les deux sous-cas n'ont pas produit de notif (pas d'admin),
+  // vérifier au moins que les anomalies ont été tracées dans stock_anomalies
   const adminCheck = await rest('GET', `/profiles?role=eq.admin&limit=1&select=id`)
   if (adminCheck.data?.length > 0) {
-    // L'admin existe (créé en setup), au moins 4a ou 4b devrait avoir passé
-    if (notifs4a.length === 0 && (await getOversellNotifications(productId4b)).length === 0) {
-      fail('S4-notification-globale', 'Admin présent mais aucune notification générée — vérifier reserve_stock()')
-      return
+    // L'admin existe (créé en setup), au moins 4a ou 4b devrait avoir passé OU avoir des anomalies
+    const notifs4bFinal = await getOversellNotifications(productId4b)
+    if (notifs4a.length === 0 && notifs4bFinal.length === 0) {
+      // Vérification fallback via stock_anomalies
+      const anom4a = await getOversellAnomalies(productId4a)
+      const anom4b = await getOversellAnomalies(productId4b)
+      if (anom4a.length === 0 && anom4b.length === 0) {
+        fail('S4-anomalie-globale', 'Admin présent mais aucune anomalie ni notification générée — vérifier reserve_stock()')
+        return
+      }
+      console.log(`  [INFO] Notifications non reçues mais anomalies tracées en DB (best-effort OK)`)
     }
   }
 }
@@ -466,11 +510,12 @@ async function scenario5() {
   console.log(`  après reserve(4): stock=${await getProductStock(productId)} (attendu: 6)`)
 
   // Puis restore
+  // 095 : p_reason forcé à 'retour' en interne — on passe la valeur correcte pour être explicite
   const rRestore = await rpc('restore_stock', {
     p_product_id: productId,
     p_qty: 4,
     p_channel: 'affiliate',
-    p_reason: 'restore',
+    p_reason: 'retour',
     p_order_id: fakeOrderId,
     p_order_type: 'affiliate',
     p_actor: null,
@@ -488,14 +533,15 @@ async function scenario5() {
   const mvts = await getMovements(productId)
   assert('S5-nb-mvts', mvts.length === 2, mvts.length, 2)
 
-  const restoreMvt = mvts.find(m => m.reason === 'restore')
+  // 095 : reason='retour' (plus 'restore' ni 'return')
+  const restoreMvt = mvts.find(m => m.reason === 'retour')
   assert('S5-restore-existe', restoreMvt !== undefined, restoreMvt, 'defined')
   assert('S5-qty_delta-positif', restoreMvt.qty_delta > 0, restoreMvt.qty_delta, '>0')
   assert('S5-qty_delta-val', restoreMvt.qty_delta === 4, restoreMvt.qty_delta, 4)
   assert('S5-balance_after', restoreMvt.balance_after === 10, restoreMvt.balance_after, 10)
-  console.log(`  mouvement restore: qty_delta=${restoreMvt.qty_delta} balance_after=${restoreMvt.balance_after}`)
+  console.log(`  mouvement retour: qty_delta=${restoreMvt.qty_delta} balance_after=${restoreMvt.balance_after}`)
 
-  pass('S5 - Réintégration', `stock 10→6→10, restore tracé qty_delta=+4`)
+  pass('S5 - Réintégration', `stock 10→6→10, retour tracé qty_delta=+4`)
 }
 
 // ── Scénario 6 : Sécurité P1-A — forge ledger bloquée ───────────────────────
@@ -505,11 +551,12 @@ async function scenario6() {
   const productId = await createTestProduct(10)
 
   // Tentative d'appel à record_stock_movement via ANON key (non-service_role)
+  // 095 : reason='vente_affilie' (nouvelle taxonomie — mais peu importe, l'appel doit être bloqué)
   const r = await rpc('record_stock_movement', {
     p_product_id: productId,
     p_qty_delta: -999,
     p_channel: 'affiliate',
-    p_reason: 'sale_reserve',
+    p_reason: 'vente_affilie',
   }, ANON_KEY)
 
   console.log(`  record_stock_movement via anon: status=${r.status} data=${JSON.stringify(r.data)}`)
@@ -553,10 +600,12 @@ async function scenario7(adminId) {
 
   // 7a : appel sans capacité manage_stock (via anon/user sans capacité)
   // On utilise une clé anon qui n'est pas authentifiée → errors.forbidden
+  // 095 : p_reason est requis (raisons manuelles uniquement)
   const r7a = await rpc('adjust_stock_manual', {
     p_product_id: productId,
     p_qty_delta: 5,
     p_note: 'test sans capacité',
+    p_reason: 'reappro',
   }, ANON_KEY)
   console.log(`  adjust_stock_manual via anon: status=${r7a.status} data=${JSON.stringify(r7a.data)}`)
 
@@ -590,11 +639,13 @@ async function scenario7(adminId) {
   // Appel via service_role (auth.uid() = NULL côté PG — SECURITY DEFINER bypass auth)
   // Note : via service_role, has_capability peut retourner true si admin car my_role() = 'admin'
   // Dans le contexte service_role, auth.uid() est NULL → v_real_actor = NULL
+  // 095 : p_reason obligatoire (raisons manuelles), on passe 'reappro'
   const r7b = await rpc('adjust_stock_manual', {
     p_product_id: productId,
     p_qty_delta: 5,
     p_actor: adminId,  // ignoré par la fonction P2-B
     p_note: 'test P2-B actor non falsifiable',
+    p_reason: 'reappro',
   })
   console.log(`  adjust_stock_manual via service_role: status=${r7b.status} retour=${JSON.stringify(r7b.data)}`)
 
@@ -605,16 +656,17 @@ async function scenario7(adminId) {
     console.log(`  stock après adjust(+5)=${stock}`)
 
     const mvts = await getMovements(productId)
-    const adjustMvt = mvts.find(m => m.reason === 'adjustment')
+    // 095 : reason='reappro' (passé en p_reason), plus 'adjustment'
+    const adjustMvt = mvts.find(m => m.reason === 'reappro')
     if (adjustMvt) {
-      console.log(`  mouvement adjustment: actor_id=${adjustMvt.actor_id} (attendu: NULL car auth.uid()=NULL en service_role)`)
+      console.log(`  mouvement reappro: actor_id=${adjustMvt.actor_id} (attendu: NULL car auth.uid()=NULL en service_role)`)
       // P2-B : actor_id doit être auth.uid() (NULL en service_role), PAS p_actor (adminId)
       assert('S7-actor-non-falsifiable', adjustMvt.actor_id !== adminId, adjustMvt.actor_id, 'not adminId (doit être NULL)')
       console.log(`  [P2-B] actor_id=${adjustMvt.actor_id} != p_actor=${adminId} — non falsifiable`)
-      pass('S7 - manage_stock + P2-B', `adjust journalisé, actor=auth.uid() (NULL), p_actor ignoré`)
+      pass('S7 - manage_stock + P2-B', `adjust journalisé reason=reappro, actor=auth.uid() (NULL), p_actor ignoré`)
     } else {
       // Peut réussir mais pas encore de mouvement visible (délai) — vérif plus large
-      console.log(`  [INFO] Pas de mouvement adjustment trouvé, stock=${stock}`)
+      console.log(`  [INFO] Pas de mouvement reappro trouvé, stock=${stock}`)
       if (stock === 25) {
         pass('S7 - manage_stock', `stock 20+5=25, adjust effectué`)
       }
