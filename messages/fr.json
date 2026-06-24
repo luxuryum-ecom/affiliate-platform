@@ -3650,5 +3650,10 @@
     "sub_Ceintures": "Ceintures",
     "sub_Accessoires": "Accessoires",
     "sub_Divers": "Divers"
+  },
+  "productVariant": {
+    "chooseOption": "Choisir une option",
+    "unavailable": "Indisponible — stock à confirmer",
+    "variantLabel": "Variante"
   }
 }

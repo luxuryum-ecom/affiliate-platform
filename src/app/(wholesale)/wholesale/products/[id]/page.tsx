@@ -14,7 +14,9 @@ import { getActiveTariff } from '@/app/actions/tariffs'
 import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
 import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { VariantSelector } from '@/components/product/variant-selector'
 import type { Product, ImportTariff } from '@/types/database'
+import type { ProductVariant } from '@/components/product/variant-selector'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -55,6 +57,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const t = await getTranslations('wholesale.productDetail')
   const tc = await getTranslations('wholesale.common')
   const tUnits = await getTranslations('units')
+  const tVariant = await getTranslations('productVariant')
   const locale = await getLocale()
 
   // Suffixe d'unité résolu SERVEUR (string, jamais une fonction → sûr à passer au
@@ -77,6 +80,24 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const ctaMode = getCatalogProductCtaMode(product.availability_type)
   // Description affichée seulement si elle apporte une info au-delà du nom (cohérent affilié).
   const meaningfulDesc = getMeaningfulDescription(product.name, product.description)
+
+  // Variantes — défensif : vide si la vue n'est pas encore exposée ou si le produit n'en a pas.
+  const { data: variantsRaw } = await supabase
+    .from('product_variants_read')
+    .select('id, product_id, attributes, is_default, stock_count')
+    .eq('product_id', id)
+  const variants: ProductVariant[] = (variantsRaw ?? []).map((v) => ({
+    id: v.id as string,
+    attributes: (v.attributes ?? {}) as Record<string, string>,
+    is_default: v.is_default as boolean,
+    stock_count: v.stock_count as number,
+  }))
+
+  const variantStrings = {
+    chooseOption: tVariant('chooseOption'),
+    unavailable: tVariant('unavailable'),
+    variantLabel: tVariant('variantLabel'),
+  }
 
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
@@ -194,6 +215,9 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               packUnit={product.pack_unit}
               saleUnit={product.sale_unit}
             />
+
+            {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
+            <VariantSelector variants={variants} strings={variantStrings} />
 
             {/* Hook grossiste — économie totale en achetant gros (affichage pur, paliers stockés).
                 Rendu uniquement s'il y a ≥ 2 paliers avec économie (sinon retourne null). */}

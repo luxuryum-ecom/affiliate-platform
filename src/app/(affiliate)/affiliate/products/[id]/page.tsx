@@ -10,8 +10,10 @@ import { getProductCoverUrl, getMeaningfulDescription } from '@/lib/product-medi
 import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
+import { VariantSelector } from '@/components/product/variant-selector'
 import { getTranslations } from 'next-intl/server'
 import type { Product } from '@/types/database'
+import type { ProductVariant } from '@/components/product/variant-selector'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -34,6 +36,7 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
   const supabase = await createClient()
   const t = await getTranslations('affiliate.products')
   const tCommon = await getTranslations('affiliate.common')
+  const tVariant = await getTranslations('productVariant')
   const tUnits = await getTranslations('units')
 
   const {
@@ -128,6 +131,24 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
   const coverUrl = getProductCoverUrl(product)
   const description = getMeaningfulDescription(product.name, product.description)
   const inStock = product.availability_type !== 'import_on_demand'
+
+  // Variantes — défensif : vide si la vue n'est pas encore exposée ou si le produit n'en a pas.
+  const { data: variantsRaw } = await supabase
+    .from('product_variants_read')
+    .select('id, product_id, attributes, is_default, stock_count')
+    .eq('product_id', id)
+  const variants: ProductVariant[] = (variantsRaw ?? []).map((v) => ({
+    id: v.id as string,
+    attributes: (v.attributes ?? {}) as Record<string, string>,
+    is_default: v.is_default as boolean,
+    stock_count: v.stock_count as number,
+  }))
+
+  const variantStrings = {
+    chooseOption: tVariant('chooseOption'),
+    unavailable: tVariant('unavailable'),
+    variantLabel: tVariant('variantLabel'),
+  }
 
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL
     ?? (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
@@ -234,6 +255,9 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
               packUnit={product.pack_unit}
               saleUnit={product.sale_unit}
             />
+
+            {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
+            <VariantSelector variants={variants} strings={variantStrings} />
 
             {/* Prix tout compris — justifie le prix catalogue (affichage pur) */}
             <p className="text-xs text-success-fg">{t('priceAllInclusive')}</p>
