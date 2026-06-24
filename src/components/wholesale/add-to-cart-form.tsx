@@ -195,6 +195,11 @@ export function AddToCartForm({
               </Link>
             </div>
           )}
+          {state.warning === 'restocking' && (
+            <div className="bg-accent-soft border border-accent px-3 py-2 rounded-lg">
+              <p className="text-sm text-accent-fg">{t('addToCartRestockingWarning')}</p>
+            </div>
+          )}
 
           <button
             type="submit"

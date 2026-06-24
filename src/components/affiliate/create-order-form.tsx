@@ -54,6 +54,7 @@ export interface CreateOrderFormStrings {
   backButton: string
   submitButton: string
   submitting: string
+  restockingWarning: string
 }
 
 interface Props {
@@ -119,6 +120,11 @@ export function CreateOrderForm({ products, cities, strings: s }: Props) {
       {state.error && (
         <div className="bg-danger-soft border border-danger text-danger-fg text-sm rounded-xl px-4 py-3">
           {state.error}
+        </div>
+      )}
+      {state.warning === 'restocking' && (
+        <div className="bg-accent-soft border border-accent px-3 py-2 rounded-lg">
+          <p className="text-sm text-accent-fg">{s.restockingWarning}</p>
         </div>
       )}
 

@@ -437,7 +437,8 @@
       "notesPlaceholder": "Ex : client confirmé par WhatsApp, livraison rapide demandée…",
       "backButton": "← Retour",
       "submitButton": "Créer la commande",
-      "submitting": "Enregistrement…"
+      "submitting": "Enregistrement…",
+      "restockingWarning": "Stock en cours de réapprovisionnement — votre commande est bien enregistrée et sera traitée dès réception du stock."
     }
   },
   "supplier": {
@@ -893,6 +894,7 @@
       "addToCartOutOfStock": "Produit épuisé",
       "addToCartSuccess": "✓ Ajouté au panier",
       "addToCartViewCart": "Voir le panier →",
+      "addToCartRestockingWarning": "Stock en cours de réapprovisionnement — votre ajout au panier est bien enregistré et sera traité dès réception du stock.",
       "addToCartTiersHeader": "Paliers de prix",
       "addToCartTierQty": "Quantité",
       "addToCartTierPrice": "Prix / unité",
@@ -1381,7 +1383,8 @@
       "directAddToCart": "Ajouter au panier",
       "directAdding": "Ajout en cours…",
       "directAddedSuccess": "Ajouté au panier",
-      "directViewCart": "Voir le panier →"
+      "directViewCart": "Voir le panier →",
+      "addToCartRestockingWarning": "Stock en cours de réapprovisionnement — votre ajout au panier est bien enregistré et sera traité dès réception du stock."
     },
     "quoteRequests": {
       "metaTitle": "Mes demandes de devis — Espace Grossiste",
@@ -1557,7 +1560,8 @@
       "consent": "En commandant, vous acceptez d'être contacté(e) pour confirmer la livraison.",
       "whatsappCta": "Commander via WhatsApp",
       "ariaDecrease": "Diminuer la quantité",
-      "ariaIncrease": "Augmenter la quantité"
+      "ariaIncrease": "Augmenter la quantité",
+      "restockingWarning": "Stock en cours de réapprovisionnement — votre commande est bien enregistrée et sera traitée dès réception du stock."
     },
     "deliveryDays": "{min}–{max} jours ouvrables"
   },

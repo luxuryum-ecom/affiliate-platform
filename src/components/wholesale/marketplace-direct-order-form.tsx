@@ -23,6 +23,7 @@ interface TDirect {
   overOrderTitle: string
   overOrderDesc: string
   overOrderCta: string
+  addToCartRestockingWarning: string
 }
 
 interface Props {
@@ -144,6 +145,11 @@ export function MarketplaceDirectOrderForm({
               >
                 {tDirect.viewCart}
               </Link>
+            </div>
+          )}
+          {state.warning === 'restocking' && (
+            <div className="bg-accent-soft border border-accent px-3 py-2 rounded-lg">
+              <p className="text-sm text-accent-fg">{tDirect.addToCartRestockingWarning}</p>
             </div>
           )}
 

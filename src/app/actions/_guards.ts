@@ -46,6 +46,7 @@ export async function requireAdmin({ allowAgent = false }: { allowAgent?: boolea
  * 'confirm_cod_orders'       — confirmation des commandes COD (mig 087)
  * 'confirm_affiliate_orders' — confirmation des commandes affiliés (mig 087)
  * 'confirm_wholesale_orders' — confirmation des commandes grossistes B2B (mig 087)
+ * 'manage_stock'             — ajustement manuel du stock + lecture ledger (mig 092)
  */
 export type StaffCapability =
   | 'validate_categories'
@@ -53,6 +54,7 @@ export type StaffCapability =
   | 'confirm_cod_orders'
   | 'confirm_affiliate_orders'
   | 'confirm_wholesale_orders'
+  | 'manage_stock'
 
 /**
  * Guard for a granular, admin-grantable capability (mig 083 staff_permissions).

@@ -65,15 +65,22 @@ export function CodOrderForm({
 
   if (state.success && state.orderId) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-2">
-        <p className="text-2xl">{t('form.successIcon')}</p>
-        <p className="font-semibold text-green-800">{t('form.successTitle')}</p>
-        <p className="text-sm text-green-700">
-          {t('form.successRef', { ref: state.orderId.slice(0, 8).toUpperCase() })}
-        </p>
-        <p className="text-xs text-green-600 pt-1">
-          {t('form.successNote')}
-        </p>
+      <div className="space-y-3">
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-2">
+          <p className="text-2xl">{t('form.successIcon')}</p>
+          <p className="font-semibold text-green-800">{t('form.successTitle')}</p>
+          <p className="text-sm text-green-700">
+            {t('form.successRef', { ref: state.orderId.slice(0, 8).toUpperCase() })}
+          </p>
+          <p className="text-xs text-green-600 pt-1">
+            {t('form.successNote')}
+          </p>
+        </div>
+        {state.warning === 'restocking' && (
+          <div className="bg-accent-soft border border-accent px-3 py-2 rounded-lg">
+            <p className="text-sm text-accent-fg">{t('form.restockingWarning')}</p>
+          </div>
+        )}
       </div>
     )
   }

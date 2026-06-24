@@ -12,7 +12,7 @@ import type { StaffCapability } from '@/app/actions/_guards'
 
 // ─── Volets ──────────────────────────────────────────────────────────────────
 
-export type VoletId = 'commandes' | 'sourcing' | 'categories'
+export type VoletId = 'commandes' | 'sourcing' | 'categories' | 'stock'
 
 export type Volet = {
   id: VoletId
@@ -36,6 +36,11 @@ export const ALL_VOLETS: Volet[] = [
     id: 'categories',
     labelKey: 'admin.permissionsV2.volet.categories',
     capabilities: ['validate_categories'],
+  },
+  {
+    id: 'stock',
+    labelKey: 'admin.permissionsV2.volet.stock',
+    capabilities: ['manage_stock'],
   },
 ]
 
@@ -80,6 +85,12 @@ export const ALL_CAPABILITIES: CapabilityMeta[] = [
     volet: 'categories',
     labelKey: 'admin.permissionsV2.cap.validate_categories.label',
     descKey: 'admin.permissionsV2.cap.validate_categories.desc',
+  },
+  {
+    id: 'manage_stock',
+    volet: 'stock',
+    labelKey: 'admin.permissionsV2.cap.manage_stock.label',
+    descKey: 'admin.permissionsV2.cap.manage_stock.desc',
   },
 ]
 

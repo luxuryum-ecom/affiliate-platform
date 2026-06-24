@@ -90,8 +90,11 @@ export async function placeOrder(
     return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
   if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
-  if (product.stock_count < quantity)
-    return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
+  // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
+  // Si le stock est insuffisant, la commande passe avec un flag warning='restocking'.
+  // L'alerte oversell est gérée côté SQL par record_anomaly (mig 095).
+  const stockWarning: 'restocking' | undefined =
+    product.stock_count < quantity ? 'restocking' : undefined
 
   // ── Validate affiliate ID if provided ────────────────────────────────────
   let validatedAffiliateId: string | null = null
@@ -249,7 +252,8 @@ export async function placeOrder(
   ]
   await supabase.from('order_signals').insert(signals)
 
-  return { error: null, success: true, orderId: order.id }
+  // WMS-1 : propage le warning restocking si le stock était insuffisant.
+  return { error: null, success: true, orderId: order.id, ...(stockWarning ? { warning: stockWarning } : {}) }
 }
 
 // =============================================================================
@@ -351,8 +355,11 @@ export async function createAffiliateOrder(
     return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
   if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
-  if (product.stock_count < quantity)
-    return { error: `Stock insuffisant (${product.stock_count} unités disponibles).`, success: false, orderId: null }
+  // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
+  // Si le stock est insuffisant, la commande passe avec warning='restocking'.
+  const stockWarningAffiliate: 'restocking' | undefined =
+    product.stock_count < quantity ? 'restocking' : undefined
+
   if (sellPriceNum < product.sell_price)
     return {
       error: `Le prix de vente doit être ≥ ${product.sell_price} MAD (prix de base).`,
@@ -437,7 +444,8 @@ export async function createAffiliateOrder(
 
   revalidatePath('/affiliate/orders')
   revalidatePath('/admin/orders')
-  return { error: null, success: true, orderId: order.id }
+  // WMS-1 : propage le warning restocking si le stock était insuffisant.
+  return { error: null, success: true, orderId: order.id, ...(stockWarningAffiliate ? { warning: stockWarningAffiliate } : {}) }
 }
 
 // =============================================================================
@@ -500,7 +508,7 @@ export async function updateOrderStatus(
   // ── Fetch current state ───────────────────────────────────────────────────
   const { data: order } = (await supabase
     .from('orders')
-    .select('status, quantity, product_id, cod_expected')
+    .select('status, quantity, product_id, cod_expected, affiliate_id')
     .eq('id', orderId)
     .single()) as {
     data: {
@@ -508,6 +516,7 @@ export async function updateOrderStatus(
       quantity: number
       product_id: string
       cod_expected: number | null
+      affiliate_id: string | null
     } | null
     error: unknown
   }
@@ -532,18 +541,32 @@ export async function updateOrderStatus(
   const needsReserve     = newStatus === 'confirmed' && prev === 'pending_confirmation'
   const needsRestore     = ['cancelled', 'returned'].includes(newStatus) && wasStockReserved
 
+  // WMS-1 OPTION A : reserve/restore étendu, canal discriminé, never-refuse.
+  // Les signatures RPC ont été étendues en mig 093 (p_channel, p_order_id, etc.).
+  // On ne vérifie plus la valeur de retour de reserve_stock (solde peut être négatif).
+  const stockChannel = order.affiliate_id ? 'affiliate' : 'ecom_perso'
+
   if (needsReserve) {
-    const { data: reserved } = (await supabase.rpc('reserve_stock', {
-      p_product_id: order.product_id,
-      p_qty: order.quantity,
-    })) as { data: boolean; error: unknown }
-    if (!reserved) return fail('Stock insuffisant pour confirmer la commande.')
+    await supabase.rpc('reserve_stock', {
+      p_product_id:  order.product_id,
+      p_qty:         order.quantity,
+      p_channel:     stockChannel,
+      p_order_id:    orderId,
+      p_order_type:  'affiliate',
+      p_actor:       userId,
+    })
+    // Ne pas vérifier le retour : OPTION A = on ne refuse jamais pour stock.
   }
 
   if (needsRestore) {
     await supabase.rpc('restore_stock', {
-      p_product_id: order.product_id,
-      p_qty: order.quantity,
+      p_product_id:  order.product_id,
+      p_qty:         order.quantity,
+      p_channel:     stockChannel,
+      p_reason:      'restore',
+      p_order_id:    orderId,
+      p_order_type:  'affiliate',
+      p_actor:       userId,
     })
   }
 

@@ -437,7 +437,8 @@
       "notesPlaceholder": "E.g.: customer confirmed via WhatsApp, fast delivery requested…",
       "backButton": "← Back",
       "submitButton": "Create order",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "restockingWarning": "Stock is being replenished — your order is saved and will be processed as soon as stock arrives."
     }
   },
   "supplier": {
@@ -893,6 +894,7 @@
       "addToCartOutOfStock": "Out of stock",
       "addToCartSuccess": "✓ Added to cart",
       "addToCartViewCart": "View cart →",
+      "addToCartRestockingWarning": "Stock is being replenished — your cart is saved and will be processed as soon as stock arrives.",
       "addToCartTiersHeader": "Price tiers",
       "addToCartTierQty": "Quantity",
       "addToCartTierPrice": "Price / unit",
@@ -1381,7 +1383,8 @@
       "directAddToCart": "Add to cart",
       "directAdding": "Adding…",
       "directAddedSuccess": "Added to cart",
-      "directViewCart": "View cart →"
+      "directViewCart": "View cart →",
+      "addToCartRestockingWarning": "Stock is being replenished — your cart is saved and will be processed as soon as stock arrives."
     },
     "quoteRequests": {
       "metaTitle": "My Quote Requests — Wholesale Portal",
@@ -1557,7 +1560,8 @@
       "consent": "By ordering, you agree to be contacted to confirm delivery.",
       "whatsappCta": "Order via WhatsApp",
       "ariaDecrease": "Decrease quantity",
-      "ariaIncrease": "Increase quantity"
+      "ariaIncrease": "Increase quantity",
+      "restockingWarning": "Stock is being replenished — your order is saved and will be processed as soon as stock arrives."
     },
     "deliveryDays": "{min}–{max} business days"
   },

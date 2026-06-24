@@ -8,7 +8,15 @@ import type { Product } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type CartState = { error: string | null; success: boolean }
+export type CartState = {
+  error: string | null
+  success: boolean
+  /**
+   * WMS-1 (095) : présent quand le stock était insuffisant au moment de l'ajout.
+   * L'ajout au panier passe toujours (OPTION A) — valeur : 'restocking'.
+   */
+  warning?: 'restocking'
+}
 
 // ─── Add / upsert ─────────────────────────────────────────────────────────────
 
@@ -57,12 +65,12 @@ export async function addToCart(
     }
   }
 
-  if (product.availability_type === 'local_stock' && quantity > product.stock_count) {
-    return {
-      error: `Stock insuffisant — ${product.stock_count} unités disponibles.`,
-      success: false,
-    }
-  }
+  // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
+  // L'ajout au panier passe avec warning='restocking' si stock < quantité demandée.
+  const stockWarning: 'restocking' | undefined =
+    product.availability_type === 'local_stock' && quantity > product.stock_count
+      ? 'restocking'
+      : undefined
 
   const { error } = await supabase.from('wholesale_cart_items').upsert(
     { buyer_id: user.id, product_id: productId, quantity },
@@ -72,7 +80,7 @@ export async function addToCart(
   if (error) return { error: error.message, success: false }
 
   revalidatePath('/wholesale/cart')
-  return { error: null, success: true }
+  return { error: null, success: true, ...(stockWarning ? { warning: stockWarning } : {}) }
 }
 
 /**
@@ -131,15 +139,11 @@ export async function addMarketplaceToCart(
     }
   }
 
-  if (
-    supplierProduct.stock_quantity != null &&
-    quantity > supplierProduct.stock_quantity
-  ) {
-    return {
-      error: `Stock disponible : ${supplierProduct.stock_quantity} unités.`,
-      success: false,
-    }
-  }
+  // WMS-1 OPTION A : stock fournisseur insuffisant → warning, pas de refus.
+  const supplierStockWarning: 'restocking' | undefined =
+    supplierProduct.stock_quantity != null && quantity > supplierProduct.stock_quantity
+      ? 'restocking'
+      : undefined
 
   // Miroir catalogue interne — MÊME résolution que celle qui gate le CTA côté page
   // (findCatalogLink), pour garantir une source de vérité unique : si la page affiche
@@ -161,12 +165,12 @@ export async function addMarketplaceToCart(
     }
   }
 
-  if (quantity > catalogProduct.stock_count) {
-    return {
-      error: `Stock catalogue : ${catalogProduct.stock_count} unités.`,
-      success: false,
-    }
-  }
+  // WMS-1 OPTION A : stock catalogue insuffisant → warning, pas de refus.
+  const catalogStockWarning: 'restocking' | undefined =
+    quantity > catalogProduct.stock_count ? 'restocking' : undefined
+
+  // Merge des warnings fournisseur + catalogue (l'un ou l'autre peut être présent).
+  const marketplaceWarning = supplierStockWarning ?? catalogStockWarning
 
   const { error } = await supabase.from('wholesale_cart_items').upsert(
     { buyer_id: user.id, product_id: catalogProduct.id, quantity },
@@ -177,7 +181,7 @@ export async function addMarketplaceToCart(
 
   revalidatePath('/wholesale/cart')
   revalidatePath('/wholesale/marketplace')
-  return { error: null, success: true }
+  return { error: null, success: true, ...(marketplaceWarning ? { warning: marketplaceWarning } : {}) }
 }
 
 // ─── Update quantity ──────────────────────────────────────────────────────────
