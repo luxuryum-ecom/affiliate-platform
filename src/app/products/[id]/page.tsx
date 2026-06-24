@@ -10,7 +10,9 @@ import { CodOrderForm } from '@/components/customer/cod-order-form'
 import { ProductGallery } from '@/components/customer/product-gallery'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { VariantSelector } from '@/components/product/variant-selector'
 import type { Product } from '@/types/database'
+import type { ProductVariant } from '@/components/product/variant-selector'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -38,6 +40,7 @@ export default async function PublicProductPage({ params, searchParams }: Params
   const { ref } = await searchParams
 
   const t = await getTranslations('publicProduct')
+  const tVariant = await getTranslations('productVariant')
 
   const supabase = await createClient()
 
@@ -83,6 +86,24 @@ export default async function PublicProductPage({ params, searchParams }: Params
 
   const inStock = product.stock_count > 0
   const lowStock = product.stock_count > 0 && product.stock_count <= 5
+
+  // Variantes — défensif : vide si la vue n'est pas encore exposée ou si le produit n'en a pas.
+  const { data: variantsRaw } = await supabase
+    .from('product_variants_read')
+    .select('id, product_id, attributes, is_default, stock_count')
+    .eq('product_id', product.id)
+  const variants: ProductVariant[] = (variantsRaw ?? []).map((v) => ({
+    id: v.id as string,
+    attributes: (v.attributes ?? {}) as Record<string, string>,
+    is_default: v.is_default as boolean,
+    stock_count: v.stock_count as number,
+  }))
+
+  const variantStrings = {
+    chooseOption: tVariant('chooseOption'),
+    unavailable: tVariant('unavailable'),
+    variantLabel: tVariant('variantLabel'),
+  }
 
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
@@ -151,6 +172,9 @@ export default async function PublicProductPage({ params, searchParams }: Params
               </span>
               <span className="text-sm font-medium text-gold-400">{t('priceUnit')}</span>
             </div>
+
+            {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
+            <VariantSelector variants={variants} strings={variantStrings} />
 
             <div className="flex items-start gap-3 bg-surface border border-line rounded-xl p-4 shadow-premium">
               <span className="text-lg" aria-hidden>

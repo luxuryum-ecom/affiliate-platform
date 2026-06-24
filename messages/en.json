@@ -3650,5 +3650,10 @@
     "sub_Ceintures": "Belts",
     "sub_Accessoires": "Accessories",
     "sub_Divers": "Miscellaneous"
+  },
+  "productVariant": {
+    "chooseOption": "Choose an option",
+    "unavailable": "Unavailable — stock to confirm",
+    "variantLabel": "Variant"
   }
 }

@@ -3650,5 +3650,10 @@
     "sub_Ceintures": "أحزمة",
     "sub_Accessoires": "إكسسوارات",
     "sub_Divers": "متنوع"
+  },
+  "productVariant": {
+    "chooseOption": "اختر خياراً",
+    "unavailable": "غير متوفر — المخزون قيد التأكيد",
+    "variantLabel": "النسخة"
   }
 }
