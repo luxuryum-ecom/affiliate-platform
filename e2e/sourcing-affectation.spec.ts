@@ -22,10 +22,14 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { getLocalSupabaseEnv } from './assert-local-supabase'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const BASE_URL = 'http://localhost:3000'
+// Port LOCAL dédié = serveur lancé par playwright.sourcing.config.ts. Codé en dur sur
+// localhost (jamais d'override env) : hors ce serveur local, la nav tape un port mort
+// et échoue — impossible d'atteindre la prod.
+const BASE_URL = 'http://localhost:3201'
 const PROOFS_DIR = path.resolve(
   '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-proofs/sourcing-affectation',
 )
@@ -38,9 +42,12 @@ const ADMIN_EMAIL = process.env.SMOKE_ADMIN_EMAIL ?? 'admin@affipartner.ma'
 const ADMIN_PASSWORD = process.env.SMOKE_ADMIN_PASSWORD ?? ''
 const AGENT_ID = 'cebd5f07-55a7-44ee-9638-43348d4de75c'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://owvtfzxvirttrbcsiveg.supabase.co'
-// JAMAIS de clé en dur — lue depuis l'environnement local (.env.local) au runtime du test.
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY ?? ''
+// GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role → identifiants
+// Supabase LOCAUX uniquement, JAMAIS .env.local/prod. REFUS fail-fast si non-local.
+// (l'URL prod codée en dur en fallback a été retirée — c'était le vecteur le plus grave.)
+const LOCAL = getLocalSupabaseEnv()
+const SUPABASE_URL = LOCAL.url
+const SERVICE_KEY = LOCAL.serviceKey
 
 // Données de test
 const PRODUCT_CN = 'Lunettes test-CN'

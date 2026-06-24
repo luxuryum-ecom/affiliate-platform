@@ -50,6 +50,19 @@ reconstruire ni doublonner l'existant**.
    code, les specs e2e, ou les commits. Si un test a besoin d'une clé, il la lit depuis
    l'environnement. Violation = incident sécurité (déjà survenu 2026-06-20 et 2026-06-22). Avant
    tout commit touchant des tests/scripts, vérifier qu'aucun secret réel n'y figure.
+8. **RÈGLE ABSOLUE — TESTS QUI ÉCRIVENT = LOCAL UNIQUEMENT, JAMAIS LA PROD.** Tout test ou script
+   qui **écrit en base** (seed, INSERT/UPDATE/DELETE, RPC d'écriture, `service_role`) doit cibler
+   **EXCLUSIVEMENT le Supabase LOCAL `127.0.0.1:54321`** — **JAMAIS** l'URL de `.env.local` (qui
+   pointe sur la **PROD** `owvtfzxvirttrbcsiveg`). Un `@tester` (ou tout agent) ne **seed JAMAIS**
+   la prod via `service_role`. Mise en œuvre obligatoire : utiliser le garde-fou
+   `assertLocalSupabase()` (`scripts/lib/assert-local-supabase.mjs` / `e2e/assert-local-supabase.ts`)
+   qui **REFUSE (fail-fast)** si l'URL n'est pas locale, et récupérer les clés locales via
+   `getLocalSupabaseEnv()` (lit `supabase status`), **jamais** en lisant `.env.local`. Les scripts
+   runtime passent par leurs wrappers (`run-wms1-*.sh` → `supabase status`). Une config Playwright
+   d'un test d'écriture force le serveur sur l'env LOCAL (`next dev` + `env` local) et
+   `reuseExistingServer: false`. **Cause racine de l'incident 2026-06-24** (un test a seedé le ledger
+   stock de prod via `service_role`). Avant tout commit d'un test/script d'écriture : vérifier qu'il
+   ne peut PAS pointer sur la prod.
 
 ## 🧭 AUTONOMIE DE DÉCISION
 > But : avancer sans interruptions inutiles. Abdou n'est sollicité que sur ce qui compte vraiment.

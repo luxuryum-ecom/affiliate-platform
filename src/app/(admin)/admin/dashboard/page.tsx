@@ -249,6 +249,12 @@ export default async function AdminDashboardPage() {
                 href: '/admin/products',
               },
               {
+                title: t('stockTitle'),
+                description: t('stockDesc'),
+                badge: null,
+                href: '/admin/stock',
+              },
+              {
                 title: t('ordersTitle'),
                 description: t('ordersDesc'),
                 badge: null,

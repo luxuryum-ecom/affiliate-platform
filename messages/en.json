@@ -3224,6 +3224,8 @@
       "usersDesc": "Validate or reject new accounts.",
       "productsTitle": "Manage products",
       "productsDesc": "Add, edit or deactivate products.",
+      "stockTitle": "Stock & movements",
+      "stockDesc": "Movement log, manual adjustments and anomalies.",
       "ordersTitle": "COD orders",
       "ordersDesc": "Track and update delivery statuses.",
       "wholesaleOrdersTitle": "Wholesale orders",
@@ -3469,7 +3471,8 @@
       "volet": {
         "commandes": "Orders",
         "sourcing": "Country sourcing",
-        "categories": "Categories"
+        "categories": "Categories",
+        "stock": "Stock"
       },
       "cap": {
         "confirm_cod_orders": {
@@ -3491,6 +3494,10 @@
         "validate_categories": {
           "label": "Validate categories",
           "desc": "Allows creating and organising categories in the product catalogue."
+        },
+        "manage_stock": {
+          "label": "Manage stock",
+          "desc": "View the stock movement log and perform manual adjustments (gift, breakage, loss, etc.)."
         }
       }
     },
@@ -3516,6 +3523,64 @@
       "errorStockInsufficient": "Insufficient stock.",
       "errorGeneric": "Error confirming order.",
       "accessDenied": "You do not have the required permissions to access this page."
+    },
+    "stock": {
+      "metaTitle": "Stock & movements — Administration",
+      "pageTitle": "Stock & movements",
+      "subtitle": "Single counter per product: log of all movements by channel, manual adjustments and anomalies.",
+      "journalTitle": "Movement log",
+      "journalEmpty": "No movements recorded.",
+      "anomaliesTitle": "Alerts & anomalies",
+      "anomaliesSubtitle": "Monitored signals (preview of the AI Guardian).",
+      "anomaliesEmpty": "No anomalies detected.",
+      "globalAnomaly": "Global anomaly (all products)",
+      "adjustTitle": "Adjust stock",
+      "adjustButton": "Adjust stock",
+      "chooseProduct": "Choose a product…",
+      "chooseReason": "Choose a reason…",
+      "fieldQty": "Quantity",
+      "qtyHint": "Positive = adds to stock, negative = removes.",
+      "fieldNote": "Note (optional)",
+      "fieldProduct": "Product",
+      "fieldReason": "Reason",
+      "confirmPrompt": "Confirm: {reason} of {qty} unit(s) on this product?",
+      "adjustSuccess": "Adjustment applied — new balance: {balance}",
+      "formIncomplete": "Select a product, a non-zero quantity and a reason.",
+      "filterProduct": "Filter by product",
+      "filterReason": "Filter by reason",
+      "allProducts": "All products",
+      "allReasons": "All reasons",
+      "clearFilters": "Reset",
+      "colBalance": "Balance",
+      "by": "by",
+      "systemActor": "System",
+      "reason": {
+        "vente_affilie": "Affiliate sale",
+        "vente_gros": "Wholesale sale",
+        "vente_ecom": "E-commerce sale",
+        "cadeau": "Gift",
+        "casse": "Breakage",
+        "echantillon": "Sample",
+        "perte": "Loss",
+        "retour": "Return",
+        "reappro": "Restock"
+      },
+      "channel": {
+        "affiliate": "Affiliate",
+        "wholesale": "Wholesale",
+        "ecom_perso": "E-commerce",
+        "manual_adjust": "Manual adjustment",
+        "return": "Return",
+        "system": "System"
+      },
+      "anomaly": {
+        "oversell": "Oversell (negative stock)",
+        "abnormal_loss": "Abnormal breakage/loss",
+        "repeated_adjust": "Repeated adjustments"
+      },
+      "anomalyQty": "Qty",
+      "anomalyStockBefore": "Stock before",
+      "anomalyShortfall": "Shortfall"
     }
   },
   "notifications": {

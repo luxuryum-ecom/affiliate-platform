@@ -3,31 +3,25 @@
  * Lots 1, 2, 3 : incitation affilié, prix clair, photos miroir.
  *
  * IMPORTANT : ce fichier crée des données ÉPHÉMÈRES et les nettoie à la fin.
- * Secrets (URL + service_role) lus depuis .env.local — JAMAIS en dur.
+ * Connexion Supabase (URL + service_role) : LOCALE uniquement via getLocalSupabaseEnv()
+ * (« supabase status ») — JAMAIS .env.local / prod, JAMAIS en dur. Fail-fast si non-local.
  * Ne touche PAS aux colonnes argent de produits existants.
  */
 
 import { test, expect, type BrowserContext } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
+import { getLocalSupabaseEnv } from './assert-local-supabase'
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
-const BASE_URL = 'http://localhost:3000'
+// Port LOCAL dédié (serveur playwright.vitrine.config.ts), en dur, sans override — anti-prod.
+const BASE_URL = 'http://localhost:3204'
 
-// URL + clé service_role lues depuis l'environnement / .env.local — JAMAIS codées
-// en dur (secret). Même pattern que les scripts (scripts/*.mjs).
-function readEnv(key: string): string {
-  if (process.env[key]) return process.env[key] as string
-  try {
-    const env = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8')
-    const m = env.match(new RegExp(`^${key}=(.*)$`, 'm'))
-    return (m?.[1] ?? '').trim().replace(/^["']|["']$/g, '')
-  } catch {
-    return ''
-  }
-}
-const SUPABASE_URL = readEnv('NEXT_PUBLIC_SUPABASE_URL')
-const SUPABASE_SERVICE_KEY = readEnv('SUPABASE_SERVICE_ROLE_KEY')
+// GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role → identifiants
+// Supabase LOCAUX uniquement (jamais .env.local/prod). REFUS fail-fast si non-local.
+const LOCAL = getLocalSupabaseEnv()
+const SUPABASE_URL = LOCAL.url
+const SUPABASE_SERVICE_KEY = LOCAL.serviceKey
 const PROOFS_DIR = path.join(process.cwd(), '.vitrine-proofs')
 const AFFILIATE_AUTH = path.join(process.cwd(), 'e2e/.auth/affiliate.json')
 const ADMIN_AUTH = path.join(process.cwd(), 'e2e/.auth/admin.json')

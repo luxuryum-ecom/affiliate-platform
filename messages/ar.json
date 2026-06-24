@@ -3224,6 +3224,8 @@
       "usersDesc": "قبول أو رفض الحسابات الجديدة.",
       "productsTitle": "إدارة المنتجات",
       "productsDesc": "إضافة المنتجات أو تعديلها أو تعطيلها.",
+      "stockTitle": "المخزون والحركات",
+      "stockDesc": "سجل الحركات والتعديلات اليدوية والحالات الشاذة.",
       "ordersTitle": "طلبات الدفع عند الاستلام",
       "ordersDesc": "تتبّع حالات التوصيل وتحديثها.",
       "wholesaleOrdersTitle": "طلبات الجملة",
@@ -3469,7 +3471,8 @@
       "volet": {
         "commandes": "الطلبات",
         "sourcing": "التوريد حسب الدولة",
-        "categories": "الفئات"
+        "categories": "الفئات",
+        "stock": "المخزون"
       },
       "cap": {
         "confirm_cod_orders": {
@@ -3491,6 +3494,10 @@
         "validate_categories": {
           "label": "التحقق من الفئات",
           "desc": "يتيح إنشاء الفئات وتنظيمها في كتالوج المنتجات."
+        },
+        "manage_stock": {
+          "label": "إدارة المخزون",
+          "desc": "الاطّلاع على سجل حركات المخزون وإجراء تعديلات يدوية (هدية، كسر، خسارة، إلخ)."
         }
       }
     },
@@ -3516,6 +3523,64 @@
       "errorStockInsufficient": "المخزون غير كافٍ.",
       "errorGeneric": "حدث خطأ أثناء التأكيد.",
       "accessDenied": "ليس لديك الصلاحيات اللازمة للوصول إلى هذه الصفحة."
+    },
+    "stock": {
+      "metaTitle": "المخزون والحركات — الإدارة",
+      "pageTitle": "المخزون والحركات",
+      "subtitle": "عدّاد واحد لكل منتج: سجل لكل الحركات حسب القناة والتعديلات اليدوية والحالات الشاذة.",
+      "journalTitle": "سجل الحركات",
+      "journalEmpty": "لا توجد حركات مسجّلة.",
+      "anomaliesTitle": "التنبيهات والحالات الشاذة",
+      "anomaliesSubtitle": "إشارات مراقَبة (تمهيدًا لحارس الذكاء الاصطناعي).",
+      "anomaliesEmpty": "لم يتم رصد أي حالة شاذة.",
+      "globalAnomaly": "حالة شاذة عامة (كل المنتجات)",
+      "adjustTitle": "تعديل المخزون",
+      "adjustButton": "تعديل المخزون",
+      "chooseProduct": "اختر منتجًا…",
+      "chooseReason": "اختر سببًا…",
+      "fieldQty": "الكمية",
+      "qtyHint": "موجب = إضافة للمخزون، سالب = خصم.",
+      "fieldNote": "ملاحظة (اختياري)",
+      "fieldProduct": "المنتج",
+      "fieldReason": "السبب",
+      "confirmPrompt": "تأكيد: {reason} بمقدار {qty} وحدة على هذا المنتج؟",
+      "adjustSuccess": "تم التعديل — الرصيد الجديد: {balance}",
+      "formIncomplete": "اختر منتجًا وكمية غير صفرية وسببًا.",
+      "filterProduct": "تصفية حسب المنتج",
+      "filterReason": "تصفية حسب السبب",
+      "allProducts": "كل المنتجات",
+      "allReasons": "كل الأسباب",
+      "clearFilters": "إعادة تعيين",
+      "colBalance": "الرصيد",
+      "by": "بواسطة",
+      "systemActor": "النظام",
+      "reason": {
+        "vente_affilie": "بيع تابع",
+        "vente_gros": "بيع بالجملة",
+        "vente_ecom": "بيع إلكتروني",
+        "cadeau": "هدية",
+        "casse": "كسر",
+        "echantillon": "عيّنة",
+        "perte": "خسارة",
+        "retour": "إرجاع",
+        "reappro": "إعادة التموين"
+      },
+      "channel": {
+        "affiliate": "تابع",
+        "wholesale": "بالجملة",
+        "ecom_perso": "إلكتروني",
+        "manual_adjust": "تعديل يدوي",
+        "return": "إرجاع",
+        "system": "النظام"
+      },
+      "anomaly": {
+        "oversell": "بيع زائد (مخزون سالب)",
+        "abnormal_loss": "خسارة غير طبيعية",
+        "repeated_adjust": "تعديلات متكررة"
+      },
+      "anomalyQty": "الكمية",
+      "anomalyStockBefore": "المخزون قبل",
+      "anomalyShortfall": "العجز"
     }
   },
   "notifications": {
