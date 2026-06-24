@@ -437,7 +437,8 @@
       "notesPlaceholder": "مثال: عميل أكّد عبر واتساب، طلب توصيل سريع…",
       "backButton": "← رجوع",
       "submitButton": "إنشاء الطلب",
-      "submitting": "جارٍ الحفظ…"
+      "submitting": "جارٍ الحفظ…",
+      "restockingWarning": "يتم حالياً تجديد المخزون — تم تسجيل طلبك بنجاح وستتم معالجته فور توفّر المخزون."
     }
   },
   "supplier": {
@@ -893,6 +894,7 @@
       "addToCartOutOfStock": "نفد المخزون",
       "addToCartSuccess": "✓ تمت الإضافة إلى السلة",
       "addToCartViewCart": "عرض السلة ←",
+      "addToCartRestockingWarning": "يتم حالياً تجديد المخزون — تمت إضافة منتجك إلى السلة بنجاح وستتم معالجته فور توفّر المخزون.",
       "addToCartTiersHeader": "شرائح الأسعار",
       "addToCartTierQty": "الكمية",
       "addToCartTierPrice": "السعر / وحدة",
@@ -1381,7 +1383,8 @@
       "directAddToCart": "أضف إلى السلة",
       "directAdding": "جارٍ الإضافة…",
       "directAddedSuccess": "تمت الإضافة إلى السلة",
-      "directViewCart": "عرض السلة ←"
+      "directViewCart": "عرض السلة ←",
+      "addToCartRestockingWarning": "يتم حالياً تجديد المخزون — تمت إضافة منتجك إلى السلة بنجاح وستتم معالجته فور توفّر المخزون."
     },
     "quoteRequests": {
       "metaTitle": "طلبات عروض الأسعار — بوابة الجملة",
@@ -1557,7 +1560,8 @@
       "consent": "بتقديم طلبك، توافق على التواصل معك لتأكيد التسليم.",
       "whatsappCta": "الطلب عبر واتساب",
       "ariaDecrease": "تقليل الكمية",
-      "ariaIncrease": "زيادة الكمية"
+      "ariaIncrease": "زيادة الكمية",
+      "restockingWarning": "يتم حالياً تجديد المخزون — تم تسجيل طلبك بنجاح وستتم معالجته فور توفّر المخزون."
     },
     "deliveryDays": "{min}–{max} أيام عمل"
   },

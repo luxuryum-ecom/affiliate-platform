@@ -297,6 +297,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                       overOrderTitle: t('overOrderTitle'),
                       overOrderDesc: t('overOrderDesc'),
                       overOrderCta: t('overOrderCta'),
+                      addToCartRestockingWarning: t('addToCartRestockingWarning'),
                     }}
                   />
                 </div>

@@ -87,6 +87,7 @@ export default async function NewAffiliateOrderPage() {
     backButton: t('backButton'),
     submitButton: t('submitButton'),
     submitting: t('submitting'),
+    restockingWarning: t('restockingWarning'),
   }
 
   return (
