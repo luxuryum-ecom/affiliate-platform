@@ -68,6 +68,36 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 - **REPORTÉS** : **Egrow / WMS-2** (ecom perso câblé) ; **réconciliation argent transporteur** (attend formats fichiers transporteurs + export Egrow).
 - **ÉTAT ACTUEL** : **LOT A (1→5) terminé et committé sur `feat/variants-step1`** (mig 096→100, 4 checks verts à chaque étape, @security GO partout, runtimes LOCAL only via `assertLocalSupabase`). **NON mergé, NON poussé, AUCUN `db push` prod** (GO Abdou requis ; touche le ledger stock → validation finale Abdou par règle 5). Décisions **VALIDÉES** : ledger (option B), retours scannés, réconciliation reportée, double-écriture. **Prochaine** : étape 6 (commandes portent la variante — circuit @finance).
 
+## 4bis. DASHBOARD STOCK PATRON — ⬜ à construire APRÈS Lot B
+
+> Vision d'Abdou : un **VRAI tableau de bord de patron** (chiffres clés en un coup d'œil), **pas** l'outil basique actuel `/admin/stock`. **PRIORITÉ : construire APRÈS le Lot B** (étapes 6-7 = les commandes portent les statuts réservé/envoyé/livré) — sinon les cartes seraient vides. ⬜ **à construire post-Lot B.**
+
+**Vue d'ensemble EN CARTES (chiffres clés, en haut) :**
+- Stock **RÉEL au dépôt** (dispo vendable, par produit/variante) — `variant_status_balance.qty_at_warehouse`
+- Stock **RÉSERVÉ** (commandé, pas encore expédié) — `qty_reserved`
+- Stock **ENVOYÉ** (en livraison) — `qty_in_transit`
+- Stock **LIVRÉ** (mois en cours, par canal) — `qty_delivered` / ledger
+- Retours **ATTENDUS** (annulés non encore revenus) — `qty_return_expected`
+- Retours **REÇUS** (scannés, mois en cours) — `scan_events` / `qty_return_received`
+- Stock **ENDOMMAGÉ / CASSE** (perte) — `qty_damaged`
+- **Valeur totale du stock** (en MAD au **prix de revient** — lecture serveur, jamais exposée au client)
+- **ARGENT COLLECTÉ** (mois, par canal)
+- **ARGENT EN ATTENTE** (livré mais transporteur n'a pas encore versé)
+
+**ALERTES en haut** : stocks bas, anomalies (`stock_anomalies`), casse anormale, **écart argent/livraison (anti-fraude)**.
+**VUE PAR PRODUIT** : triable par stock bas, ventes, retours.
+**JOURNAL DES MOUVEMENTS** : déjà construit (`/admin/stock`), placé **en bas**.
+**AJUSTEMENT MANUEL** : déplacé **dans un coin** (plus en pleine page).
+
+**DESIGN** : admin **noir & or**, **FR/AR/EN + RTL**, hiérarchie claire (chiffres clés en haut, détails en bas). Strings i18n résolues côté serveur (jamais de fonction passée à un Client Component).
+
+**DÉPENDANCES** :
+- **~80 % des chiffres viennent du Lot B** (commandes portent les statuts : réservé / envoyé / livré). Sans Lot B → cartes vides.
+- **Retours reçus** viennent de l'usage opérationnel du **scan** (`scan_events` existe déjà, Étape 5 ✅).
+- **« Argent collecté »** et **« argent en attente »** viennent de la **réconciliation transporteur** (REPORTÉE — attend les vrais formats de fichiers transporteurs + export Egrow). Tant qu'elle n'existe pas, ces 2 cartes restent en placeholder.
+
+**PRIORITÉ** : **construire APRÈS Lot B** (étapes 6-7). Audit : `@security` (lecture serveur des données sensibles prix de revient/marge — jamais au client) ; `@finance` pour les cartes argent (collecté / en attente).
+
 ## 5. RESTE DE LA ROADMAP (après le grand chantier), par priorité
 
 1. **Stock fournisseur multi-modes + fraîcheur** (peut démarrer en parallèle tôt).
