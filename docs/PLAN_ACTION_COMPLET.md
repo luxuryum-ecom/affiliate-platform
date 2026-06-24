@@ -202,21 +202,27 @@
 
 ---
 
-## H. À CLARIFIER AVEC ABDOU (ne pas supposer)
+## H. DÉCISIONS DU BLOC H — tranché par Abdou (2026-06-24)
 
-1. **Lot B Étape 6** : confirmer le changement de timing retour (annulation → `return_expected`, le stock ne revient vendable qu'au **scan** — plus de restore instantané). Impact opérationnel.
-2. **Lot B Étape 7** : valider l'emplacement final du compteur (variante seule, `products.stock_count` déprécié) et le moment de « couper l'ancien ».
-3. **Réconciliation argent transporteur** : confirmer qu'elle reste hors périmètre tant que les **formats de fichiers transporteurs + export Egrow** ne sont pas en main.
-4. **Sémantique `sell_price`** (contenant vs unitaire) : base réellement facturée — à trancher @finance (FEUILLE L639).
-5. **`affiliate_enabled DEFAULT true`** (fail-open, mig 007) : passer à `DEFAULT false` ?
-6. **`products.ts` autorise marge=0 en affilié** (viole « marge>0 ») — corriger ? (dette finance pré-existante)
-7. **TVA refacturation** (cas 1) : validation par un professionnel avant prod.
-8. **Destinataires notifications** (par événement/rôle/canal) : design fin à finaliser.
-9. **Dette transport devisé non refacturé** (`convertQuoteToOrder`) : décision produit.
-10. **Migration 072** : statut prod ambigu entre fichiers (listée EN PROD dans ETAT — à confirmer définitivement).
-11. **« 6 fournisseurs »** : chiffre cité par Abdou mais non trouvé dans les registres — confirmer le besoin réel multi-modes.
-12. **Relecture humaine AR** (natif) des traductions avant prod : requise ou optionnelle ?
-13. **Branches non mergées restantes** : `chore/ai-operating-contract`, `chore/project-skills`, `feat/dette-factory-cost-authenticated` — à merger, garder ou supprimer ?
+1. **H1 — Retour scanné** : ✅ **VALIDÉ.** Annulation → `return_expected` ; le stock ne redevient vendable qu'au **scan** (fin du restore instantané). À implémenter en Lot B Étape 6.
+2. **H2 — Étape 7 source de vérité** : ✅ **VALIDÉ.** Variante = source de vérité ; `products.stock_count` déprécié quand le nouveau est prouvé ; double-écriture maintenue pendant la transition.
+3. **H3 — Réconciliation argent transporteur** : ✅ **REPORTÉE** (attend formats fichiers transporteurs + export Egrow).
+4. **H4 — Sémantique `sell_price`** : ⏳ **EN ANALYSE (décision Abdou en attente).** Le code traite **DÉJÀ** `sell_price` comme le prix de l'**unité-de-vente facturée** : `total = sell_price × quantité` (`orders.ts:163/638/763`), commission par unité-de-vente (`016`), `sale_unit`/`pack_size` = **affichage pur** (`pack_size` sert à AFFICHER un prix/sous-unité dérivé `÷`, jamais à facturer). **Option A** (recommandée) = garder l'unité-de-vente, satisfaire la DÉCISION 1 purement à l'affichage (zéro impact calcul). **Option B** (facturer à la sous-unité) = changement financier + recalibration du catalogue → circuit @finance + @security + Abdou. **→ Abdou tranche A vs B.**
+5. **H5 — `affiliate_enabled` DEFAULT** : ✅ **TRANCHÉ → `DEFAULT false` (fail-closed).** Migration additive. *(nouvelle action)*
+6. **H6 — marge=0 affilié** : ✅ **TRANCHÉ → corriger en marge>0 STRICT.** Migration de cohérence + audit @finance. *(nouvelle action — financier)*
+7. **H7 — TVA refacturation** : ✅ **HORS PÉRIMÈTRE beta fermée** (validation comptable plus tard).
+8. **H8 — Destinataires notifications** : ✅ **REPORTÉ** au chantier « cloche notif + email/SMS ».
+9. **H9 — Transport devisé non refacturé** : ✅ **TRANCHÉ → REFACTURÉ au client** (à câbler proprement, `convertQuoteToOrder`). *(nouvelle action — financier)*
+10. **H10 — Migration 072** : ✅ **RÉSOLU → EN PROD** (confirmé `supabase migration list` : Local 072 | Remote 072). Statut désormais sans ambiguïté.
+11. **H11 — « 6 fournisseurs »** : ✅ **CONFIRMÉ par Abdou** — 6 fournisseurs prêts hors système, arrivent dès la beta ouverte. **Besoin multi-modes RÉEL** → confirme « stock fournisseur multi-modes » comme **bloquant beta** (section E).
+12. **H12 — Relecture AR native** : ✅ **TRANCHÉ → OPTIONNELLE pour beta fermée, OBLIGATOIRE pour ouverture publique.**
+13. **H13 — Branches non mergées restantes** : ⏳ **DÉCISION ABDOU EN ATTENTE** (contenu fourni) :
+    - `chore/ai-operating-contract` (1 commit) — contrat opérationnel IA + safety gates (`.claude/settings.json` hooks) ; reste = captures `.nav-proofs`. *Intérêt : éventuels garde-fous hooks.*
+    - `chore/project-skills` (2 commits) — 6 skills projet (`.claude/skills/` : finance-cod-payout, marketplace-ux-review, qa-backlog-executor, release-readiness, security-rls-review, supabase-migration-safety). *Intérêt : skills réutilisables pour le workflow.*
+    - `feat/dette-factory-cost-authenticated` (1 commit) — WIP **différé (option C)** ; surtout `.mobile-proofs` + `.env.example`. *Intérêt : faible (chantier volontairement différé).*
+    **→ Abdou tranche garde / merge / supprime pour chacune.**
+
+> **Nouvelles actions issues du bloc H** (à intégrer dans l'ordre d'exécution, section F) : **H5** (migration `affiliate_enabled DEFAULT false`), **H6** (migration marge>0 strict + audit @finance), **H9** (refacturation transport devisé, @finance). H4 et H13 en attente d'arbitrage Abdou.
 
 ---
 
