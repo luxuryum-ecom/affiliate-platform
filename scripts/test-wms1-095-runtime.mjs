@@ -21,6 +21,8 @@
  */
 
 // ── Lecture des clés depuis l'environnement (JAMAIS en dur) ──────────────────
+import { assertLocalSupabase } from './lib/assert-local-supabase.mjs'
+
 const BASE_URL = process.env.LOCAL_SUPABASE_URL
 const SERVICE_KEY = process.env.LOCAL_SERVICE_ROLE_KEY
 const ANON_KEY = process.env.LOCAL_ANON_KEY
@@ -30,6 +32,9 @@ if (!BASE_URL || !SERVICE_KEY || !ANON_KEY) {
   console.error('Utilisez le wrapper: ./scripts/run-wms1-095-tests.sh')
   process.exit(1)
 }
+
+// GARDE-FOU : ce script ÉCRIT en base — il REFUSE de tourner ailleurs qu'en local.
+assertLocalSupabase(BASE_URL, 'test-wms1-095-runtime')
 
 const TEST_PASSWORD = 'TestPassword123!'
 
