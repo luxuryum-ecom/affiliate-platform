@@ -138,6 +138,11 @@
 
 ---
 
+### 🔄 CHANTIER V5-bis — stock fournisseur multi-modes (branche `feat/supplier-stock-multimodes`, NON mergé)
+- **V5-bis.1** ✅ `e795de0` (mig 104, additif, @security GO, LOCAL only) — `stock_mode`/`stock_quantity_updated_at`/`variant_id` + vue redacted étendue.
+- **V5-bis.2** ✅ `c9b5e7f` (@finance GO + @security GO, runtime LOCAL 3 langues) — badge i18n « À confirmer » fraîcheur sur page marketplace.
+- **V5-bis.3** ⬜ — fraîcheur Telegram + saisie manuelle. Voir ROADMAP_MASTER §4 + ARCHI ambiguïtés C1/C2/C4.
+
 ## 🔒 DÉCISIONS FIGÉES — NE JAMAIS ROUVRIR
 > Gravées avec Abdou. Toute évolution les respecte ; ce qui touche l'argent passe par
 > `@finance` + `@security` + GO Abdou. *(Sources détaillées dans l'ARCHIVE + `ETAT_SYSTEME.md`.)*

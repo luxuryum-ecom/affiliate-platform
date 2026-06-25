@@ -216,6 +216,12 @@
 
 ---
 
+### 🔄 V5-bis — STOCK FOURNISSEUR MULTI-MODES + FRAÎCHEUR — *(branche `feat/supplier-stock-multimodes`, NON MERGÉE, mig 104 LOCAL only)*
+> Option B disciplinée (Abdou) : fraîcheur au niveau PRODUIT, `variant_id` provisionné non câblé, additif pur, zéro touche RPC/commandes/finance, i18n serveur.
+- **V5-bis.1** ✅ commit `e795de0` — mig **104** : `supplier_products` +`stock_mode` (api/manuel/telegram/hebdo, CHECK, défaut `manuel`) +`stock_quantity_updated_at` +`variant_id` FK nullable NON câblée ; backfill `= updated_at` ; vue redacted `supplier_products_wholesaler_read` étendue (2 colonnes non sensibles, prix inchangé). **@security GO**. Vérifié LOCAL (colonnes/CHECK/FK/vue). **Mig 104 NON appliquée prod** (db push réservé Abdou).
+- **V5-bis.2** ✅ commit `c9b5e7f` — helper pur `src/lib/supplier-stock-freshness.ts` (frais ≤72h / périmé >7j, seuils provisoires C2) + badge i18n « À confirmer » (FR/AR/EN) sur `wholesale/marketplace/[id]` quand stock pas frais. Rendu SERVEUR, RTL-aware, Option A (jamais bloquant). Pas de somme propre+fournisseur (zéro double-comptage miroir). **@finance GO + @security GO** ; runtime LOCAL prouvé 3 langues. tsc/build/vitest verts (312).
+- **V5-bis.3** ⬜ — fraîcheur depuis Telegram (`ingest.ts`) + saisie manuelle. **Ambiguïtés ouvertes (C1 défaut mode tranché `manuel` ; C2 seuils ; C4 somme/double-comptage — voir cadrage @architect).**
+
 ## 📦 RÈGLE STOCK & COMMANDE — définitive (TRANCHÉ)
 > Gravé le **2026-06-18** (décision Abdou). Règle métier, vaut pour tout affichage/flux commande.
 

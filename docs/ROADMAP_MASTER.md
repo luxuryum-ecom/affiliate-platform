@@ -65,7 +65,10 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 | **6** | **Commandes 3 canaux portent la variante** | `variant_id` sur `orders`/`wholesale_order_items`/panier + transitions de statut câblées sur les flux commande ; restore→return_expected (staging scanné) | **ÉLEVÉ** | ✅ **FAIT** (mig 101+102 + C1 `a3ad7b0` / C2 `6782472` / C3 `d9e4d79`) — câblé sur les 3 canaux (affilié, COD public, wholesale) avec double défense cross-product (TS + DB) ; @security GO · @finance GO |
 | **7** | **Bascule finale du compteur sur la variante** | Le stock devient la source de vérité au niveau variante ; on **coupe l'ancien** `products.stock_count` une fois le nouveau prouvé | **MAXIMAL** | ⬜ à faire — **@finance + @security + Abdou** |
 
-- **EN PARALLÈLE (dès étapes 1-2 faites)** : **stock fournisseur multi-modes + fraîcheur** (`stock_mode`, `stock_quantity_updated_at`, « dispo réel » pondéré). ⬜
+- **EN PARALLÈLE (dès étapes 1-2 faites)** : **stock fournisseur multi-modes + fraîcheur** (`stock_mode`, `stock_quantity_updated_at`, « dispo réel » pondéré). 🔄 **EN COURS sur branche `feat/supplier-stock-multimodes` (NON mergé, NON appliqué prod)** :
+  - **V5-bis.1** ✅ (commit `e795de0`, mig **104**) — colonnes additives `stock_mode` (api/manuel/telegram/hebdo) + `stock_quantity_updated_at` + `variant_id` FK nullable NON câblée ; backfill ; vue redacted `supplier_products_wholesaler_read` étendue (2 colonnes non sensibles). **@security GO**. Appliqué **LOCAL** uniquement.
+  - **V5-bis.2** ✅ (commit `c9b5e7f`) — helper pur `supplier-stock-freshness.ts` (seuils provisoires 72h/7j, ambiguïté C2) + badge i18n « À confirmer » page détail marketplace (rendu serveur, RTL-aware). **@finance GO + @security GO** ; runtime LOCAL prouvé FR/AR/EN. Pas de somme propre+fournisseur (zéro double-comptage miroir).
+  - **V5-bis.3** ⬜ à faire — alimentation fraîcheur depuis Telegram (`ingest.ts` → `stock_quantity_updated_at`/`stock_mode='telegram'`) + saisie manuelle.
 - **REPORTÉS** : **Egrow / WMS-2** (ecom perso câblé) ; **réconciliation argent transporteur** (attend formats fichiers transporteurs + export Egrow) ; **C4 pack grossiste** (courbe de tailles fixe type Alibaba/Faire — cadrage @finance requis avant tout code).
 
 ---
