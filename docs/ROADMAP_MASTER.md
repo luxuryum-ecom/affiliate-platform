@@ -53,7 +53,7 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 
 > Détail technique complet : `docs/ARCHI_VARIANTES_STOCK.md`. Tout est **additif** (la prod ne casse pas), filet = **double-écriture**.
 
-> **LOT A (étapes 1→5) = ✅ MERGÉ dans `main` (`3900b74`, 2026-06-24). LOT B (Étape 6 partielle : variant_id commandes + sécurité RPCs) = ✅ COMMITTÉ dans `main` (`0b427f4`, 2026-06-25). Migrations 096→102 dans le code, PAS encore appliquées en prod Supabase (`db push` en attente GO Abdou).**
+> **LOT A (étapes 1→5) = ✅ MERGÉ dans `main` (`3900b74`, 2026-06-24). LOT B Étape 6 = ✅ COMPLÈTE ET MERGÉE : variant_id commandes + RPCs sécurisées (`0b427f4`) PUIS C1 UI admin CRUD variantes (`a3ad7b0`) + C2 affichage grossiste (`6782472`) + C3 sélecteur affilié (`d9e4d79`), 2026-06-25. Migrations 096→103 APPLIQUÉES EN PROD (confirmé `supabase migration list` : Local 103 | Remote 103).**
 
 | # | Étape | Objet | Risque | État |
 |---|---|---|---|---|
@@ -62,7 +62,7 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 | **3** | **Afficher choix taille/couleur** | Vue client `product_variants_read` + sélecteur (caché si 1 variante) ; i18n FR/AR/EN | Faible | ✅ **FAIT** (mig 098) — @security GO · @tester 18/18 |
 | **4** | **Fonctions stock comprennent variante + statuts** | RPC `reserve/restore_stock`/`adjust_stock_manual`/`record_stock_movement` + `p_variant_id`/`p_from_status`/`p_to_status` DEFAULT NULL ; **double-écriture** ; trigger auto-variante + mouvement d'ouverture | Moyen | ✅ **FAIT** (mig 099) — @security GO · @tester 58/58 |
 | **5** | **Scan entrée dépôt + retour** | Table `scan_events` (carrier/tracking texte libre, idempotence anti-fraude) + `record_scan` + transitions retour (attendu→reçu→dépôt) et endommagé | Moyen | ✅ **FAIT** (mig 100) — @security GO · @tester 46/46 |
-| **6** | **Commandes 3 canaux portent la variante** | `variant_id` sur `orders`/`wholesale_order_items`/panier + transitions de statut câblées sur les flux commande ; restore→return_expected (staging scanné) | **ÉLEVÉ** | 🔄 **PARTIEL** — mig 101+102 sur `main` (colonnes + backfill + RPCs sécurisées) ; manque : UI admin CRUD variantes (C1) + affichage grossiste axes (C2) + VariantSelector affilié/B2C `onSelect` câblé (C3, @finance+@security) |
+| **6** | **Commandes 3 canaux portent la variante** | `variant_id` sur `orders`/`wholesale_order_items`/panier + transitions de statut câblées sur les flux commande ; restore→return_expected (staging scanné) | **ÉLEVÉ** | ✅ **FAIT** (mig 101+102 + C1 `a3ad7b0` / C2 `6782472` / C3 `d9e4d79`) — câblé sur les 3 canaux (affilié, COD public, wholesale) avec double défense cross-product (TS + DB) ; @security GO · @finance GO |
 | **7** | **Bascule finale du compteur sur la variante** | Le stock devient la source de vérité au niveau variante ; on **coupe l'ancien** `products.stock_count` une fois le nouveau prouvé | **MAXIMAL** | ⬜ à faire — **@finance + @security + Abdou** |
 
 - **EN PARALLÈLE (dès étapes 1-2 faites)** : **stock fournisseur multi-modes + fraîcheur** (`stock_mode`, `stock_quantity_updated_at`, « dispo réel » pondéré). ⬜
@@ -112,7 +112,7 @@ Le fournisseur uploade un fichier de stock par variante (batch update).
 > ⬜ **Statut : à cadrer** — @architect plan + @security audit AVANT toute ligne de code.
 
 ---
-- **ÉTAT ACTUEL (2026-06-25)** : LOT A (mig 096→100) **MERGÉ + APPLIQUÉ PROD** (`3900b74`). LOT B (mig 101→102) **COMMITTÉ + APPLIQUÉ PROD** (`0b427f4`). DB prod à 102 migrations (confirmé 2026-06-25). `npm run check` exit 0. Décisions figées : synchro B3 (server action admin recalcule `products.stock_count = SUM(variants actives)`) ; affichage grossiste tous les axes ; C4 pack cadré plus tard. **Prochaine** : C1 UI admin CRUD variantes (plan @architect en cours) → C2 affichage grossiste → C3 VariantSelector affilié (@finance+@security).
+- **ÉTAT ACTUEL (2026-06-25)** : LOT A (mig 096→100) **MERGÉ + APPLIQUÉ PROD** (`3900b74`). LOT B Étape 6 (mig 101→102 + C1 `a3ad7b0` / C2 `6782472` / C3 `d9e4d79`) **MERGÉE + APPLIQUÉE PROD** — câblée sur les 3 canaux. Mig 103 (cleanup comptes test) appliquée prod. DB prod à **103 migrations** (confirmé `supabase migration list` : Local 103 | Remote 103). `npm run check` exit 0. Décisions figées : synchro B3 (server action admin recalcule `products.stock_count = SUM(variants actives)`) ; affichage grossiste tous les axes ; C4 pack cadré plus tard. **Prochaine** : F3 **stock fournisseur multi-modes + fraîcheur** (V5-bis ARCHI — `stock_mode`, `stock_quantity_updated_at`, dispo réel pondéré ; @security plein + @finance garde-fou ; parallélisable). Étape 7 bascule compteur = reportée (@finance+@security+Abdou).
 
 ## 4bis. DASHBOARD STOCK PATRON — ⬜ à construire APRÈS Lot B
 
@@ -168,4 +168,4 @@ Le fournisseur uploade un fichier de stock par variante (batch update).
 
 ## 7. PROCHAINE ÉTAPE EXACTE
 
-➡️ **LOT A (mig 096→100) + LOT B (mig 101→102) MERGÉS ET APPLIQUÉS EN PROD (confirmé 2026-06-25). DB prod à 102 migrations.** Prochaine, dans l'ordre : **C1** UI admin CRUD variantes (`/admin/products/[id]/edit` + server action + composant `ProductVariantsEditor`, synchro B3) → **C2** affichage grossiste axes auto (string serveur, zéro finance) → **C3** VariantSelector affilié/B2C câblé avec `onSelect` (circuit @finance+@security). C4 pack grossiste + C5 bascule finale = reportés.
+➡️ **LOT A (mig 096→100) + LOT B Étape 6 (mig 101→102 + C1/C2/C3) MERGÉS ET APPLIQUÉS EN PROD (confirmé 2026-06-25). DB prod à 103 migrations (Local 103 | Remote 103).** Étape 6 câblée sur les 3 canaux (affilié, COD public, wholesale) avec double défense cross-product (TS + DB). **Prochaine** : F3 **stock fournisseur multi-modes + fraîcheur** (V5-bis ARCHI) — `stock_mode` (api/manuel/telegram/hebdo) + `stock_quantity_updated_at` + « dispo réel » pondéré, additif, financièrement neutre ; audit **@security plein + @finance garde-fou** ; sur branche dédiée depuis `main`. C4 pack grossiste + Étape 7/C5 bascule finale = reportés (@finance+@security+Abdou).

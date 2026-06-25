@@ -879,7 +879,7 @@ export async function toggleVariantActive(
       .eq('active', true) as { data: { id: string }[] | null; error: unknown }
 
     if ((activeVariants ?? []).length <= 1) {
-      return { success: false, error: 'Cannot deactivate the last active variant.' }
+      return { success: false, error: 'errorLastActiveVariant' }
     }
   }
 
@@ -905,7 +905,7 @@ export async function toggleVariantActive(
         .update({ active: true })
         .eq('id', variantId)
         .eq('product_id', productId)
-      return { success: false, error: 'Cannot deactivate the last active variant.' }
+      return { success: false, error: 'errorLastActiveVariant' }
     }
   }
 

@@ -77,6 +77,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       errorDuplicateAttributes: tv('errorDuplicateAttributes'),
       errorMinStock: tv('errorMinStock'),
       errorVariantSave: tv('errorVariantSave'),
+      errorLastActiveVariant: tv('errorLastActiveVariant'),
       successAdded: tv('successAdded'),
     successStockUpdated: tv('successStockUpdated'),
     successToggled: tv('successToggled'),
