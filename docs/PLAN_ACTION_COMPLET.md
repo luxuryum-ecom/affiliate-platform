@@ -63,6 +63,9 @@
 7. **Allowlist Redirect URLs Supabase** : ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` (sinon reset MDP échoue)
 8. **Backup prod frais** (celui du 2026-06-23 a échoué — Docker éteint)
 
+### 🟡 Tests / couverture (non bloquant beta)
+1. **Compte fournisseur DÉDIÉ au smoke prod** — `SMOKE_SUPPLIER_EMAIL/PASSWORD` commentés dans `.env.local` (2026-06-25) car ils pointaient sur `supplier-morocco-03@` neutralisé par mig 103 → le smoke faisait échouer le push `main` sur l'auth supplier. Rôle `supplier` désormais **skip proprement** (couverture supplier non testée, loggé). **Action** : créer un compte fournisseur **dédié au smoke** (approuvé en prod, NON test, jamais utilisé par un vrai humain), le renseigner dans `.env.local`, et restaurer la couverture supplier. Même esprit que le fix attendu pour les 2 specs e2e `agent-demo@` (handoff).
+
 ### 🟠 Dettes techniques
 1. Saisie manuelle **paliers fournisseur** (flux Finaliser) — table `supplier_product_moq_tiers` VIDE (0/469)
 2. **parseFloat argent restant** : `bulk-import.ts`, `products.ts`, `orders.ts` (plusieurs sites) → helper `money.ts`
