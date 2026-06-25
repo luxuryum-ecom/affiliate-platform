@@ -935,7 +935,9 @@
       "quoteNotesPlaceholder": "Special requirements, desired lead time, packaging…",
       "quoteSubmit": "Send request",
       "quoteSubmitting": "Sending…",
-      "quoteSuccess": "Your quote request has been sent. We will contact you via WhatsApp."
+      "quoteSuccess": "Your quote request has been sent. We will contact you via WhatsApp.",
+      "variantsAvailableSection": "Variant availability",
+      "variantsNone": "Availability to confirm"
     },
     "cart": {
       "metaTitle": "My cart — Wholesale area",

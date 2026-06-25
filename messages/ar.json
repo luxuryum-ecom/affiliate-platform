@@ -935,7 +935,9 @@
       "quoteNotesPlaceholder": "متطلبات خاصة، مهلة مرغوبة، تغليف…",
       "quoteSubmit": "إرسال الطلب",
       "quoteSubmitting": "جارٍ الإرسال…",
-      "quoteSuccess": "تم إرسال طلب عرض السعر بنجاح. سنتواصل معك عبر واتساب."
+      "quoteSuccess": "تم إرسال طلب عرض السعر بنجاح. سنتواصل معك عبر واتساب.",
+      "variantsAvailableSection": "التوفر حسب النوع",
+      "variantsNone": "التوفر يخضع للتأكيد"
     },
     "cart": {
       "metaTitle": "سلتي — فضاء الجملة",

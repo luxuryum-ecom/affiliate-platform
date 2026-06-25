@@ -935,7 +935,9 @@
       "quoteNotesPlaceholder": "Exigences particulières, délai souhaité, conditionnement…",
       "quoteSubmit": "Envoyer la demande",
       "quoteSubmitting": "Envoi en cours…",
-      "quoteSuccess": "Votre demande de devis a bien été envoyée. Nous vous contacterons via WhatsApp."
+      "quoteSuccess": "Votre demande de devis a bien été envoyée. Nous vous contacterons via WhatsApp.",
+      "variantsAvailableSection": "Disponibilité par variante",
+      "variantsNone": "Disponibilité à confirmer"
     },
     "cart": {
       "metaTitle": "Mon panier — Espace Grossiste",

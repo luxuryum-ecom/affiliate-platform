@@ -14,9 +14,7 @@ import { getActiveTariff } from '@/app/actions/tariffs'
 import { SHIPPING_MODE_LABELS } from '@/lib/tariff-utils'
 import { getCatalogProductCtaMode } from '@/lib/wholesale-cta'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
-import { VariantSelector } from '@/components/product/variant-selector'
-import type { Product, ImportTariff } from '@/types/database'
-import type { ProductVariant } from '@/components/product/variant-selector'
+import type { Product, ImportTariff, ProductVariantRow } from '@/types/database'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -57,7 +55,6 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
   const t = await getTranslations('wholesale.productDetail')
   const tc = await getTranslations('wholesale.common')
   const tUnits = await getTranslations('units')
-  const tVariant = await getTranslations('productVariant')
   const locale = await getLocale()
 
   // Suffixe d'unité résolu SERVEUR (string, jamais une fonction → sûr à passer au
@@ -86,20 +83,23 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
     .from('product_variants_read')
     .select('id, product_id, attributes, is_default, stock_count')
     .eq('product_id', id)
-  const variants: ProductVariant[] = (variantsRaw ?? []).map((v) => ({
+  const variants: ProductVariantRow[] = (variantsRaw ?? []).map((v) => ({
     id: v.id as string,
+    product_id: id,
     attributes: (v.attributes ?? {}) as Record<string, string>,
     is_default: v.is_default as boolean,
     stock_count: v.stock_count as number,
+    sku: null,
+    active: true,
+    created_at: '',
+    updated_at: '',
   }))
 
   const defaultVariantId = variants.find((v) => v.is_default)?.id ?? variants[0]?.id ?? null
 
-  const variantStrings = {
-    chooseOption: tVariant('chooseOption'),
-    unavailable: tVariant('unavailable'),
-    variantLabel: tVariant('variantLabel'),
-  }
+  // C2 — axes disponibles calculés server-side depuis les variantes en stock > 0.
+  const wholesaleAxes = buildWholesaleAxes(variants)
+  const variantsAvailableLabel = t('variantsAvailableSection')
 
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
@@ -218,8 +218,12 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               saleUnit={product.sale_unit}
             />
 
-            {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
-            <VariantSelector variants={variants} strings={variantStrings} />
+            {/* C2 — Disponibilité par variante, générée auto depuis les variantes stock>0.
+                Read-only, pas de sélection : la commande grossiste est au niveau produit. */}
+            <WholesaleVariantDisplay
+              axes={wholesaleAxes}
+              sectionLabel={variantsAvailableLabel}
+            />
 
             {/* Hook grossiste — économie totale en achetant gros (affichage pur, paliers stockés).
                 Rendu uniquement s'il y a ≥ 2 paliers avec économie (sinon retourne null). */}
@@ -259,6 +263,71 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+
+// ─── C2 : Wholesale variant display (read-only) ───────────────────────────────
+
+interface AxisGroup {
+  axis: string
+  label: string
+  values: string[]
+}
+
+/**
+ * Groups in-stock variants by axis, returns one entry per axis with the list
+ * of values that have stock_count > 0.
+ * Returns an empty array if no meaningful in-stock variants exist.
+ */
+function buildWholesaleAxes(variants: ProductVariantRow[]): AxisGroup[] {
+  const inStock = variants.filter(
+    (v) => v.stock_count > 0 && Object.keys(v.attributes).length > 0,
+  )
+  if (inStock.length === 0) return []
+
+  const axisMap = new Map<string, Set<string>>()
+  for (const v of inStock) {
+    for (const [axis, value] of Object.entries(v.attributes)) {
+      if (!axisMap.has(axis)) axisMap.set(axis, new Set())
+      axisMap.get(axis)!.add(value)
+    }
+  }
+
+  return Array.from(axisMap.entries()).map(([axis, values]) => ({
+    axis,
+    label: axis.charAt(0).toUpperCase() + axis.slice(1),
+    values: Array.from(values),
+  }))
+}
+
+/**
+ * Pure server component — shows available axes (taille · couleur …) derived
+ * from active variants with stock > 0. No client state, no onSelect callback.
+ * Hidden if no axes are available.
+ */
+function WholesaleVariantDisplay({
+  axes,
+  sectionLabel,
+}: {
+  axes: AxisGroup[]
+  sectionLabel: string
+}) {
+  if (axes.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-line bg-surface px-4 py-3 space-y-2.5">
+      <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+        {sectionLabel}
+      </p>
+      {axes.map(({ axis, label, values }) => (
+        <div key={axis} className="flex items-start gap-2 text-sm flex-wrap">
+          <span className="text-muted shrink-0">{label} :</span>
+          <span className="text-foreground font-medium leading-relaxed">
+            {values.join(' · ')}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }
