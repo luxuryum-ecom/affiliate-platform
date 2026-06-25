@@ -376,6 +376,7 @@
 
 ## 🛟 SÉCURITÉ / BACKUP
 
+- **POLITIQUE COMPTES TEST (figée 2026-06-25)** : neutralisation = **`auth.users.banned_until` lointain** + **`profiles.status = 'rejected'`** + retrait des **permissions actives** (`staff_permissions`, `agent_countries`, `telegram_supplier_links`, archivage `supplier_products`). **JAMAIS `DELETE auth.users`** — les comptes avec historique dans des registres **append-only** (`staff_permission_audit`, `agent_country_audit`, `wholesale_delivery_ledger`, `ledger_entries`…) provoquent un rollback (FK `ON DELETE SET NULL` = UPDATE bloqué par trigger). Mig **103** applique ce modèle sur `agent-demo@` + `supplier-morocco-03@` ; `admin@affipartner.ma` = MDP roté séparément (#3).
 - **CODE** : tout est sur **GitHub** (`origin`). `main` = prod. Branches de travail poussées (y compris `feat/dette-factory-cost-authenticated`, sauvegardée à distance).
 - **BASE Supabase** (plan gratuit = **aucun backup auto** → critique) : dump complet schéma + données via le **CLI Supabase**, dans `~/AI-FACTORY/backups/` (fichiers datés `prod_backup_<date>.sql` + `_data.sql`).
 - **Refaire un backup manuellement** : `bash ~/AI-FACTORY/backups/backup-prod.sh`
