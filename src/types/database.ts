@@ -931,6 +931,24 @@ export interface SupplierProduct {
   updated_at: string
 }
 
+/**
+ * A variant of a catalogue product (migration 096).
+ * Attributes are flexible JSONB key-value pairs, e.g. { taille: "M", couleur: "rouge" }.
+ * A simple product has exactly one default variant with attributes = {}.
+ * Finance (price/commission/tiers) stays at the product level — never on the variant.
+ */
+export interface ProductVariantRow {
+  id: string
+  product_id: string
+  attributes: Record<string, string>
+  sku: string | null
+  is_default: boolean
+  stock_count: number
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
 /** A color/size/model variant of a supplier product (migration 035). */
 export interface SupplierProductVariant {
   id: string

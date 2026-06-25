@@ -685,3 +685,231 @@ export async function deleteProduct(id: string): Promise<void> {
   await supabase.from('products').delete().eq('id', id)
   revalidatePath('/admin/products')
 }
+
+// ─── Variant CRUD (C1) ────────────────────────────────────────────────────────
+
+/**
+ * B3 sync helper: recalculates products.stock_count as the sum of all active
+ * variant stock. Called after every variant write so the display layer stays
+ * consistent while the final stock cutover (C5) is pending.
+ *
+ * KNOWN LIMITATION: variant write and this SUM are two separate round-trips.
+ * Concurrent admin saves on the same product can produce a stale aggregate.
+ * Impact: display-layer stock_count can drift by one concurrent edit cycle.
+ * This is admin-trust only (no financial path). Full fix = atomic RPC in C5.
+ */
+async function syncProductStockCount(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>['supabase'],
+  productId: string,
+): Promise<void> {
+  const { data } = await supabase
+    .from('product_variants')
+    .select('stock_count')
+    .eq('product_id', productId)
+    .eq('active', true) as { data: { stock_count: number }[] | null; error: unknown }
+
+  const total = (data ?? []).reduce((sum, v) => sum + (v.stock_count ?? 0), 0)
+  await supabase.from('products').update({ stock_count: total }).eq('id', productId)
+}
+
+export type VariantActionState = { success: boolean; error: string | null }
+
+/**
+ * Add a new variant to a product.
+ * Expects formData keys: productId, pairs (JSON array of {axis, value}), stock.
+ * Guard: attribute combination must be unique for the product.
+ */
+export async function addProductVariant(
+  _prev: VariantActionState,
+  formData: FormData,
+): Promise<VariantActionState> {
+  const { supabase, error } = await requireAdmin()
+  if (error) return { success: false, error: 'unauthorized' }
+
+  const productId = formData.get('productId') as string
+  const pairsRaw = formData.get('pairs') as string
+  const stockRaw = formData.get('stock') as string
+
+  let pairs: { axis: string; value: string }[] = []
+  try {
+    pairs = JSON.parse(pairsRaw)
+  } catch {
+    return { success: false, error: 'invalid_pairs' }
+  }
+
+  // Strict structural validation — guards against crafted FormData from DevTools (admin-only).
+  if (!Array.isArray(pairs) || pairs.length === 0 || pairs.length > 10) {
+    return { success: false, error: 'invalid_pairs' }
+  }
+  for (const p of pairs) {
+    if (
+      typeof p !== 'object' ||
+      p === null ||
+      typeof p.axis !== 'string' ||
+      typeof p.value !== 'string' ||
+      p.axis.length > 50 ||
+      p.value.length > 100
+    ) {
+      return { success: false, error: 'invalid_pairs' }
+    }
+  }
+  if (pairs.some((p) => !p.axis.trim() || !p.value.trim())) {
+    return { success: false, error: 'errorRequiredAxis' }
+  }
+
+  const stock = parseInt(stockRaw, 10)
+  if (isNaN(stock) || stock < 0) {
+    return { success: false, error: 'errorMinStock' }
+  }
+
+  const attributes: Record<string, string> = {}
+  for (const { axis, value } of pairs) {
+    attributes[axis.trim().toLowerCase()] = value.trim()
+  }
+
+  // Check for duplicate attribute set on this product
+  const { data: existing } = await supabase
+    .from('product_variants')
+    .select('id, attributes')
+    .eq('product_id', productId) as { data: { id: string; attributes: Record<string, string> }[] | null; error: unknown }
+
+  const isDuplicate = (existing ?? []).some((v) => {
+    const a = v.attributes ?? {}
+    if (Object.keys(a).length !== Object.keys(attributes).length) return false
+    return Object.entries(attributes).every(([k, val]) => a[k] === val)
+  })
+  if (isDuplicate) return { success: false, error: 'errorDuplicateAttributes' }
+
+  const { error: insertError } = await supabase.from('product_variants').insert({
+    product_id: productId,
+    attributes,
+    stock_count: stock,
+    is_default: false,
+    active: true,
+  })
+  // Return a generic message to avoid leaking DB internals to the admin UI.
+  if (insertError) return { success: false, error: 'errorVariantSave' }
+
+  // Auto-neutralise the default placeholder variant when the first real variant is added.
+  // The default variant (is_default=true, attributes={}) was backfilled by migration 096 for
+  // simple products. Once real variants exist, it must no longer contribute to stock.
+  // We set active=false AND stock_count=0 (belt-and-suspenders: B3 sync only sums active,
+  // but zeroing out stock prevents any confusion if the flag is ever misread).
+  const { data: defaultVariant } = await supabase
+    .from('product_variants')
+    .select('id, attributes')
+    .eq('product_id', productId)
+    .eq('is_default', true)
+    .maybeSingle() as { data: { id: string; attributes: Record<string, string> } | null; error: unknown }
+
+  if (defaultVariant && Object.keys(defaultVariant.attributes ?? {}).length === 0) {
+    const { error: deactErr } = await supabase
+      .from('product_variants')
+      .update({ active: false, stock_count: 0 })
+      .eq('id', defaultVariant.id)
+      .eq('product_id', productId) // belt-and-suspenders: defence-in-depth
+
+    // If deactivation fails, abort: B3 sync would double-count the placeholder's stock.
+    if (deactErr) return { success: false, error: 'errorVariantSave' }
+  }
+
+  await syncProductStockCount(supabase, productId)
+  revalidatePath(`/admin/products/${productId}/edit`)
+  return { success: true, error: null }
+}
+
+/**
+ * Update the stock count of a specific variant.
+ * Expects formData keys: variantId, productId, stock.
+ */
+export async function updateVariantStock(
+  _prev: VariantActionState,
+  formData: FormData,
+): Promise<VariantActionState> {
+  const { supabase, error } = await requireAdmin()
+  if (error) return { success: false, error: 'unauthorized' }
+
+  const variantId = formData.get('variantId') as string
+  const productId = formData.get('productId') as string
+  const stockRaw = formData.get('stock') as string
+
+  const stock = parseInt(stockRaw, 10)
+  if (isNaN(stock) || stock < 0) {
+    return { success: false, error: 'errorMinStock' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('product_variants')
+    .update({ stock_count: stock })
+    .eq('id', variantId)
+    .eq('product_id', productId)
+  if (updateError) return { success: false, error: 'errorVariantSave' }
+
+  await syncProductStockCount(supabase, productId)
+  revalidatePath(`/admin/products/${productId}/edit`)
+  return { success: true, error: null }
+}
+
+/**
+ * Toggle the active flag of a specific variant.
+ * Guard: the default variant cannot be deactivated if it is the only active one.
+ * Expects formData keys: variantId, productId, currentActive (string 'true'|'false').
+ */
+export async function toggleVariantActive(
+  _prev: VariantActionState,
+  formData: FormData,
+): Promise<VariantActionState> {
+  const { supabase, error } = await requireAdmin()
+  if (error) return { success: false, error: 'unauthorized' }
+
+  const variantId = formData.get('variantId') as string
+  const productId = formData.get('productId') as string
+  const currentActive = formData.get('currentActive') === 'true'
+  const newActive = !currentActive
+
+  if (!newActive) {
+    // Pre-check: guard against deactivating the last active variant.
+    // Note: this is a TOCTOU check (two round-trips). A fully atomic fix requires
+    // a DB-level constraint or RPC — deferred to C5 (final stock cutover migration).
+    // As a compensating measure we also re-activate below if the post-update count is 0.
+    const { data: activeVariants } = await supabase
+      .from('product_variants')
+      .select('id')
+      .eq('product_id', productId)
+      .eq('active', true) as { data: { id: string }[] | null; error: unknown }
+
+    if ((activeVariants ?? []).length <= 1) {
+      return { success: false, error: 'Cannot deactivate the last active variant.' }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from('product_variants')
+    .update({ active: newActive })
+    .eq('id', variantId)
+    .eq('product_id', productId)
+  if (updateError) return { success: false, error: 'errorVariantSave' }
+
+  // Compensating check: if a concurrent deactivation raced us to 0 active variants,
+  // immediately re-activate this variant so the product is never fully dark.
+  if (!newActive) {
+    const { data: remaining } = await supabase
+      .from('product_variants')
+      .select('id')
+      .eq('product_id', productId)
+      .eq('active', true) as { data: { id: string }[] | null; error: unknown }
+
+    if ((remaining ?? []).length === 0) {
+      await supabase
+        .from('product_variants')
+        .update({ active: true })
+        .eq('id', variantId)
+        .eq('product_id', productId)
+      return { success: false, error: 'Cannot deactivate the last active variant.' }
+    }
+  }
+
+  await syncProductStockCount(supabase, productId)
+  revalidatePath(`/admin/products/${productId}/edit`)
+  return { success: true, error: null }
+}

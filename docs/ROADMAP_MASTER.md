@@ -53,7 +53,7 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 
 > Détail technique complet : `docs/ARCHI_VARIANTES_STOCK.md`. Tout est **additif** (la prod ne casse pas), filet = **double-écriture**.
 
-> **LOT A (étapes 1→5) = ✅ FAIT sur la branche `feat/variants-step1` (NON mergée, NON poussée en prod).** Étapes 6-7 = à venir.
+> **LOT A (étapes 1→5) = ✅ MERGÉ dans `main` (`3900b74`, 2026-06-24). LOT B (Étape 6 partielle : variant_id commandes + sécurité RPCs) = ✅ COMMITTÉ dans `main` (`0b427f4`, 2026-06-25). Migrations 096→102 dans le code, PAS encore appliquées en prod Supabase (`db push` en attente GO Abdou).**
 
 | # | Étape | Objet | Risque | État |
 |---|---|---|---|---|
@@ -62,12 +62,57 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 | **3** | **Afficher choix taille/couleur** | Vue client `product_variants_read` + sélecteur (caché si 1 variante) ; i18n FR/AR/EN | Faible | ✅ **FAIT** (mig 098) — @security GO · @tester 18/18 |
 | **4** | **Fonctions stock comprennent variante + statuts** | RPC `reserve/restore_stock`/`adjust_stock_manual`/`record_stock_movement` + `p_variant_id`/`p_from_status`/`p_to_status` DEFAULT NULL ; **double-écriture** ; trigger auto-variante + mouvement d'ouverture | Moyen | ✅ **FAIT** (mig 099) — @security GO · @tester 58/58 |
 | **5** | **Scan entrée dépôt + retour** | Table `scan_events` (carrier/tracking texte libre, idempotence anti-fraude) + `record_scan` + transitions retour (attendu→reçu→dépôt) et endommagé | Moyen | ✅ **FAIT** (mig 100) — @security GO · @tester 46/46 |
-| **6** | **Commandes 3 canaux portent la variante** | `variant_id` sur `orders`/`wholesale_order_items`/panier + transitions de statut câblées sur les flux commande ; restore→return_expected (staging scanné) | **ÉLEVÉ** | ⬜ à faire — **@finance + @security** |
+| **6** | **Commandes 3 canaux portent la variante** | `variant_id` sur `orders`/`wholesale_order_items`/panier + transitions de statut câblées sur les flux commande ; restore→return_expected (staging scanné) | **ÉLEVÉ** | 🔄 **PARTIEL** — mig 101+102 sur `main` (colonnes + backfill + RPCs sécurisées) ; manque : UI admin CRUD variantes (C1) + affichage grossiste axes (C2) + VariantSelector affilié/B2C `onSelect` câblé (C3, @finance+@security) |
 | **7** | **Bascule finale du compteur sur la variante** | Le stock devient la source de vérité au niveau variante ; on **coupe l'ancien** `products.stock_count` une fois le nouveau prouvé | **MAXIMAL** | ⬜ à faire — **@finance + @security + Abdou** |
 
 - **EN PARALLÈLE (dès étapes 1-2 faites)** : **stock fournisseur multi-modes + fraîcheur** (`stock_mode`, `stock_quantity_updated_at`, « dispo réel » pondéré). ⬜
-- **REPORTÉS** : **Egrow / WMS-2** (ecom perso câblé) ; **réconciliation argent transporteur** (attend formats fichiers transporteurs + export Egrow).
-- **ÉTAT ACTUEL** : **LOT A (1→5) terminé et committé sur `feat/variants-step1`** (mig 096→100, 4 checks verts à chaque étape, @security GO partout, runtimes LOCAL only via `assertLocalSupabase`). **NON mergé, NON poussé, AUCUN `db push` prod** (GO Abdou requis ; touche le ledger stock → validation finale Abdou par règle 5). Décisions **VALIDÉES** : ledger (option B), retours scannés, réconciliation reportée, double-écriture. **Prochaine** : étape 6 (commandes portent la variante — circuit @finance).
+- **REPORTÉS** : **Egrow / WMS-2** (ecom perso câblé) ; **réconciliation argent transporteur** (attend formats fichiers transporteurs + export Egrow) ; **C4 pack grossiste** (courbe de tailles fixe type Alibaba/Faire — cadrage @finance requis avant tout code).
+
+---
+
+### LOTS FUTURS — SAISIE STOCK VARIANTES PAR LE FOURNISSEUR *(cadrage @architect + @security requis, NE PAS CODER avant validation Abdou)*
+
+#### LOT "Variantes via Telegram"
+Le fournisseur déclare son stock par taille/couleur via le bot Telegram interne.
+
+**Périmètre fonctionnel :**
+- Commande bot : `/stock [ref_produit] [taille] [quantité]` (ou formulaire conversationnel guidé)
+- Le bot met à jour `product_variants.stock_count` + appelle `syncProductStockCount` (B3)
+- Confirmation de lecture avec résumé au fournisseur
+
+**Points de sécurité OBLIGATOIRES à cadrer :**
+- Authentification fournisseur : liaison `telegram_user_id` ↔ `supplier_id` dans la DB (token enregistré par admin, pas d'auto-enregistrement)
+- **Isolation fournisseur** : un fournisseur ne peut modifier QUE les variantes de SES produits (vérification `product.supplier_id = supplier.id` côté serveur, jamais côté bot)
+- Rate-limiting par `telegram_user_id` (anti-spam/flood)
+- Pas de secret partagé dans le code — clé bot via variable d'environnement
+- Validation stricte des entrées (ref_produit = UUID valide, quantité = entier ≥ 0, taille = valeur présente dans les variantes existantes)
+
+> ⬜ **Statut : à cadrer** — @architect plan + @security audit AVANT toute ligne de code.
+
+---
+
+#### LOT "Variantes via fichier (CSV/Excel)"
+Le fournisseur uploade un fichier de stock par variante (batch update).
+
+**Périmètre fonctionnel :**
+- Upload depuis l'espace fournisseur (`/supplier/stock/import`)
+- Colonnes attendues : `product_ref`, `taille`, `couleur`, `stock_count`
+- Preview + diff avant confirmation (pas d'application aveugle)
+- Résultat : rapport de validation (lignes OK / erreurs / ignorées)
+
+**Sécurité OBLIGATOIRE — checklist @security avant tout code :**
+- **Anti-CSV-injection** : toute cellule commençant par `=`, `+`, `-`, `@`, `\t`, `\r` doit être sanitisée ou rejetée (formules Excel malveillantes)
+- **Validation magic-bytes** : vérifier les octets de signature du fichier (`.csv` = UTF-8 ou BOM UTF-8 ; `.xlsx` = PK\x03\x04) — rejeter si le contenu ne correspond pas à l'extension déclarée
+- **Isolation fournisseur** : chaque ligne est validée contre `product.supplier_id = session.supplier_id` côté serveur — un fournisseur ne peut pas écraser le stock d'un autre
+- **Validation d'appartenance produit** : `product_ref` doit exister ET appartenir au fournisseur connecté (pas de lookup par name ou SKU seul, utiliser UUID)
+- **Pas de SSRF** : aucune URL dans le fichier n'est résolue côté serveur
+- **Taille max** : limiter le fichier (ex. 5 Mo, 10 000 lignes max) pour éviter les DoS
+- **Pas d'exécution de code** : la lib de parsing (ex. `xlsx`) tourne en mode lecture seule, sans évaluation de macros
+
+> ⬜ **Statut : à cadrer** — @architect plan + @security audit AVANT toute ligne de code.
+
+---
+- **ÉTAT ACTUEL (2026-06-25)** : LOT A (mig 096→100) **MERGÉ + APPLIQUÉ PROD** (`3900b74`). LOT B (mig 101→102) **COMMITTÉ + APPLIQUÉ PROD** (`0b427f4`). DB prod à 102 migrations (confirmé 2026-06-25). `npm run check` exit 0. Décisions figées : synchro B3 (server action admin recalcule `products.stock_count = SUM(variants actives)`) ; affichage grossiste tous les axes ; C4 pack cadré plus tard. **Prochaine** : C1 UI admin CRUD variantes (plan @architect en cours) → C2 affichage grossiste → C3 VariantSelector affilié (@finance+@security).
 
 ## 4bis. DASHBOARD STOCK PATRON — ⬜ à construire APRÈS Lot B
 
@@ -123,4 +168,4 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 
 ## 7. PROCHAINE ÉTAPE EXACTE
 
-➡️ **LOT A (étapes 1→5) terminé sur `feat/variants-step1` (non mergé).** Prochaine : décider du **merge du Lot A** (GO Abdou + `db push` prod séquencé : mig 096→100, ledger stock → validation finale Abdou règle 5), PUIS lancer l'**Étape 6 — commandes 3 canaux portent la variante** (circuit **@finance + @security**, ÉLEVÉ : touche les lignes de commande + le staging retour).
+➡️ **LOT A (mig 096→100) + LOT B (mig 101→102) MERGÉS ET APPLIQUÉS EN PROD (confirmé 2026-06-25). DB prod à 102 migrations.** Prochaine, dans l'ordre : **C1** UI admin CRUD variantes (`/admin/products/[id]/edit` + server action + composant `ProductVariantsEditor`, synchro B3) → **C2** affichage grossiste axes auto (string serveur, zéro finance) → **C3** VariantSelector affilié/B2C câblé avec `onSelect` (circuit @finance+@security). C4 pack grossiste + C5 bascule finale = reportés.

@@ -6,7 +6,8 @@ import { getTariffs } from '@/app/actions/tariffs'
 import { getRatesMap } from '@/lib/fx'
 import { getTranslations } from 'next-intl/server'
 import { getCategoryDisplayList } from '@/lib/categories/display'
-import type { Product } from '@/types/database'
+import type { Product, ProductVariantRow } from '@/types/database'
+import ProductVariantsEditor from '@/components/admin/product-variants-editor'
 
 interface EditProductPageProps {
   params: Promise<{ id: string }>
@@ -31,19 +32,57 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   const t = await getTranslations('admin.productEdit')
   const tc = await getTranslations('admin.common')
   const tp = await getTranslations('admin.products')
+  const tv = await getTranslations('admin.productVariants')
 
-  const [profileResult, productResult, tariffs, rates, categories] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('products').select('*').eq('id', id).single(),
-    getTariffs(),
-    getRatesMap(supabase),
-    getCategoryDisplayList(),
-  ])
+  const [profileResult, productResult, tariffs, rates, categories, variantsResult] =
+    await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('products').select('*').eq('id', id).single(),
+      getTariffs(),
+      getRatesMap(supabase),
+      getCategoryDisplayList(),
+      supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', id)
+        .order('created_at', { ascending: true }),
+    ])
 
   const profile = profileResult.data as { full_name: string } | null
   const product = productResult.data as Product | null
+  const variants = (variantsResult.data ?? []) as ProductVariantRow[]
 
   if (!product) notFound()
+
+  const variantStrings = {
+    sectionTitle: tv('sectionTitle'),
+    sectionSubtitle: tv('sectionSubtitle'),
+    addVariant: tv('addVariant'),
+    axisLabel: tv('axisLabel'),
+    valueLabel: tv('valueLabel'),
+    stockLabel: tv('stockLabel'),
+    addAxisBtn: tv('addAxisBtn'),
+    saveVariant: tv('saveVariant'),
+    noVariants: tv('noVariants'),
+    defaultVariant: tv('defaultVariant'),
+    stockColHeader: tv('stockColHeader'),
+    attrsColHeader: tv('attrsColHeader'),
+    statusColHeader: tv('statusColHeader'),
+    actionsColHeader: tv('actionsColHeader'),
+    stockSave: tv('stockSave'),
+    deactivate: tv('deactivate'),
+    reactivate: tv('reactivate'),
+    inactive: tv('inactive'),
+      errorRequiredAxis: tv('errorRequiredAxis'),
+      errorDuplicateAttributes: tv('errorDuplicateAttributes'),
+      errorMinStock: tv('errorMinStock'),
+      errorVariantSave: tv('errorVariantSave'),
+      successAdded: tv('successAdded'),
+    successStockUpdated: tv('successStockUpdated'),
+    successToggled: tv('successToggled'),
+    addFormTitle: tv('addFormTitle'),
+    cancelAdd: tv('cancelAdd'),
+  }
 
   return (
     <div className="min-h-screen bg-bg">
@@ -56,8 +95,8 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         maxWidth="max-w-6xl"
       />
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+        <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
           <span
             className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
@@ -72,6 +111,14 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
         <div className="bg-surface rounded-xl border border-line p-6">
           <ProductForm product={product} tariffs={tariffs} rates={rates} categories={categories} />
+        </div>
+
+        <div className="bg-surface rounded-xl border border-line p-6">
+          <ProductVariantsEditor
+            productId={id}
+            variants={variants}
+            strings={variantStrings}
+          />
         </div>
       </main>
     </div>

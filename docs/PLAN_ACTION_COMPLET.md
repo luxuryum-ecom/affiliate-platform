@@ -73,6 +73,8 @@
 7. **Backfill catégories** des produits internes créés avant le fix
 8. Dette test : re-login `beforeEach` C/D CAT-IA ; test DB idempotence `create_payout` ; **`repeated_adjust` non testé runtime**
 9. Audit `wholesale_tiers` hérités non re-validés ; `bulkApproveProducts` n'écrit ni toggle ni canal ; preview commission product-form
+10. **[Lot B / mig 102] `updateOrderStatus` avale silencieusement les erreurs `reserve_stock`** (pré-existant par design Option A, mais `reserve_stock` peut désormais lever sur mismatch variante ou rôle) — ajouter un `console.error` dans la branche `needsReserve` pour journaliser l'exception RPC sans la propager. (`src/app/actions/orders.ts`)
+11. **[Lot B / mig 102] Idempotence replay mig 101+102** — si mig 101 était rejouée après 102, le `REVOKE ALL FROM public, anon` de 102 serait perdu (DROP+CREATE réinitialise les grants PostgreSQL). Risque faible (migrations forward-only), mais par cohérence : regrouper le `REVOKE` de `transition_wholesale_order_status` avec un `DROP+CREATE` dans une future migration de consolidation.
 
 ### ❌ Manquants structurels
 1. **Email / SMS / push** : aucune lib (resend/twilio/web-push/fcm)
