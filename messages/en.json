@@ -1308,6 +1308,7 @@
       "infoMoq": "MOQ",
       "infoStock": "Stock",
       "infoStockOut": "Out of stock",
+      "infoStockToConfirm": "To confirm",
       "infoLeadTime": "Lead time",
       "infoLeadTimeDays": "{days} days",
       "infoPriceMorocco": "Wholesale price",

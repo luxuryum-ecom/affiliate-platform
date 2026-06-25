@@ -1308,6 +1308,7 @@
       "infoMoq": "الحد الأدنى للطلب",
       "infoStock": "المخزون",
       "infoStockOut": "نفد المخزون",
+      "infoStockToConfirm": "بحاجة إلى تأكيد",
       "infoLeadTime": "مهلة التسليم",
       "infoLeadTimeDays": "{days} أيام",
       "infoPriceMorocco": "سعر الجملة",

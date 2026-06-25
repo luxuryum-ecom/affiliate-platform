@@ -6,6 +6,7 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
 import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { computeStockFreshness, stockNeedsConfirmation } from '@/lib/supplier-stock-freshness'
 import { formatMAD, formatQty } from '@/lib/utils'
 import { getMeaningfulDescription } from '@/lib/product-media'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
@@ -54,7 +55,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
     supabase
       .from('supplier_products_wholesaler_read')
       .select(
-        'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, created_at'
+        'id, product_name, category, niche, description, photos, min_quantity, origin_country, availability_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, stock_mode, stock_quantity_updated_at, lead_time_days, created_at'
       )
       .eq('id', id)
       .single(),
@@ -72,6 +73,8 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
     supplier_type: SupplierType
     unit: string
     stock_quantity: number | null
+    stock_mode: string | null
+    stock_quantity_updated_at: string | null
     lead_time_days: number | null
   }
 
@@ -91,6 +94,17 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const ctaMode = getSupplierProductCtaMode(product)
   const directMinQty = product.min_quantity
   const directStock = product.stock_quantity
+
+  // V5-bis.2 — signal de fraîcheur (Option A : JAMAIS bloquant, pur signal d'affichage).
+  // Affiché seulement s'il y a du stock déclaré ET que sa dernière MAJ n'est pas fraîche.
+  // Calcul SERVEUR ; on ne transmet qu'une string i18n sérialisable (jamais de fonction
+  // passée à un Client Component — cf. régression stockAvailable). Pas de somme avec le
+  // stock propre ici (la page lit la source fournisseur vivante, pas le miroir → zéro
+  // double-comptage). Seuils provisoires (C2) dans le helper.
+  const stockToConfirm =
+    product.stock_quantity != null &&
+    product.stock_quantity > 0 &&
+    stockNeedsConfirmation(computeStockFreshness(product.stock_quantity_updated_at))
 
   const hasCatalog = attachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
   const hasVideo   = attachments.some((a) => a.attachment_type === 'video')
@@ -240,6 +254,11 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                       ? `${formatQty(product.stock_quantity)}${product.unit?.trim() ? ` ${product.unit.trim()}` : ''}`
                       : t('infoStockOut')
                     }
+                    {stockToConfirm && (
+                      <span className="ms-2 inline-block align-middle text-xs font-medium text-warning-fg bg-warning-soft border border-warning rounded-full px-2 py-0.5">
+                        {t('infoStockToConfirm')}
+                      </span>
+                    )}
                   </span>
                 </div>
               )}
