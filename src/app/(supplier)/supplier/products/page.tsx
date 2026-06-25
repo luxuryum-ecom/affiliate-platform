@@ -10,6 +10,8 @@ import {
 } from '@/lib/supplier-product-moderation'
 import { isAwaitingFxRate } from '@/lib/supplier-pricing'
 import { TelegramLinkCard } from '@/components/supplier/telegram-link-card'
+import { StockUpdateForm } from '@/components/supplier/stock-update-form'
+import { computeStockFreshness, stockAgeDays, stockNeedsConfirmation, stockNeedsWatch } from '@/lib/supplier-stock-freshness'
 import { getTelegramLinkStatus } from '@/app/actions/telegram-link'
 import { getProductLimitStatus } from '@/app/actions/premium'
 
@@ -47,6 +49,17 @@ export default async function SupplierProductsPage() {
   const t = await getTranslations('supplier.products')
   const tc = await getTranslations('supplier.common')
   const locale = await getLocale()
+
+  // V5-bis.3 — strings de la saisie manuelle de stock, résolues SERVEUR (sérialisables).
+  const stockStrings = {
+    stockLabel: t('stockManualLabel'),
+    updateBtn: t('stockManualUpdate'),
+    saving: t('stockManualSaving'),
+    success: t('stockManualSuccess'),
+    errorInvalidStock: t('stockErrorInvalid'),
+    errorUnauthorized: t('stockErrorUnauthorized'),
+    errorGeneric: t('stockErrorGeneric'),
+  }
 
   return (
     <div className="min-h-screen bg-bg">
@@ -117,6 +130,22 @@ export default async function SupplierProductsPage() {
           <div className="bg-surface rounded-xl border border-line divide-y divide-line">
             {products.map((product) => {
               const badge = SUPPLIER_PRODUCT_STATUS_BADGES[product.approval_status]
+              // V5-bis.3 — fraîcheur du stock déclaré (calcul SERVEUR, label sérialisable).
+              const stockFr = computeStockFreshness(product.stock_quantity_updated_at)
+              const stockTone: 'confirm' | 'watch' | 'none' =
+                product.stock_quantity == null
+                  ? 'none'
+                  : stockNeedsConfirmation(stockFr)
+                    ? 'confirm'
+                    : stockNeedsWatch(stockFr)
+                      ? 'watch'
+                      : 'none'
+              const stockFreshLabel =
+                stockTone === 'confirm'
+                  ? t('stockToConfirm')
+                  : stockTone === 'watch'
+                    ? t('stockUpdatedDaysAgo', { days: stockAgeDays(product.stock_quantity_updated_at) ?? 0 })
+                    : ''
               return (
                 <div key={product.id} className="p-4 flex items-start gap-4">
                   <div className="flex-1 min-w-0">
@@ -161,6 +190,13 @@ export default async function SupplierProductsPage() {
                     <p className="text-xs text-faint mt-0.5">
                       {t('submittedOn', { date: new Date(product.created_at).toLocaleDateString(locale) })}
                     </p>
+                    <StockUpdateForm
+                      productId={product.id}
+                      currentStock={product.stock_quantity}
+                      freshnessLabel={stockFreshLabel}
+                      freshnessTone={stockTone}
+                      strings={stockStrings}
+                    />
                   </div>
                 </div>
               )
