@@ -51,7 +51,7 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const { data: profile } = await supabase
     .from('profiles').select('full_name').eq('id', user.id).single() as { data: Pick<Profile, 'full_name'> | null; error: unknown }
 
-  const [productRes, attachmentsRes] = await Promise.all([
+  const [productRes, attachmentsRes, mirrorRes] = await Promise.all([
     supabase
       .from('supplier_products_wholesaler_read')
       .select(
@@ -65,6 +65,14 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
       .eq('supplier_product_id', id)
       .eq('admin_status', 'approved')
       .order('created_at', { ascending: true }),
+    // V5-bis.2/C4 — stock PROPRE (entrepôt) du produit miroir lié à ce produit fournisseur.
+    // Lecture via la vue redacted `products_catalog_read` (zéro coût/marge, GRANT authenticated,
+    // filtre active+approved). Pas de miroir / inactif → null → « Sur commande » (fail-safe).
+    supabase
+      .from('products_catalog_read')
+      .select('stock_count')
+      .eq('source_supplier_product_id', id)
+      .maybeSingle(),
   ])
 
   if (!productRes.data) notFound()
@@ -112,6 +120,16 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
       : stockNeedsWatch(stockFreshness)
         ? { tone: 'watch', label: t('infoStockUpdatedDaysAgo', { days: stockAgeDays(product.stock_quantity_updated_at) ?? 0 }) }
         : null
+
+  // V5-bis.2/C4 (tranché Abdou) — on n'additionne JAMAIS stock propre + fournisseur (évite
+  // le double-comptage du miroir). On affiche SÉPARÉMENT : « Dispo immédiate » (stock propre
+  // entrepôt, miroir) et « Dispo fournisseur » (stock déclaré + badge fraîcheur). Si le stock
+  // propre est nul/absent mais le fournisseur en a → badge « Sur commande » (jamais de refus,
+  // Option A). Lecture serveur, valeurs sérialisables.
+  const ownStock = (mirrorRes.data?.stock_count ?? null) as number | null
+  const unitSuffix = product.unit?.trim() ? ` ${product.unit.trim()}` : ''
+  const onBackorder =
+    (ownStock == null || ownStock <= 0) && product.stock_quantity != null && product.stock_quantity > 0
 
   const hasCatalog = attachments.some((a) => ['pdf_catalog', 'pdf_datasheet'].includes(a.attachment_type))
   const hasVideo   = attachments.some((a) => a.attachment_type === 'video')
@@ -253,12 +271,27 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
                 <span className="text-muted">{t('infoMoq')}</span>
                 <span className="font-medium text-foreground">{formatQty(product.min_quantity)}{product.unit?.trim() ? ` ${product.unit.trim()}` : ''}</span>
               </div>
+              {/* V5-bis.2/C4 — stock affiché SÉPARÉMENT (jamais sommé) : propre vs fournisseur */}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted">{t('infoStockOwn')}</span>
+                <span className={`font-medium ${ownStock != null && ownStock > 0 ? 'text-success-fg' : 'text-faint'}`}>
+                  {ownStock != null && ownStock > 0 ? (
+                    `${formatQty(ownStock)}${unitSuffix}`
+                  ) : onBackorder ? (
+                    <span className="inline-block align-middle text-xs font-medium rounded-full px-2 py-0.5 border text-warning-fg bg-warning-soft border-warning">
+                      {t('infoOnBackorder')}
+                    </span>
+                  ) : (
+                    t('infoStockOut')
+                  )}
+                </span>
+              </div>
               {product.stock_quantity != null && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted">{t('infoStock')}</span>
+                  <span className="text-muted">{t('infoStockSupplier')}</span>
                   <span className={`font-medium ${product.stock_quantity > 0 ? 'text-success-fg' : 'text-danger-fg'}`}>
                     {product.stock_quantity > 0
-                      ? `${formatQty(product.stock_quantity)}${product.unit?.trim() ? ` ${product.unit.trim()}` : ''}`
+                      ? `${formatQty(product.stock_quantity)}${unitSuffix}`
                       : t('infoStockOut')
                     }
                     {stockBadge && (
