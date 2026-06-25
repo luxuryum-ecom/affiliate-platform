@@ -5,7 +5,9 @@ import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAffiliateOrder } from '@/app/actions/orders'
 import { formatMAD } from '@/lib/utils'
+import { VariantSelector } from '@/components/product/variant-selector'
 import type { Product, City } from '@/types/database'
+import type { ProductVariant } from '@/components/product/variant-selector'
 
 type ProductOption = Pick<
   Product,
@@ -61,6 +63,13 @@ interface Props {
   products: ProductOption[]
   cities: Pick<City, 'id' | 'name' | 'delivery_fee_mad'>[]
   strings: CreateOrderFormStrings
+  /** C3 : variantes par product_id, chargées server-side, données sérialisables uniquement. */
+  variantsPerProduct: Record<string, ProductVariant[]>
+  variantStrings: {
+    chooseOption: string
+    unavailable: string
+    variantLabel: string
+  }
 }
 
 /** Minimal ICU-like interpolation for string templates with named params. */
@@ -68,7 +77,13 @@ function interpolate(template: string, params: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => params[key] ?? `{${key}}`)
 }
 
-export function CreateOrderForm({ products, cities, strings: s }: Props) {
+/** Retourne le premier variant_id significatif d'un produit (stock > 0 en priorité). */
+function getDefaultVariantId(variants: ProductVariant[]): string | null {
+  const meaningful = variants.filter((v) => Object.keys(v.attributes).length > 0)
+  return meaningful.find((v) => v.is_default)?.id ?? meaningful[0]?.id ?? null
+}
+
+export function CreateOrderForm({ products, cities, strings: s, variantsPerProduct, variantStrings }: Props) {
   const router = useRouter()
   const [state, action, isPending] = useActionState(createAffiliateOrder, {
     error: null,
@@ -80,8 +95,16 @@ export function CreateOrderForm({ products, cities, strings: s }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [sellPrice, setSellPrice] = useState(products[0]?.sell_price ?? 0)
   const [selectedCity, setSelectedCity] = useState('')
+  // C3 — variant_id sélectionné pour ce produit. null = commande sans variante (produit simple).
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(() =>
+    getDefaultVariantId(variantsPerProduct[products[0]?.id ?? ''] ?? []),
+  )
 
   const product = products.find((p) => p.id === selectedProductId)
+  // Variantes réelles (attrs non-vides) pour le produit sélectionné.
+  const currentVariants = variantsPerProduct[selectedProductId] ?? []
+  const hasMeaningfulVariants =
+    currentVariants.filter((v) => Object.keys(v.attributes).length > 0).length > 1
 
   const cityRow = cities.find(
     (c) => c.name.toLowerCase() === selectedCity.toLowerCase()
@@ -107,6 +130,8 @@ export function CreateOrderForm({ products, cities, strings: s }: Props) {
     setSelectedProductId(id)
     const p = products.find((x) => x.id === id)
     if (p) setSellPrice(p.sell_price)
+    // C3 : réinitialise la variante sélectionnée au défaut du nouveau produit.
+    setSelectedVariantId(getDefaultVariantId(variantsPerProduct[id] ?? []))
   }
 
   const sourceOptions = [
@@ -117,6 +142,10 @@ export function CreateOrderForm({ products, cities, strings: s }: Props) {
 
   return (
     <form action={action} className="space-y-6">
+      {/* C3 : variant_id transmis silencieusement — null si produit simple (pas de variantes). */}
+      {selectedVariantId && (
+        <input type="hidden" name="variant_id" value={selectedVariantId} />
+      )}
       {state.error && (
         <div className="bg-danger-soft border border-danger text-danger-fg text-sm rounded-xl px-4 py-3">
           {state.error}
@@ -152,6 +181,17 @@ export function CreateOrderForm({ products, cities, strings: s }: Props) {
               ))}
             </select>
           </div>
+
+          {/* C3 : Sélecteur de variante — visible uniquement si le produit a ≥ 2 variantes réelles. */}
+          {hasMeaningfulVariants && (
+            <div className="sm:col-span-2">
+              <VariantSelector
+                variants={currentVariants}
+                strings={variantStrings}
+                onSelect={setSelectedVariantId}
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs text-muted mb-1" htmlFor="quantity">

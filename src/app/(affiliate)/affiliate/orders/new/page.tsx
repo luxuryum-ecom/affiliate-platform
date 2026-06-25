@@ -5,6 +5,7 @@ import { CreateOrderForm } from '@/components/affiliate/create-order-form'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTranslations } from 'next-intl/server'
 import type { Product, City } from '@/types/database'
+import type { ProductVariant } from '@/components/product/variant-selector'
 
 export async function generateMetadata() {
   const t = await getTranslations('affiliate.ordersNew')
@@ -31,6 +32,8 @@ export default async function NewAffiliateOrderPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const tVariant = await getTranslations('productVariant')
+
   const [profileRes, productsRes, allCities] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user!.id).single(),
     supabase
@@ -53,6 +56,33 @@ export default async function NewAffiliateOrderPage() {
       name: c.name,
       delivery_fee_mad: c.delivery_fee_mad,
     }))
+
+  // C3 — variantes par produit, chargées server-side et passées comme données sérialisables
+  // au composant client (pas de fonction, règle CLAUDE.md #2 respectée).
+  const variantsPerProduct: Record<string, ProductVariant[]> = {}
+  if (products.length > 0) {
+    const productIds = products.map((p) => p.id)
+    const { data: variantsRaw } = await supabase
+      .from('product_variants_read')
+      .select('id, product_id, attributes, is_default, stock_count')
+      .in('product_id', productIds)
+    for (const v of variantsRaw ?? []) {
+      const pid = v.product_id as string
+      if (!variantsPerProduct[pid]) variantsPerProduct[pid] = []
+      variantsPerProduct[pid].push({
+        id: v.id as string,
+        attributes: (v.attributes ?? {}) as Record<string, string>,
+        is_default: v.is_default as boolean,
+        stock_count: v.stock_count as number,
+      })
+    }
+  }
+
+  const variantStrings = {
+    chooseOption: tVariant('chooseOption'),
+    unavailable: tVariant('unavailable'),
+    variantLabel: tVariant('variantLabel'),
+  }
 
   const formStrings = {
     sectionProduct: t('sectionProduct'),
@@ -113,7 +143,13 @@ export default async function NewAffiliateOrderPage() {
             </Link>
           </div>
         ) : (
-          <CreateOrderForm products={products} cities={cities} strings={formStrings} />
+          <CreateOrderForm
+            products={products}
+            cities={cities}
+            strings={formStrings}
+            variantsPerProduct={variantsPerProduct}
+            variantStrings={variantStrings}
+          />
         )}
       </main>
     </div>
