@@ -1309,6 +1309,7 @@
       "infoStock": "المخزون",
       "infoStockOut": "نفد المخزون",
       "infoStockToConfirm": "بحاجة إلى تأكيد",
+      "infoStockUpdatedDaysAgo": "آخر تحديث منذ {days, plural, zero {# يوم} one {يوم واحد} two {يومين} few {# أيام} many {# يومًا} other {# يوم}}",
       "infoLeadTime": "مهلة التسليم",
       "infoLeadTimeDays": "{days} أيام",
       "infoPriceMorocco": "سعر الجملة",

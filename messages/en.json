@@ -1309,6 +1309,7 @@
       "infoStock": "Stock",
       "infoStockOut": "Out of stock",
       "infoStockToConfirm": "To confirm",
+      "infoStockUpdatedDaysAgo": "Updated {days, plural, one {# day} other {# days}} ago",
       "infoLeadTime": "Lead time",
       "infoLeadTimeDays": "{days} days",
       "infoPriceMorocco": "Wholesale price",
