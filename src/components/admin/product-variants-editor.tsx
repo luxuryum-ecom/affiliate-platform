@@ -32,6 +32,7 @@ interface Strings {
   errorDuplicateAttributes: string
   errorMinStock: string
   errorVariantSave: string
+  errorLastActiveVariant: string
   successAdded: string
   successStockUpdated: string
   successToggled: string
@@ -53,6 +54,7 @@ function resolveError(code: string | null, s: Strings): string | null {
   if (code === 'errorDuplicateAttributes') return s.errorDuplicateAttributes
   if (code === 'errorMinStock') return s.errorMinStock
   if (code === 'errorVariantSave') return s.errorVariantSave
+  if (code === 'errorLastActiveVariant') return s.errorLastActiveVariant
   // Fallback: mask any unmapped code (DB internals must not reach the UI).
   return s.errorVariantSave
 }
@@ -146,7 +148,7 @@ function StockRow({
           </button>
         </form>
         {toggleState.error && (
-          <p className="text-red-600 text-xs mt-0.5">{toggleState.error}</p>
+          <p className="text-red-600 text-xs mt-0.5">{resolveError(toggleState.error, strings)}</p>
         )}
       </td>
     </tr>

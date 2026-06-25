@@ -1929,7 +1929,8 @@
       "successToggled": "Variante mise à jour.",
       "addFormTitle": "Nouvelle variante",
       "cancelAdd": "Annuler",
-      "errorVariantSave": "Erreur lors de l'enregistrement de la variante."
+      "errorVariantSave": "Erreur lors de l'enregistrement de la variante.",
+      "errorLastActiveVariant": "Impossible de désactiver la dernière variante active."
     },
     "productFilters": {
       "searchPlaceholder": "Rechercher par nom, fournisseur, pays…",

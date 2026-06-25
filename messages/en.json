@@ -1929,7 +1929,8 @@
       "successToggled": "Variant updated.",
       "addFormTitle": "New variant",
       "cancelAdd": "Cancel",
-      "errorVariantSave": "An error occurred while saving the variant."
+      "errorVariantSave": "An error occurred while saving the variant.",
+      "errorLastActiveVariant": "Cannot deactivate the last active variant."
     },
     "productFilters": {
       "searchPlaceholder": "Search by name, supplier, country…",

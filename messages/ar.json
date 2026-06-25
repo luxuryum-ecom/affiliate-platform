@@ -1929,7 +1929,8 @@
       "successToggled": "تم تحديث المتغير.",
       "addFormTitle": "متغير جديد",
       "cancelAdd": "إلغاء",
-      "errorVariantSave": "حدث خطأ أثناء حفظ المتغير."
+      "errorVariantSave": "حدث خطأ أثناء حفظ المتغير.",
+      "errorLastActiveVariant": "لا يمكن إلغاء تفعيل المتغير النشط الأخير."
     },
     "productFilters": {
       "searchPlaceholder": "البحث بالاسم أو المورّد أو البلد…",
