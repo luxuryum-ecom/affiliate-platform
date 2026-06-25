@@ -155,3 +155,11 @@ commission = prix_vente − coût_usine − marge_plateforme − livraison(ville
 3. `@tester` écrit/lance les tests (vert obligatoire)
 4. `@security-reviewer` audite (read-only)
 5. Abdou valide → merge
+
+## Règle modèle & économie de contexte
+- Signale-moi "→ passe sur Opus" quand on attaque un lot qui touche l'argent, la finance, l'archi, ou une décision sensible (raisonnement complexe).
+- Signale-moi "→ Sonnet suffit" quand le travail est du routine (docs, i18n FR/AR/EN, commit, renommage, bug simple, tests).
+- Quand une tâche/chantier est terminé(e) et commité(e), suggère-moi d'ouvrir un nouveau chat pour repartir sur un contexte léger (les docs du repo gardent la continuité via SESSION_HANDOFF.md).
+
+## Règle budget subagents
+- Lance les audits EN SÉQUENCE uniquement (jamais en parallèle) : @finance → @security → @navigator. Un subagent à la fois.

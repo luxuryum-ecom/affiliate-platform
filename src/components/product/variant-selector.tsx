@@ -17,13 +17,15 @@ interface VariantSelectorProps {
     unavailable: string
     variantLabel: string
   }
+  /** Lot B : appelé quand la sélection change — Client→Client uniquement (pas depuis Server Component). */
+  onSelect?: (variantId: string) => void
 }
 
 /**
- * Display-only variant selector — Étape 3 (affichage seul, sans soumission de commande).
+ * Variant selector — Étape 3 (affichage) + Lot B (câblage commande via onSelect).
  * Retourne null si ≤ 1 variante ou si toutes les variantes sont la variante défaut sans attributs.
  */
-export function VariantSelector({ variants, strings }: VariantSelectorProps) {
+export function VariantSelector({ variants, strings, onSelect }: VariantSelectorProps) {
   // Filtre : garde uniquement les variantes ayant au moins un attribut renseigné.
   const meaningful = variants.filter(
     (v) => v.attributes && Object.keys(v.attributes).length > 0,
@@ -37,7 +39,7 @@ export function VariantSelector({ variants, strings }: VariantSelectorProps) {
     new Set(meaningful.flatMap((v) => Object.keys(v.attributes))),
   )
 
-  return <VariantSelectorInner variants={meaningful} axes={axes} strings={strings} />
+  return <VariantSelectorInner variants={meaningful} axes={axes} strings={strings} onSelect={onSelect} />
 }
 
 // Composant interne séparé pour isoler useState (évite les règles de hooks conditionnelles).
@@ -45,12 +47,13 @@ function VariantSelectorInner({
   variants,
   axes,
   strings,
+  onSelect,
 }: {
   variants: ProductVariant[]
   axes: string[]
   strings: VariantSelectorProps['strings']
+  onSelect?: (variantId: string) => void
 }) {
-  // Sélection initiale : valeurs de la variante défaut, ou premières valeurs disponibles.
   const defaultVariant = variants.find((v) => v.is_default) ?? variants[0]
   const initialSelection: Record<string, string> = {}
   for (const axis of axes) {
@@ -59,7 +62,6 @@ function VariantSelectorInner({
 
   const [selection, setSelection] = useState<Record<string, string>>(initialSelection)
 
-  // Trouve la variante correspondant à la sélection courante.
   const selectedVariant = variants.find((v) =>
     axes.every((axis) => v.attributes[axis] === selection[axis]),
   )
@@ -68,7 +70,12 @@ function VariantSelectorInner({
     selectedVariant != null && selectedVariant.stock_count <= 0
 
   const handleChange = (axis: string, value: string) => {
-    setSelection((prev) => ({ ...prev, [axis]: value }))
+    const next = { ...selection, [axis]: value }
+    setSelection(next)
+    if (onSelect) {
+      const matched = variants.find((v) => axes.every((a) => v.attributes[a] === next[a]))
+      if (matched) onSelect(matched.id)
+    }
   }
 
   return (

@@ -383,6 +383,8 @@ export interface Order {
   /** Null when customer orders directly (no referral link). */
   affiliate_id: string | null
   product_id: string
+  /** Variante commandée (Lot B mig 101). NULL = commande antérieure au chantier variantes. */
+  variant_id: string | null
   customer_name: string
   customer_phone: string
   customer_city: string
@@ -445,6 +447,8 @@ export interface WholesaleCartItem {
   id: string
   buyer_id: string
   product_id: string
+  /** Variante dans le panier (Lot B mig 101). */
+  variant_id: string | null
   quantity: number
   added_at: string
 }
@@ -611,6 +615,8 @@ export interface WholesaleOrderItem {
   id: string
   order_id: string
   product_id: string
+  /** Variante de la ligne (Lot B mig 101). NULL = lignes antérieures au chantier. */
+  variant_id: string | null
   quantity: number
   unit_price_snapshot: number
   subtotal: number

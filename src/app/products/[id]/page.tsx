@@ -6,11 +6,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { formatMAD } from '@/lib/utils'
 import { getProductCoverUrl, getProductGalleryUrls, getMeaningfulDescription } from '@/lib/product-media'
 import { getDeliveryEstimate } from '@/lib/order-analytics'
-import { CodOrderForm } from '@/components/customer/cod-order-form'
 import { ProductGallery } from '@/components/customer/product-gallery'
+import { ProductOrderSection } from '@/components/customer/product-order-section'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
-import { VariantSelector } from '@/components/product/variant-selector'
 import type { Product } from '@/types/database'
 import type { ProductVariant } from '@/components/product/variant-selector'
 
@@ -99,6 +98,8 @@ export default async function PublicProductPage({ params, searchParams }: Params
     stock_count: v.stock_count as number,
   }))
 
+  const defaultVariantId = variants.find((v) => v.is_default)?.id ?? variants[0]?.id ?? null
+
   const variantStrings = {
     chooseOption: tVariant('chooseOption'),
     unavailable: tVariant('unavailable'),
@@ -173,9 +174,6 @@ export default async function PublicProductPage({ params, searchParams }: Params
               <span className="text-sm font-medium text-gold-400">{t('priceUnit')}</span>
             </div>
 
-            {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
-            <VariantSelector variants={variants} strings={variantStrings} />
-
             <div className="flex items-start gap-3 bg-surface border border-line rounded-xl p-4 shadow-premium">
               <span className="text-lg" aria-hidden>
                 🚚
@@ -188,16 +186,18 @@ export default async function PublicProductPage({ params, searchParams }: Params
               </div>
             </div>
 
-            <div className="bg-surface border border-line rounded-2xl p-5 shadow-premium">
-              <h2 className="text-sm font-semibold text-foreground mb-4">{t('orderSectionTitle')}</h2>
-              <CodOrderForm
-                productId={product.id}
-                affiliateIdFromUrl={affiliateId}
-                productName={product.name}
-                sellPrice={displayPrice}
-                maxQty={Math.max(product.stock_count, 0)}
-              />
-            </div>
+            {/* Lot B : VariantSelector + CodOrderForm réunis dans un wrapper Client partagé. */}
+            <ProductOrderSection
+              productId={product.id}
+              affiliateIdFromUrl={affiliateId}
+              productName={product.name}
+              sellPrice={displayPrice}
+              maxQty={Math.max(product.stock_count, 0)}
+              variants={variants}
+              defaultVariantId={defaultVariantId}
+              variantStrings={variantStrings}
+              orderSectionTitle={t('orderSectionTitle')}
+            />
           </div>
         </div>
       </main>

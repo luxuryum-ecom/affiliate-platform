@@ -43,7 +43,8 @@ export async function placeOrder(
   // COD public flow — no session. Use service_role to bypass anon RLS policies.
   const supabase = createAdminClient()
 
-  const productId  = (formData.get('productId') as string)?.trim()
+  const productId    = (formData.get('productId') as string)?.trim()
+  const variantIdRaw = (formData.get('variantId') as string | null)?.trim() || null
   const affiliateIdRaw = (formData.get('affiliateId') as string)?.trim() || null
   const attributionClickId = (formData.get('attributionClickId') as string)?.trim() || null
   const quantity   = parseInt(formData.get('quantity') as string, 10)
@@ -90,6 +91,21 @@ export async function placeOrder(
     return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
   if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
+
+  // Lot B — validation cross-product : si un variant_id est fourni, il doit appartenir
+  // au produit de cette commande. Première ligne de défense TypeScript (DB confirme en 102).
+  // Option A : variante invalide → on commande sans variante (pas de refus de vente).
+  let variantId: string | null = variantIdRaw
+  if (variantId) {
+    const { data: vCheck } = (await supabase
+      .from('product_variants_read')
+      .select('id')
+      .eq('id', variantId)
+      .eq('product_id', productId)
+      .maybeSingle()) as { data: { id: string } | null }
+    if (!vCheck) variantId = null
+  }
+
   // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
   // Si le stock est insuffisant, la commande passe avec un flag warning='restocking'.
   // L'alerte oversell est gérée côté SQL par record_anomaly (mig 095).
@@ -210,6 +226,7 @@ export async function placeOrder(
     .insert({
       affiliate_id: validatedAffiliateId,
       product_id: productId,
+      variant_id: variantId,
       customer_name: customerName,
       customer_phone: customerPhone,
       customer_city: customerCity,
@@ -288,8 +305,9 @@ export async function createAffiliateOrder(
     return { error: 'Accès réservé aux affiliés approuvés.', success: false, orderId: null }
   }
 
-  const productId      = (formData.get('product_id') as string)?.trim()
-  const quantity       = parseInt(formData.get('quantity') as string, 10)
+  const productId        = (formData.get('product_id') as string)?.trim()
+  const variantIdAffRaw  = (formData.get('variant_id') as string | null)?.trim() || null
+  const quantity         = parseInt(formData.get('quantity') as string, 10)
   const sellPriceResult = parseMoneyInput(formData.get('sell_price'))
   const customerName   = (formData.get('customer_name') as string)?.trim()
   const customerPhone  = (formData.get('customer_phone') as string)?.trim()
@@ -355,6 +373,20 @@ export async function createAffiliateOrder(
     return { error: 'Ce produit n\'est plus disponible.', success: false, orderId: null }
   if (!product.affiliate_enabled || product.availability_type === 'import_on_demand')
     return { error: 'Ce produit n\'est pas disponible à la vente COD.', success: false, orderId: null }
+
+  // Lot B — validation cross-product variant_id. Option A : invalide → null, pas de refus.
+  // Utilise createAdminClient() déjà importé (lecture seule ici, pas d'escalade).
+  let variantIdAff: string | null = variantIdAffRaw
+  if (variantIdAff) {
+    const { data: vCheckAff } = (await createAdminClient()
+      .from('product_variants_read')
+      .select('id')
+      .eq('id', variantIdAff)
+      .eq('product_id', productId)
+      .maybeSingle()) as { data: { id: string } | null }
+    if (!vCheckAff) variantIdAff = null
+  }
+
   // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
   // Si le stock est insuffisant, la commande passe avec warning='restocking'.
   const stockWarningAffiliate: 'restocking' | undefined =
@@ -411,6 +443,7 @@ export async function createAffiliateOrder(
     .insert({
       affiliate_id:          user.id,
       product_id:            productId,
+      variant_id:            variantIdAff,
       customer_name:         customerName,
       customer_phone:        customerPhone,
       customer_city:         customerCity,
@@ -508,13 +541,14 @@ export async function updateOrderStatus(
   // ── Fetch current state ───────────────────────────────────────────────────
   const { data: order } = (await supabase
     .from('orders')
-    .select('status, quantity, product_id, cod_expected, affiliate_id')
+    .select('status, quantity, product_id, variant_id, cod_expected, affiliate_id')
     .eq('id', orderId)
     .single()) as {
     data: {
       status: string
       quantity: number
       product_id: string
+      variant_id: string | null
       cod_expected: number | null
       affiliate_id: string | null
     } | null
@@ -540,6 +574,9 @@ export async function updateOrderStatus(
   const wasStockReserved = ['confirmed', 'shipped', 'delivered'].includes(prev)
   const needsReserve     = newStatus === 'confirmed' && prev === 'pending_confirmation'
   const needsRestore     = ['cancelled', 'returned'].includes(newStatus) && wasStockReserved
+  // Lot B : transitions de statut ledger informationnelles (aucun impact stock vendable).
+  const needsInTransit   = newStatus === 'shipped'    && prev === 'confirmed'
+  const needsDelivered   = newStatus === 'delivered'  && prev === 'shipped'
 
   // WMS-1 OPTION A : reserve/restore étendu, canal discriminé, never-refuse.
   // Les signatures RPC ont été étendues en mig 093 (p_channel, p_order_id, etc.).
@@ -554,16 +591,52 @@ export async function updateOrderStatus(
       p_order_id:    orderId,
       p_order_type:  'affiliate',
       p_actor:       userId,
+      p_variant_id:  order.variant_id,
     })
     // Ne pas vérifier le retour : OPTION A = on ne refuse jamais pour stock.
   }
 
   if (needsRestore) {
+    // Lot B H1 : restore_stock → return_expected (staging non vendable).
+    // p_from_status déterminé selon l'état précédent (shipped = in_transit, sinon reserved).
     await supabase.rpc('restore_stock', {
       p_product_id:  order.product_id,
       p_qty:         order.quantity,
       p_channel:     stockChannel,
       p_reason:      'restore',
+      p_order_id:    orderId,
+      p_order_type:  'affiliate',
+      p_actor:       userId,
+      p_variant_id:  order.variant_id,
+      p_from_status: prev === 'shipped' ? 'in_transit' : 'reserved',
+    })
+  }
+
+  // Lot B : transitions ledger pures — reserved→in_transit (shipped) et in_transit→delivered.
+  if (needsInTransit) {
+    await supabase.rpc('transition_variant_stock_status', {
+      p_product_id:  order.product_id,
+      p_qty:         order.quantity,
+      p_variant_id:  order.variant_id,
+      p_from_status: 'reserved',
+      p_to_status:   'in_transit',
+      p_channel:     stockChannel,
+      p_reason:      'expedition',
+      p_order_id:    orderId,
+      p_order_type:  'affiliate',
+      p_actor:       userId,
+    })
+  }
+
+  if (needsDelivered) {
+    await supabase.rpc('transition_variant_stock_status', {
+      p_product_id:  order.product_id,
+      p_qty:         order.quantity,
+      p_variant_id:  order.variant_id,
+      p_from_status: 'in_transit',
+      p_to_status:   'delivered',
+      p_channel:     stockChannel,
+      p_reason:      'livraison',
       p_order_id:    orderId,
       p_order_type:  'affiliate',
       p_actor:       userId,
@@ -639,6 +712,7 @@ export async function createWholesaleOrderFromCart(
     totalCents         += subtotalCents
     return {
       product_id:          item.product_id,
+      variant_id:          item.variant_id ?? null,
       quantity:            item.quantity,
       unit_price_snapshot: unitPrice,
       subtotal:            (subtotalCents / 100).toFixed(2),
@@ -670,7 +744,7 @@ export async function createWholesaleOrderFromCart(
 
   if (orderErr || !newOrder) return fail('Erreur lors de la création de la commande.')
 
-  // ── Insert order items ─────────────────────────────────────────────────────
+  // ── Insert order items (variant_id propagé depuis le panier) ──────────────
   const items = lineItems.map((li) => ({ ...li, order_id: newOrder.id }))
   const { error: itemsErr } = await supabase.from('wholesale_order_items').insert(items)
   if (itemsErr) {
@@ -763,10 +837,11 @@ export async function submitWholesaleOrder(
     const subtotalCents = Math.round(unitPrice * 100) * item.quantity
     totalCents += subtotalCents
     return {
-      product_id: item.product_id,
-      quantity: item.quantity,
+      product_id:          item.product_id,
+      variant_id:          item.variant_id ?? null,
+      quantity:            item.quantity,
       unit_price_snapshot: unitPrice,
-      subtotal: (subtotalCents / 100).toFixed(2),
+      subtotal:            (subtotalCents / 100).toFixed(2),
       tier_label_snapshot: tier ? tier.label : 'Prix standard',
     }
   })

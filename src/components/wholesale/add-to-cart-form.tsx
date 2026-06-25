@@ -13,6 +13,8 @@ interface AddToCartFormProps {
   tiers: WholesaleTier[]
   minQty: number
   stockCount: number
+  /** Lot B : variante défaut résolue côté serveur. Propagée en hidden input → addToCart. */
+  defaultVariantId?: string | null
 }
 
 const initialState: CartState = { error: null, success: false }
@@ -23,10 +25,15 @@ export function AddToCartForm({
   tiers,
   minQty,
   stockCount,
+  defaultVariantId,
 }: AddToCartFormProps) {
   const t = useTranslations('wholesale.productDetail')
   const [state, action, isPending] = useActionState(addToCart, initialState)
   const [qty, setQty] = useState(minQty)
+  // Lot B : la variante sélectionnée est initialisée sur la variante défaut.
+  // Dans ce composant, pas de VariantSelector (le sélecteur est dans WholesaleProductSection
+  // si le produit en a plusieurs) → pour l'instant on fixe la variante défaut.
+  const [selectedVariantId] = useState<string | null>(defaultVariantId ?? null)
 
   // Live tier calculation — runs purely on the client
   const activeTier = tiers.length > 0 ? getWholesaleTier(tiers, qty) : null
@@ -148,6 +155,9 @@ export function AddToCartForm({
       ) : (
         <form action={action} className="space-y-4">
           <input type="hidden" name="productId" value={productId} />
+          {selectedVariantId && (
+            <input type="hidden" name="variantId" value={selectedVariantId} />
+          )}
           {/* Controlled qty is synced to hidden input on every render */}
           <input type="hidden" name="quantity" value={qty} />
 

@@ -93,6 +93,8 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
     stock_count: v.stock_count as number,
   }))
 
+  const defaultVariantId = variants.find((v) => v.is_default)?.id ?? variants[0]?.id ?? null
+
   const variantStrings = {
     chooseOption: tVariant('chooseOption'),
     unavailable: tVariant('unavailable'),
@@ -242,6 +244,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                     tiers={product.wholesale_tiers}
                     minQty={product.wholesale_min_qty}
                     stockCount={product.stock_count}
+                    defaultVariantId={defaultVariantId}
                   />
                 </div>
                 {/* Sur-commande / rupture → devis (cible de l'ancre #quote depuis AddToCartForm) */}

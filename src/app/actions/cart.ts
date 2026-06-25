@@ -37,8 +37,9 @@ export async function addToCart(
 
   if (!user) return { error: 'Non authentifié.', success: false }
 
-  const productId = (formData.get('productId') as string)?.trim()
-  const quantity = parseInt(formData.get('quantity') as string, 10)
+  const productId    = (formData.get('productId') as string)?.trim()
+  const variantIdRaw = (formData.get('variantId') as string | null)?.trim() || null
+  const quantity     = parseInt(formData.get('quantity') as string, 10)
 
   if (!productId) return { error: 'Produit introuvable.', success: false }
   if (isNaN(quantity) || quantity < 1)
@@ -65,6 +66,19 @@ export async function addToCart(
     }
   }
 
+  // Lot B — validation cross-product variant_id. Option A : invalide → null, pas de refus.
+  // product_variants_read : vue security-definer accessible à tous les rôles authentifiés.
+  let variantId: string | null = variantIdRaw
+  if (variantId) {
+    const { data: vCheckCart } = (await supabase
+      .from('product_variants_read')
+      .select('id')
+      .eq('id', variantId)
+      .eq('product_id', productId)
+      .maybeSingle()) as { data: { id: string } | null }
+    if (!vCheckCart) variantId = null
+  }
+
   // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
   // L'ajout au panier passe avec warning='restocking' si stock < quantité demandée.
   const stockWarning: 'restocking' | undefined =
@@ -72,12 +86,32 @@ export async function addToCart(
       ? 'restocking'
       : undefined
 
-  const { error } = await supabase.from('wholesale_cart_items').upsert(
-    { buyer_id: user.id, product_id: productId, quantity },
-    { onConflict: 'buyer_id,product_id' }
-  )
+  // Lot B : la contrainte unique est sur (buyer_id, product_id, COALESCE(variant_id, uuid_nil)).
+  // PostgREST ne supporte pas l'upsert sur un index expressif → SELECT + UPDATE/INSERT manuel.
+  const existingQuery = supabase
+    .from('wholesale_cart_items')
+    .select('id')
+    .eq('buyer_id', user.id)
+    .eq('product_id', productId)
 
-  if (error) return { error: error.message, success: false }
+  const { data: existing } = (await (variantId
+    ? existingQuery.eq('variant_id', variantId)
+    : existingQuery.is('variant_id', null)
+  ).maybeSingle()) as { data: { id: string } | null }
+
+  if (existing) {
+    const { error: updateErr } = await supabase
+      .from('wholesale_cart_items')
+      .update({ quantity, variant_id: variantId })
+      .eq('id', existing.id)
+      .eq('buyer_id', user.id)
+    if (updateErr) return { error: updateErr.message, success: false }
+  } else {
+    const { error: insertErr } = await supabase
+      .from('wholesale_cart_items')
+      .insert({ buyer_id: user.id, product_id: productId, variant_id: variantId, quantity })
+    if (insertErr) return { error: insertErr.message, success: false }
+  }
 
   revalidatePath('/wholesale/cart')
   return { error: null, success: true, ...(stockWarning ? { warning: stockWarning } : {}) }
@@ -172,12 +206,43 @@ export async function addMarketplaceToCart(
   // Merge des warnings fournisseur + catalogue (l'un ou l'autre peut être présent).
   const marketplaceWarning = supplierStockWarning ?? catalogStockWarning
 
-  const { error } = await supabase.from('wholesale_cart_items').upsert(
-    { buyer_id: user.id, product_id: catalogProduct.id, quantity },
-    { onConflict: 'buyer_id,product_id' }
-  )
+  // Lot B : résoudre la variante défaut du catalogProduct.
+  // product_variants_read : vue security-definer accessible à tous les rôles — évite le
+  // blocage RLS qui touchait les grossistes (product_variants table : staff-only).
+  const { data: defaultVariantRow } = (await supabase
+    .from('product_variants_read')
+    .select('id')
+    .eq('product_id', catalogProduct.id)
+    .eq('is_default', true)
+    .maybeSingle()) as { data: { id: string } | null }
 
-  if (error) return { error: error.message, success: false }
+  const resolvedVariantId = defaultVariantRow?.id ?? null
+
+  // Lot B : SELECT + UPDATE/INSERT manuel (index expressif non supporté par PostgREST upsert).
+  const mktQuery = supabase
+    .from('wholesale_cart_items')
+    .select('id')
+    .eq('buyer_id', user.id)
+    .eq('product_id', catalogProduct.id)
+
+  const { data: existingMkt } = (await (resolvedVariantId
+    ? mktQuery.eq('variant_id', resolvedVariantId)
+    : mktQuery.is('variant_id', null)
+  ).maybeSingle()) as { data: { id: string } | null }
+
+  if (existingMkt) {
+    const { error: upErr } = await supabase
+      .from('wholesale_cart_items')
+      .update({ quantity, variant_id: resolvedVariantId })
+      .eq('id', existingMkt.id)
+      .eq('buyer_id', user.id)
+    if (upErr) return { error: upErr.message, success: false }
+  } else {
+    const { error: inErr } = await supabase
+      .from('wholesale_cart_items')
+      .insert({ buyer_id: user.id, product_id: catalogProduct.id, variant_id: resolvedVariantId, quantity })
+    if (inErr) return { error: inErr.message, success: false }
+  }
 
   revalidatePath('/wholesale/cart')
   revalidatePath('/wholesale/marketplace')

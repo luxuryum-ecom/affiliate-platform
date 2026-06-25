@@ -19,6 +19,8 @@ interface CodOrderFormProps {
   productName: string
   sellPrice: number
   maxQty: number
+  /** Lot B : variante sélectionnée par le parent. Envoyée en hidden input pour placeOrder. */
+  variantId?: string | null
 }
 
 const initialState: OrderFormState = { error: null, success: false, orderId: null }
@@ -32,6 +34,7 @@ export function CodOrderForm({
   productName,
   sellPrice,
   maxQty,
+  variantId,
 }: CodOrderFormProps) {
   const t = useTranslations('publicProduct')
   const [state, action, isPending] = useActionState(placeOrder, initialState)
@@ -89,6 +92,9 @@ export function CodOrderForm({
     <div className="space-y-4">
       <form action={action} className="space-y-4">
         <input type="hidden" name="productId" value={productId} />
+        {variantId && (
+          <input type="hidden" name="variantId" value={variantId} />
+        )}
         {attribution.affiliateId && (
           <input type="hidden" name="affiliateId" value={attribution.affiliateId} />
         )}
