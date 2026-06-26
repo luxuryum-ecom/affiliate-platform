@@ -287,6 +287,10 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
         price_source: pricing.price_source,
         fx_rate_source_to_mad: pricing.fx_rate_source_to_mad,
         stock_quantity: clean.stock_quantity,
+        // V5-bis.3 — déclaration via bot Telegram = mode 'telegram' ; horodate la
+        // fraîcheur du stock UNIQUEMENT si un stock est réellement déclaré.
+        stock_mode: 'telegram',
+        stock_quantity_updated_at: clean.stock_quantity != null ? nowIso() : null,
         lead_time_days: clean.lead_time_days,
         // P2 — unité de vente devinée par l'IA. On NE pose `unit` QUE si une unité
         // NON-pièce a été détectée → un produit sans unité garde le défaut colonne

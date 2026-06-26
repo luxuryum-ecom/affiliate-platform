@@ -888,6 +888,11 @@ export interface SupplierProduct {
   // Extended catalog fields (migration 035)
   unit: string
   stock_quantity: number | null
+  // Stock fournisseur multi-modes + fraîcheur (migration 104, V5-bis.1).
+  // Optionnels : absents des produits internes du catalogue fusionné (Omit→Public).
+  stock_mode?: 'api' | 'manuel' | 'telegram' | 'hebdo'
+  stock_quantity_updated_at?: string | null
+  variant_id?: string | null
   lead_time_days: number | null
   export_countries: string[]
   supplier_unit_price_usd: number | null
@@ -1014,6 +1019,9 @@ export type SupplierProductSupplierView = Pick<
   | 'supplier_type'
   | 'approval_status'
   | 'created_at'
+  | 'stock_quantity'
+  | 'stock_mode'
+  | 'stock_quantity_updated_at'
 >
 
 /** Status for supplier marketplace quote requests. */

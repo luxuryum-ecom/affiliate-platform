@@ -144,6 +144,10 @@ export async function submitSupplierProduct(
       approval_status: 'pending_review' as SupplierProductStatus,
       source: 'web',
       stock_quantity: isNaN(stockRaw) ? null : stockRaw,
+      // V5-bis.3 — saisie WEB = mode 'manuel' ; horodate la fraîcheur du stock
+      // UNIQUEMENT si un stock est réellement déclaré (sinon date trompeuse).
+      stock_mode: 'manuel',
+      stock_quantity_updated_at: isNaN(stockRaw) ? null : new Date().toISOString(),
       lead_time_days: isNaN(leadRaw) ? null : leadRaw,
     })
     .select('id')
@@ -181,6 +185,56 @@ export async function submitSupplierProduct(
   })
 
   redirect('/supplier/products')
+}
+
+// ── Supplier: mise à jour manuelle du stock (V5-bis.3) ────────────────────────
+// Le fournisseur rafraîchit le stock déclaré de SON produit → mode 'manuel' +
+// horodatage de fraîcheur. N'altère AUCUN prix/marge (zéro finance). Option A :
+// stock 0 autorisé (rupture déclarée), négatif refusé. Isolation stricte.
+export async function updateSupplierStock(
+  _prevState: SupplierProductState,
+  formData: FormData,
+): Promise<SupplierProductState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié.' }
+
+  // Rôle vérifié serveur : l'écriture passe par service_role (RLS/verrou 055 contournés),
+  // ce contrôle est donc à notre charge.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single() as { data: { role: string } | null; error: unknown }
+  if (profile?.role !== 'supplier') return { error: 'errorStockUnauthorized' }
+
+  const productId = (formData.get('productId') as string)?.trim()
+  const stockRaw = parseInt(formData.get('stock_quantity') as string, 10)
+  if (!productId) return { error: 'errorStockUnauthorized' }
+  // Option A : 0 autorisé (rupture déclarée), négatif/non numérique refusé.
+  if (Number.isNaN(stockRaw) || stockRaw < 0) return { error: 'errorInvalidStock' }
+
+  // Isolation fournisseur (défense en profondeur) : service_role IGNORE la RLS, donc
+  // l'appartenance est garantie par la DOUBLE-CLÉ WHERE (id + supplier_id = user.id).
+  // Un productId d'un autre fournisseur ne matchera jamais → aucune ligne mise à jour.
+  const admin = createAdminClient()
+  const { data: updated, error } = await admin
+    .from('supplier_products')
+    .update({
+      stock_quantity: stockRaw,
+      stock_mode: 'manuel',
+      stock_quantity_updated_at: new Date().toISOString(),
+    })
+    .eq('id', productId)
+    .eq('supplier_id', user.id)
+    .select('id')
+    .maybeSingle()
+
+  if (error) return { error: error.message }
+  if (!updated) return { error: 'errorStockUnauthorized' }
+
+  revalidatePath('/supplier/products')
+  return { error: null, success: true }
 }
 
 // ── Admin: approve a supplier product ─────────────────────────────────────────

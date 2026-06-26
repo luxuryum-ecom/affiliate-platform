@@ -216,6 +216,14 @@
 
 ---
 
+### 🔄 V5-bis — STOCK FOURNISSEUR MULTI-MODES + FRAÎCHEUR — *(branche `feat/supplier-stock-multimodes`, NON MERGÉE, mig 104 APPLIQUÉE PROD le 2026-06-26 par Abdou)*
+> Option B disciplinée (Abdou) : fraîcheur au niveau PRODUIT, `variant_id` provisionné non câblé, additif pur, zéro touche RPC/commandes/finance, i18n serveur.
+- **V5-bis.1** ✅ commit `e795de0` — mig **104** : `supplier_products` +`stock_mode` (api/manuel/telegram/hebdo, CHECK, défaut `manuel`) +`stock_quantity_updated_at` +`variant_id` FK nullable NON câblée ; backfill `= updated_at` ; vue redacted `supplier_products_wholesaler_read` étendue (2 colonnes non sensibles, prix inchangé). **@security GO**. Vérifié LOCAL (colonnes/CHECK/FK/vue). **Mig 104 NON appliquée prod** (db push réservé Abdou).
+- **V5-bis.2 / C2** ✅ commit `081cada` — helper `supplier-stock-freshness.ts` **3 paliers** (tranché Abdou) : frais <3j (rien) / surveille 3-14j (badge GRIS « Mis à jour il y a X jours ») / >14j ou inconnu (badge ORANGE « À confirmer »). Seuils 72h/336h. Rendu SERVEUR, RTL. @security léger GO.
+- **V5-bis.2 / C4** ✅ commit `3e7a771` — affichage **SÉPARÉ** (tranché Abdou) sur `wholesale/marketplace/[id]` : « Dispo immédiate » (stock propre miroir via `products_catalog_read`, zéro coût/marge) + « Dispo fournisseur » (déclaré + badge fraîcheur). Badge « Sur commande » si propre=0 & fournisseur>0. JAMAIS de somme (zéro double-comptage). @finance GO + @security GO.
+- **V5-bis.3** ✅ commit `739ffd2` — alimentation fraîcheur : bot Telegram (`ingest.ts` → `stock_mode='telegram'` + horodatage si stock) + saisie manuelle fournisseur (action `updateSupplierStock` — isolation double-clé `id`+`supplier_id` via service_role, Option A, zéro finance ; composant `StockUpdateForm`). @security plein GO + @finance GO. tsc 0 · vitest 315 · build OK.
+- **V5-bis — RUNTIME VERTS** ✅ 2026-06-26 — vérif runtime LOCAL (garde-fous règle #8 `assertLocalSupabase`+`getLocalSupabaseEnv`, jamais prod) : **tester n°1** marketplace C2 (3 paliers ×FR/AR/EN) + C4 (4 cas ×FR/AR/EN) = **21/21 Playwright + 10/10 unit PASS** (captures `scratchpad/v5bis-tester1/`) ; **tester n°2** Telegram+manuel+recalcul fraîcheur 20j→frais = **20/20 PASS** (preuves `scratchpad/v5bis-tester2/`). Checks règle #3 : tsc 0 · build OK · vitest **315/315** · **smoke 16/16 VERT** (`marketplace/[id]` 200 après mig 104 prod). Fichiers tests : `e2e/v5bis-c2c4.spec.ts`, `playwright.v5bis.config.ts`, fix seed `scripts/seed-c2c4-test-local.mjs`. **V5-bis = branche feat, NON mergé. Mig 104 APPLIQUÉE PROD le 2026-06-26.** Prêt pour merge (en attente accord Abdou).
+
 ## 📦 RÈGLE STOCK & COMMANDE — définitive (TRANCHÉ)
 > Gravé le **2026-06-18** (décision Abdou). Règle métier, vaut pour tout affichage/flux commande.
 
