@@ -51,5 +51,6 @@ supabase/.temp/
 # Playwright (smoke tests)
 /test-results
 /playwright-report
+/playwright-report-v5bis
 /blob-report
 /e2e/.auth
