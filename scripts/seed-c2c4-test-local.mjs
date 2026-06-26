@@ -99,9 +99,13 @@ async function ensureUser(email, role, fullName) {
     console.log(`[SEED] User ${email} créé (id=${userId})`)
   }
 
-  // Upsert profile
+  // Upsert profile — s'assure que le wholesaler a bien accès (status=approved + wholesale_access=true)
+  // sans quoi l'app redirige vers la page de validation au lieu du marketplace.
+  const profileBody = role === 'wholesaler'
+    ? { id: userId, role, full_name: fullName, status: 'approved', wholesale_access: true }
+    : { id: userId, role, full_name: fullName, status: 'approved' }
   const p = await rest('POST', '/rest/v1/profiles',
-    { id: userId, role, full_name: fullName },
+    profileBody,
     'resolution=merge-duplicates,return=minimal')
   console.log(`[SEED] Profil ${role} upsert HTTP ${p.status}`)
 

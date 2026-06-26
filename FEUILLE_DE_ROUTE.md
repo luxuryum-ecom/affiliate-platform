@@ -143,6 +143,7 @@
 - **V5-bis.2/C2** ✅ `081cada` — fraîcheur 3 paliers (frais/surveille gris/confirmer orange), seuils 72h/336h. @security léger GO.
 - **V5-bis.2/C4** ✅ `3e7a771` — affichage séparé « Dispo immédiate » (propre miroir) + « Dispo fournisseur », badge « Sur commande ». Jamais de somme. @finance GO + @security GO.
 - **V5-bis.3** ✅ `739ffd2` — bot Telegram (`stock_mode='telegram'`) + saisie manuelle fournisseur (`updateSupplierStock`, isolation double-clé) + `StockUpdateForm`. @security plein GO + @finance GO.
+- **V5-bis — RUNTIME VERTS** ✅ 2026-06-26 — vérif runtime LOCAL (règle #8) : tester n°1 marketplace C2/C4 ×FR/AR/EN = 21/21 Playwright + 10/10 unit ; tester n°2 Telegram/manuel/recalcul 20j→frais = 20/20. Checks règle #3 : tsc 0 · build OK · vitest 315/315 · **smoke 16/16 VERT** (`marketplace/[id]` 200). **Mig 104 appliquée PROD le 2026-06-26 par Abdou.** Tests : `e2e/v5bis-c2c4.spec.ts`, `playwright.v5bis.config.ts`. Captures `scratchpad/v5bis-tester1+2/`. **Prêt pour merge — en attente accord Abdou (pas de merge/push sans son OK).**
 
 ## 🔒 DÉCISIONS FIGÉES — NE JAMAIS ROUVRIR
 > Gravées avec Abdou. Toute évolution les respecte ; ce qui touche l'argent passe par
