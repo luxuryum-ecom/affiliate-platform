@@ -8,6 +8,7 @@ import { getProductCoverUrl } from '@/lib/product-media'
 import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { priceWithUnit, resolveUnitLabel } from '@/lib/units'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
+import { AffiliateFeesBreakdown } from '@/components/affiliate/AffiliateFeesBreakdown'
 import { getTranslations } from 'next-intl/server'
 import { getCategoryDisplayList } from '@/lib/categories/display'
 import { CategoryRail, type CategoryChip } from '@/components/shared/category-rail'
@@ -28,6 +29,15 @@ export default async function AffiliateProductsPage({
   const tCommon = await getTranslations('affiliate.common')
   const tUnits = await getTranslations('units')
   const tCat = await getTranslations('categories')
+  const feesStrings = {
+    resellerPrice: t('feesResellerPrice'),
+    productIncluded: t('feesProductIncluded'),
+    delivery: t('feeDelivery'),
+    packaging: t('feePackaging'),
+    confirmation: t('feeConfirmation'),
+    noAdvance: t('feesNoAdvance'),
+    compactTag: t('feesCompactTag'),
+  }
   const params = await searchParams
   const activeCategory = params.category ?? null
 
@@ -203,9 +213,12 @@ export default async function AffiliateProductsPage({
                           saleUnit={product.sale_unit}
                         />
                       </div>
-                      {/* #5 — dé-emphase : neutre (et non vert) pour que le GAIN reste le seul
-                          point vert mis en avant. Couleur only, taille de carte inchangée. */}
-                      <p className="text-[10px] text-muted mt-0.5">{t('priceAllInclusiveShort')}</p>
+                      {/* Bloc frais partagé — variante compacte (prix revendeur + « tout compris »). */}
+                      <AffiliateFeesBreakdown
+                        resellerPrice={product.sell_price}
+                        strings={feesStrings}
+                        compact
+                      />
                     </div>
 
                     {/* CTA — cible tactile ≥44px (flex centering + min-h) ; texte/couleur/

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
 import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
+import { AffiliateFeesBreakdown } from '@/components/affiliate/AffiliateFeesBreakdown'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl, getMeaningfulDescription } from '@/lib/product-media'
@@ -170,6 +171,15 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
     suggestedGain: t.raw('suggestedGain') as string,
   }
   const copyLinkStrings = { copy: t('copyLink'), copied: t('copied') }
+  const feesStrings = {
+    resellerPrice: t('feesResellerPrice'),
+    productIncluded: t('feesProductIncluded'),
+    delivery: t('feeDelivery'),
+    packaging: t('feePackaging'),
+    confirmation: t('feeConfirmation'),
+    noAdvance: t('feesNoAdvance'),
+    compactTag: t('feesCompactTag'),
+  }
 
   return (
     <div className="theme-dark bg-bg text-foreground min-h-screen">
@@ -274,17 +284,16 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
           </div>
         </div>
 
-        {/* Tout inclus — argument de vente (affichage pur ; les frais sont DÉJÀ dans le capital) */}
-        <div className="mt-6 bg-success-soft border border-success rounded-xl p-4">
-          <p className="text-sm font-bold text-success-fg mb-2">{t('feesIncludedTitle')}</p>
-          <ul className="text-sm text-foreground space-y-1">
-            <li>✅ {t('feesIncludedDelivery')}</li>
-            <li>✅ {t('feesIncludedPackaging')}</li>
-            <li>✅ {t('feesIncludedConfirmation')}</li>
-          </ul>
-          <p className="text-sm font-semibold text-foreground mt-3">{t('feesIncludedZero')}</p>
-          <p className="text-xs text-muted mt-1">{t('feesIncludedFooter')}</p>
-        </div>
+        {/* Prix revendeur + frais déjà inclus — composant partagé (affichage pur).
+            Livraison = provision fixe DELIVERY_PROVISION_MAD (= ce qui est réellement
+            déduit), confirmation/emballage = frais produit (fallback 10, aligné calcul). */}
+        <AffiliateFeesBreakdown
+          resellerPrice={product.sell_price}
+          deliveryFee={DELIVERY_PROVISION_MAD}
+          packagingFee={product.packaging_fee_mad ?? 10}
+          confirmationFee={product.confirmation_fee_mad ?? 10}
+          strings={feesStrings}
+        />
 
         {/* Stats */}
         <div className="mt-6">
