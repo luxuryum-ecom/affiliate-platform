@@ -5,12 +5,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
 import { AffiliateQrButton } from '@/components/affiliate/AffiliateQrButton'
 import { CommissionCalculator } from '@/components/affiliate/CommissionCalculator'
-import { AffiliateFeesBreakdown } from '@/components/affiliate/AffiliateFeesBreakdown'
+import { AffiliateResellerDisclosure } from '@/components/affiliate/AffiliateResellerDisclosure'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl, getMeaningfulDescription } from '@/lib/product-media'
-import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
-import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
+import { formatDH, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { VariantSelector } from '@/components/product/variant-selector'
 import { getTranslations } from 'next-intl/server'
@@ -39,7 +38,6 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
   const t = await getTranslations('affiliate.products')
   const tCommon = await getTranslations('affiliate.common')
   const tVariant = await getTranslations('productVariant')
-  const tUnits = await getTranslations('units')
 
   const {
     data: { user },
@@ -179,14 +177,15 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
     hint: t('doorQrHint'),
     close: t('doorQrClose'),
   }
-  const feesStrings = {
-    resellerPrice: t('feesResellerPrice'),
-    productIncluded: t('feesProductIncluded'),
-    delivery: t('feeDelivery'),
-    packaging: t('feePackaging'),
-    confirmation: t('feeConfirmation'),
-    noAdvance: t('feesNoAdvance'),
-    compactTag: t('feesCompactTag'),
+  // Bloc « Prix revendeur » pliable — strings DÉJÀ formatées en DH côté serveur
+  // (formatDH = affichage seul, aucune valeur ni calcul touché). Règle #2 : strings only.
+  const resellerDisclosureStrings = {
+    summary: t('resellerSummary', { price: formatDH(product.sell_price) }),
+    detail: t('resellerDetail', {
+      delivery: formatDH(DELIVERY_PROVISION_MAD),
+      packaging: formatDH(product.packaging_fee_mad ?? 10),
+      confirmation: formatDH(product.confirmation_fee_mad ?? 10),
+    }),
   }
 
   return (
@@ -247,30 +246,21 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
               )}
             </div>
 
-            {/* Commission + catalog price — highlighted, the affiliate's key numbers */}
-            <div className="bg-accent-soft border border-gold-300 rounded-xl p-4 flex items-end justify-between">
-              <div>
-                <p className="text-xs text-faint">{t('baseCommission')}</p>
-                {baseCommission != null && baseCommission > 0 ? (
-                  <p className="text-2xl font-bold text-success-fg tabular-nums leading-tight">
-                    {formatMAD(baseCommission)}
-                  </p>
-                ) : (
-                  <p className="text-base font-semibold text-accent-fg">{t('adjustPrice')}</p>
-                )}
+            {/* Calculateur de commission REMONTÉ ici (remplace l'ancien casier commission/
+                prix catalogue — doublon supprimé). GARDE @finance : affiché UNIQUEMENT là où
+                l'égalité commission = (custom − sell_price) = calculateNetAffiliateCommission
+                (custom) est prouvée — produit règle-capital (baseCommission ≠ null) et NON
+                miroir fournisseur. */}
+            {baseCommission != null && product.source_supplier_product_id == null && (
+              <div className="bg-surface rounded-xl border border-line px-4 pb-4">
+                <CommissionCalculator
+                  productId={product.id}
+                  resellerPrice={product.sell_price}
+                  currentCustomPrice={customPrice}
+                  strings={calcStrings}
+                />
               </div>
-              <div className="text-end">
-                <p className="text-xs text-faint">{t('catalogPrice')}</p>
-                {/* Suffixe d'unité AJOUTÉ seulement si sale_unit est posé → produit
-                    sans unité (NULL) = affichage strictement identique à avant. */}
-                <p className="text-sm font-medium text-muted tabular-nums">
-                  {priceWithUnit(
-                    formatMAD(product.sell_price),
-                    product.sale_unit ? resolveUnitLabel(product.sale_unit, tUnits) : null,
-                  )}
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* Conditionnement descriptif (P3) — rien si pack_size/pack_unit non posés */}
             <PackBreakdown
@@ -282,35 +272,12 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
 
             {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
             <VariantSelector variants={variants} strings={variantStrings} />
-
-            {/* Calculateur de commission (client component — strings only, règle #2).
-                GARDE @finance : affiché UNIQUEMENT là où l'égalité commission = (custom −
-                sell_price) = calculateNetAffiliateCommission(custom) est prouvée, càd
-                produit règle-capital (factory_cost_mad présent → baseCommission ≠ null) et
-                NON miroir fournisseur (sinon sell_price ≠ capital → commission divergente). */}
-            {baseCommission != null && product.source_supplier_product_id == null && (
-              <div className="bg-surface rounded-xl border border-line px-4 pb-4">
-                <CommissionCalculator
-                  productId={product.id}
-                  resellerPrice={product.sell_price}
-                  currentCustomPrice={customPrice}
-                  strings={calcStrings}
-                />
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Prix revendeur + frais déjà inclus — composant partagé (affichage pur).
-            Livraison = provision fixe DELIVERY_PROVISION_MAD (= ce qui est réellement
-            déduit), confirmation/emballage = frais produit (fallback 10, aligné calcul). */}
-        <AffiliateFeesBreakdown
-          resellerPrice={product.sell_price}
-          deliveryFee={DELIVERY_PROVISION_MAD}
-          packagingFee={product.packaging_fee_mad ?? 10}
-          confirmationFee={product.confirmation_fee_mad ?? 10}
-          strings={feesStrings}
-        />
+        {/* Prix revendeur — bloc pliable (replié par défaut, accessible clavier).
+            Montants formatés DH côté serveur ; livraison = DELIVERY_PROVISION_MAD. */}
+        <AffiliateResellerDisclosure strings={resellerDisclosureStrings} />
 
         {/* Bloc vert — argument de vente (texte validé Abdou, affichage pur) */}
         <div className="mt-4 bg-success-soft border border-success rounded-xl p-4">
@@ -320,13 +287,13 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
         {/* Stats */}
         <div className="mt-6">
           <p className="text-xs font-semibold text-muted mb-2">{t('statsTitle')}</p>
-          {/* Mobile : 2×2 pour ne pas serrer les valeurs MAD ; desktop (sm+) INCHANGÉ = 4 colonnes. */}
+          {/* Mobile : 2×2 pour ne pas serrer les valeurs DH ; desktop (sm+) INCHANGÉ = 4 colonnes. */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { value: String(clicks), label: t('statsClicks') },
               { value: String(orders), label: t('statsOrders') },
               { value: convRate, label: t('statsConv') },
-              { value: commissionEarned > 0 ? formatMAD(commissionEarned) : '—', label: t('statsEarned'), good: commissionEarned > 0 },
+              { value: commissionEarned > 0 ? formatDH(commissionEarned) : '—', label: t('statsEarned'), good: commissionEarned > 0 },
             ].map((s, i) => (
               <div key={i} className="bg-surface rounded-lg border border-line px-2 py-3 text-center">
                 <p className={`text-sm font-bold tabular-nums ${s.good ? 'text-success-fg' : 'text-foreground'}`}>

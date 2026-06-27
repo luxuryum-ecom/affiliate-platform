@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { saveAffiliateProductPrice, type AffiliatePriceState } from '@/app/actions/affiliate-prices'
-import { formatMAD } from '@/lib/utils'
+import { formatDH } from '@/lib/utils'
 
 /**
  * CommissionCalculator — refonte d'AffiliatePriceForm (LOT 3).
@@ -73,7 +73,7 @@ export function CommissionCalculator({ productId, resellerPrice, currentCustomPr
   // Message contextuel sous le chip.
   let contextMsg: string
   if (priceNum <= resellerPrice) {
-    contextMsg = interpolate(strings.msgBelow, { price: formatMAD(resellerPrice) })
+    contextMsg = interpolate(strings.msgBelow, { price: formatDH(resellerPrice) })
   } else if (Math.abs(priceNum - suggested) <= NEAR_BAND) {
     contextMsg = strings.msgNear
   } else {
@@ -89,14 +89,14 @@ export function CommissionCalculator({ productId, resellerPrice, currentCustomPr
     <div className="border-t border-line pt-3 mt-1">
       <p className="text-xs font-bold text-accent-fg mb-2">💰 {strings.title}</p>
 
-      {/* Commission en gros — temps réel */}
-      <p className="text-xs text-faint">{strings.commissionLabel}</p>
+      {/* Commission en TRÈS gros — temps réel */}
+      <p className="text-sm text-faint">{strings.commissionLabel}</p>
       <p
-        className={`text-3xl font-bold tabular-nums leading-tight ${
+        className={`text-5xl font-extrabold tabular-nums leading-tight ${
           commission > 0 ? 'text-success-fg' : 'text-muted'
         }`}
       >
-        {formatMAD(Math.max(0, commission))}
+        {formatDH(Math.max(0, commission))}
       </p>
 
       {/* Chip « Prix testé » → reset au conseillé */}
@@ -105,7 +105,7 @@ export function CommissionCalculator({ productId, resellerPrice, currentCustomPr
         onClick={() => setValue(String(suggested))}
         className="mt-2 inline-flex items-center rounded-full border border-gold-300 bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-fg tabular-nums hover:bg-accent-soft/70 transition-colors"
       >
-        {interpolate(strings.testedChip, { price: formatMAD(suggested) })}
+        {interpolate(strings.testedChip, { price: formatDH(suggested) })}
       </button>
 
       {/* Message contextuel */}
@@ -120,7 +120,7 @@ export function CommissionCalculator({ productId, resellerPrice, currentCustomPr
           onClick={() => nudge(-STEP)}
           aria-label={strings.decrease}
           disabled={isPending}
-          className="shrink-0 w-9 flex items-center justify-center text-base border border-line rounded-lg bg-surface text-foreground hover:bg-surface-2 disabled:opacity-50 transition-colors"
+          className="shrink-0 w-12 min-h-[48px] flex items-center justify-center text-2xl border border-line rounded-lg bg-surface text-foreground hover:bg-surface-2 disabled:opacity-50 transition-colors"
         >
           −
         </button>
@@ -133,21 +133,21 @@ export function CommissionCalculator({ productId, resellerPrice, currentCustomPr
           step="1"
           inputMode="numeric"
           disabled={isPending}
-          className="flex-1 min-w-0 px-2.5 py-1.5 text-sm text-center border border-line rounded-lg bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:bg-surface-2 tabular-nums"
+          className="flex-1 min-w-0 px-3 py-3 text-2xl font-semibold text-center border border-line rounded-lg bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 disabled:bg-surface-2 tabular-nums"
         />
         <button
           type="button"
           onClick={() => nudge(STEP)}
           aria-label={strings.increase}
           disabled={isPending}
-          className="shrink-0 w-9 flex items-center justify-center text-base border border-line rounded-lg bg-surface text-foreground hover:bg-surface-2 disabled:opacity-50 transition-colors"
+          className="shrink-0 w-12 min-h-[48px] flex items-center justify-center text-2xl border border-line rounded-lg bg-surface text-foreground hover:bg-surface-2 disabled:opacity-50 transition-colors"
         >
           +
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="shrink-0 text-xs px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="shrink-0 text-sm px-4 min-h-[48px] bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {isPending ? strings.priceSaving : strings.priceSave}
         </button>
