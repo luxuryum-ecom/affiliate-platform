@@ -19,6 +19,7 @@
 - ✅ Prix à l'unité + total du contenant — **D1** (`aec0689`) — `priceWithUnit` + `PackBreakdown` sur cartes affilié
 - ✅ Incitation affilié « 💰 Tu gagnes / vente » bloc or (`3803a01`) — réutilise `calculateNetAffiliateCommission`
 - ✅ Description publique dédupliquée — `getMeaningfulDescription` sur `/products/[id]`
+- ✅ **Fiche affilié — CONVERSION (LOT 1→5 + catalogue DH)** mergé prod `7cef65d` (2026-06-27) : bloc « Prix revendeur + frais » (DH), hook or + sous-titre + bloc vert, `CommissionCalculator` (refonte temps réel −/+, prix conseillé+60, persistance), 4 portes (Ajouter commande + présélection produit, WhatsApp, **QR fonctionnel** `qrcode.react`, Copier le lien), bloc Prix revendeur **pliable**, unité **DH** (`formatDH`). Affichage pur, **@finance + @security GO**. Dettes : `?ref=` UUID → code parrainage opaque ; WhatsApp masse (lots séparés). Détail → `ETAT_SYSTEME.md`.
 - ✅ *(Socle vitrine déjà en prod, rangé ici)* : hook profit affilié (`ba4b2af`) · wording « Tu vends, tu encaisses » (`842acce`) · catalogue affilié 2 niveaux + thème noir & or + grille responsive + placeholder thémé · badges i18n (`0b18d10`) · marketplace RTL/format (`b007baa`) · P2 cosmétiques (`c14e172`) · unités de vente P1→P4 (mig 079/080) · conditionnement + RTL (`c1975c3`/`8ed3557`/`3dd81f2`/`75aff16`)
 
 ### ÉTAPE 2 — Publication propre ✅ **FAIT**

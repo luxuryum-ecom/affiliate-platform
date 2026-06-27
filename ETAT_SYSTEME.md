@@ -13,6 +13,16 @@
 
 ## 🧭 POINT DE REPRISE — fin de session 2026-06-18 (à lire en premier)
 
+### ✅ EN PROD — FICHE AFFILIÉ CONVERSION (merge `--no-ff` `7cef65d`, 2026-06-27)
+Refonte `/affiliate/products/[id]` en 5 lots + mini-lot catalogue, **affichage pur** (DETTE 073 respectée ; **@finance GO + @security GO** sur les lots financiers) :
+- **LOT 1** `AffiliateFeesBreakdown` — bloc « Prix revendeur + frais déjà inclus » (fiche + catalogue compact).
+- **LOT 2** hook or + sous-titre + bloc vert (textes validés Abdou, verbatim).
+- **LOT 3** `CommissionCalculator` (refonte de `affiliate-price-form`, supprimé) — commission temps réel, boutons −/+, prix conseillé = revendeur+60, persistance `saveAffiliateProductPrice` conservée. **Garde @finance** : rendu uniquement si `baseCommission != null` ET produit non-miroir (égalité commission = custom − sell_price = `calculateNetAffiliateCommission` prouvée, marge fixe ET %).
+- **LOT 4** 4 portes de conversion : « Ajouter une commande » → `/affiliate/orders/new?product_id=` (présélection produit), WhatsApp (partage lien), **Mon QR fonctionnel** (`qrcode.react`, génération LOCALE), Copier le lien.
+- **LOT 5** finitions : casier or « commission de base » supprimé (doublon), calculateur remonté + agrandi, **unité DH** (helper `formatDH`, affichage seul), bloc « Prix revendeur » **pliable** (accessible clavier, `aria-expanded`).
+- **Mini-lot** : catalogue `/affiliate/products` harmonisé en **DH**.
+i18n FR/AR/EN + RTL sur tout texte. 4 checks verts par lot (tsc 0 / build / vitest 315 / smoke 16/16). **Dettes notées** (cf. `docs/ROADMAP_MASTER.md` + ci-dessous) : `?ref=` expose l'UUID auth → code de parrainage opaque ; envoi en masse WhatsApp (Business API) — lots séparés.
+
 ### ✅ EN PROD (code mergé) — DURCISSEMENT GO-LIVE BETA VITRINE (merge `--no-ff` `0cc4387`, 2026-06-23)
 - **MERGÉ dans `main` (`0cc4387`, poussé `origin/main`) — GO Abdou.** Sécurise l'ouverture à des grossistes extérieurs. **@security GO** (0 P0/P1 ; 2 P2 corrigés), **@finance GO** (commission/calculs strictement INCHANGÉS — seule la source de lecture du coût bascule en service_role). **4 checks verts** (tsc 0 / build / vitest 305 / smoke 20/20). Fuite marge fermée + escalade signup bloquée **prouvées** (API HTTP 400 + payload scan grossiste/affilié = 0 terme coût/marge).
 - **⚠️ FERMETURE API NON ENCORE TOTALE — action ops requise** : migrations **089 + 090 appliquées en prod** ; **091 (resserrage policy SELECT `products` → staff-only) RESTE À APPLIQUER post-déploiement** (`supabase db push`). Tant que 091 n'est pas appliquée, la table de base reste lisible par les authentifiés (les PAGES passent déjà par la vue redacted). Voir « NOTES OPS GO-LIVE » ci-dessous.
