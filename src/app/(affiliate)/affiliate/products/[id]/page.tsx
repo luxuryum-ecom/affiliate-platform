@@ -199,6 +199,12 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
           <span aria-hidden="true">←</span> {t('backToCatalog')}
         </Link>
 
+        {/* Hook or + sous-titre — accroche de tête (textes validés Abdou, affichage pur) */}
+        <div className="mb-6 bg-accent-soft border border-gold-300 rounded-xl p-4">
+          <p className="text-base font-bold text-accent-fg leading-snug">{t('affiliateHookGold')}</p>
+          <p className="text-sm text-muted mt-1.5">{t('affiliateHookSubtitle')}</p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: image + availability/stock grouped */}
           <div className="flex flex-col gap-3">
@@ -294,6 +300,11 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
           confirmationFee={product.confirmation_fee_mad ?? 10}
           strings={feesStrings}
         />
+
+        {/* Bloc vert — argument de vente (texte validé Abdou, affichage pur) */}
+        <div className="mt-4 bg-success-soft border border-success rounded-xl p-4">
+          <p className="text-sm text-success-fg font-medium">{t('affiliateGreenArgument')}</p>
+        </div>
 
         {/* Stats */}
         <div className="mt-6">
