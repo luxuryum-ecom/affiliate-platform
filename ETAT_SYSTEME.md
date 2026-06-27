@@ -13,6 +13,12 @@
 
 ## 🧭 POINT DE REPRISE — fin de session 2026-06-18 (à lire en premier)
 
+### 🚨 INCIDENT SÉCURITÉ (2026-06-27) — clé service_role fuitée via `NEXT_PUBLIC_APP_URL`
+**Cause** : en PROD (Vercel), la variable `NEXT_PUBLIC_APP_URL` (exposée au client) a été renseignée avec la valeur de la clé secrète `SUPABASE_SERVICE_ROLE_KEY` (`sb_secret_…`). Tout `NEXT_PUBLIC_*` étant **inliné dans le bundle client** au build, la clé **service_role (bypass RLS)** a été **diffusée publiquement** (bundle JS + chaque QR / lien copié / message WhatsApp de la fiche affilié), et `referralUrl` était cassée (URL sans `https://` → recherche Google). Le reset MDP (`auth.ts:167`, même variable) était aussi cassé pendant l'incident. **Code SAIN** : `createAdminClient` (`src/lib/supabase/admin.ts`) est server-only, aucun secret hardcodé (grep vide) — **erreur de config Vercel**, pas de code. **@security : fuite CRITIQUE confirmée.**
+**Remédiation (ordre strict)** : (1) **ROTATION** de la clé service_role (Supabase Dashboard → API Keys) — OBLIGATOIRE, le fix env seul ne récupère pas une clé déjà fuitée ; (2) nouvelle clé **uniquement** dans `SUPABASE_SERVICE_ROLE_KEY` (Vercel + `.env.local`), **jamais** en `NEXT_PUBLIC_*` ; (3) `NEXT_PUBLIC_APP_URL` = domaine prod `https://…` ; (4) redeploy (rebuild : les `NEXT_PUBLIC_*` sont figées au build) + vérifier 0 `sb_secret_` dans le bundle + 3 portes OK ; (5) audit logs Supabase (accès anormaux pendant la fenêtre d'exposition) + évaluer notification fuite (PII clients COD).
+**Garde-fou anti-récidive (code)** : `next.config.ts` **refuse le build** si une variable `NEXT_PUBLIC_*` commence par `sb_secret_` (fail-fast) — branche `fix/guard-public-secret-leak`. Remplace la dette « rotation service_role avant go-live » (désormais incident actif).
+**Statut** : 🔄 rotation + correction env = **action ops Abdou** (dashboards Supabase/Vercel) ; ✅ garde-fou code ajouté.
+
 ### ✅ EN PROD — FICHE AFFILIÉ CONVERSION (merge `--no-ff` `7cef65d`, 2026-06-27)
 Refonte `/affiliate/products/[id]` en 5 lots + mini-lot catalogue, **affichage pur** (DETTE 073 respectée ; **@finance GO + @security GO** sur les lots financiers) :
 - **LOT 1** `AffiliateFeesBreakdown` — bloc « Prix revendeur + frais déjà inclus » (fiche + catalogue compact).
