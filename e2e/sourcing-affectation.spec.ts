@@ -36,11 +36,11 @@ const PROOFS_DIR = path.resolve(
 
 // Secrets de test via process.env (règle #7 — jamais de mot de passe en dur).
 // Renseigner SMOKE_AGENT_PASSWORD / SMOKE_ADMIN_PASSWORD dans .env.local.
-const AGENT_EMAIL = process.env.SMOKE_AGENT_EMAIL ?? 'agent-demo@affipartner.ma'
+const AGENT_EMAIL = process.env.SMOKE_AGENT_EMAIL ?? '' // mig 103 a banni agent-demo — plus de fallback banni
 const AGENT_PASSWORD = process.env.SMOKE_AGENT_PASSWORD ?? ''
-const ADMIN_EMAIL = process.env.SMOKE_ADMIN_EMAIL ?? 'admin@affipartner.ma'
+const ADMIN_EMAIL = process.env.SMOKE_ADMIN_EMAIL ?? '' // via env — pas de domaine prod en dur
 const ADMIN_PASSWORD = process.env.SMOKE_ADMIN_PASSWORD ?? ''
-const AGENT_ID = 'cebd5f07-55a7-44ee-9638-43348d4de75c'
+const AGENT_ID = process.env.SMOKE_AGENT_ID ?? '' // piloté par env (l'UUID du banni cebd5f07 retiré)
 
 // GARDE-FOU (incident 2026-06-24) : ce spec ÉCRIT via service_role → identifiants
 // Supabase LOCAUX uniquement, JAMAIS .env.local/prod. REFUS fail-fast si non-local.
@@ -184,6 +184,16 @@ async function restoreAgentCapability(_page: Page) {
 
 test.describe('Affectation agents sourcing', () => {
   test.setTimeout(120_000)
+
+  // Skip propre si les identifiants test ne sont pas fournis (modèle cat-ia-suggest.spec.ts).
+  // Couvre agent ET admin : SC3/SC4 pilotent l'affectation via l'admin.
+  const CREDS_OK = Boolean(AGENT_EMAIL && AGENT_PASSWORD && AGENT_ID && ADMIN_EMAIL && ADMIN_PASSWORD)
+  test.beforeEach(() => {
+    test.skip(
+      !CREDS_OK,
+      'SMOKE_AGENT_* / SMOKE_ADMIN_* absent(s) — renseigner .env.local (comptes LOCAUX non bannis).',
+    )
+  })
 
   // ─── SCÉNARIO 1 : Isolation pays ──────────────────────────────────────────
 
