@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CopyLinkButton } from '@/components/affiliate/copy-link-button'
-import { AffiliatePriceForm } from '@/components/affiliate/affiliate-price-form'
+import { CommissionCalculator } from '@/components/affiliate/CommissionCalculator'
 import { AffiliateFeesBreakdown } from '@/components/affiliate/AffiliateFeesBreakdown'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
@@ -155,20 +155,21 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
     ?? (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
   const referralUrl = `${APP_URL}/products/${product.id}?ref=${user.id}`
 
-  const priceFormStrings = {
+  const calcStrings = {
+    title: t('keepDifference'),
     myPrice: t('myPrice'),
-    priceVsCatalog: t.raw('priceVsCatalog') as string,
-    priceNotSet: t.raw('priceNotSet') as string,
     priceSave: t('priceSave'),
     priceSaving: t('priceSaving'),
     priceSavedOk: t('priceSavedOk'),
     priceResetOk: t('priceResetOk'),
-    keepDifference: t('keepDifference'),
-    gainPerSale: t.raw('gainPerSale') as string,
-    gainPlaceholder: t.raw('gainPlaceholder') as string,
-    suggestedLabel: t.raw('suggestedLabel') as string,
-    suggestedRange: t.raw('suggestedRange') as string,
-    suggestedGain: t.raw('suggestedGain') as string,
+    commissionLabel: t('calcCommissionLabel'),
+    testedChip: t.raw('calcTestedChip') as string,
+    msgBelow: t.raw('calcMsgBelow') as string,
+    msgNear: t('calcMsgNear'),
+    msgOther: t('calcMsgOther'),
+    freeLine: t('calcFreeLine'),
+    decrease: t('calcDecrease'),
+    increase: t('calcIncrease'),
   }
   const copyLinkStrings = { copy: t('copyLink'), copied: t('copied') }
   const feesStrings = {
@@ -275,18 +276,21 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
             {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
             <VariantSelector variants={variants} strings={variantStrings} />
 
-            {/* Prix tout compris — justifie le prix catalogue (affichage pur) */}
-            <p className="text-xs text-success-fg">{t('priceAllInclusive')}</p>
-
-            {/* Custom price setter (client component — strings only) */}
-            <div className="bg-surface rounded-xl border border-line px-4 pb-4">
-              <AffiliatePriceForm
-                productId={product.id}
-                platformPrice={product.sell_price}
-                currentCustomPrice={customPrice}
-                strings={priceFormStrings}
-              />
-            </div>
+            {/* Calculateur de commission (client component — strings only, règle #2).
+                GARDE @finance : affiché UNIQUEMENT là où l'égalité commission = (custom −
+                sell_price) = calculateNetAffiliateCommission(custom) est prouvée, càd
+                produit règle-capital (factory_cost_mad présent → baseCommission ≠ null) et
+                NON miroir fournisseur (sinon sell_price ≠ capital → commission divergente). */}
+            {baseCommission != null && product.source_supplier_product_id == null && (
+              <div className="bg-surface rounded-xl border border-line px-4 pb-4">
+                <CommissionCalculator
+                  productId={product.id}
+                  resellerPrice={product.sell_price}
+                  currentCustomPrice={customPrice}
+                  strings={calcStrings}
+                />
+              </div>
+            )}
           </div>
         </div>
 
