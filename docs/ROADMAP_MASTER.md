@@ -73,6 +73,12 @@ SaaS marchand **multi-canal à niveau international** : **affiliation COD Maroc*
 
 ---
 
+### LOTS FUTURS — AFFILIÉ *(NE PAS CODER avant validation Abdou)*
+- **Envoi en masse liste contacts WhatsApp** (WhatsApp Business API) — diffuser le lien d'affiliation à une liste de contacts/groupes. Lot séparé (conformité + rate-limit + opt-out à cadrer).
+- **Code de parrainage opaque** — remplacer `?ref={user.id}` (UUID auth en clair) par un code court non réversible (cf. dette `ETAT_SYSTEME.md`). Lot séparé.
+
+---
+
 ### LOTS FUTURS — SAISIE STOCK VARIANTES PAR LE FOURNISSEUR *(cadrage @architect + @security requis, NE PAS CODER avant validation Abdou)*
 
 #### LOT "Variantes via Telegram"
