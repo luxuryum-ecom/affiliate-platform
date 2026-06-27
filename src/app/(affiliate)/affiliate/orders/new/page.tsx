@@ -23,7 +23,12 @@ type ProductOption = Pick<
   | 'packaging_fee_mad'
 >
 
-export default async function NewAffiliateOrderPage() {
+export default async function NewAffiliateOrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ product_id?: string }>
+}) {
+  const { product_id: initialProductId } = await searchParams
   const supabase = await createClient()
   const t = await getTranslations('affiliate.ordersNew')
   const tCommon = await getTranslations('affiliate.common')
@@ -149,6 +154,7 @@ export default async function NewAffiliateOrderPage() {
             strings={formStrings}
             variantsPerProduct={variantsPerProduct}
             variantStrings={variantStrings}
+            initialProductId={initialProductId}
           />
         )}
       </main>

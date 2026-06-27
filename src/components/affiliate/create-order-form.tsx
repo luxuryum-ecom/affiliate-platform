@@ -70,6 +70,8 @@ interface Props {
     unavailable: string
     variantLabel: string
   }
+  /** Présélection produit via ?product_id= (porte « Ajouter une commande »). */
+  initialProductId?: string
 }
 
 /** Minimal ICU-like interpolation for string templates with named params. */
@@ -83,7 +85,7 @@ function getDefaultVariantId(variants: ProductVariant[]): string | null {
   return meaningful.find((v) => v.is_default)?.id ?? meaningful[0]?.id ?? null
 }
 
-export function CreateOrderForm({ products, cities, strings: s, variantsPerProduct, variantStrings }: Props) {
+export function CreateOrderForm({ products, cities, strings: s, variantsPerProduct, variantStrings, initialProductId }: Props) {
   const router = useRouter()
   const [state, action, isPending] = useActionState(createAffiliateOrder, {
     error: null,
@@ -91,13 +93,17 @@ export function CreateOrderForm({ products, cities, strings: s, variantsPerProdu
     orderId: null,
   })
 
-  const [selectedProductId, setSelectedProductId] = useState(products[0]?.id ?? '')
+  // Présélection : produit passé en ?product_id= s'il est dans la liste, sinon le premier.
+  const initialProduct =
+    (initialProductId ? products.find((p) => p.id === initialProductId) : undefined) ?? products[0]
+
+  const [selectedProductId, setSelectedProductId] = useState(initialProduct?.id ?? '')
   const [quantity, setQuantity] = useState(1)
-  const [sellPrice, setSellPrice] = useState(products[0]?.sell_price ?? 0)
+  const [sellPrice, setSellPrice] = useState(initialProduct?.sell_price ?? 0)
   const [selectedCity, setSelectedCity] = useState('')
   // C3 — variant_id sélectionné pour ce produit. null = commande sans variante (produit simple).
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(() =>
-    getDefaultVariantId(variantsPerProduct[products[0]?.id ?? ''] ?? []),
+    getDefaultVariantId(variantsPerProduct[initialProduct?.id ?? ''] ?? []),
   )
 
   const product = products.find((p) => p.id === selectedProductId)
