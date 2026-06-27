@@ -1,8 +1,10 @@
-import { formatMAD } from '@/lib/utils'
+import { formatDH } from '@/lib/utils'
 
 /**
- * AffiliateFeesBreakdown — bloc « Prix revendeur + frais déjà inclus », partagé
- * entre la fiche affilié (complet) et la liste catalogue (compact).
+ * AffiliateFeesBreakdown — bloc « Prix revendeur + frais déjà inclus ».
+ * Utilisé en mode COMPACT sur la liste catalogue `/affiliate/products`. (La fiche
+ * détail utilise désormais AffiliateResellerDisclosure ; le mode complet ici est
+ * conservé comme variante mais non câblé — nettoyage possible ultérieurement.)
  *
  * AFFICHAGE PUR (Server Component, zéro état) : reçoit des montants DÉJÀ calculés
  * côté serveur + des libellés i18n résolus par la page (pattern strings-only,
@@ -10,7 +12,7 @@ import { formatMAD } from '@/lib/utils'
  *
  * DETTE 073 : ne reçoit JAMAIS factory_cost_mad ni marge plateforme — uniquement
  * resellerPrice (= prix catalogue public) et les frais d'affichage.
- * Montants formatés via formatMAD (canonique, MAD partout — décision Abdou).
+ * Montants formatés via formatDH (DH — harmonisé avec la fiche, décision Abdou). Affichage seul.
  */
 
 export interface AffiliateFeesBreakdownStrings {
@@ -53,7 +55,7 @@ export function AffiliateFeesBreakdown({
     return (
       <p className="text-[10px] text-muted mt-0.5">
         {strings.resellerPrice}&nbsp;:{' '}
-        <span className="tabular-nums">{formatMAD(resellerPrice)}</span>
+        <span className="tabular-nums">{formatDH(resellerPrice)}</span>
         {' · '}
         {strings.compactTag}
       </p>
@@ -64,18 +66,18 @@ export function AffiliateFeesBreakdown({
     <div className="mt-6 bg-surface rounded-xl border border-line p-4">
       <p className="text-sm font-semibold text-foreground">
         {strings.resellerPrice}&nbsp;:{' '}
-        <span className="tabular-nums">{formatMAD(resellerPrice)}</span>
+        <span className="tabular-nums">{formatDH(resellerPrice)}</span>
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Pill>{strings.productIncluded}</Pill>
         <Pill>
-          {strings.delivery}&nbsp;<span className="tabular-nums">{formatMAD(deliveryFee)}</span>
+          {strings.delivery}&nbsp;<span className="tabular-nums">{formatDH(deliveryFee)}</span>
         </Pill>
         <Pill>
-          {strings.packaging}&nbsp;<span className="tabular-nums">{formatMAD(packagingFee)}</span>
+          {strings.packaging}&nbsp;<span className="tabular-nums">{formatDH(packagingFee)}</span>
         </Pill>
         <Pill>
-          {strings.confirmation}&nbsp;<span className="tabular-nums">{formatMAD(confirmationFee)}</span>
+          {strings.confirmation}&nbsp;<span className="tabular-nums">{formatDH(confirmationFee)}</span>
         </Pill>
       </div>
       <p className="mt-3 text-xs text-muted">{strings.noAdvance}</p>

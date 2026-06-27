@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getProductCoverUrl } from '@/lib/product-media'
-import { formatMAD, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
+import { formatDH, calculateNetAffiliateCommission, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { priceWithUnit, resolveUnitLabel } from '@/lib/units'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { AffiliateFeesBreakdown } from '@/components/affiliate/AffiliateFeesBreakdown'
@@ -186,7 +186,7 @@ export default async function AffiliateProductsPage({
                         <div className="rounded-lg bg-accent-soft border border-gold-300 px-2.5 py-1.5">
                           <p className="text-[11px] font-medium text-accent-fg">{t('earnPerSaleLabel')}</p>
                           <p className="text-xl font-extrabold text-success-fg tabular-nums leading-tight">
-                            {formatMAD(baseCommission)}
+                            {formatDH(baseCommission)}
                           </p>
                         </div>
                       ) : (
@@ -198,7 +198,7 @@ export default async function AffiliateProductsPage({
                             sans unité (NULL) = affichage strictement identique à avant. */}
                         <span className="text-muted tabular-nums">
                           {priceWithUnit(
-                            formatMAD(product.sell_price),
+                            formatDH(product.sell_price),
                             product.sale_unit ? resolveUnitLabel(product.sale_unit, tUnits) : null,
                           )}
                         </span>
