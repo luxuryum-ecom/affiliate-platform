@@ -8,8 +8,8 @@
  *   - COD (affiliate_id IS NULL)      : COD_ORDER_ID (créée en setup)
  *   - AFFILIÉ (affiliate_id NOT NULL) : AFFILIATE_ORDER_ID = 88c25be9...
  *
- * AGENT TEST : agent-demo@affipartner.ma (mot de passe via SMOKE_AGENT_PASSWORD, règle #7)
- *   AGENT_ID = cebd5f07-55a7-44ee-9638-43348d4de75c
+ * AGENT TEST : piloté par env (SMOKE_AGENT_EMAIL / SMOKE_AGENT_PASSWORD / SMOKE_AGENT_ID, règle #7)
+ *   → agent LOCAL actif/approuvé (mig 103 a banni l'ancien agent-demo ; plus de compte banni en dur).
  *   État initial : manage_country_sourcing UNIQUEMENT
  *   Capacités accordées/retirées par chaque scénario.
  *
@@ -36,9 +36,22 @@ const PROOFS_DIR = '/Users/abderrahimbougjdi/AI-FACTORY/affiliate-platform/.nav-
 const ADMIN_EMAIL    = process.env.SMOKE_ADMIN_EMAIL    ?? ''
 const ADMIN_PASSWORD = process.env.SMOKE_ADMIN_PASSWORD ?? ''
 
-const AGENT_EMAIL    = 'agent-demo@affipartner.ma'
+// Agent de test piloté par env (mig 103 a banni agent-demo@affipartner.ma — plus de compte
+// banni en dur ici). Renseigner SMOKE_AGENT_EMAIL / SMOKE_AGENT_PASSWORD / SMOKE_AGENT_ID
+// dans .env.local, pointant un agent LOCAL actif/approuvé (cf. scripts/seed-smoke-agent-local.mjs).
+const AGENT_EMAIL    = process.env.SMOKE_AGENT_EMAIL    ?? ''
 const AGENT_PASSWORD = process.env.SMOKE_AGENT_PASSWORD ?? '' // règle #7 — via env
-const AGENT_ID       = 'cebd5f07-55a7-44ee-9638-43348d4de75c'
+const AGENT_ID       = process.env.SMOKE_AGENT_ID       ?? ''
+
+// Skip propre si les identifiants test ne sont pas fournis (modèle cat-ia-suggest.spec.ts).
+// Couvre agent ET admin : ces scénarios pilotent les permissions via l'admin.
+const CREDS_OK = Boolean(AGENT_EMAIL && AGENT_PASSWORD && AGENT_ID && ADMIN_EMAIL && ADMIN_PASSWORD)
+test.beforeEach(() => {
+  test.skip(
+    !CREDS_OK,
+    'SMOKE_AGENT_* / SMOKE_ADMIN_* absent(s) — renseigner .env.local (comptes LOCAUX non bannis).',
+  )
+})
 
 // Commande affiliée (affiliate_id NOT NULL) — test EXISTANTE
 const AFFILIATE_ORDER_ID = '88c25be9-e69b-42cc-b44f-fba9a7dd6d7b'
