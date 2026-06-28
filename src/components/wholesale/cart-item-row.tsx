@@ -11,12 +11,22 @@ import type { WholesaleCartItemWithProduct } from '@/types/database'
 
 interface CartItemRowProps {
   item: WholesaleCartItemWithProduct
+  /**
+   * Étape 7.B — stock de la VARIANTE du panier (source de vérité, mig 105), résolu
+   * côté serveur par la page panier. Le cap/clamp se base dessus au lieu de l'agrégat
+   * produit (réconcilie l'incohérence §9bis : variante défaut à 0 vs autres variantes).
+   * Fallback agrégat produit si non fourni (produit sans variante).
+   */
+  variantStock?: number | null
 }
 
-export function CartItemRow({ item }: CartItemRowProps) {
+export function CartItemRow({ item, variantStock }: CartItemRowProps) {
   const t = useTranslations('wholesale.cart')
   const { product } = item
   const [qty, setQty] = useState(item.quantity)
+
+  // Référence de stock = variante (mig 105), fallback agrégat produit.
+  const stockCap = variantStock ?? product.stock_count
 
   const tier = getWholesaleTier(product.wholesale_tiers, qty)
   const unitPrice = tier ? tier.price_per_unit : product.sell_price
@@ -25,7 +35,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
   const decrement = () => setQty((q) => Math.max(product.wholesale_min_qty, q - 1))
   const increment = () => setQty((q) =>
     product.availability_type === 'local_stock'
-      ? Math.min(product.stock_count, q + 1)
+      ? Math.min(stockCap, q + 1)
       : q + 1
   )
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,7 +43,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
     if (!isNaN(val) && val >= 1)
       setQty(
         product.availability_type === 'local_stock'
-          ? Math.min(product.stock_count, val)
+          ? Math.min(stockCap, val)
           : val
       )
   }
@@ -98,13 +108,13 @@ export function CartItemRow({ item }: CartItemRowProps) {
               value={qty}
               onChange={handleInput}
               min={product.wholesale_min_qty}
-              max={product.availability_type === 'local_stock' ? product.stock_count : undefined}
+              max={product.availability_type === 'local_stock' ? stockCap : undefined}
               className="w-14 text-center py-1 border border-line rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gold-400"
             />
             <button
               type="button"
               onClick={increment}
-              disabled={product.availability_type === 'local_stock' && qty >= product.stock_count}
+              disabled={product.availability_type === 'local_stock' && qty >= stockCap}
               className="w-7 h-7 flex items-center justify-center border border-line rounded-md text-muted hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed text-base leading-none"
             >
               +

@@ -83,9 +83,6 @@ export default async function PublicProductPage({ params, searchParams }: Params
   const meaningfulDescription = getMeaningfulDescription(product.name, product.description)
   const delivery = getDeliveryEstimate(product.availability_type)
 
-  const inStock = product.stock_count > 0
-  const lowStock = product.stock_count > 0 && product.stock_count <= 5
-
   // Variantes — défensif : vide si la vue n'est pas encore exposée ou si le produit n'en a pas.
   const { data: variantsRaw } = await supabase
     .from('product_variants_read')
@@ -99,6 +96,37 @@ export default async function PublicProductPage({ params, searchParams }: Params
   }))
 
   const defaultVariantId = variants.find((v) => v.is_default)?.id ?? variants[0]?.id ?? null
+
+  // Dict sérialisable variantId → dispo, construit côté SERVEUR (rule #2 : aucune fonction
+  // passée au Client). Les labels sont des strings i18n déjà résolues.
+  const availabilityByVariant: Record<string, { inStock: boolean; lowStock: boolean; label: string }> = {}
+  for (const v of variants) {
+    const inStk = v.stock_count > 0
+    const lowStk = inStk && v.stock_count <= 5
+    availabilityByVariant[v.id] = {
+      inStock: inStk,
+      lowStock: lowStk,
+      label: inStk
+        ? lowStk
+          ? t('badgeLowStock', { count: v.stock_count })
+          : t('badgeInStock', { count: v.stock_count })
+        : t('badgeOutOfStock'),
+    }
+  }
+
+  // Dispo de repli pour les produits sans variante (ou variante sans attributs).
+  // Dérivée de product.stock_count (= SUM des variantes actives, prouvée égale).
+  const productInStock = product.stock_count > 0
+  const productLowStock = productInStock && product.stock_count <= 5
+  const defaultAvailability = {
+    inStock: productInStock,
+    lowStock: productLowStock,
+    label: productInStock
+      ? productLowStock
+        ? t('badgeLowStock', { count: product.stock_count })
+        : t('badgeInStock', { count: product.stock_count })
+      : t('badgeOutOfStock'),
+  }
 
   const variantStrings = {
     chooseOption: tVariant('chooseOption'),
@@ -134,25 +162,13 @@ export default async function PublicProductPage({ params, searchParams }: Params
           {/* Product info + form */}
           <div className="space-y-5">
             <div>
+              {/* Badge statique — toujours affiché, indépendant de la variante. */}
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="text-xs px-2 py-0.5 rounded-full bg-success-soft text-success-fg">
                   {t('badgeStockMorocco')}
                 </span>
-                {inStock ? (
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      lowStock ? 'bg-warning-soft text-warning-fg' : 'bg-surface-2 text-muted'
-                    }`}
-                  >
-                    {lowStock
-                      ? t('badgeLowStock', { count: product.stock_count })
-                      : t('badgeInStock', { count: product.stock_count })}
-                  </span>
-                ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-danger-soft text-danger-fg">
-                    {t('badgeOutOfStock')}
-                  </span>
-                )}
+                {/* Le badge inStock/lowStock/outOfStock est rendu dans ProductOrderSection
+                    (Client Component) pour refléter la variante sélectionnée. */}
               </div>
 
               <div className="h-0.5 w-10 bg-gold-400 rounded-full mb-2" aria-hidden />
@@ -186,7 +202,8 @@ export default async function PublicProductPage({ params, searchParams }: Params
               </div>
             </div>
 
-            {/* Lot B : VariantSelector + CodOrderForm réunis dans un wrapper Client partagé. */}
+            {/* Lot B : VariantSelector + CodOrderForm réunis dans un wrapper Client partagé.
+                availabilityByVariant = dict sérialisable (aucune fonction) construit server-side. */}
             <ProductOrderSection
               productId={product.id}
               affiliateIdFromUrl={affiliateId}
@@ -197,6 +214,8 @@ export default async function PublicProductPage({ params, searchParams }: Params
               defaultVariantId={defaultVariantId}
               variantStrings={variantStrings}
               orderSectionTitle={t('orderSectionTitle')}
+              availabilityByVariant={availabilityByVariant}
+              defaultAvailability={defaultAvailability}
             />
           </div>
         </div>

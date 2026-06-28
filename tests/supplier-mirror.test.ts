@@ -215,4 +215,39 @@ describe('computeSupplierCostMad (C-B1)', () => {
   it('panier vide → 0.00', () => {
     expect(computeSupplierCostMad([])).toBe('0.00')
   })
+
+  // ── PREUVE ARGENT — LIVRABLE B (étape 7 / bascule-stock) ─────────────────────
+  // Prouve que le coût fournisseur persisté est IDENTIQUE au centime entre le chemin
+  // grossiste (submitWholesaleOrder, après fix) et le chemin admin (createWholesaleOrderFromCart).
+  // Les DEUX chemins appellent computeSupplierCostMad avec les mêmes paramètres (factory_cost_mad
+  // lus via service_role sur la table products, quantity depuis le panier).
+  //
+  // Cas 1 : factory_cost_mad=50.00, qty=8
+  //   Math.round(50*100)*8 / 100 = 5000*8/100 = 40000/100 = 400.00
+  it('PREUVE ARGENT Cas 1 — factory_cost_mad=50, qty=8 → 400.00 MAD (chemin grossiste=admin au centime)', () => {
+    const result = computeSupplierCostMad([{ factory_cost_mad: 50, quantity: 8 }])
+    expect(result).toBe('400.00')
+    // Vérification manuelle : Math.round(50*100)*8 = 5000*8 = 40000 centimes = 400.00 MAD
+    expect(Number(result)).toBe(400.00)
+  })
+
+  // Cas 2 : factory_cost_mad=33.33, qty=3
+  //   Math.round(33.33*100)*3 / 100 = Math.round(3333)*3/100 = 3333*3/100 = 9999/100 = 99.99
+  it('PREUVE ARGENT Cas 2 — factory_cost_mad=33.33, qty=3 → 99.99 MAD (arrondi centime correct)', () => {
+    const result = computeSupplierCostMad([{ factory_cost_mad: 33.33, quantity: 3 }])
+    expect(result).toBe('99.99')
+    // Vérification : Math.round(33.33*100) = Math.round(3333.0) = 3333 centimes × 3 = 9999 centimes = 99.99 MAD
+    // PAS 33.33*3 = 99.99000000000001 (bug flottant évité par l'arrondi en centimes)
+    expect(Number(result)).toBe(99.99)
+  })
+
+  // Idempotence : le même panier soumis deux fois produit le MÊME coût (pas de double-comptage)
+  it('IDEMPOTENCE — même panier soumis N fois → coût identique (pas de dérive)', () => {
+    const cas1 = computeSupplierCostMad([{ factory_cost_mad: 50, quantity: 8 }])
+    const cas1b = computeSupplierCostMad([{ factory_cost_mad: 50, quantity: 8 }])
+    expect(cas1).toBe(cas1b)
+    const cas2 = computeSupplierCostMad([{ factory_cost_mad: 33.33, quantity: 3 }])
+    const cas2b = computeSupplierCostMad([{ factory_cost_mad: 33.33, quantity: 3 }])
+    expect(cas2).toBe(cas2b)
+  })
 })

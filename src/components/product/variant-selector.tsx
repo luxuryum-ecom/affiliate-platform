@@ -9,6 +9,17 @@ export interface ProductVariant {
   stock_count: number
 }
 
+/**
+ * Dispo par variante — calculée côté SERVEUR (strings i18n déjà résolues).
+ * Passée en prop sérialisable ; jamais de fonction.
+ */
+export interface VariantAvailability {
+  inStock: boolean
+  lowStock: boolean
+  /** String i18n déjà résolue côté serveur (ex: "12 unités" / "Épuisé"). */
+  label: string
+}
+
 interface VariantSelectorProps {
   variants: ProductVariant[]
   /** i18n strings resolved server-side */
@@ -19,13 +30,20 @@ interface VariantSelectorProps {
   }
   /** Lot B : appelé quand la sélection change — Client→Client uniquement (pas depuis Server Component). */
   onSelect?: (variantId: string) => void
+  /**
+   * Dictionnaire variantId → disponibilité, construit côté serveur.
+   * Quand fourni, remplace le fallback `isUnavailable` par un affichage inline
+   * de la dispo de la variante sélectionnée (stock count ou "épuisé").
+   * Aucune fonction : toutes les strings sont déjà i18n-résolues côté serveur.
+   */
+  availabilityByVariant?: Record<string, VariantAvailability>
 }
 
 /**
  * Variant selector — Étape 3 (affichage) + Lot B (câblage commande via onSelect).
  * Retourne null si ≤ 1 variante ou si toutes les variantes sont la variante défaut sans attributs.
  */
-export function VariantSelector({ variants, strings, onSelect }: VariantSelectorProps) {
+export function VariantSelector({ variants, strings, onSelect, availabilityByVariant }: VariantSelectorProps) {
   // Filtre : garde uniquement les variantes ayant au moins un attribut renseigné.
   const meaningful = variants.filter(
     (v) => v.attributes && Object.keys(v.attributes).length > 0,
@@ -39,7 +57,7 @@ export function VariantSelector({ variants, strings, onSelect }: VariantSelector
     new Set(meaningful.flatMap((v) => Object.keys(v.attributes))),
   )
 
-  return <VariantSelectorInner variants={meaningful} axes={axes} strings={strings} onSelect={onSelect} />
+  return <VariantSelectorInner variants={meaningful} axes={axes} strings={strings} onSelect={onSelect} availabilityByVariant={availabilityByVariant} />
 }
 
 // Composant interne séparé pour isoler useState (évite les règles de hooks conditionnelles).
@@ -48,11 +66,13 @@ function VariantSelectorInner({
   axes,
   strings,
   onSelect,
+  availabilityByVariant,
 }: {
   variants: ProductVariant[]
   axes: string[]
   strings: VariantSelectorProps['strings']
   onSelect?: (variantId: string) => void
+  availabilityByVariant?: Record<string, VariantAvailability>
 }) {
   const defaultVariant = variants.find((v) => v.is_default) ?? variants[0]
   const initialSelection: Record<string, string> = {}
@@ -77,6 +97,12 @@ function VariantSelectorInner({
       if (matched) onSelect(matched.id)
     }
   }
+
+  // Dispo de la variante sélectionnée (depuis le dict serveur si fourni).
+  const currentAvail =
+    availabilityByVariant && selectedVariant
+      ? (availabilityByVariant[selectedVariant.id] ?? null)
+      : null
 
   return (
     <div className="space-y-3" aria-label={strings.variantLabel}>
@@ -116,14 +142,29 @@ function VariantSelectorInner({
         )
       })}
 
-      {isUnavailable && (
+      {/* Affichage dispo variante :
+          — quand availabilityByVariant fourni : label i18n déjà résolu côté serveur
+          — sinon : fallback sur le signal isUnavailable existant */}
+      {currentAvail != null ? (
+        <p
+          className={`text-xs font-medium ${
+            !currentAvail.inStock
+              ? 'text-danger-fg'
+              : currentAvail.lowStock
+                ? 'text-warning-fg'
+                : 'text-success-fg'
+          }`}
+        >
+          {currentAvail.label}
+        </p>
+      ) : isUnavailable ? (
         <p
           role="alert"
           className="text-xs text-warning-fg bg-warning-soft border border-warning rounded-lg px-3 py-2"
         >
           {strings.unavailable}
         </p>
-      )}
+      ) : null}
     </div>
   )
 }
