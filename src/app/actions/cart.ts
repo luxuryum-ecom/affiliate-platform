@@ -68,21 +68,26 @@ export async function addToCart(
 
   // Lot B — validation cross-product variant_id. Option A : invalide → null, pas de refus.
   // product_variants_read : vue security-definer accessible à tous les rôles authentifiés.
+  // Étape 7.B : on récupère AUSSI le stock de la variante (source de vérité, mig 105).
   let variantId: string | null = variantIdRaw
+  let variantStock: number | null = null
   if (variantId) {
     const { data: vCheckCart } = (await supabase
       .from('product_variants_read')
-      .select('id')
+      .select('id, stock_count')
       .eq('id', variantId)
       .eq('product_id', productId)
-      .maybeSingle()) as { data: { id: string } | null }
+      .maybeSingle()) as { data: { id: string; stock_count: number } | null }
     if (!vCheckCart) variantId = null
+    else variantStock = vCheckCart.stock_count
   }
 
   // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
   // L'ajout au panier passe avec warning='restocking' si stock < quantité demandée.
+  // Étape 7.B : le flag se base sur le stock de la VARIANTE (mig 105), fallback agrégat.
+  const stockReference = variantStock ?? product.stock_count
   const stockWarning: 'restocking' | undefined =
-    product.availability_type === 'local_stock' && quantity > product.stock_count
+    product.availability_type === 'local_stock' && quantity > stockReference
       ? 'restocking'
       : undefined
 
@@ -199,24 +204,27 @@ export async function addMarketplaceToCart(
     }
   }
 
-  // WMS-1 OPTION A : stock catalogue insuffisant → warning, pas de refus.
-  const catalogStockWarning: 'restocking' | undefined =
-    quantity > catalogProduct.stock_count ? 'restocking' : undefined
-
-  // Merge des warnings fournisseur + catalogue (l'un ou l'autre peut être présent).
-  const marketplaceWarning = supplierStockWarning ?? catalogStockWarning
-
   // Lot B : résoudre la variante défaut du catalogProduct.
   // product_variants_read : vue security-definer accessible à tous les rôles — évite le
   // blocage RLS qui touchait les grossistes (product_variants table : staff-only).
+  // Étape 7.B : on récupère AUSSI le stock de la variante (source de vérité, mig 105).
   const { data: defaultVariantRow } = (await supabase
     .from('product_variants_read')
-    .select('id')
+    .select('id, stock_count')
     .eq('product_id', catalogProduct.id)
     .eq('is_default', true)
-    .maybeSingle()) as { data: { id: string } | null }
+    .maybeSingle()) as { data: { id: string; stock_count: number } | null }
 
   const resolvedVariantId = defaultVariantRow?.id ?? null
+
+  // WMS-1 OPTION A : stock catalogue insuffisant → warning, pas de refus.
+  // Étape 7.B : flag basé sur le stock de la VARIANTE défaut (mig 105), fallback agrégat.
+  const catalogStockReference = defaultVariantRow?.stock_count ?? catalogProduct.stock_count
+  const catalogStockWarning: 'restocking' | undefined =
+    quantity > catalogStockReference ? 'restocking' : undefined
+
+  // Merge des warnings fournisseur + catalogue (l'un ou l'autre peut être présent).
+  const marketplaceWarning = supplierStockWarning ?? catalogStockWarning
 
   // Lot B : SELECT + UPDATE/INSERT manuel (index expressif non supporté par PostgREST upsert).
   const mktQuery = supabase

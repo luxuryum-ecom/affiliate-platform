@@ -6,7 +6,7 @@ import { CartItemRow } from '@/components/wholesale/cart-item-row'
 import { SubmitWholesaleOrderForm } from '@/components/wholesale/submit-order-form'
 import { WhatsAppButton } from '@/components/wholesale/whatsapp-button'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
-import type { WholesaleCartItemWithProduct } from '@/types/database'
+import type { WholesaleCartItem, WholesaleCartItemWithProduct } from '@/types/database'
 
 export async function generateMetadata() {
   const t = await getTranslations('wholesale.cart')
@@ -24,13 +24,45 @@ export default async function WholesaleCartPage() {
     supabase.from('profiles').select('*').eq('id', user!.id).single(),
     supabase
       .from('wholesale_cart_items')
-      .select('*, product:products(*)')
+      .select('*')
       .eq('buyer_id', user!.id)
       .order('added_at', { ascending: true }),
   ])
 
   const profile = profileResult.data as { full_name: string } | null
-  const items = (cartResult.data ?? []) as unknown as WholesaleCartItemWithProduct[]
+
+  // Fix mig 091 : la table `products` n'est plus lisible en direct par un grossiste
+  // (policy SELECT staff-only). Les colonnes vitrine (nom, prix, paliers, stock, médias)
+  // se lisent via la VUE redacted `products_catalog_read` (mig 089, accessible à tous les
+  // rôles authentifiés). Affichage PUR — zéro coût/marge (factory_cost_mad exclu de la vue).
+  // Le coût fournisseur (factory_cost_mad) n'est JAMAIS lu ici : il l'est côté serveur via
+  // service_role dans submitWholesaleOrder (chemin argent isolé).
+  const rawItems = (cartResult.data ?? []) as unknown as WholesaleCartItem[]
+  const productIds = [...new Set(rawItems.map((i) => i.product_id))]
+  const productById = new Map<string, Record<string, unknown>>()
+  if (productIds.length) {
+    const { data: prows } = (await supabase
+      .from('products_catalog_read')
+      .select('*')
+      .in('id', productIds)) as { data: Record<string, unknown>[] | null }
+    for (const p of prows ?? []) productById.set(p.id as string, p)
+  }
+  const items = rawItems
+    .map((i) => ({ ...i, product: productById.get(i.product_id) }))
+    .filter((i) => i.product) as unknown as WholesaleCartItemWithProduct[]
+
+  // Étape 7.B — stock par VARIANTE (source de vérité, mig 105) pour le cap/clamp des
+  // lignes panier. product_variants_read = vue security-definer (tous rôles authentifiés).
+  // Map sérialisable variantId→stock_count transmise au Client (aucune fonction — règle #2).
+  const variantIds = items.map((i) => i.variant_id).filter((v): v is string => !!v)
+  const variantStockById: Record<string, number> = {}
+  if (variantIds.length) {
+    const { data: vRows } = (await supabase
+      .from('product_variants_read')
+      .select('id, stock_count')
+      .in('id', variantIds)) as { data: { id: string; stock_count: number }[] | null }
+    for (const r of vRows ?? []) variantStockById[r.id] = r.stock_count
+  }
 
   const t = await getTranslations('wholesale.cart')
   const tc = await getTranslations('wholesale.common')
@@ -84,7 +116,11 @@ export default async function WholesaleCartPage() {
             {/* Cart items */}
             <div className="space-y-3">
               {items.map((item) => (
-                <CartItemRow key={item.id} item={item} />
+                <CartItemRow
+                  key={item.id}
+                  item={item}
+                  variantStock={item.variant_id ? variantStockById[item.variant_id] ?? null : null}
+                />
               ))}
             </div>
 

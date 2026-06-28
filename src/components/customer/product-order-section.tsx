@@ -61,6 +61,13 @@ export function ProductOrderSection({
     (selectedVariantId != null && availabilityByVariant[selectedVariantId]) ||
     defaultAvailability
 
+  // Étape 7.B — cap input COD basé sur la VARIANTE sélectionnée (source de vérité, mig 105) :
+  // le stock de la variante remplace l'agrégat produit (maxQty prop). Fallback agrégat
+  // si aucune variante identifiée (produit simple). Données locales, aucune fonction au Client.
+  const selectedVariant =
+    selectedVariantId != null ? variants.find((v) => v.id === selectedVariantId) ?? null : null
+  const effectiveMaxQty = selectedVariant ? Math.max(selectedVariant.stock_count, 0) : maxQty
+
   return (
     <div className="space-y-5">
       {/* Badge dispo variante-aware — remplace l'agrégat produit du Server Component. */}
@@ -97,7 +104,7 @@ export function ProductOrderSection({
           affiliateIdFromUrl={affiliateIdFromUrl}
           productName={productName}
           sellPrice={sellPrice}
-          maxQty={maxQty}
+          maxQty={effectiveMaxQty}
           variantId={selectedVariantId}
         />
       </div>

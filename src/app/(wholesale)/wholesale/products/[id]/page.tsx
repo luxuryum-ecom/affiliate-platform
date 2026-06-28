@@ -97,9 +97,10 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   const defaultVariantId = variants.find((v) => v.is_default)?.id ?? variants[0]?.id ?? null
 
-  // Stock de la variante par défaut — remplace l'agrégat pour les badges de dispo.
+  // Stock de la variante par défaut — remplace l'agrégat pour les badges de dispo ET,
+  // depuis l'Étape 7.B, pour AddToCartForm.stockCount (le form commande la variante
+  // défaut via selectedVariantId → cohérence cap/over-order avec le badge, §9bis réconcilié).
   // Quand aucune variante : fallback sur product.stock_count (= SUM actif, prouvé égal).
-  // AddToCartForm.stockCount reste sur product.stock_count (logique Lot B, intouchable).
   const defaultVariantRow = variants.find((v) => v.is_default) ?? variants[0] ?? null
   const defaultVariantStock = defaultVariantRow?.stock_count ?? product.stock_count
 
@@ -161,8 +162,8 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                   {t('badgeTiers')}
                 </span>
               )}
-              {/* Badges dispo rebranché sur la variante par défaut (non plus agrégat produit).
-                  AddToCartForm.stockCount reste sur product.stock_count — logique Lot B intouchable. */}
+              {/* Badges dispo + AddToCartForm.stockCount rebranchés sur la variante par défaut
+                  (Étape 7.B — §9bis réconcilié : badge et cap panier sur la même source). */}
               {defaultVariantStock === 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">
                   {t('badgeOverOrder')}
@@ -255,7 +256,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                     sellPrice={product.sell_price}
                     tiers={product.wholesale_tiers}
                     minQty={product.wholesale_min_qty}
-                    stockCount={product.stock_count}
+                    stockCount={defaultVariantStock}
                     defaultVariantId={defaultVariantId}
                   />
                 </div>

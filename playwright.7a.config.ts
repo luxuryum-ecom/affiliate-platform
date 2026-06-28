@@ -1,0 +1,63 @@
+/**
+ * Config Playwright dédiée aux tests runtime Étape 7-A :
+ * badge/texte de dispo reflète la variante SÉLECTIONNÉE et CHANGE au switch.
+ *
+ * GARDE-FOU RÈGLE #8 : cible EXCLUSIVEMENT le Supabase LOCAL (127.0.0.1:54321).
+ * Le serveur de test est forcé sur le Supabase LOCAL (identifiants lus via « supabase status »).
+ * JAMAIS sur .env.local / la prod.
+ *
+ * Pré-requis :
+ *   1. supabase start
+ *   2. node scripts/seed-7a-test-local.mjs --seed
+ *   3. npx playwright test --config=playwright.7a.config.ts
+ */
+import { defineConfig, devices } from '@playwright/test'
+import { getLocalSupabaseEnv } from './e2e/assert-local-supabase'
+
+const LOCAL = getLocalSupabaseEnv() // local-only garanti, sinon throw
+
+const PORT = 3300 // port dédié 7A — n'entre pas en collision avec 3000/3100/3200
+const BASE_URL = `http://localhost:${PORT}`
+
+export default defineConfig({
+  testDir: './e2e',
+  testMatch: /etape7-7a-variant-dispo\.spec\.ts/,
+  fullyParallel: false,
+  forbidOnly: false,
+  retries: 0,
+  workers: 1,
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report-7a' }]],
+  timeout: 120_000,
+  expect: { timeout: 25_000 },
+
+  use: {
+    baseURL: BASE_URL,
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    navigationTimeout: 60_000,
+    actionTimeout: 25_000,
+    video: 'off',
+  },
+
+  projects: [
+    {
+      name: '7a',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+
+  webServer: {
+    command: `./node_modules/.bin/next dev -p ${PORT}`,
+    url: BASE_URL,
+    reuseExistingServer: false,
+    timeout: 180_000,
+    stdout: 'ignore',
+    stderr: 'pipe',
+    // Force l'app de test sur le Supabase LOCAL (surcharge .env.local).
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: LOCAL.url,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: LOCAL.anonKey,
+      SUPABASE_SERVICE_ROLE_KEY: LOCAL.serviceKey,
+    },
+  },
+})

@@ -95,22 +95,28 @@ export async function placeOrder(
   // Lot B — validation cross-product : si un variant_id est fourni, il doit appartenir
   // au produit de cette commande. Première ligne de défense TypeScript (DB confirme en 102).
   // Option A : variante invalide → on commande sans variante (pas de refus de vente).
+  // Étape 7.B : on récupère AUSSI le stock de la variante (source de vérité, mig 105).
   let variantId: string | null = variantIdRaw
+  let variantStock: number | null = null
   if (variantId) {
     const { data: vCheck } = (await supabase
       .from('product_variants_read')
-      .select('id')
+      .select('id, stock_count')
       .eq('id', variantId)
       .eq('product_id', productId)
-      .maybeSingle()) as { data: { id: string } | null }
+      .maybeSingle()) as { data: { id: string; stock_count: number } | null }
     if (!vCheck) variantId = null
+    else variantStock = vCheck.stock_count
   }
 
   // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
   // Si le stock est insuffisant, la commande passe avec un flag warning='restocking'.
   // L'alerte oversell est gérée côté SQL par record_anomaly (mig 095).
+  // Étape 7.B : le flag se base sur le stock de la VARIANTE commandée (mig 105),
+  // fallback agrégat produit si aucune variante résolue.
+  const stockReference = variantStock ?? product.stock_count
   const stockWarning: 'restocking' | undefined =
-    product.stock_count < quantity ? 'restocking' : undefined
+    stockReference < quantity ? 'restocking' : undefined
 
   // ── Validate affiliate ID if provided ────────────────────────────────────
   let validatedAffiliateId: string | null = null
@@ -376,21 +382,26 @@ export async function createAffiliateOrder(
 
   // Lot B — validation cross-product variant_id. Option A : invalide → null, pas de refus.
   // Utilise createAdminClient() déjà importé (lecture seule ici, pas d'escalade).
+  // Étape 7.B : on récupère AUSSI le stock de la variante (source de vérité, mig 105).
   let variantIdAff: string | null = variantIdAffRaw
+  let variantStockAff: number | null = null
   if (variantIdAff) {
     const { data: vCheckAff } = (await createAdminClient()
       .from('product_variants_read')
-      .select('id')
+      .select('id, stock_count')
       .eq('id', variantIdAff)
       .eq('product_id', productId)
-      .maybeSingle()) as { data: { id: string } | null }
+      .maybeSingle()) as { data: { id: string; stock_count: number } | null }
     if (!vCheckAff) variantIdAff = null
+    else variantStockAff = vCheckAff.stock_count
   }
 
   // WMS-1 OPTION A : on ne refuse JAMAIS pour stock insuffisant.
   // Si le stock est insuffisant, la commande passe avec warning='restocking'.
+  // Étape 7.B : flag basé sur le stock de la VARIANTE (mig 105), fallback agrégat.
+  const stockReferenceAff = variantStockAff ?? product.stock_count
   const stockWarningAffiliate: 'restocking' | undefined =
-    product.stock_count < quantity ? 'restocking' : undefined
+    stockReferenceAff < quantity ? 'restocking' : undefined
 
   if (sellPriceNum < product.sell_price)
     return {
@@ -799,7 +810,16 @@ export async function submitWholesaleOrder(
     return fail('Accès réservé aux grossistes approuvés.')
   }
 
-  const { data: cartItems } = (await supabase
+  // Fix mig 091 (chemin ARGENT, lecture via service_role) : la table `products` n'est plus
+  // lisible en direct par un grossiste (policy SELECT staff-only). Or le calcul du coût
+  // fournisseur a besoin de `factory_cost_mad` (EXCLU de la vue redacted products_catalog_read).
+  // On lit donc le panier + produits via createAdminClient (service_role, serveur uniquement,
+  // jamais exposé au client — pattern documenté mig 091 « le coût se lit via service_role »).
+  // PÉRIMÈTRE STRICT : SEULE la SOURCE de lecture change. Le calcul computeSupplierCostMad
+  // et tous les montants restent IDENTIQUES (mêmes factory_cost_mad, même fonction pure).
+  // La lecture reste bornée au panier de l'utilisateur courant (eq buyer_id = user.id).
+  const adminRead = createAdminClient()
+  const { data: cartItems } = (await adminRead
     .from('wholesale_cart_items')
     .select('*, product:products(*)')
     .eq('buyer_id', user.id)) as {
@@ -809,6 +829,25 @@ export async function submitWholesaleOrder(
 
   if (!cartItems?.length) return fail('Votre panier est vide.')
 
+  // Étape 7.B — stock par VARIANTE (source de vérité, mig 105). On récupère le stock
+  // des variantes commandées via la vue security-definer (fallback agrégat produit si
+  // aucune variante). product_variants_read est accessible à tous les rôles authentifiés.
+  const variantIds = cartItems.map((i) => i.variant_id).filter((v): v is string => !!v)
+  const variantStockMap = new Map<string, number>()
+  if (variantIds.length) {
+    const { data: vRows } = (await supabase
+      .from('product_variants_read')
+      .select('id, stock_count')
+      .in('id', variantIds)) as { data: { id: string; stock_count: number }[] | null }
+    for (const r of vRows ?? []) variantStockMap.set(r.id, r.stock_count)
+  }
+
+  // Q2 / Étape 7.B — NEVER-REFUSE (décision Abdou 2026-06-26, Option 2) : on n'oppose
+  // PLUS de refus dur sur le stock insuffisant. La commande est acceptée avec un flag
+  // restocking ; la chaîne FSM pending→assigned→supplier_confirmed = validation humaine
+  // de la dispo réelle (cohérent avec la doctrine Option A / COD). Seuls l'indisponibilité
+  // produit et le minimum grossiste restent bloquants (pas du stock-availability).
+  let hasRestocking = false
   for (const item of cartItems) {
     if (!item.product.active || item.product.approval_status !== 'approved') {
       return fail(`« ${item.product.name} » n'est plus disponible.`)
@@ -818,13 +857,11 @@ export async function submitWholesaleOrder(
         `« ${item.product.name} » : minimum ${item.product.wholesale_min_qty} unités requises.`
       )
     }
-    if (
-      item.product.availability_type === 'local_stock' &&
-      item.quantity > item.product.stock_count
-    ) {
-      return fail(
-        `« ${item.product.name} » — Stock insuffisant — ${item.product.stock_count} unités disponibles.`
-      )
+    const itemStock = item.variant_id
+      ? variantStockMap.get(item.variant_id) ?? item.product.stock_count
+      : item.product.stock_count
+    if (item.product.availability_type === 'local_stock' && item.quantity > itemStock) {
+      hasRestocking = true
     }
   }
 
@@ -886,7 +923,9 @@ export async function submitWholesaleOrder(
   revalidatePath('/wholesale/cart')
   revalidatePath('/wholesale/orders')
   revalidatePath('/admin/wholesale-orders')
-  redirect(`/wholesale/orders/${newOrder.id}?submitted=1`)
+  // Étape 7.B (Q2 never-refuse) : flag restocking porté en query param (comme submitted=1)
+  // → la commande est passée, la dispo réelle sera confirmée par le fournisseur (FSM).
+  redirect(`/wholesale/orders/${newOrder.id}?submitted=1${hasRestocking ? '&restocking=1' : ''}`)
 }
 
 // =============================================================================
