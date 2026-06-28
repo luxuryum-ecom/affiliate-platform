@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { VariantSelector } from '@/components/product/variant-selector'
 import { CodOrderForm } from '@/components/customer/cod-order-form'
-import type { ProductVariant } from '@/components/product/variant-selector'
+import type { ProductVariant, VariantAvailability } from '@/components/product/variant-selector'
 
 interface ProductOrderSectionProps {
   productId: string
@@ -19,6 +19,16 @@ interface ProductOrderSectionProps {
     variantLabel: string
   }
   orderSectionTitle: string
+  /**
+   * Dict variantId → dispo, construit côté serveur (strings i18n déjà résolues).
+   * Aucune fonction — données sérialisables uniquement.
+   */
+  availabilityByVariant: Record<string, VariantAvailability>
+  /**
+   * Dispo de repli quand aucune variante n'est sélectionnée ou identifiée
+   * (ex : produit sans variantes → dérivé de product.stock_count côté serveur).
+   */
+  defaultAvailability: VariantAvailability
 }
 
 /**
@@ -36,14 +46,42 @@ export function ProductOrderSection({
   defaultVariantId,
   variantStrings,
   orderSectionTitle,
+  availabilityByVariant,
+  defaultAvailability,
 }: ProductOrderSectionProps) {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(defaultVariantId)
 
   const hasVariants =
     variants.filter((v) => v.attributes && Object.keys(v.attributes).length > 0).length > 1
 
+  // Dispo de la variante sélectionnée — source : dict serveur (sérialisable).
+  // Fallback sur defaultAvailability si la variante n'est pas dans le dict
+  // (ex : aucune variante, ou variante sans stock_count indexé).
+  const currentAvail =
+    (selectedVariantId != null && availabilityByVariant[selectedVariantId]) ||
+    defaultAvailability
+
   return (
     <div className="space-y-5">
+      {/* Badge dispo variante-aware — remplace l'agrégat produit du Server Component. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {currentAvail.inStock ? (
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full ${
+              currentAvail.lowStock
+                ? 'bg-warning-soft text-warning-fg'
+                : 'bg-surface-2 text-muted'
+            }`}
+          >
+            {currentAvail.label}
+          </span>
+        ) : (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-danger-soft text-danger-fg">
+            {currentAvail.label}
+          </span>
+        )}
+      </div>
+
       {hasVariants && (
         <VariantSelector
           variants={variants}

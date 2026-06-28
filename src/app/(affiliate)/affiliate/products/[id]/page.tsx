@@ -144,6 +144,23 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
     stock_count: v.stock_count as number,
   }))
 
+  // Stock de la variante par défaut — remplace l'agrégat produit pour l'affichage.
+  // Quand plusieurs variantes : n'affiche que la variante défaut (= sélection initiale).
+  // Pour 0 variante : fallback sur product.stock_count (équivalent, prouvé = SUM actif).
+  const defaultVariant = variants.find((v) => v.is_default) ?? variants[0] ?? null
+  const defaultVariantStock = defaultVariant?.stock_count ?? product.stock_count
+
+  // Dict sérialisable variantId → dispo, construit SERVEUR (rule #2 : aucune fonction passée
+  // au Client). Labels = strings i18n résolues (namespace affiliate.products).
+  const availabilityByVariant: Record<string, { inStock: boolean; lowStock: boolean; label: string }> = {}
+  for (const v of variants) {
+    availabilityByVariant[v.id] = {
+      inStock: v.stock_count > 0,
+      lowStock: v.stock_count > 0 && v.stock_count <= 5,
+      label: v.stock_count > 0 ? t('stockUnits', { count: v.stock_count }) : t('stockEmpty'),
+    }
+  }
+
   const variantStrings = {
     chooseOption: tVariant('chooseOption'),
     unavailable: tVariant('unavailable'),
@@ -230,9 +247,13 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
               >
                 {inStock ? t('availStock') : t('availImport')}
               </span>
-              <span className={product.stock_count > 0 ? 'text-success-fg' : 'text-danger-fg'}>
+              {/* Stock : variante par défaut (server-side). Le VariantSelector affiche
+                  la dispo de la variante SÉLECTIONNÉE (client-side, via availabilityByVariant). */}
+              <span className={defaultVariantStock > 0 ? 'text-success-fg' : 'text-danger-fg'}>
                 {t('stock')}&nbsp;:{' '}
-                {product.stock_count > 0 ? t('stockUnits', { count: product.stock_count }) : t('stockEmpty')}
+                {defaultVariantStock > 0
+                  ? t('stockUnits', { count: defaultVariantStock })
+                  : t('stockEmpty')}
               </span>
             </div>
           </div>
@@ -270,8 +291,15 @@ export default async function AffiliateProductDetailPage({ params }: PageProps) 
               saleUnit={product.sale_unit}
             />
 
-            {/* Sélecteur de variantes — display only, Étape 3. Caché si ≤ 1 variante. */}
-            <VariantSelector variants={variants} strings={variantStrings} />
+            {/* Sélecteur de variantes — Étape 7.A : affiche la dispo de la variante
+                SÉLECTIONNÉE inline (dict sérialisable availabilityByVariant, aucune fonction
+                au Client — règle #2). Caché si ≤ 1 variante. Le calculateur de commission et
+                le prix catalogue restent gérés au-dessus (fiche LOT 1→5, doublon supprimé). */}
+            <VariantSelector
+              variants={variants}
+              strings={variantStrings}
+              availabilityByVariant={availabilityByVariant}
+            />
           </div>
         </div>
 

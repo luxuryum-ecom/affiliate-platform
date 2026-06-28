@@ -97,6 +97,12 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
 
   const defaultVariantId = variants.find((v) => v.is_default)?.id ?? variants[0]?.id ?? null
 
+  // Stock de la variante par défaut — remplace l'agrégat pour les badges de dispo.
+  // Quand aucune variante : fallback sur product.stock_count (= SUM actif, prouvé égal).
+  // AddToCartForm.stockCount reste sur product.stock_count (logique Lot B, intouchable).
+  const defaultVariantRow = variants.find((v) => v.is_default) ?? variants[0] ?? null
+  const defaultVariantStock = defaultVariantRow?.stock_count ?? product.stock_count
+
   // C2 — axes disponibles calculés server-side depuis les variantes en stock > 0.
   const wholesaleAxes = buildWholesaleAxes(variants)
   const variantsAvailableLabel = t('variantsAvailableSection')
@@ -155,12 +161,14 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                   {t('badgeTiers')}
                 </span>
               )}
-              {product.stock_count === 0 && (
+              {/* Badges dispo rebranché sur la variante par défaut (non plus agrégat produit).
+                  AddToCartForm.stockCount reste sur product.stock_count — logique Lot B intouchable. */}
+              {defaultVariantStock === 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-muted border border-line">
                   {t('badgeOverOrder')}
                 </span>
               )}
-              {product.stock_count > 0 && product.stock_count < product.wholesale_min_qty && (
+              {defaultVariantStock > 0 && defaultVariantStock < product.wholesale_min_qty && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning-fg border border-warning">
                   {t('badgePartialStock')}
                 </span>
