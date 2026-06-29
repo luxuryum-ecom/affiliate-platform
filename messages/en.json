@@ -3664,6 +3664,12 @@
       "body": "Ref: #{ref} · Delivery: {city}",
       "item": "• {label} × {qty}",
       "due": "Prepare before: {date}"
+    },
+    "ui": {
+      "ariaLabel": "Notifications",
+      "title": "Notifications",
+      "empty": "No notifications",
+      "markAll": "Mark all as read"
     }
   },
   "categories": {

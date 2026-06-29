@@ -56,8 +56,14 @@
   données acheteur sensibles (suivre la règle existante `notifyOrderAssigned` : `ref`,
   `items[label, qty]`, `city`, `dueAt`) → **audit `@security-reviewer`**. Prévoir que
   `notifications.order_id` puisse référencer aussi `orders` (aujourd'hui wholesale-only).
-- ⬜ **Cloche in-app 🔔 visible (modèle Shopify)** : badge compteur + liste déroulante +
-  marquer-lu. La **table existe**, c'est **l'UI qui manque**. i18n FR/AR/EN + RTL obligatoires.
+- ✅ **Cloche in-app 🔔 visible (modèle Shopify) — LOT 1A FAIT** : badge compteur + liste
+  déroulante + marquer-lu, montée sur les dashboards admin + affilié. Lecture RLS-scopée
+  (`getNotifications`/`markNotificationRead`/`markAllRead`, jamais service_role), libellés +
+  date résolus serveur (FR/AR/EN + RTL validés). Fichiers : `src/app/actions/notifications.ts`,
+  `src/components/notifications/notification-bell.tsx` + `notification-item.tsx`.
+  - 🎫 **Ticket cosmétique (à traiter plus tard)** : les events **sans libellé i18n dédié**
+    (ex. `stock_anomaly`) affichent aujourd'hui la clé brute de l'event comme titre → prévoir
+    un **libellé de repli lisible** (titre générique i18n FR/AR/EN) pour tout event non mappé.
 - ⬜ **Casiers de responsabilité (via `staff_permissions`, mig `083+`, système réellement
   actif ; `team_members` est une coquille morte non branchée)** : cases à cocher **par compte
   personnel** du dépôt — **Réception / Emballage / Expédition / Confirmation / Supervision**.

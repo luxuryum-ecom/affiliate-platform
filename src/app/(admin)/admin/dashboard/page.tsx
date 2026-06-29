@@ -6,6 +6,7 @@ import { signOut } from '@/app/actions/auth'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import type { Profile } from '@/types/database'
 
 export async function generateMetadata() {
@@ -162,6 +163,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
+            <NotificationBell />
             <span className="text-sm text-muted hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button

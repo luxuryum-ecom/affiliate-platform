@@ -5,6 +5,7 @@ import { formatMAD } from '@/lib/utils'
 import { formatConversionRate, formatReturnRate } from '@/lib/order-analytics'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import { signOut } from '@/app/actions/auth'
 import type { Profile, Commission } from '@/types/database'
 
@@ -114,6 +115,7 @@ export default async function AffiliateDashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
+            <NotificationBell />
             <span className="text-sm text-muted hidden sm:block">{profile?.full_name}</span>
             <form action={signOut}>
               <button type="submit" className="text-sm text-muted hover:text-foreground transition-colors">
