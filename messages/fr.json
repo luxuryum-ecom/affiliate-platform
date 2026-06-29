@@ -3341,6 +3341,8 @@
       "permissionsDesc": "Attribuer ou retirer les capacités modulables aux agents internes.",
       "agentSourcingTitle": "Affectation agents sourcing",
       "agentSourcingDesc": "Affecter les agents aux pays de sourcing et gérer leurs capacités.",
+      "auditTitle": "Journal d'audit",
+      "auditDesc": "Traçabilité globale : qui a fait quoi et quand. Append-only, ineffaçable.",
       "open": "Ouvrir",
       "soon": "Bientôt",
       "agentActionsSection": "Mes outils",
@@ -3607,6 +3609,27 @@
           "label": "Supervision",
           "desc": "Supervise l'activité du dépôt et coordonne les postes (réception, emballage, expédition)."
         }
+      }
+    },
+    "audit": {
+      "metaTitle": "Journal d'audit — Admin",
+      "pageTitle": "Journal d'audit global",
+      "subtitle": "Traçabilité de toutes les actions sensibles : qui, quoi, quand. Append-only, ineffaçable.",
+      "filterAll": "Toutes les actions",
+      "filterLabel": "Filtrer :",
+      "empty": "Aucune entrée d'audit.",
+      "colWho": "Qui",
+      "colAction": "Action",
+      "colTarget": "Cible",
+      "colChange": "Changement",
+      "colWhen": "Quand",
+      "action": {
+        "order_status_change": "Changement de statut commande",
+        "order_assign_agent": "Assignation agent",
+        "order_assign_supplier": "Assignation fournisseur",
+        "cod_order_status_change": "Changement de statut COD",
+        "promote_to_agent": "Promotion en agent",
+        "login": "Connexion"
       }
     },
     "ordersConfirm": {

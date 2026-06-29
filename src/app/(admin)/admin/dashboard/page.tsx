@@ -352,6 +352,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/sourcing/agents',
               },
+              {
+                title: t('auditTitle'),
+                description: t('auditDesc'),
+                badge: null,
+                href: '/admin/audit',
+              },
             ].map((action) => (
               <div
                 key={action.title}
