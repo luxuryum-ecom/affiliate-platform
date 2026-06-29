@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { isSupplierCountryCode } from '@/lib/supplier-countries'
 import { notifyAdminNewSignup } from '@/lib/notifications/new-signup'
@@ -117,6 +118,21 @@ export async function signIn(
 
   if (!user) {
     return { error: 'Erreur de connexion. Réessayez.' }
+  }
+
+  // Journal d'audit : trace la connexion (qui + quand + appareil). JAMAIS le mot
+  // de passe (inaccessible ici de toute façon). Best-effort — ne bloque pas le login.
+  try {
+    const ua = (await headers()).get('user-agent') ?? null
+    await supabase.rpc('log_admin_action', {
+      p_action: 'login',
+      p_target_table: 'auth',
+      p_target_id: user.id,
+      p_old: null,
+      p_new: { device: ua },
+    })
+  } catch {
+    // best-effort : un échec de log ne doit jamais empêcher la connexion
   }
 
   const { data: profile } = await supabase

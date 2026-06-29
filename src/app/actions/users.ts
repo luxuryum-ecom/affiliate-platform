@@ -64,7 +64,7 @@ export async function promoteToAgent(formData: FormData): Promise<void> {
   if (!profileId) return
 
   // GARDE admin-only — un non-admin est rejeté AVANT tout usage de service_role.
-  const { error } = await requireAdmin()
+  const { supabase, error } = await requireAdmin()
   if (error) return
 
   const adminClient = createAdminClient()
@@ -82,6 +82,20 @@ export async function promoteToAgent(formData: FormData): Promise<void> {
     .update({ role: 'agent', status: 'approved' })
     .eq('id', profileId)
   if (updErr) return // échec silencieux (ex. trigger d'immutabilité) → pas de revalidate
+
+  // Journal d'audit : l'écriture passe par service_role (acteur=NULL côté trigger) →
+  // on loggue ici via le client utilisateur pour capturer l'admin auteur (auth.uid()).
+  try {
+    await supabase.rpc('log_admin_action', {
+      p_action: 'promote_to_agent',
+      p_target_table: 'profiles',
+      p_target_id: profileId,
+      p_old: { role: target.role },
+      p_new: { role: 'agent', status: 'approved' },
+    })
+  } catch {
+    // best-effort : un échec de log ne doit pas casser la promotion
+  }
 
   revalidatePath('/admin/users')
   revalidatePath(`/admin/users/${profileId}`)
