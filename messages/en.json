@@ -3547,7 +3547,8 @@
         "commandes": "Orders",
         "sourcing": "Country sourcing",
         "categories": "Categories",
-        "stock": "Stock"
+        "stock": "Stock",
+        "depot": "Warehouse"
       },
       "cap": {
         "confirm_cod_orders": {
@@ -3573,6 +3574,26 @@
         "manage_stock": {
           "label": "Manage stock",
           "desc": "View the stock movement log and perform manual adjustments (gift, breakage, loss, etc.)."
+        },
+        "depot_reception": {
+          "label": "Receiving",
+          "desc": "Allows receiving incoming goods at the warehouse (check / scan on arrival)."
+        },
+        "depot_packing": {
+          "label": "Packing",
+          "desc": "Allows packing and preparing parcels before shipping."
+        },
+        "depot_shipping": {
+          "label": "Shipping",
+          "desc": "Allows shipping parcels and handing them to the carrier."
+        },
+        "depot_confirmation": {
+          "label": "Confirmation",
+          "desc": "Allows confirming orders at the warehouse level."
+        },
+        "depot_supervision": {
+          "label": "Supervision",
+          "desc": "Supervises warehouse activity and coordinates stations (receiving, packing, shipping)."
         }
       }
     },
