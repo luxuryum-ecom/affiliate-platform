@@ -58,11 +58,13 @@
   `notifications.order_id` puisse référencer aussi `orders` (aujourd'hui wholesale-only).
 - ⬜ **Cloche in-app 🔔 visible (modèle Shopify)** : badge compteur + liste déroulante +
   marquer-lu. La **table existe**, c'est **l'UI qui manque**. i18n FR/AR/EN + RTL obligatoires.
-- ⬜ **Casiers de responsabilité (Option A — via `team_members.permissions`)** : cases à
-  cocher **par compte personnel** du dépôt — **Réception / Emballage / Expédition /
-  Confirmation / Supervision**. **Provisoires et réversibles** (on coche/décoche selon le
-  jour). S'appuie sur le jsonb `team_members.permissions` **déjà en place** (pas de nouvelle
-  table au LOT 1).
+- ⬜ **Casiers de responsabilité (via `staff_permissions`, mig `083+`, système réellement
+  actif ; `team_members` est une coquille morte non branchée)** : cases à cocher **par compte
+  personnel** du dépôt — **Réception / Emballage / Expédition / Confirmation / Supervision**.
+  **Provisoires et réversibles** (on coche/décoche selon le jour). S'appuie sur `staff_permissions`
+  **déjà en place** (1 ligne par (user, capability), RPC `grant/revoke_staff_permission`, audit
+  immuable `staff_permission_audit`, action `setVoletSupervisor`) — ajouter les 5 capacités
+  `depot_*` à l'allowlist, pas de nouvelle table au LOT 1.
 - ⬜ **« Qui traite quoi »** : chaque commande **affiche son responsable à l'instant T**,
   **réassignable en un clic**. Le socle réassignation grossiste existe déjà (`assignWholesaleOrder`) ;
   l'étendre à l'affichage + au COD.
@@ -79,8 +81,8 @@
   journal. Protection traçabilité : on ne donne pas de pouvoirs (personnel, futurs grossistes)
   sans piste d'audit. ⚠️ Touche données sensibles → **audit `@security-reviewer`**.
 
-**Réutilise :** `notifications` (mig `076`/`077`), `team_members.permissions` (mig `058`),
-`telegramSendMessage`, `assignWholesaleOrder` / `can_assign_orders`.
+**Réutilise :** `notifications` (mig `076`/`077`), `staff_permissions` (mig `083+`) +
+`staff_permission_audit` (audit immuable), `telegramSendMessage`, `assignWholesaleOrder`.
 **Touche :** notif COD = **PII** + journal d'audit = sécurité → `@security-reviewer` avant commit.
 
 ---
