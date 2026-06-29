@@ -52,6 +52,7 @@ export async function requireAdmin({ allowAgent = false }: { allowAgent?: boolea
  * 'depot_shipping'           — casier expédition / remise transporteur (mig 106)
  * 'depot_confirmation'       — casier confirmation des commandes au dépôt (mig 106)
  * 'depot_supervision'        — casier supervision du dépôt (mig 106)
+ * 'assign_orders'            — assigner/réassigner des commandes (mig 107 ; gate can_assign_orders)
  */
 export type StaffCapability =
   | 'validate_categories'
@@ -65,6 +66,7 @@ export type StaffCapability =
   | 'depot_shipping'
   | 'depot_confirmation'
   | 'depot_supervision'
+  | 'assign_orders'
 
 /**
  * Guard for a granular, admin-grantable capability (mig 083 staff_permissions).

@@ -2549,6 +2549,14 @@
       "wholesaleAccessLabel": "وصول الجملة (B2B)",
       "wholesaleAccessDescNative": "دور تاجر الجملة — وصول B2B أصلي.",
       "wholesaleAccessDescToggle": "وصول إلى كتالوج الجملة والسلة والطلبات.",
+      "internalRoleTitle": "الدور الداخلي",
+      "promoteAgentLabel": "وكيل / موظف المستودع",
+      "promoteAgentDesc": "ترقية هذا الحساب إلى وكيل: الوصول إلى الفضاء الداخلي والأهلية للمهام (المستودع، الإسناد، التأكيد).",
+      "promoteAgentDescDone": "هذا الحساب وكيل داخلي بالفعل، ومؤهَّل للمهام في لوحة الصلاحيات.",
+      "promoteAgentButton": "ترقية إلى وكيل",
+      "promoteAgentPending": "جارٍ الترقية…",
+      "promoteAgentAlready": "وكيل بالفعل",
+      "promoteAgentConfirm": "ترقية هذا الحساب إلى وكيل (موظف داخلي)؟ سيتغيّر الدور إلى «وكيل» وسيُعتمد الحساب.",
       "wholesaleNative": "أصلي",
       "supplierCountryLabel": "بلد المورّد",
       "supplierCountryDesc": "يحدّد عملة إدخال الأسعار. لا يمكن تعديله إلا من طرف المسؤول.",
@@ -3562,6 +3570,10 @@
         "confirm_wholesale_orders": {
           "label": "تأكيد طلبات الجملة",
           "desc": "يتيح تأكيد الطلبات الواردة عبر قناة البيع بالجملة (B2B)."
+        },
+        "assign_orders": {
+          "label": "إسناد الطلبات",
+          "desc": "يتيح إسناد وإعادة إسناد طلبات الجملة إلى وكيل أو مورّد."
         },
         "manage_country_sourcing": {
           "label": "إدارة التوريد حسب الدولة",

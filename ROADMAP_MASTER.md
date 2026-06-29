@@ -79,13 +79,44 @@
   - **Affiliés** — leurs **ventes / commissions** (leur propre activité uniquement).
   - **Personnel dépôt** — **leurs tâches** (selon les casiers cochés).
   - **PAS les grossistes externes** — n'existent pas encore (cf. chantier **MULTI-GROSSISTES**).
-- ⬜ **Journal d'audit des actions super-admin (indispensable AVANT personnel à pouvoirs &
-  grossistes externes)** : toute action admin de type **forcer / modifier / corriger /
-  supprimer / backup** laisse une **trace automatique ineffaçable (append-only)** —
-  **qui** (compte admin), **quand** (timestamp serveur), **quoi** (action + cible), et
-  **ancienne valeur → nouvelle valeur**. Garde **serveur**, jamais d'UPDATE/DELETE sur le
-  journal. Protection traçabilité : on ne donne pas de pouvoirs (personnel, futurs grossistes)
-  sans piste d'audit. ⚠️ Touche données sensibles → **audit `@security-reviewer`**.
+- ⬜ **LOT 1E — Journal d'audit (TRAÇABILITÉ TOTALE) + verrouillage des pouvoirs sensibles
+  (indispensable AVANT que le personnel agisse avec des pouvoirs & avant les grossistes
+  externes)**. Décision Abdou 2026-06-29 — deux volets indissociables :
+  - **(1) Traçabilité TOTALE — pas seulement l'admin.** **Toute action de TOUTE personne**
+    (personnel dépôt, agents, admin) laisse une **trace automatique ineffaçable (append-only)**
+    — **qui** (compte) / **quoi** (action + cible) / **quand** (timestamp serveur), et
+    **ancienne valeur → nouvelle valeur** quand applicable. Le journal couvre notamment :
+    **événements de connexion** (qui se connecte, quand, depuis quel appareil) — **JAMAIS le
+    mot de passe en clair** (il reste **chiffré**, géré par Supabase Auth, hors de ce journal) ;
+    **changements de statut** ; **assignations / réassignations** ; **modifications** (commande,
+    stock, profil…) ; et plus tard les **scans** (LOT 2). Garde **serveur**, **aucun
+    UPDATE/DELETE** sur le journal (trigger d'immuabilité, modèle `staff_permission_audit`).
+  - **(2) Pouvoirs super-admin RÉSERVÉS À ABDOU (rôle admin uniquement).** Les **actions
+    sensibles** — **assigner / réassigner / modifier / forcer / corriger** une commande ou un
+    stock — sont **verrouillées au rôle `admin`**. Le **personnel exécute selon ses casiers**
+    (`depot_*` : réception/emballage/expédition/confirmation/supervision) **mais ne peut PAS**
+    réaliser ces actions sensibles.
+  - **(3) La DÉLÉGATION est exclusivement réservée au super-admin Abdou.** Le pouvoir de
+    **déléguer** — cocher/décocher les casiers `staff_permissions`, **attribuer ou retirer la
+    capacité `assign_orders`** (ou toute autre capacité) — se fait **uniquement** par l'admin
+    sur l'interface **`/admin/permissions`**. Distinction nette **exécuter vs déléguer** : un
+    agent à qui `assign_orders` est coché **peut EXÉCUTER** l'assignation de commandes, mais ne
+    peut **JAMAIS attribuer/retirer une capacité** — ni à lui-même, ni à autrui. (Résout la
+    tension notée en (2) : `assign_orders` reste **délégable pour l'exécution**, mais **la
+    délégation elle-même est admin-only**.)
+    - ✅ **Déjà respecté par l'implémentation** (vérifié par les audits `@security` 1C & 1G) :
+      les RPC `grant_staff_permission` / `revoke_staff_permission` lèvent une exception si
+      `my_role() <> 'admin'`, et l'action `setStaffPermission`/`setVoletSupervisor` est gardée
+      `requireAdmin()`. Un agent ne peut donc pas s'auto-accorder ni accorder une capacité.
+      Le LOT 1E n'a qu'à **préserver** cet invariant (et le tracer dans le journal).
+  - ⚠️ Contrôle d'accès + données sensibles → **audit `@security-reviewer` obligatoire**.
+
+- 🎫 **Ticket RTL admin (lot `@frontend` séparé, non bloquant)** : sur les routes `/admin/*`,
+  changer la langue en **AR** via le sélecteur (client-side `router.refresh()`) ne repasse pas
+  `html[dir]` en `rtl` — limite connue de Next 15 App Router (le layout racine n'est pas
+  re-rendu). Le **texte arabe se charge** ; un **rechargement complet** applique le RTL.
+  Constaté pendant la validation e2e du LOT 1G. À corriger côté `@frontend` (ex. forcer un
+  reload au switch, ou poser `dir` plus haut). N'affecte ni migration ni logique de permissions.
 
 **Réutilise :** `notifications` (mig `076`/`077`), `staff_permissions` (mig `083+`) +
 `staff_permission_audit` (audit immuable), `telegramSendMessage`, `assignWholesaleOrder`.

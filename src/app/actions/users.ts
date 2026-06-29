@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { UserStatus } from '@/types/database'
 import { isSupplierCountryCode } from '@/lib/supplier-countries'
 import { requireAdmin } from './_guards'
@@ -42,6 +43,45 @@ export async function toggleWholesaleAccess(formData: FormData): Promise<void> {
     .from('profiles')
     .update({ wholesale_access: value })
     .eq('id', profileId)
+
+  revalidatePath('/admin/users')
+  revalidatePath(`/admin/users/${profileId}`)
+}
+
+/**
+ * Promeut un utilisateur existant en role='agent', status='approved' (personnel
+ * interne / dépôt). Modèle promoteToAdmin : on passe par le client service_role
+ * pour écrire le rôle, MAIS l'action est gardée admin-only en amont (requireAdmin)
+ * → seul un admin peut promouvoir (anti-escalade préservée). Un non-admin n'atteint
+ * jamais le client service_role.
+ *
+ * Garde-fou : on REFUSE de modifier un compte déjà 'admin' (pas de rétrogradation
+ * accidentelle). Une fois agent, l'utilisateur apparaît dans /admin/permissions et
+ * devient éligible aux casiers (dépôt, assignation, confirmation…).
+ */
+export async function promoteToAgent(formData: FormData): Promise<void> {
+  const profileId = (formData.get('profileId') as string)?.trim()
+  if (!profileId) return
+
+  // GARDE admin-only — un non-admin est rejeté AVANT tout usage de service_role.
+  const { error } = await requireAdmin()
+  if (error) return
+
+  const adminClient = createAdminClient()
+
+  // Anti-escalade : ne jamais toucher un admin existant.
+  const { data: target } = (await adminClient
+    .from('profiles')
+    .select('role')
+    .eq('id', profileId)
+    .single()) as { data: { role: string } | null }
+  if (!target || target.role === 'admin') return
+
+  const { error: updErr } = await adminClient
+    .from('profiles')
+    .update({ role: 'agent', status: 'approved' })
+    .eq('id', profileId)
+  if (updErr) return // échec silencieux (ex. trigger d'immutabilité) → pas de revalidate
 
   revalidatePath('/admin/users')
   revalidatePath(`/admin/users/${profileId}`)

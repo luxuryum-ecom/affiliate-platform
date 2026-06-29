@@ -2549,6 +2549,14 @@
       "wholesaleAccessLabel": "Wholesale access (B2B)",
       "wholesaleAccessDescNative": "Wholesaler role — native B2B access.",
       "wholesaleAccessDescToggle": "Access to B2B catalogue, cart and wholesale orders.",
+      "internalRoleTitle": "Internal role",
+      "promoteAgentLabel": "Agent / warehouse staff",
+      "promoteAgentDesc": "Promote this account to agent: access to the internal workspace and eligibility for capabilities (warehouse, assignment, confirmation).",
+      "promoteAgentDescDone": "This account is already an internal agent, eligible for capabilities in the Permissions panel.",
+      "promoteAgentButton": "Promote to agent",
+      "promoteAgentPending": "Promoting…",
+      "promoteAgentAlready": "Already an agent",
+      "promoteAgentConfirm": "Promote this account to agent (internal staff)? The role will change to 'agent' and the account will be approved.",
       "wholesaleNative": "Native",
       "supplierCountryLabel": "Supplier country",
       "supplierCountryDesc": "Determines the price entry currency. Editable by an administrator only.",
@@ -3562,6 +3570,10 @@
         "confirm_wholesale_orders": {
           "label": "Confirm wholesale orders",
           "desc": "Allows confirming orders from the B2B/wholesale channel."
+        },
+        "assign_orders": {
+          "label": "Assign orders",
+          "desc": "Allows assigning and reassigning wholesale orders to an agent or a supplier."
         },
         "manage_country_sourcing": {
           "label": "Manage country sourcing",
