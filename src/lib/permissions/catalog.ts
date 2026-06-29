@@ -5,14 +5,14 @@
  * Importable côté client ET serveur.
  *
  * Capacités définies dans _guards.ts (StaffCapability) et protégées par
- * la contrainte CHECK de la migration 087.
+ * la contrainte CHECK de la migration 106 (dernier sur-ensemble).
  */
 
 import type { StaffCapability } from '@/app/actions/_guards'
 
 // ─── Volets ──────────────────────────────────────────────────────────────────
 
-export type VoletId = 'commandes' | 'sourcing' | 'categories' | 'stock'
+export type VoletId = 'commandes' | 'sourcing' | 'categories' | 'stock' | 'depot'
 
 export type Volet = {
   id: VoletId
@@ -41,6 +41,17 @@ export const ALL_VOLETS: Volet[] = [
     id: 'stock',
     labelKey: 'admin.permissionsV2.volet.stock',
     capabilities: ['manage_stock'],
+  },
+  {
+    id: 'depot',
+    labelKey: 'admin.permissionsV2.volet.depot',
+    capabilities: [
+      'depot_reception',
+      'depot_packing',
+      'depot_shipping',
+      'depot_confirmation',
+      'depot_supervision',
+    ],
   },
 ]
 
@@ -91,6 +102,36 @@ export const ALL_CAPABILITIES: CapabilityMeta[] = [
     volet: 'stock',
     labelKey: 'admin.permissionsV2.cap.manage_stock.label',
     descKey: 'admin.permissionsV2.cap.manage_stock.desc',
+  },
+  {
+    id: 'depot_reception',
+    volet: 'depot',
+    labelKey: 'admin.permissionsV2.cap.depot_reception.label',
+    descKey: 'admin.permissionsV2.cap.depot_reception.desc',
+  },
+  {
+    id: 'depot_packing',
+    volet: 'depot',
+    labelKey: 'admin.permissionsV2.cap.depot_packing.label',
+    descKey: 'admin.permissionsV2.cap.depot_packing.desc',
+  },
+  {
+    id: 'depot_shipping',
+    volet: 'depot',
+    labelKey: 'admin.permissionsV2.cap.depot_shipping.label',
+    descKey: 'admin.permissionsV2.cap.depot_shipping.desc',
+  },
+  {
+    id: 'depot_confirmation',
+    volet: 'depot',
+    labelKey: 'admin.permissionsV2.cap.depot_confirmation.label',
+    descKey: 'admin.permissionsV2.cap.depot_confirmation.desc',
+  },
+  {
+    id: 'depot_supervision',
+    volet: 'depot',
+    labelKey: 'admin.permissionsV2.cap.depot_supervision.label',
+    descKey: 'admin.permissionsV2.cap.depot_supervision.desc',
   },
 ]
 

@@ -3547,7 +3547,8 @@
         "commandes": "Commandes",
         "sourcing": "Sourcing pays",
         "categories": "Catégories",
-        "stock": "Stock"
+        "stock": "Stock",
+        "depot": "Dépôt"
       },
       "cap": {
         "confirm_cod_orders": {
@@ -3573,6 +3574,26 @@
         "manage_stock": {
           "label": "Gérer le stock",
           "desc": "Consulter le journal des mouvements de stock et effectuer des ajustements manuels (cadeau, casse, perte, etc.)."
+        },
+        "depot_reception": {
+          "label": "Réception",
+          "desc": "Permet de réceptionner les marchandises entrantes au dépôt (contrôle / scan à l'arrivée)."
+        },
+        "depot_packing": {
+          "label": "Emballage",
+          "desc": "Permet d'emballer et de préparer les colis avant expédition."
+        },
+        "depot_shipping": {
+          "label": "Expédition",
+          "desc": "Permet d'expédier les colis et de les remettre au transporteur."
+        },
+        "depot_confirmation": {
+          "label": "Confirmation",
+          "desc": "Permet de confirmer les commandes au niveau du dépôt."
+        },
+        "depot_supervision": {
+          "label": "Supervision",
+          "desc": "Supervise l'activité du dépôt et coordonne les postes (réception, emballage, expédition)."
         }
       }
     },
