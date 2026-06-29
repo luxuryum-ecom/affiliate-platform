@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WholesaleAccessToggle } from '@/components/admin/wholesale-access-toggle'
+import { AgentPromoteControl } from '@/components/admin/agent-promote-control'
 import { SupplierCountrySelect } from '@/components/admin/supplier-country-select'
 import { SUPPLIER_COUNTRIES } from '@/lib/supplier-countries'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
@@ -52,12 +53,13 @@ export default async function AdminUserDetailPage({ params }: Params) {
   const [supabase, adminClient] = [await createClient(), createAdminClient()]
 
   const [adminProfileRes, profileRes, authUserRes] = await Promise.all([
-    supabase.from('profiles').select('full_name').eq('id', (await supabase.auth.getUser()).data.user!.id).single(),
+    supabase.from('profiles').select('full_name, role').eq('id', (await supabase.auth.getUser()).data.user!.id).single(),
     supabase.from('profiles').select('*').eq('id', id).single(),
     adminClient.auth.admin.getUserById(id),
   ])
 
-  const adminProfile = adminProfileRes.data as { full_name: string } | null
+  const adminProfile = adminProfileRes.data as { full_name: string; role: string } | null
+  const visitorIsAdmin = adminProfile?.role === 'admin'
   const profile = profileRes.data as Profile | null
   const email = authUserRes.data?.user?.email ?? null
 
@@ -68,6 +70,8 @@ export default async function AdminUserDetailPage({ params }: Params) {
   const isAffiliate  = profile.role === 'affiliate'
   const isWholesaler = profile.role === 'wholesaler'
   const isSupplier   = profile.role === 'supplier'
+  const isAdmin      = profile.role === 'admin'
+  const isAgent      = profile.role === 'agent'
   const countryLabel = SUPPLIER_COUNTRIES.find((c) => c.code === profile.country_code)
 
   function statusLabel(s: string) {
@@ -218,6 +222,35 @@ export default async function AdminUserDetailPage({ params }: Params) {
             </div>
           )}
         </div>
+
+        {/* ── Rôle interne — promotion en agent / personnel dépôt.
+            Visible UNIQUEMENT pour un visiteur admin (défense en profondeur : le
+            layout (admin) autorise aussi les agents) ET si la cible n'est pas admin. ── */}
+        {visitorIsAdmin && !isAdmin && (
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">{t('internalRoleTitle')}</h2>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">{t('promoteAgentLabel')}</p>
+                <p className="text-xs text-faint mt-0.5">
+                  {isAgent ? t('promoteAgentDescDone') : t('promoteAgentDesc')}
+                </p>
+              </div>
+              <div className="shrink-0">
+                <AgentPromoteControl
+                  profileId={profile.id}
+                  isAgent={isAgent}
+                  labels={{
+                    button: t('promoteAgentButton'),
+                    pending: t('promoteAgentPending'),
+                    already: t('promoteAgentAlready'),
+                    confirm: t('promoteAgentConfirm'),
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Billing info (if any) ── */}
         {(profile.company_name || profile.ice || profile.registre_commerce || profile.billing_address) && (

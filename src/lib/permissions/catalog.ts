@@ -25,7 +25,12 @@ export const ALL_VOLETS: Volet[] = [
   {
     id: 'commandes',
     labelKey: 'admin.permissionsV2.volet.commandes',
-    capabilities: ['confirm_cod_orders', 'confirm_affiliate_orders', 'confirm_wholesale_orders'],
+    capabilities: [
+      'confirm_cod_orders',
+      'confirm_affiliate_orders',
+      'confirm_wholesale_orders',
+      'assign_orders',
+    ],
   },
   {
     id: 'sourcing',
@@ -84,6 +89,12 @@ export const ALL_CAPABILITIES: CapabilityMeta[] = [
     volet: 'commandes',
     labelKey: 'admin.permissionsV2.cap.confirm_wholesale_orders.label',
     descKey: 'admin.permissionsV2.cap.confirm_wholesale_orders.desc',
+  },
+  {
+    id: 'assign_orders',
+    volet: 'commandes',
+    labelKey: 'admin.permissionsV2.cap.assign_orders.label',
+    descKey: 'admin.permissionsV2.cap.assign_orders.desc',
   },
   {
     id: 'manage_country_sourcing',

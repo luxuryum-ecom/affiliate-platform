@@ -2549,6 +2549,14 @@
       "wholesaleAccessLabel": "Accès grossiste (B2B)",
       "wholesaleAccessDescNative": "Rôle grossiste — accès B2B natif.",
       "wholesaleAccessDescToggle": "Accès au catalogue B2B, panier et commandes grossiste.",
+      "internalRoleTitle": "Rôle interne",
+      "promoteAgentLabel": "Agent / personnel dépôt",
+      "promoteAgentDesc": "Promouvoir ce compte en agent : accès à l'espace interne et éligibilité aux casiers (dépôt, assignation, confirmation).",
+      "promoteAgentDescDone": "Ce compte est déjà un agent interne, éligible aux casiers dans le panneau Permissions.",
+      "promoteAgentButton": "Promouvoir en agent",
+      "promoteAgentPending": "Promotion…",
+      "promoteAgentAlready": "Déjà agent",
+      "promoteAgentConfirm": "Promouvoir ce compte en agent (personnel interne) ? Le rôle passera à « agent » et le compte sera approuvé.",
       "wholesaleNative": "Natif",
       "supplierCountryLabel": "Pays du fournisseur",
       "supplierCountryDesc": "Détermine la devise de saisie des prix. Modifiable uniquement par un administrateur.",
@@ -3562,6 +3570,10 @@
         "confirm_wholesale_orders": {
           "label": "Confirmer les commandes gros",
           "desc": "Permet de confirmer les commandes du canal B2B/gros."
+        },
+        "assign_orders": {
+          "label": "Assigner les commandes",
+          "desc": "Permet d'assigner et de réassigner les commandes grossistes à un agent ou un fournisseur."
         },
         "manage_country_sourcing": {
           "label": "Gérer le sourcing pays",
