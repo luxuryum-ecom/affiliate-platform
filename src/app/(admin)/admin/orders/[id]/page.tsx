@@ -4,6 +4,7 @@ import { formatMAD } from '@/lib/utils'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderStatusForm } from '@/components/admin/order-status-form'
+import { CodOrderAssignForm } from '@/components/admin/cod-order-assign-form'
 import { CommissionStatusForm } from '@/components/admin/commission-status-form'
 import { OrderProofForm } from '@/components/admin/order-proof-form'
 import { OrderTimeline, buildCodTimeline } from '@/components/shared/order-timeline'
@@ -25,6 +26,7 @@ const STATUS_CLS: Record<string, string> = {
 type OrderDetail = Order & {
   product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sell_price' | 'commission_amount'>
   affiliate: Pick<Profile, 'id' | 'full_name' | 'phone' | 'city'> | null
+  assigned: Pick<Profile, 'id' | 'full_name'> | null
 }
 
 export default async function AdminOrderDetailPage({ params }: Params) {
@@ -33,25 +35,30 @@ export default async function AdminOrderDetailPage({ params }: Params) {
   const t = await getTranslations('admin.orderDetail')
   const tc = await getTranslations('admin.common')
   const to = await getTranslations('admin.orders')
+  const tAssign = await getTranslations('admin.codAssign')
   const locale = await getLocale()
 
   const { data: { user } } = await supabase.auth.getUser()
   const profileRes = await supabase.from('profiles').select('full_name').eq('id', user!.id).single()
   const adminProfile = profileRes.data as { full_name: string } | null
 
-  const [orderRes, commissionRes, proofsRes] = await Promise.all([
+  const [orderRes, commissionRes, proofsRes, agentsRes] = await Promise.all([
     supabase
       .from('orders')
-      .select('*, product:products(id,name,images,media,sell_price,commission_amount), affiliate:profiles!affiliate_id(id,full_name,phone,city)')
+      .select('*, product:products(id,name,images,media,sell_price,commission_amount), affiliate:profiles!affiliate_id(id,full_name,phone,city), assigned:profiles!assigned_to(id,full_name)')
       .eq('id', id)
       .single(),
     supabase.from('commissions').select('*').eq('order_id', id).maybeSingle(),
     supabase.from('order_proofs').select('*').eq('related_order_id', id).order('uploaded_at', { ascending: false }),
+    // Assignables COD = agents (le RPC exige role agent/admin ; protection PII).
+    supabase.from('profiles').select('id, full_name').eq('role', 'agent').order('full_name'),
   ])
 
   const order = orderRes.data as unknown as OrderDetail | null
   const commission = commissionRes.data as Commission | null
   const proofs = (proofsRes.data ?? []) as OrderProof[]
+  const agents = ((agentsRes.data ?? []) as { id: string; full_name: string | null }[])
+    .map((a) => ({ id: a.id, name: a.full_name ?? a.id.slice(0, 8) }))
 
   if (!order) notFound()
 
@@ -185,6 +192,21 @@ export default async function AdminOrderDetailPage({ params }: Params) {
             <div className="bg-surface rounded-xl border border-line p-5">
               <h2 className="text-sm font-semibold text-foreground mb-4">{t('updateStatus')}</h2>
               <OrderStatusForm orderId={order.id} currentStatus={order.status} />
+            </div>
+
+            <div className="bg-surface rounded-xl border border-line p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-3">{tAssign('heading')}</h2>
+              <p className="text-xs text-faint mb-3">
+                {tAssign('currentlyAssigned')} :{' '}
+                <span className="font-medium text-foreground">
+                  {order.assigned?.full_name ?? tAssign('unassigned')}
+                </span>
+              </p>
+              <CodOrderAssignForm
+                orderId={order.id}
+                members={agents}
+                currentAgentId={order.assigned?.id ?? null}
+              />
             </div>
           </div>
         </div>
