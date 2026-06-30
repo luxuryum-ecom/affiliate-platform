@@ -2952,6 +2952,17 @@
       "invoiceRc": "RC",
       "invoiceBillingAddress": "عنوان الفوترة"
     },
+    "codAssign": {
+      "heading": "إسناد الطلب",
+      "assignTo": "إسناد إلى",
+      "selectMember": "اختر وكيلًا…",
+      "assign": "إسناد",
+      "assigning": "جارٍ الإسناد…",
+      "assignSuccess": "تم إسناد الطلب.",
+      "currentlyAssigned": "يعالجه",
+      "unassigned": "غير مُسند",
+      "noMembers": "لا يوجد وكلاء متاحون."
+    },
     "wholesaleAssign": {
       "heading": "إسناد الطلب",
       "assignTo": "إسناد إلى",

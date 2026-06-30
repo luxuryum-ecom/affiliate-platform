@@ -413,6 +413,9 @@ export interface Order {
   signals_metadata: Record<string, unknown>
 
   status: OrderStatus
+  /** Agent en charge du traitement (LOT 1F, mig 110). NULL = non assignée. Orthogonal au statut. */
+  assigned_to: string | null
+  assigned_at: string | null
   /** How the affiliate captured this order. Null for legacy public-page orders. */
   order_source: OrderSource | null
   notes: string | null

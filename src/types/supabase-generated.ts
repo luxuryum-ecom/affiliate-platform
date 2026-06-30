@@ -942,6 +942,8 @@ export type Database = {
         Row: {
           affiliate_commission_mad_snapshot: number | null
           affiliate_id: string | null
+          assigned_at: string | null
+          assigned_to: string | null
           attribution_click_id: string | null
           cancelled_at: string | null
           cod_expected: number | null
@@ -982,6 +984,8 @@ export type Database = {
         Insert: {
           affiliate_commission_mad_snapshot?: number | null
           affiliate_id?: string | null
+          assigned_at?: string | null
+          assigned_to?: string | null
           attribution_click_id?: string | null
           cancelled_at?: string | null
           cod_expected?: number | null
@@ -1022,6 +1026,8 @@ export type Database = {
         Update: {
           affiliate_commission_mad_snapshot?: number | null
           affiliate_id?: string | null
+          assigned_at?: string | null
+          assigned_to?: string | null
           attribution_click_id?: string | null
           cancelled_at?: string | null
           cod_expected?: number | null
@@ -3988,6 +3994,10 @@ export type Database = {
       }
     }
     Functions: {
+      assign_cod_order_atomic: {
+        Args: { p_assignee: string; p_order_id: string }
+        Returns: undefined
+      }
       assign_wholesale_order_atomic: {
         Args: { p_assignee: string; p_notes?: string; p_order_id: string }
         Returns: undefined

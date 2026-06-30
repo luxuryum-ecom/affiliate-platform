@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { calculateNetAffiliateCommission, getWholesaleTier, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
-import { requireAdmin } from './_guards'
+import { requireAdmin, requireCapability } from './_guards'
 import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
 import { parseMoneyInput } from '@/lib/money'
 import { computeSupplierCostMad } from '@/lib/supplier-mirror'
@@ -1124,6 +1124,64 @@ export async function assignWholesaleOrder(
 
   revalidatePath('/admin/wholesale-orders')
   revalidatePath(`/admin/wholesale-orders/${orderId}`)
+  return ok
+}
+
+// =============================================================================
+// COD — ASSIGN ORDER TO AGENT (LOT 1F)
+// =============================================================================
+
+/**
+ * Assigne / réassigne une commande COD (table `orders`) à un agent.
+ *
+ * GARDE : capacité `assign_orders` (admin court-circuite, mig 107). Le RPC
+ * `assign_cod_order_atomic` (mig 110) re-garde côté DB via `can_assign_orders` —
+ * autorité finale. Le pouvoir de DÉLÉGUER le casier reste admin-only (décision Abdou,
+ * mig 107 inchangée) : un agent avec `assign_orders` exécute mais ne distribue rien.
+ *
+ * Assignation ORTHOGONALE au statut : ne touche NI `status` NI aucune colonne
+ * financière. L'audit `order_assign_agent` est posé par le trigger (mig 110).
+ *
+ * Idempotence : réassigner le MÊME agent est un no-op (retourne ok silencieusement).
+ */
+export async function assignCodOrder(
+  orderId: string,
+  assigneeId: string,
+): Promise<ActionState> {
+  // ── Input validation ──────────────────────────────────────────────────────
+  if (!orderId?.trim())    return fail('errors.order_id_required')
+  if (!assigneeId?.trim()) return fail('errors.assignee_id_required')
+
+  // ── Garde applicative : casier assign_orders (admin court-circuité) ────────
+  const { supabase, error: capError, userId } = await requireCapability('assign_orders')
+  if (capError || !userId) return fail('errors.forbidden_assign_orders')
+
+  // ── Idempotence côté action (évite un aller-retour RPC inutile) ───────────
+  const { data: order } = (await supabase
+    .from('orders')
+    .select('assigned_to')
+    .eq('id', orderId)
+    .single()) as { data: { assigned_to: string | null } | null; error: unknown }
+
+  if (!order) return fail('errors.order_not_found')
+  if (order.assigned_to === assigneeId) return ok
+
+  // ── Délégation atomique au RPC Postgres (migration 110) ───────────────────
+  // Garde can_assign_orders, validation rôle assignee (PII), verrou FOR UPDATE,
+  // UPDATE étroit assigned_to/assigned_at. Audit posé par le trigger.
+  const { error: rpcErr } = await supabase.rpc('assign_cod_order_atomic', {
+    p_order_id: orderId,
+    p_assignee: assigneeId,
+  })
+
+  if (rpcErr) {
+    const msg = rpcErr.message ?? 'errors.update_failed'
+    const key = msg.match(/errors\.[a-z_]+/)?.[0] ?? 'errors.update_failed'
+    return fail(key)
+  }
+
+  revalidatePath('/admin/orders')
+  revalidatePath(`/admin/orders/${orderId}`)
   return ok
 }
 

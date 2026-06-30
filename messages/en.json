@@ -2952,6 +2952,17 @@
       "invoiceRc": "RC",
       "invoiceBillingAddress": "Billing address"
     },
+    "codAssign": {
+      "heading": "Assign order",
+      "assignTo": "Assign to",
+      "selectMember": "Choose an agent…",
+      "assign": "Assign",
+      "assigning": "Assigning…",
+      "assignSuccess": "Order assigned.",
+      "currentlyAssigned": "Handled by",
+      "unassigned": "Unassigned",
+      "noMembers": "No agents available."
+    },
     "wholesaleAssign": {
       "heading": "Assign order",
       "assignTo": "Assign to",
