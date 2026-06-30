@@ -3627,6 +3627,7 @@
         "order_status_change": "تغيير حالة الطلب",
         "order_assign_agent": "إسناد إلى وكيل",
         "order_assign_supplier": "إسناد إلى مورّد",
+        "cod_order_created": "إنشاء طلب الدفع عند الاستلام",
         "cod_order_status_change": "تغيير حالة طلب الدفع عند الاستلام",
         "promote_to_agent": "الترقية إلى وكيل",
         "login": "تسجيل الدخول"
@@ -3720,6 +3721,16 @@
       "body": "المرجع: #{ref} · التسليم: {city}",
       "item": "• {label} × {qty}",
       "due": "للتحضير قبل: {date}"
+    },
+    "cod_order_created": {
+      "title": "🛒 طلب جديد بالدفع عند الاستلام",
+      "body": "المرجع: #{ref} · التسليم: {city}",
+      "item": "• {label} × {qty}"
+    },
+    "cod_order_confirmed": {
+      "title": "✅ تم تأكيد طلب الدفع عند الاستلام",
+      "body": "المرجع: #{ref} · التسليم: {city}",
+      "item": "• {label} × {qty}"
     },
     "ui": {
       "ariaLabel": "الإشعارات",

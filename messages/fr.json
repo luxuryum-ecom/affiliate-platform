@@ -3627,6 +3627,7 @@
         "order_status_change": "Changement de statut commande",
         "order_assign_agent": "Assignation agent",
         "order_assign_supplier": "Assignation fournisseur",
+        "cod_order_created": "Création commande COD",
         "cod_order_status_change": "Changement de statut COD",
         "promote_to_agent": "Promotion en agent",
         "login": "Connexion"
@@ -3720,6 +3721,16 @@
       "body": "Réf : #{ref} · Livraison : {city}",
       "item": "• {label} × {qty}",
       "due": "À préparer avant : {date}"
+    },
+    "cod_order_created": {
+      "title": "🛒 Nouvelle commande COD",
+      "body": "Réf : #{ref} · Livraison : {city}",
+      "item": "• {label} × {qty}"
+    },
+    "cod_order_confirmed": {
+      "title": "✅ Commande COD confirmée",
+      "body": "Réf : #{ref} · Livraison : {city}",
+      "item": "• {label} × {qty}"
     },
     "ui": {
       "ariaLabel": "Notifications",
