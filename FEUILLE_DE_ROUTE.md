@@ -9,6 +9,22 @@
 
 ---
 
+## 🎉 JALON BETA — PÉRIMÈTRE BLOQUANT COMPLET EN PROD (2026-06-30)
+> **Tous les lots bloquants beta sont mergés `main` + appliqués en prod Supabase Remote.**
+> Migrations **104→110 confirmées Remote** le 2026-06-30. Détail dans `ETAT_SYSTEME.md` → POINT DE REPRISE.
+
+- ✅ **Étape 7** — bascule stock → variante (source de vérité) — mig **105**.
+- ✅ **LOT 1C/1G** — casiers dépôt (5 capacités) + personnel dépôt (`promoteToAgent` + capacité `assign_orders`, `can_assign_orders` rebranché sur `staff_permissions`) — mig **106 + 107**.
+- ✅ **fix-admin** — `promoteToAdmin` garde anti-escalade **fail-closed** (bootstrap one-time, @security GO 2026-06-29).
+- ✅ **LOT 1E** — journal d'audit GLOBAL append-only (`admin_audit_log`, triggers immuables, UI `/admin/audit`, FR/AR/EN+RTL) — mig **108**.
+- ✅ **LOT 1B** — notifications commande COD affilié (in-app + Telegram admin, zéro PII) — mig **109**.
+- ✅ **LOT 1F** — assignation des commandes COD à un agent (RPC atomique, casier `assign_orders`) — mig **110**.
+- ✅ **Cloche 1A** — UI cloche notifications in-app (badge + dropdown, FR/AR/EN+RTL).
+
+**🚧 RESTE UNE SEULE CONDITION AVANT GO-LIVE PUBLIC : backups auto prod** (la base `owvtfzxvirttrbcsiveg` n'a aucun backup automatique → activer **Supabase PITR** OU **cron `pg_dump`** hébergé). Voir section DETTES TECHNIQUES & GO-LIVE PUBLIC + `ETAT_SYSTEME.md` → SÉCURITÉ / BACKUP.
+
+---
+
 ## 🧭 SOMMAIRE — 3 ÉTAPES
 
 ### ÉTAPE 1 — Vitrine crédible ✅ **FAIT**
@@ -130,7 +146,7 @@
 
 - ⬜ **Import multi-produits** : album Telegram (`media_group_id`) · vrai `.xlsx` · IA appliquée au bulk · extraction catalogue PDF
 - ⬜ **Bot Telegram conversationnel** (relance le fournisseur quand une info manque)
-- 🔄 **Gestion commandes « Deliveroo » B2B** : LOTs 1-4 ✅ (FSM, assignation, lien fournisseur, moteur cash livraison) · **LOT 5** alertes visuelles retard/bloqué ⬜ · **LOT 6** cloche notifications UI ⬜ (notif assignée/admin/pays déjà en prod) · automatisation + escalade hiérarchique (worker cron) ⬜
+- 🔄 **Gestion commandes « Deliveroo » B2B** : LOTs 1-4 ✅ (FSM, assignation, lien fournisseur, moteur cash livraison) · **LOT 5** alertes visuelles retard/bloqué ⬜ · **LOT 6 cloche notifications UI ✅ EN PROD** (cloche 1A : badge + dropdown FR/AR/EN+RTL) · automatisation + escalade hiérarchique (worker cron) ⬜
 - 🔄 **Agents de sourcing par pays** (SECTION 2) : `agent_countries` (mig 078) ✅ · perf/alertes/compte-rendu ⬜
 - ⬜ Stock multi-entrepôt par pays · commande sourcing 2 lignes · branchement courier API · transport DDP variable/auto-calculé
 - ⬜ **Commande directe SANS lien d'affiliation** (saisie manuelle + import Sheet/CSV) — B1
@@ -167,6 +183,8 @@
 > Ni features ni étapes produit, mais à solder avant ouverture grand public.
 > *(Détail complet : ARCHIVE « SECTION 3 — DETTES », « GO-LIVE PUBLIC », « BLOC B ».)*
 
+- 🚧 **BLOQUANT GO-LIVE PUBLIC #1 (2026-06-30) — BACKUPS AUTO PROD.** La base prod `owvtfzxvirttrbcsiveg` n'a **aucun backup automatique** (le LaunchAgent local `com.mozouna.backup-prod` dépend du PC allumé + Docker → non fiable comme unique filet). **Activer l'un des deux avant l'ouverture publique :** (a) **Supabase PITR** (dashboard, plan Pro) ; OU (b) **cron `pg_dump`** hébergé hors-PC. **C'est la SEULE condition fonctionnelle restante** — tout le périmètre beta est en prod.
+- ⬜ **DETTES POST-BETA (non bloquantes, après ouverture)** : (1) **RTL admin** refresh complet ; (2) **libellé cloche events** sans i18n → câbler FR/AR/EN ; (3) **MAD → DH espace grossiste** (affichage pur, vs `formatDH` affilié) ; (4) **mock `makeClient`** de `tests/orders.test.ts` à étendre pour `notifyOrderCreated` (LOT 1B) ; (5) **désactivation double-écriture stock 7.D** (actuellement MAINTENUE/réversible, GO séparé).
 - 🔄 **Dette 073 (authenticated)** — **ADRESSÉE sur `feat/durcissement-beta-vitrine` (PRÊTE, non mergée)** : vue redacted `products_catalog_read` (mig 089, appliquée) + 10 reads non-admin repointés (calcul commission via service_role, INCHANGÉ) + policy SELECT `products` → staff-only (mig **091, à appliquer AU MERGE**). @security+@finance GO. Détail : `ETAT_SYSTEME.md`.
 - ⬜ Rate-limiting sur `placeOrder` (flux public COD) *(note : routes auth/reset couvertes par le rate-limit natif GoTrue)*
 - 🔄 **Durcir la confiance `metadata.role` au signup** — **ADRESSÉE sur `feat/durcissement-beta-vitrine`** : trigger `handle_new_user` durci (mig 090, appliquée) = allowlist DB {affiliate,wholesaler,supplier}, admin/agent non auto-déclarables.
