@@ -8,6 +8,7 @@ export const AUDIT_ACTIONS = [
   'order_status_change',
   'order_assign_agent',
   'order_assign_supplier',
+  'cod_order_created',
   'cod_order_status_change',
   'promote_to_agent',
   'login',

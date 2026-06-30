@@ -22,6 +22,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireCapability } from './_guards'
+import { notifyOrderConfirmed } from '@/lib/notifications/order-created'
 import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
 import type { ActionState } from '@/types/orders'
 import type { WholesaleOrderStatus } from '@/types/database'
@@ -117,6 +118,9 @@ export async function confirmOrderAsSupervisor(
   revalidatePath('/admin/orders')
   revalidatePath(`/admin/orders/${parsed.data}`)
   revalidatePath('/admin/orders-confirm')
+
+  // LOT 1B — notification COD confirmée (best-effort, post-commit, ne touche aucun montant).
+  await notifyOrderConfirmed(parsed.data)
 
   return ok
 }

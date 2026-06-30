@@ -33,6 +33,7 @@ interface NotifRow {
   id: string
   event: string
   order_id: string | null
+  cod_order_id: string | null
   payload: { ref?: string; city?: string | null } | null
   read_at: string | null
   created_at: string
@@ -64,7 +65,7 @@ export async function getNotifications(
 
   let query = supabase
     .from('notifications')
-    .select('id, event, order_id, payload, read_at, created_at')
+    .select('id, event, order_id, cod_order_id, payload, read_at, created_at')
     .order('created_at', { ascending: false })
     .limit(limit)
   if (opts?.unreadOnly) query = query.is('read_at', null)
@@ -78,6 +79,8 @@ export async function getNotifications(
 
   // Traducteurs + formateur de date résolus une fois (pas par ligne).
   const tAssigned = await getTranslations('notifications.order_assigned')
+  const tCodCreated = await getTranslations('notifications.cod_order_created')
+  const tCodConfirmed = await getTranslations('notifications.cod_order_confirmed')
   const numLocale =
     locale.split('-')[0] === 'ar'
       ? 'ar-MA-u-nu-latn' // numéraux latins en arabe (règle CLAUDE)
@@ -103,6 +106,14 @@ export async function getNotifications(
       // Lien sûr : seul l'admin a une page commande grossiste dédiée. Les autres
       // espaces (fournisseur/agent/affilié) seront câblés dans leurs lots.
       if (role === 'admin' && r.order_id) href = `/admin/wholesale-orders/${r.order_id}`
+    } else if (r.event === 'cod_order_created' || r.event === 'cod_order_confirmed') {
+      const tc = r.event === 'cod_order_confirmed' ? tCodConfirmed : tCodCreated
+      title = tc('title')
+      body = tc('body', { ref: p.ref ?? '—', city: p.city ?? '—' })
+      // Lien sûr et scopé par rôle : l'admin vers la fiche COD admin, l'affilié vers
+      // sa liste de commandes. Aucune autre cible (pas de fuite inter-espaces).
+      if (role === 'admin' && r.cod_order_id) href = `/admin/orders/${r.cod_order_id}`
+      else if (role === 'affiliate') href = '/affiliate/orders'
     }
 
     return {

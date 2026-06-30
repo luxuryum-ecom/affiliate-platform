@@ -11,6 +11,7 @@ import { isFsmTransitionAllowed } from '@/lib/wholesale-fsm'
 import { parseMoneyInput } from '@/lib/money'
 import { computeSupplierCostMad } from '@/lib/supplier-mirror'
 import { notifyOrderAssigned } from '@/lib/notifications/order-assigned'
+import { notifyOrderCreated } from '@/lib/notifications/order-created'
 import {
   scoreDuplicateOrder,
   scoreFraudOrder,
@@ -275,6 +276,9 @@ export async function placeOrder(
   ]
   await supabase.from('order_signals').insert(signals)
 
+  // LOT 1B — notification COD (best-effort, ne touche aucun montant ; post-commit).
+  await notifyOrderCreated(order.id)
+
   // WMS-1 : propage le warning restocking si le stock était insuffisant.
   return { error: null, success: true, orderId: order.id, ...(stockWarning ? { warning: stockWarning } : {}) }
 }
@@ -488,6 +492,10 @@ export async function createAffiliateOrder(
 
   revalidatePath('/affiliate/orders')
   revalidatePath('/admin/orders')
+
+  // LOT 1B — notification COD (best-effort, ne touche aucun montant ; post-commit).
+  await notifyOrderCreated(order.id)
+
   // WMS-1 : propage le warning restocking si le stock était insuffisant.
   return { error: null, success: true, orderId: order.id, ...(stockWarningAffiliate ? { warning: stockWarningAffiliate } : {}) }
 }
