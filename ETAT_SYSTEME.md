@@ -7,14 +7,16 @@
 >
 > **🩺 RÈGLE DIAGNOSTIC — déploiement d'abord.** Si l'agent voit le **bon comportement dans le code** (vérifié runtime sur build local) mais que l'utilisateur voit **autre chose en prod**, **VÉRIFIER LE DÉPLOIEMENT VERCEL EN PREMIER** (souvent en retard sur `main` / cache). Ne PAS conclure « ergonomie » ou « non reproduit » avant ça. Trancher en **forçant un redeploy** : `git commit --allow-empty -m "chore: force redeploy" && git push` sur `main`. Cas réel : recherche grossiste « Pull ref 5 » = 0 en prod alors que le code était correct → déploiement périmé (résolu par `6dc0244`).
 
-**Dernière synchro :** 2026-06-30 — `main` @ `39ae0d4` — 110 migrations (001→110) — **toutes appliquées en prod Supabase Remote** (104→110 confirmées 2026-06-30). `npm run check` exit 0. **🎉 PÉRIMÈTRE BETA COMPLET EN PROD** — reste UNE seule condition avant go-live public : **backups auto prod** (voir POINT DE REPRISE ci-dessous + section SÉCURITÉ / BACKUP).
+**Dernière synchro :** 2026-06-30 — `main` @ `39ae0d4` — 110 migrations (001→110) — **toutes appliquées en prod Supabase Remote** (104→110 confirmées 2026-06-30 ; 109/110 re-vérifiées par sondage direct des colonnes `orders.assigned_to` + `notifications.cod_order_id`). `npm run check` exit 0. **🎉 PÉRIMÈTRE BETA COMPLET EN PROD** — restent **4 bloquants go-live dans l'ordre** : (1) rotation secrets, (2) backups auto prod, (3) vérif mig 091, (4) redirect `/auth/callback` (voir POINT DE REPRISE ci-dessous + section SÉCURITÉ / BACKUP).
 
 ---
 
 ## 🧭 POINT DE REPRISE — fin de session 2026-06-30 (à lire en premier)
 
 ### 🎉 BETA-READY — PÉRIMÈTRE BLOQUANT COMPLET EN PROD (2026-06-30)
-**Tous les lots bloquants beta sont MERGÉS `main` + APPLIQUÉS en prod Supabase Remote** (migrations **104→110 confirmées Remote** le 2026-06-30, plus appliquées en attente GO). La plateforme est **fonctionnellement prête pour la beta**.
+**Tous les lots bloquants beta sont MERGÉS `main` + APPLIQUÉS en prod Supabase Remote** (migrations **104→110 confirmées Remote** le 2026-06-30 ; 109/110 re-vérifiées par sondage direct des colonnes en prod). La plateforme est **fonctionnellement prête pour la beta**.
+
+**🤖 Ingestion Telegram fournisseur = PRÊTE en prod mais 0 fournisseur lié.** Le flux complet (liaison `/link <code>` TTL 30 min usage unique → photo + légende → extraction IA Haiku → fiche `supplier_products` en `pending_review` → modération admin `/admin/supplier-products` → miroir catalogue) est déployé et fonctionnel, **jamais utilisé en réel**. Le 1er fournisseur (Turquie/Dubaï, comptes à créer de zéro via `/signup?type=supplier`, pays figé → devise de saisie dérivée) sera le test bout-en-bout. Données pays/devises conformes (TR→USD, AE→AED seedés mig 050) ; taux FX présents en prod (USD=10, AED=2.72) mais `source='seed:indicative'` jamais réactualisés (cf. FEUILLE_DE_ROUTE PB-7).
 
 | Lot | Contenu | Migration(s) | Statut prod |
 |-----|---------|--------------|-------------|
@@ -28,12 +30,22 @@
 
 **@finance 🟢 · @security 🟢** sur tous les lots financiers/sensibles ; 4 checks verts à chaque lot. Détail de chaque lot plus bas (sections « LOT A/B variantes » pour Étape 7, et « EN ATTENTE » pour 1B/1F/1A).
 
-### 🚧 RESTE — UNE SEULE CONDITION AVANT GO-LIVE PUBLIC : BACKUPS AUTO PROD
-**La base prod `owvtfzxvirttrbcsiveg` n'a AUCUN backup automatique actif.** Avant d'ouvrir au public, mettre en place **l'un** des deux :
-- **Supabase PITR** (Point-In-Time Recovery) — activation payante dans le dashboard Supabase (plan Pro), la voie la plus sûre ; OU
-- **Cron `pg_dump`** automatique vers stockage hors-PC (le LaunchAgent local `com.mozouna.backup-prod` existe mais dépend du PC allumé + Docker → non fiable comme unique filet).
+### 🚧 RESTE — 4 BLOQUANTS AVANT GO-LIVE PUBLIC (dans l'ordre)
+> **Action conseillée : (1) rotation des secrets, PUIS (2) backups auto prod.** (3) et (4) = actions ops courtes.
 
-→ **PROCHAINE ACTION = mettre en place les backups auto prod.** Voir section 🛟 SÉCURITÉ / BACKUP.
+**1. 🔴 ROTATION DES SECRETS COMPROMIS — le plus urgent.** Un secret compromis = bypass total du RLS, à traiter avant tout.
+- **`SUPABASE_SERVICE_ROLE_KEY`** fuitée (incidents 2026-06-20/22 tests + 2026-06-27 via `NEXT_PUBLIC_APP_URL` inliné client) → **régénérer** (Supabase → API Keys), reposer uniquement dans `SUPABASE_SERVICE_ROLE_KEY` (Vercel + `.env.local`), jamais en `NEXT_PUBLIC_*`, redeploy. Détail : 🚨 INCIDENT SÉCURITÉ ci-dessous.
+- **Mot de passe admin** `AdminTest2026!` **committé** → changer + nettoyer comptes/secrets de test.
+
+**2. 🚧 BACKUPS AUTO PROD.** La base `owvtfzxvirttrbcsiveg` n'a **aucun backup automatique actif**. Mettre en place **l'un** :
+- **Supabase PITR** (plan Pro, payant) — backups continus, restauration à la minute. **Recommandé** ; OU
+- **Cron `pg_dump`** hors-PC (le LaunchAgent local `com.mozouna.backup-prod` dépend du PC allumé + Docker → non fiable). Voir section 🛟 SÉCURITÉ / BACKUP.
+
+**3. ⚙️ VÉRIFIER / APPLIQUER MIG 091** (policy SELECT `products` → staff-only). Statut incohérent dans les docs (« appliquée » vs « reste à appliquer ») → **confirmer en prod**, `supabase db push` si absente. Sans elle, la table de base reste lisible par les authentifiés (pages déjà sur vue redacted → pas de fuite UI). Cf. NOTES OPS GO-LIVE ci-dessous.
+
+**4. 🔧 REDIRECT `/auth/callback` SUPABASE** (non-code). Ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` à l'allowlist « Redirect URLs » du dashboard Supabase Auth, sinon le reset mot de passe self-service échoue.
+
+→ **PROCHAINE ACTION = rotation des secrets, puis backups auto prod.**
 
 ### 🪵 DETTES POST-BETA CONNUES (non bloquantes, à traiter après ouverture)
 1. **RTL admin** — refresh RTL complet sur l'espace admin (cohérence directionnelle de toutes les pages admin).

@@ -12,8 +12,10 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 
 ## 🎉 ÉTAT : BETA-READY — périmètre bloquant COMPLET en prod
 
-**Tous les lots bloquants beta sont mergés `main` ET appliqués en prod Supabase Remote.**
-La plateforme est **fonctionnellement prête pour la beta**. Il ne reste **qu'une seule condition technique** avant l'ouverture publique : les **backups auto prod** (voir « Prochaine action » ci-dessous).
+**Tous les lots bloquants beta sont mergés `main` ET appliqués en prod Supabase Remote** (109/110 vérifiées présentes en Remote par sondage direct le 2026-06-30 : `orders.assigned_to` ✅ + `notifications.cod_order_id` ✅).
+La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloquants techniques go-live** (voir « Prochaine action » ci-dessous) ; aucun n'est une feature manquante.
+
+**🤖 Ingestion Telegram fournisseur : PRÊTE en prod, mais 0 fournisseur lié à ce jour.** Le bot (`/link <code>` → photo + légende → extraction IA → fiche `pending_review` → modération admin) est fonctionnel et déployé (webhook Vercel), mais **jamais utilisé en réel** : le 1er fournisseur (TR/AE, comptes à créer de zéro) sera le test bout-en-bout. Devises de saisie en place et conformes (MA→MAD, AE→AED, TR/EG→USD) ; taux FX présents en prod mais valeurs seed indicatives (cf. PB-7).
 
 | Lot | Contenu | Migration(s) | Statut prod |
 |-----|---------|--------------|-------------|
@@ -29,15 +31,23 @@ La plateforme est **fonctionnellement prête pour la beta**. Il ne reste **qu'un
 
 ---
 
-## 🎯 PROCHAINE ACTION — backups auto prod (SEULE condition go-live public)
+## 🎯 PROCHAINE ACTION — 4 bloquants go-live, dans l'ordre
 
-**La base prod `owvtfzxvirttrbcsiveg` n'a AUCUN backup automatique actif.** Le LaunchAgent local `com.mozouna.backup-prod` existe mais **dépend du PC allumé + Docker** → non fiable comme unique filet pour une ouverture publique.
+> **Action conseillée : (1) rotation des secrets, PUIS (2) backups auto prod.** Le reste (3 + 4) sont des actions ops courtes.
 
-**Activer l'un des deux avant le go-live :**
-- **(a) Supabase PITR** (Point-In-Time Recovery) — dashboard Supabase, plan **Pro** (payant). Voie la plus sûre : backups continus côté serveur, restauration à la minute. **Recommandé.**
-- **(b) Cron `pg_dump` hébergé** — sur un serveur/CI indépendant du PC, dump quotidien vers stockage hors-PC.
+**1. 🔴 ROTATION DES SECRETS COMPROMIS (le plus urgent).** Une clé / un mot de passe compromis = contournement total du RLS, donc à faire AVANT tout le reste.
+   - **`SUPABASE_SERVICE_ROLE_KEY`** — fuitée (incidents 2026-06-20/22 tests + 2026-06-27 via `NEXT_PUBLIC_APP_URL` inliné dans le bundle client) → **régénérer** (Supabase Dashboard → API Keys), reposer **uniquement** dans `SUPABASE_SERVICE_ROLE_KEY` (Vercel + `.env.local`), jamais en `NEXT_PUBLIC_*`, puis redeploy.
+   - **Mot de passe admin** `AdminTest2026!` — **committé** → changer + nettoyer les comptes/secrets de test.
 
-→ **C'est la seule chose qui reste avant d'ouvrir au public.** Voir `ETAT_SYSTEME.md` → section 🛟 SÉCURITÉ / BACKUP (en tête de section, marqué BLOQUANT GO-LIVE).
+**2. 🚧 BACKUPS AUTO PROD.** La base prod `owvtfzxvirttrbcsiveg` n'a **aucun backup automatique actif**. Le LaunchAgent local `com.mozouna.backup-prod` dépend du PC allumé + Docker → non fiable. Activer **l'un** :
+   - **(a) Supabase PITR** (plan Pro, payant) — backups continus côté serveur, restauration à la minute. **Recommandé.**
+   - **(b) Cron `pg_dump` hébergé** hors-PC (serveur/CI indépendant), dump quotidien.
+
+**3. ⚙️ VÉRIFIER / APPLIQUER MIG 091** (resserrage policy SELECT `products` → staff-only). Statut incohérent dans les docs (« appliquée » vs « reste à appliquer ») → **confirmer en prod** et `supabase db push` si absente. Sans elle, la table de base `products` reste lisible par les authentifiés (les pages passent déjà par la vue redacted, donc pas de fuite UI, mais policy à fermer).
+
+**4. 🔧 CONFIG REDIRECT `/auth/callback` SUPABASE** (non-code). Ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` à l'allowlist « Redirect URLs » du dashboard Supabase Auth, sinon le reset mot de passe self-service ne boucle pas.
+
+→ Détail backups : `ETAT_SYSTEME.md` → section 🛟 SÉCURITÉ / BACKUP. Détail rotation/incident : `ETAT_SYSTEME.md` → POINT DE REPRISE (🚨 INCIDENT SÉCURITÉ + NOTES OPS GO-LIVE).
 
 ---
 
@@ -53,12 +63,14 @@ La plateforme est **fonctionnellement prête pour la beta**. Il ne reste **qu'un
 
 ---
 
-## ⬜ Autres dettes go-live (déjà tracées avant cette session)
+## ⬜ Autres dettes go-live (non bloquantes — après les 4 ci-dessus)
+
+> Rotation des clés, backups, mig 091 et redirect `/auth/callback` sont **remontés en bloquants** (section « Prochaine action »). Le reste, non bloquant :
 
 Voir `FEUILLE_DE_ROUTE.md` → « 🔧 DETTES TECHNIQUES & GO-LIVE PUBLIC » et `ETAT_SYSTEME.md` pour le détail. Principales :
-- **Rotation des clés** `SUPABASE_SERVICE_ROLE_KEY` + `sb_secret_…` (incidents 2026-06-20/22/27) — action ops dashboard Supabase/Vercel. Cf. incident `NEXT_PUBLIC_APP_URL` (mig garde-fou `next.config.ts` en place).
-- **Ménage secrets de test** + reset MDP `admin@affipartner.ma`.
-- **Allowlist Redirect URLs** Supabase (`${NEXT_PUBLIC_APP_URL}/auth/callback`) pour le reset MDP self-service.
+- **Rate-limiting** sur `placeOrder` (flux public COD ; routes auth/reset déjà couvertes par GoTrue).
+- **Signatures webhooks** + logs d'audit ; idempotence/reporting du CSV `publishBulkImport`.
+- **Garde-fou anti-récidive en place** : `next.config.ts` refuse le build si un `NEXT_PUBLIC_*` commence par `sb_secret_`.
 
 ---
 
@@ -97,4 +109,4 @@ npm run types          # regénérer supabase-generated.ts après migration
 
 ---
 
-*Fin handoff — périmètre beta complet en prod. Ouvrir un chat frais ; LA prochaine action = backups auto prod (PITR ou cron pg_dump) avant go-live public.*
+*Fin handoff — périmètre beta complet en prod, ingestion Telegram prête (0 fournisseur lié). Ouvrir un chat frais ; LA prochaine action = rotation des secrets compromis, PUIS backups auto prod, puis vérif mig 091 + redirect `/auth/callback`.*
