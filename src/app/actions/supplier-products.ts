@@ -8,6 +8,7 @@ import { requireAdmin } from './_guards'
 import { buildSupplierPricing, applyPlatformMargin, buildMirrorTiers } from '@/lib/supplier-pricing'
 import { checkProductLimit } from '@/lib/product-limit'
 import { buildSupplierMirror } from '@/lib/supplier-mirror'
+import { insertMoqTiers } from '@/lib/supplier/moq-tiers'
 import { parseMoneyInput } from '@/lib/money'
 import { parsePercentInput } from '@/lib/rate'
 import type {
@@ -157,19 +158,8 @@ export async function submitSupplierProduct(
 
   const productId = (product as { id: string }).id
 
-  if (moqTiers.length > 0) {
-    const tierRows: Array<{
-      supplier_product_id: string
-      min_quantity: number
-      unit_price_usd: string
-    }> = moqTiers.map((t) => ({
-      supplier_product_id: productId,
-      min_quantity: t.min_quantity,
-      unit_price_usd: t.unit_price_usd,
-    }))
-    const { error: tierErr } = await admin.from('supplier_product_moq_tiers').insert(tierRows)
-    if (tierErr) return { error: tierErr.message }
-  }
+  const { error: tierErr } = await insertMoqTiers(admin, productId, moqTiers)
+  if (tierErr) return { error: tierErr }
 
   await runAndStoreModeration(admin as unknown as Awaited<ReturnType<typeof createClient>>, productId, {
     product_name,
