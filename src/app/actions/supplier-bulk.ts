@@ -10,6 +10,7 @@ import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
 import { getRateToMad } from '@/lib/fx'
 import { checkProductLimit } from '@/lib/product-limit'
 import { fetchImageFromUrl } from '@/lib/image-fetch'
+import { insertMoqTiers } from '@/lib/supplier/moq-tiers'
 import {
   moderateSupplierProduct,
   validateSupplierProductReadyForApproval,
@@ -50,7 +51,6 @@ import type {
   SupplierProductStatus,
   BulkImportReportRow,
   SupplierProductVariant,
-  SupplierProductMoqTier,
   PlatformMarginType,
 } from '@/types/database'
 
@@ -240,14 +240,8 @@ export async function publishBulkImport(
       await admin.from('supplier_product_variants').insert(variantRows)
     }
 
-    if (row.moq_tiers.length > 0) {
-      const tierRows: Omit<SupplierProductMoqTier, 'id' | 'created_at'>[] = row.moq_tiers.map((t) => ({
-        supplier_product_id: productId,
-        min_quantity:        t.min_quantity,
-        unit_price_usd:      t.unit_price_usd,
-      }))
-      await admin.from('supplier_product_moq_tiers').insert(tierRows)
-    }
+    // Best-effort (erreur ignorée) — comportement d'origine préservé.
+    await insertMoqTiers(admin, productId, row.moq_tiers)
 
     imported++
   }
