@@ -7,7 +7,9 @@
 >
 > **🩺 RÈGLE DIAGNOSTIC — déploiement d'abord.** Si l'agent voit le **bon comportement dans le code** (vérifié runtime sur build local) mais que l'utilisateur voit **autre chose en prod**, **VÉRIFIER LE DÉPLOIEMENT VERCEL EN PREMIER** (souvent en retard sur `main` / cache). Ne PAS conclure « ergonomie » ou « non reproduit » avant ça. Trancher en **forçant un redeploy** : `git commit --allow-empty -m "chore: force redeploy" && git push` sur `main`. Cas réel : recherche grossiste « Pull ref 5 » = 0 en prod alors que le code était correct → déploiement périmé (résolu par `6dc0244`).
 
-**Dernière synchro :** 2026-06-30 — `main` @ `39ae0d4` — 110 migrations (001→110) — **toutes appliquées en prod Supabase Remote** (104→110 confirmées 2026-06-30 ; 109/110 re-vérifiées par sondage direct des colonnes `orders.assigned_to` + `notifications.cod_order_id`). `npm run check` exit 0. **🎉 PÉRIMÈTRE BETA COMPLET EN PROD** — restent **4 bloquants go-live dans l'ordre** : (1) rotation secrets, (2) backups auto prod, (3) vérif mig 091, (4) redirect `/auth/callback` (voir POINT DE REPRISE ci-dessous + section SÉCURITÉ / BACKUP).
+**Dernière synchro :** 2026-07-01 — `main` @ `6977e6d` — 110 migrations (001→110) — **toutes appliquées en prod Supabase Remote** (104→110 confirmées 2026-06-30 ; 109/110 re-vérifiées par sondage direct des colonnes `orders.assigned_to` + `notifications.cod_order_id`). `npm run check` exit 0. **🎉 PÉRIMÈTRE BETA COMPLET EN PROD** — restent **4 bloquants go-live dans l'ordre** : (1) rotation secrets, (2) backups auto prod, (3) vérif mig 091, (4) redirect `/auth/callback` (voir POINT DE REPRISE ci-dessous + section SÉCURITÉ / BACKUP).
+
+> **Session 2026-07-01** — 2 merges sur `main`, **sans migration** : **(a) Magic-link fournisseur** (`e50b1f0`) EN PROD (Vercel) ; **(b) Sanitizer paliers `sanitizeMoqTiers` LOT 1** (`6977e6d`) **isolé/NON branché**. **🏗️ Chantier paliers Telegram EN COURS — Lot 1/5 fait** (voir section « CHANTIER PALIERS TELEGRAM » ci-dessous).
 
 ---
 
@@ -27,9 +29,28 @@
 | **LOT 1B** | Notifications commande COD affilié (in-app + Telegram admin, zéro PII) | **109** | ✅ EN PROD |
 | **LOT 1F** | Assignation des commandes COD à un agent (RPC atomique, casier `assign_orders`, UI+i18n) | **110** | ✅ EN PROD |
 | **Cloche 1A** | UI cloche notifications in-app (badge + dropdown, FR/AR/EN+RTL) | — | ✅ EN PROD |
-| **Magic-link fournisseur** | Onboarding ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR côté fournisseur ; admin génère le lien + QR + partage WhatsApp (`/admin/users/[id]`) ; TTL admin 15 min ; notif in-app à la liaison + cloche fournisseur. Aucune migration, aucun changement bot. | — (code) | 🟢 mergé main — ⚙️ prod : poser `TELEGRAM_BOT_USERNAME` |
+| **Magic-link fournisseur** | Onboarding ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR côté fournisseur ; admin génère le lien + QR + partage WhatsApp (`/admin/users/[id]`) ; TTL admin 15 min ; notif in-app à la liaison + cloche fournisseur. Aucune migration, aucun changement bot. `e50b1f0`, @security 🟢, @tester 5/5 e2e LOCAL. | — (code) | ✅ EN PROD (Vercel) — ⚙️ poser `TELEGRAM_BOT_USERNAME` en env Vercel (sinon repli texte `/link CODE`) |
+| **Sanitizer paliers moq (LOT 1)** | `sanitizeMoqTiers` (schema.ts) : valide une échelle de paliers dégressifs (1er palier = minimum, prix strictement décroissant) → SET rejeté au moindre doute. **ISOLÉ, NON BRANCHÉ** (aucun appelant). `6977e6d`, @finance 🟢, 33 tests. | — (code) | 🟢 mergé main (dormant — non branché) |
 
 **@finance 🟢 · @security 🟢** sur tous les lots financiers/sensibles ; 4 checks verts à chaque lot. Détail de chaque lot plus bas (sections « LOT A/B variantes » pour Étape 7, et « EN ATTENTE » pour 1B/1F/1A).
+
+---
+
+## 🏗️ CHANTIER PALIERS TELEGRAM — EN COURS (Lot 1/5 fait)
+
+> **But** : que les **paliers de prix dégressifs + le minimum de commande** viennent du **fournisseur automatiquement** (via Telegram), pour scaler à des milliers de produits — sans saisie admin manuelle.
+> **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : le **1er palier démarre au minimum de commande** ; le prix unitaire est **STRICTEMENT décroissant** quand la quantité monte (ex. `10→20, 50→18, 100→16, 500→14`). Chaque produit a son propre minimum. Format `{ min_quantity, unit_price }`, identique aux produits web (« Pull ref 5 »).
+> **Contexte** : l'aval (stockage `supplier_product_moq_tiers`, auto-report `buildMirrorTiers` à l'approbation, affichage + prix dégressif au panier + MOQ imposé) **existe et marche déjà**. Le trou est l'**amont** : faire entrer les paliers dans `supplier_products` depuis Telegram. Tout passe par le **mur de modération** (`pending_review` → l'admin approuve → marge appliquée) : aucune piste ne publie un prix en autonomie.
+
+| Lot | Contenu | Statut |
+|-----|---------|--------|
+| **Lot 1** | `sanitizeMoqTiers` (sanitizer strict, isolé + 33 tests, @finance 🟢) | ✅ **FAIT & MERGÉ** (`6977e6d`) |
+| **Lot 2** | Helper `insertMoqTiers` factorisé (dédoublonner l'insert web `supplier-products.ts:160` + CSV `supplier-bulk.ts:243`) — socle | ⬜ à faire |
+| **Lot 3** | **Extraction IA** : champ `moq_tiers` au tool/prompt `extract.ts` + `aiExtractionRawSchema` ; brancher `sanitizeMoqTiers` + `insertMoqTiers` dans `ingest.ts` + **vrai MOQ** (au lieu de `min_quantity:1` forcé) + désambiguïsation stock/minimum/palier. **⚠️ ARGENT → @finance** | ⬜ à faire |
+| **Lot 4** | Éditeur de paliers + MOQ dans la **modération admin** (`supplier-product-review.tsx` + `approveSupplierProduct`) — filet : l'admin corrige une extraction douteuse | ⬜ à faire |
+| **Lot 5** | Message bot d'accueil recommandant le format (FR + AR/darija) | ⬜ à faire |
+
+**Prochaine action : reprendre au Lot 2** (helper, sans risque), puis Lot 3 (⚠️ @finance obligatoire), 4, 5 — un lot à la fois, à tête reposée.
 
 ### 🚧 RESTE — 4 BLOQUANTS AVANT GO-LIVE PUBLIC (dans l'ordre)
 > **Action conseillée : (1) rotation des secrets, PUIS (2) backups auto prod.** (3) et (4) = actions ops courtes.

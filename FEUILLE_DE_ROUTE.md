@@ -20,9 +20,25 @@
 - ✅ **LOT 1B** — notifications commande COD affilié (in-app + Telegram admin, zéro PII) — mig **109**.
 - ✅ **LOT 1F** — assignation des commandes COD à un agent (RPC atomique, casier `assign_orders`) — mig **110**.
 - ✅ **Cloche 1A** — UI cloche notifications in-app (badge + dropdown, FR/AR/EN+RTL).
-- 🟢 **LOT MAGIC-LINK** — onboarding fournisseur ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur), génération admin + partage WhatsApp (`/admin/users/[id]`), TTL admin 15 min, notif in-app à la liaison + cloche fournisseur. **Sans migration, sans changement bot.** @security 🟢 · @tester 5/5 e2e LOCAL · 4 checks verts. Branche `feat/magic-link-supplier`. ⚙️ Prod : poser `TELEGRAM_BOT_USERNAME` en env Vercel.
+- ✅ **LOT MAGIC-LINK** — onboarding fournisseur ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur), génération admin + partage WhatsApp (`/admin/users/[id]`), TTL admin 15 min, notif in-app à la liaison + cloche fournisseur. **Sans migration, sans changement bot.** @security 🟢 · @tester 5/5 e2e LOCAL · 4 checks verts. **Mergé `main` `e50b1f0` → EN PROD (Vercel).** ⚙️ Prod : poser `TELEGRAM_BOT_USERNAME` en env Vercel (sinon repli texte `/link CODE`).
 
 **🚧 RESTE UNE SEULE CONDITION AVANT GO-LIVE PUBLIC : backups auto prod** (la base `owvtfzxvirttrbcsiveg` n'a aucun backup automatique → activer **Supabase PITR** OU **cron `pg_dump`** hébergé). Voir section DETTES TECHNIQUES & GO-LIVE PUBLIC + `ETAT_SYSTEME.md` → SÉCURITÉ / BACKUP.
+
+---
+
+## 🏗️ CHANTIER PALIERS TELEGRAM — EN COURS (Lot 1/5 fait, 2026-07-01)
+
+> **But** : paliers de prix dégressifs + minimum de commande venant du **fournisseur automatiquement** (Telegram), pour scaler à des milliers de produits, **sans saisie admin manuelle**.
+> **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : 1er palier = **minimum de commande** ; prix **strictement décroissant** quand la quantité monte (ex. `10→20, 50→18, 100→16, 500→14`). Format `{ min_quantity, unit_price }`.
+> **Contexte** : l'aval (stockage, auto-report `buildMirrorTiers`, affichage + prix dégressif au panier + MOQ imposé) **marche déjà** ; le trou est l'amont (faire entrer les paliers depuis Telegram). Tout passe par le **mur de modération** — aucune piste ne publie un prix en autonomie.
+
+- ✅ **Lot 1 — sanitizer `sanitizeMoqTiers`** (strict : rejette croissant/égal/doublon/aberrant/>20, cross-check base ; 33 tests ; @finance 🟢). **ISOLÉ, NON BRANCHÉ.** Mergé `main` `6977e6d`.
+- ⬜ **Lot 2 — helper `insertMoqTiers` factorisé** (dédoublonner l'insert web `supplier-products.ts:160` + CSV `supplier-bulk.ts:243`) — socle, sans risque. **← PROCHAINE ACTION.**
+- ⬜ **Lot 3 — extraction IA** : champ `moq_tiers` au tool/prompt `extract.ts` + `aiExtractionRawSchema` ; brancher `sanitizeMoqTiers` + `insertMoqTiers` dans `ingest.ts` + **vrai MOQ** (au lieu de `min_quantity:1`) + désambiguïsation stock/minimum/palier. **⚠️ ARGENT → circuit @finance obligatoire.**
+- ⬜ **Lot 4 — éditeur paliers + MOQ en modération admin** (`supplier-product-review.tsx` + `approveSupplierProduct`) : l'admin corrige une extraction douteuse avant approbation.
+- ⬜ **Lot 5 — message bot d'accueil** recommandant le format (FR + AR/darija).
+
+**Prochaine action : reprendre au Lot 2**, puis 3 (⚠️ @finance) / 4 / 5 — un lot à la fois, à tête reposée.
 
 ---
 
