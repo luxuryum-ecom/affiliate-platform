@@ -148,6 +148,91 @@ export function sanitizeNonNegativeInt(raw: unknown, max: number): number | null
   return n
 }
 
+// ── Paliers de gros dégressifs (MOQ tiers) — sanitizer STRICT ────────────────
+// @finance — un palier extrait ne devient JAMAIS un prix public sans modération.
+// Ce sanitizer réutilise sanitizeExtractedPrice pour CHAQUE prix (mêmes bornes,
+// même arrondi, AUCUN parseFloat ajouté — règle argent #4). Toute incohérence de
+// l'échelle → SET ENTIER rejeté à [] : on n'invente ni ne devine jamais.
+
+/**
+ * Palier validé : quantité seuil + prix unitaire dans la devise SOURCE du
+ * fournisseur (PAS MAD — cohérent avec sanitizeExtractedPrice / price_source).
+ */
+export interface SanitizedMoqTier {
+  min_quantity: number
+  unit_price: number
+}
+
+/** Nombre maximal de paliers accepté (parité catalogue buildMirrorTiers). */
+const MAX_MOQ_TIERS = 20
+/** Plafond de plausibilité d'un minimum de commande (anti-absurde). */
+const MAX_TIER_MIN_QUANTITY = 1_000_000
+
+/**
+ * Valide une échelle de paliers dégressifs (extraite IA / texte libre) vers une
+ * liste STRICTE triée, ou [] au moindre doute.
+ *
+ * RÈGLE MÉTIER (Abdou) : le 1er palier = minimum de commande ; le prix unitaire
+ * est STRICTEMENT décroissant quand la quantité monte (ex. 10→20, 50→18, 100→16,
+ * 500→14). Format { min_quantity, unit_price }.
+ *
+ * Philosophie identique à sanitizeExtractedPrice : le résultat est une SUGGESTION
+ * en pending_review, jamais un prix public (la modération admin valide/corrige).
+ *
+ * Garde-fous :
+ *  - chaque palier : min_quantity entier > 0 (sanitizeNonNegativeInt), unit_price
+ *    via sanitizeExtractedPrice (bornes existantes, arrondi 2 déc.) ; un palier
+ *    avec quantité ou prix invalide (null/0) est ÉCARTÉ (pas le set entier) ;
+ *  - plus de MAX_MOQ_TIERS candidats → SET rejeté ([]) ;
+ *  - après tri croissant par min_quantity : doublon de quantité → SET rejeté ([]) ;
+ *  - prix NON strictement décroissant (égal ou croissant) → SET rejeté ([]) ;
+ *  - basePrice fourni (déjà sanitizé) et tiers[0].unit_price !== basePrice → SET
+ *    rejeté ([]) (cross-check : le 1er palier porte le prix de base).
+ *
+ * @param raw       valeur brute (attendu : tableau d'objets { min_quantity, unit_price })
+ * @param basePrice prix de base DÉJÀ sanitizé (number) ou null si non fourni
+ */
+export function sanitizeMoqTiers(
+  raw: unknown,
+  basePrice: number | null = null,
+): SanitizedMoqTier[] {
+  if (!Array.isArray(raw)) return []
+  // Échelle absurde (au-delà du plafond) → rejet strict (double garde anti-DoS).
+  if (raw.length > MAX_MOQ_TIERS) return []
+
+  const valid: SanitizedMoqTier[] = []
+  for (const item of raw) {
+    if (item === null || typeof item !== 'object') continue
+    const rec = item as Record<string, unknown>
+    const minQ = sanitizeNonNegativeInt(rec.min_quantity, MAX_TIER_MIN_QUANTITY)
+    const price = sanitizeExtractedPrice(rec.unit_price)
+    // Palier ÉCARTÉ (pas le set) si quantité ou prix douteux, ou min_quantity = 0.
+    if (minQ === null || minQ <= 0 || price === null) continue
+    valid.push({ min_quantity: minQ, unit_price: price })
+  }
+
+  if (valid.length === 0) return []
+
+  // Tri croissant par quantité — le 1er palier = minimum de commande.
+  valid.sort((a, b) => a.min_quantity - b.min_quantity)
+
+  // Doublon de quantité (seuils identiques) → ambigu → SET rejeté.
+  for (let i = 1; i < valid.length; i++) {
+    if (valid[i].min_quantity === valid[i - 1].min_quantity) return []
+  }
+
+  // Prix STRICTEMENT décroissant quand la quantité monte (règle Abdou).
+  // `>=` rejette à la fois l'égalité ET la croissance.
+  for (let i = 1; i < valid.length; i++) {
+    if (valid[i].unit_price >= valid[i - 1].unit_price) return []
+  }
+
+  // Cross-check : le 1er palier (au minimum) doit porter EXACTEMENT le prix de base.
+  if (basePrice !== null && valid[0].unit_price !== basePrice) return []
+
+  return valid
+}
+
 /** Retire un séparateur de milliers : groupes de 3 chiffres obligatoires. */
 function stripThousands(s: string, sep: string): string | null {
   const parts = s.split(sep)
