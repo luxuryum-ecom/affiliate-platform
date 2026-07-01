@@ -81,6 +81,7 @@ export async function getNotifications(
   const tAssigned = await getTranslations('notifications.order_assigned')
   const tCodCreated = await getTranslations('notifications.cod_order_created')
   const tCodConfirmed = await getTranslations('notifications.cod_order_confirmed')
+  const tTgLinked = await getTranslations('notifications.supplier_telegram_linked')
   const numLocale =
     locale.split('-')[0] === 'ar'
       ? 'ar-MA-u-nu-latn' // numéraux latins en arabe (règle CLAUDE)
@@ -114,6 +115,10 @@ export async function getNotifications(
       // sa liste de commandes. Aucune autre cible (pas de fuite inter-espaces).
       if (role === 'admin' && r.cod_order_id) href = `/admin/orders/${r.cod_order_id}`
       else if (role === 'affiliate') href = '/affiliate/orders'
+    } else if (r.event === 'supplier_telegram_linked') {
+      title = tTgLinked('title')
+      body = tTgLinked('body')
+      if (role === 'supplier') href = '/supplier/dashboard'
     }
 
     return {

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { WholesaleAccessToggle } from '@/components/admin/wholesale-access-toggle'
 import { AgentPromoteControl } from '@/components/admin/agent-promote-control'
 import { SupplierCountrySelect } from '@/components/admin/supplier-country-select'
+import { SupplierTelegramLink } from '@/components/admin/supplier-telegram-link'
 import { SUPPLIER_COUNTRIES } from '@/lib/supplier-countries'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTranslations, getLocale } from 'next-intl/server'
@@ -222,6 +223,19 @@ export default async function AdminUserDetailPage({ params }: Params) {
             </div>
           )}
         </div>
+
+        {/* ── Liaison Telegram fournisseur — l'admin génère le lien magique + QR
+            et le partage (WhatsApp) au fournisseur non-technique. Visible admin only. ── */}
+        {visitorIsAdmin && isSupplier && (
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">{t('telegram.sectionTitle')}</h2>
+            <SupplierTelegramLink
+              supplierId={profile.id}
+              phone={profile.phone}
+              botUsername={process.env.TELEGRAM_BOT_USERNAME ?? null}
+            />
+          </div>
+        )}
 
         {/* ── Rôle interne — promotion en agent / personnel dépôt.
             Visible UNIQUEMENT pour un visiteur admin (défense en profondeur : le

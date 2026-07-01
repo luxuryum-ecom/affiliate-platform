@@ -20,6 +20,7 @@
 - ✅ **LOT 1B** — notifications commande COD affilié (in-app + Telegram admin, zéro PII) — mig **109**.
 - ✅ **LOT 1F** — assignation des commandes COD à un agent (RPC atomique, casier `assign_orders`) — mig **110**.
 - ✅ **Cloche 1A** — UI cloche notifications in-app (badge + dropdown, FR/AR/EN+RTL).
+- 🟢 **LOT MAGIC-LINK** — onboarding fournisseur ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur), génération admin + partage WhatsApp (`/admin/users/[id]`), TTL admin 15 min, notif in-app à la liaison + cloche fournisseur. **Sans migration, sans changement bot.** @security 🟢 · @tester 5/5 e2e LOCAL · 4 checks verts. Branche `feat/magic-link-supplier`. ⚙️ Prod : poser `TELEGRAM_BOT_USERNAME` en env Vercel.
 
 **🚧 RESTE UNE SEULE CONDITION AVANT GO-LIVE PUBLIC : backups auto prod** (la base `owvtfzxvirttrbcsiveg` n'a aucun backup automatique → activer **Supabase PITR** OU **cron `pg_dump`** hébergé). Voir section DETTES TECHNIQUES & GO-LIVE PUBLIC + `ETAT_SYSTEME.md` → SÉCURITÉ / BACKUP.
 

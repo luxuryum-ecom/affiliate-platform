@@ -491,7 +491,10 @@
       "linkedGuide": "Send a product photo with a short description to the bot {bot}. Each product is reviewed by an administrator before publication.",
       "limitReached": "Limit reached — {current}/{max} products",
       "limitReachedSub": "Go Premium to add without limits",
-      "goPremium": "Go Premium →"
+      "goPremium": "Go Premium →",
+      "openTelegramButton": "Open Telegram and link my account",
+      "qrHint": "Or scan this QR code with your phone",
+      "fallbackToggle": "Button not working? Link manually"
     },
     "products": {
       "metaTitle": "My products — Supplier area",
@@ -2577,7 +2580,20 @@
       "roleAgent": "Agent",
       "statusPending": "Pending",
       "statusApproved": "Approved",
-      "statusRejected": "Rejected"
+      "statusRejected": "Rejected",
+      "telegram": {
+        "sectionTitle": "Telegram link",
+        "title": "Generate the supplier's Telegram link",
+        "desc": "Create a magic link to send to the supplier: they click or scan, and their account links automatically — no typing.",
+        "generate": "Generate link",
+        "generating": "Generating…",
+        "openLink": "Open Telegram link",
+        "shareWhatsApp": "Share on WhatsApp",
+        "waMessage": "Hello, here is your link to connect Telegram to your Mozouna supplier area: {url}",
+        "scanQr": "QR code for the supplier to scan",
+        "validity": "Link valid for {minutes} minutes, single use.",
+        "linkedAlready": "This supplier has already linked their Telegram."
+      }
     },
     "premium": {
       "metaTitle": "Premium — Admin",
@@ -3748,6 +3764,10 @@
       "title": "Notifications",
       "empty": "No notifications",
       "markAll": "Mark all as read"
+    },
+    "supplier_telegram_linked": {
+      "title": "Telegram linked to your account",
+      "body": "Your Telegram account has just been linked to your supplier area. If this wasn't you, contact support."
     }
   },
   "categories": {
