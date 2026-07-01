@@ -491,7 +491,10 @@
       "linkedGuide": "Envoyez une photo de produit avec une courte description au bot {bot}. Chaque produit est vérifié par un administrateur avant publication.",
       "limitReached": "Limite atteinte — {current}/{max} produits",
       "limitReachedSub": "Passez Premium pour ajouter sans limite",
-      "goPremium": "Passer Premium →"
+      "goPremium": "Passer Premium →",
+      "openTelegramButton": "Ouvrir Telegram et lier mon compte",
+      "qrHint": "Ou scannez ce QR code avec votre téléphone",
+      "fallbackToggle": "Le bouton ne marche pas ? Lier manuellement"
     },
     "products": {
       "metaTitle": "Mes produits — Espace Fournisseur",
@@ -2577,7 +2580,20 @@
       "roleAgent": "Agent",
       "statusPending": "En attente",
       "statusApproved": "Approuvé",
-      "statusRejected": "Rejeté"
+      "statusRejected": "Rejeté",
+      "telegram": {
+        "sectionTitle": "Liaison Telegram",
+        "title": "Générer le lien Telegram du fournisseur",
+        "desc": "Créez un lien magique à envoyer au fournisseur : il clique ou scanne, et son compte se lie automatiquement — sans rien taper.",
+        "generate": "Générer le lien",
+        "generating": "Génération…",
+        "openLink": "Ouvrir le lien Telegram",
+        "shareWhatsApp": "Partager sur WhatsApp",
+        "waMessage": "Bonjour, voici votre lien pour connecter Telegram à votre espace fournisseur Mozouna : {url}",
+        "scanQr": "QR code à scanner par le fournisseur",
+        "validity": "Lien valable {minutes} minutes, à usage unique.",
+        "linkedAlready": "Ce fournisseur a déjà lié son Telegram."
+      }
     },
     "premium": {
       "metaTitle": "Premium — Admin",
@@ -3748,6 +3764,10 @@
       "title": "Notifications",
       "empty": "Aucune notification",
       "markAll": "Tout marquer comme lu"
+    },
+    "supplier_telegram_linked": {
+      "title": "Telegram lié à votre compte",
+      "body": "Votre compte Telegram vient d'être lié à votre espace fournisseur. Si ce n'est pas vous, contactez le support."
     }
   },
   "categories": {

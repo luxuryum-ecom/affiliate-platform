@@ -7,6 +7,7 @@
 import { useActionState } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   generateTelegramLinkCode,
   type TelegramLinkState,
@@ -39,6 +40,14 @@ export function TelegramLinkCard({
   const botUsername = state.botUsername ?? initialStatus?.botUsername ?? null
   const botLabel = botUsername ? `@${botUsername}` : t('botFallback')
   const linked = state.linked || initialStatus?.linked
+
+  // Lien magique Telegram : clic/scan → le bot s'ouvre ET lie le compte (/start CODE
+  // est déjà géré côté bot). Construit uniquement si le username du bot est connu ;
+  // sinon on retombe sur le repli textuel « /link CODE ».
+  const startUrl =
+    botUsername && state.code
+      ? `https://t.me/${botUsername}?start=${state.code}`
+      : null
 
   const atLimit = !!quota && !quota.isUnlimited && quota.current >= quota.max
 
@@ -100,11 +109,40 @@ export function TelegramLinkCard({
       {quotaSection}
 
       {state.code ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted">{t('instruction', { bot: botLabel })}</p>
-          <code className="block rounded-lg bg-ink-900 px-4 py-3 text-center text-lg font-mono tracking-widest text-cream">
-            /link {state.code}
-          </code>
+        <div className="space-y-3">
+          {startUrl && (
+            <>
+              {/* (1) Gros bouton — un clic ouvre Telegram et lie le compte. */}
+              <a
+                href={startUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                {t('openTelegramButton')}
+              </a>
+
+              {/* (2) QR code du même lien — généré côté client, sans appel externe. */}
+              <div className="flex flex-col items-center gap-2 rounded-lg border border-line bg-surface-2 p-4">
+                <p className="text-xs text-muted">{t('qrHint')}</p>
+                <div className="rounded-lg bg-white p-3">
+                  <QRCodeSVG value={startUrl} size={160} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* (3) Repli textuel discret : /link CODE (si le bouton/QR échoue). */}
+          <details className="text-xs text-faint">
+            <summary className="cursor-pointer select-none hover:text-muted">
+              {t('fallbackToggle')}
+            </summary>
+            <p className="mt-2 text-muted">{t('instruction', { bot: botLabel })}</p>
+            <code className="mt-1 block rounded-lg bg-ink-900 px-4 py-2 text-center font-mono tracking-widest text-cream">
+              /link {state.code}
+            </code>
+          </details>
+
           <p className="text-xs text-faint">
             {t('codeValidity', { minutes: state.expiresInMinutes ?? 30 })}
           </p>

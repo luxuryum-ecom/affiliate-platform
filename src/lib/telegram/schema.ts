@@ -350,6 +350,13 @@ function normalizePack(
 /** Durée de validité d'un code de liaison généré côté web (minutes). */
 export const LINK_CODE_TTL_MINUTES = 30
 
+/**
+ * TTL raccourci (minutes) pour un code généré PAR L'ADMIN et transmis hors-app
+ * (lien magique / QR / WhatsApp). Fenêtre d'interception plus courte : le code est
+ * un bearer token, on limite sa durée de vie côté envoi assisté (LOT magic-link).
+ */
+export const ADMIN_LINK_CODE_TTL_MINUTES = 15
+
 /** Format attendu d'un code de liaison : 8 caractères base32 (sans 0/1/O/I). */
 export const LINK_CODE_REGEX = /^[A-HJ-NP-Z2-9]{8}$/
 

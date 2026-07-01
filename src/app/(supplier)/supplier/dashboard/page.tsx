@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatMAD } from '@/lib/utils'
 import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import { TelegramLinkCard } from '@/components/supplier/telegram-link-card'
 import { getTelegramLinkStatus } from '@/app/actions/telegram-link'
 import { getProductLimitStatus } from '@/app/actions/premium'
@@ -143,6 +144,7 @@ export default async function SupplierDashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <LanguageSwitcher variant="light" />
+            <NotificationBell />
             <span className="text-sm text-muted hidden sm:block">{profile?.full_name}</span>
           </div>
         </div>

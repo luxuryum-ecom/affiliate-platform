@@ -166,6 +166,20 @@ async function handleLinkCommand(admin: Admin, msg: TelegramMessage, codeRaw: st
     return
   }
 
+  // Notif in-app au fournisseur : son Telegram vient d'être lié (sécurité — il peut
+  // repérer une liaison qu'il n'aurait pas initiée). Best-effort : ne bloque jamais
+  // la liaison. Insert service_role (aucune policy INSERT client sur notifications).
+  try {
+    await admin.from('notifications').insert({
+      recipient_id: link.supplier_id,
+      event: 'supplier_telegram_linked',
+      payload: { telegramUsername: msg.from!.username ?? null },
+      channels: ['in_app'],
+    })
+  } catch (e) {
+    console.error('notify supplier_telegram_linked', e)
+  }
+
   await telegramSendMessage(
     chatId,
     'Compte lié ✅ Envoyez désormais une photo de produit avec une courte description (nom + prix en DH). Chaque produit sera vérifié par un administrateur avant publication.',
