@@ -52,5 +52,9 @@ supabase/.temp/
 /test-results
 /playwright-report
 /playwright-report-v5bis
+playwright-report-*
 /blob-report
 /e2e/.auth
+
+# Test artefacts (nav proofs — never commit)
+.nav-proofs/
