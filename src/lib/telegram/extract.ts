@@ -23,6 +23,15 @@ Règles STRICTES :
 - "subcategory" DOIT appartenir à la catégorie choisie, copiée à l'identique. Si incertain → "".
 - "price" : prix de gros TEL QU'ÉCRIT par le fournisseur (nombre seul, sans devise ni conversion) s'il figure, sinon null.
   Le fournisseur saisit dans SA devise locale — ne convertis rien, ne suppose aucune devise. Ne JAMAIS inventer ni estimer un prix.
+- "moq_tiers" : PALIERS DE GROS DÉGRESSIFS = liste de couples { min_quantity, unit_price } quand le fournisseur donne des prix qui BAISSENT selon la quantité commandée.
+  RÈGLE DE DÉSAMBIGUÏSATION (cruciale — ne pas confondre palier, stock, prix de base) :
+  • Une quantité ASSOCIÉE À UN PRIX = un palier → { min_quantity: la quantité, unit_price: le prix à cette quantité }.
+    Ex. « 50=18, 100=16 » / « à partir de 50 : 18 » / « 50 pièces 18 dh » / arabe « 50 قطعة ب 18 » → paliers {50,18} et {100,16}.
+  • Une quantité SEULE, SANS prix = du STOCK (→ "stock_quantity"), JAMAIS un palier ni un minimum.
+    Ex. « quantité 500 » / « 500 disponibles » / darija/arabe « الكمية 500 » / « كمية 500 » → stock_quantity=500 ; moq_tiers ne le contient PAS.
+  • Un prix SEUL sans quantité rattachée = le "price" de base, PAS un palier.
+  • Le MINIMUM de commande = la plus petite quantité qui a un prix (= le 1er palier). Ne l'invente pas ; s'il n'y a aucun couple quantité→prix, laisse moq_tiers=[].
+  • Sois TOLÉRANT : capture TOUS les couples quantité→prix, même formulés librement. NE JUGE PAS la cohérence (ordre, décroissance, doublons) — un autre système validera. Ne convertis aucune devise. Aucun palier → [].
 - "product_name" : nom court et clair (max ~80 caractères), sans marque contrefaite.
 - "description" : 1 à 2 phrases neutres décrivant le produit.
 - "stock_quantity" : quantité en stock (entier ≥ 0) UNIQUEMENT si elle figure dans la légende, sinon null.
@@ -98,6 +107,26 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
         description:
           'NOUVELLE catégorie proposée (1-3 mots, générique) UNIQUEMENT si aucune catégorie de la liste ne convient (alors category="Autres"). Sinon null.',
       },
+      moq_tiers: {
+        type: 'array',
+        description:
+          'Paliers de gros dégressifs : liste de { min_quantity, unit_price } quand le fournisseur donne des prix qui BAISSENT selon la quantité. [] si aucun palier.',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            min_quantity: {
+              type: ['integer', 'null'],
+              description: 'Quantité seuil du palier (entier > 0).',
+            },
+            unit_price: {
+              type: ['number', 'null'],
+              description: "Prix unitaire À CE PALIER, tel qu'écrit (sans devise ni conversion).",
+            },
+          },
+          required: ['min_quantity', 'unit_price'],
+        },
+      },
     },
     required: [
       'product_name',
@@ -111,6 +140,7 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       'pack_size',
       'pack_unit',
       'suggested_category',
+      'moq_tiers',
     ],
   } as Anthropic.Tool['input_schema'],
 }
