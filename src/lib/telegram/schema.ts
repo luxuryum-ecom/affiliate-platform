@@ -83,6 +83,19 @@ export const aiExtractionRawSchema = z.object({
   // l'IA UNIQUEMENT quand aucune catégorie existante ne convient (→ category='Autres').
   // Sert à alimenter la file de validation ; ne crée RIEN automatiquement. Absent → null.
   suggested_category: z.union([z.string(), z.null()]).optional(),
+  // Paliers de gros dégressifs (LOT 3) : couples quantité seuil → prix unitaire,
+  // tels qu'écrits (devise source). Tolérant (nombre/chaîne/null par champ) — la
+  // cohérence (décroissance stricte, minimum, doublons) est tranchée en aval par
+  // sanitizeMoqTiers. Absent/null → aucun palier.
+  moq_tiers: z
+    .array(
+      z.object({
+        min_quantity: z.union([z.number(), z.string(), z.null()]),
+        unit_price: z.union([z.number(), z.string(), z.null()]),
+      }),
+    )
+    .nullable()
+    .optional(),
 })
 
 export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
@@ -389,6 +402,13 @@ export type CleanExtraction = {
    * ET l'IA a proposé un nouveau libellé inédit → alimente la file de validation.
    */
   suggested_category: string | null
+  /**
+   * Paliers de gros dégressifs VALIDÉS (LOT 3) par sanitizeMoqTiers : triés par
+   * quantité, prix STRICTEMENT décroissant, échelle douteuse → []. Le 1er palier
+   * porte le MINIMUM de commande. Prix en devise SOURCE (converti à l'approbation
+   * via buildMirrorTiers, jamais ici). Suggestion pending_review — jamais publié.
+   */
+  moq_tiers: SanitizedMoqTier[]
 }
 
 // Plafond anti-absurde du conditionnement (nb d'unités par lot).
@@ -412,6 +432,12 @@ export function buildCleanExtraction(
     ...normalizePack(raw.pack_size, raw.pack_unit),
     // Proposition de catégorie (seulement si category résolue = 'Autres' + label inédit).
     suggested_category: sanitizeSuggestedCategory(raw.suggested_category, category, source),
+    // LOT 3 — échelle validée en BOUT de chaîne IA (avant toute écriture). basePrice
+    // NON passé : le prix « headline » (price) et le 1er palier peuvent LÉGITIMEMENT
+    // diverger dans une légende libre (ex. « 20 aed, 50=18 » → base 20, palier 50=18).
+    // On ne force donc pas l'égalité ici ; base et paliers sont 2 suggestions
+    // indépendantes, toutes deux en pending_review (l'admin réconcilie au Lot 4).
+    moq_tiers: sanitizeMoqTiers(raw.moq_tiers),
   }
 }
 

@@ -10,6 +10,7 @@ import { telegramDownloadPhoto, telegramSendMessage } from './client'
 import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
 import { getRateToMad } from '@/lib/fx'
 import { checkProductLimit } from '@/lib/product-limit'
+import { insertMoqTiers } from '@/lib/supplier/moq-tiers'
 import {
   buildMessageKey,
   isValidLinkCodeFormat,
@@ -280,6 +281,13 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
     const rate = await getRateToMad(db, currency)
     const pricing = composePricing(currency, rate, clean.price_source)
 
+    // Paliers de gros dégressifs : déjà VALIDÉS par sanitizeMoqTiers (Lot 1) dans
+    // buildCleanExtraction (triés, prix strictement décroissant, échelle douteuse
+    // → []). Le 1er palier (le plus petit) porte le MINIMUM de commande ; aucun
+    // palier → min_quantity = 1 (défaut historique strictement inchangé).
+    const moqTiers = clean.moq_tiers
+    const minQuantity = moqTiers[0]?.min_quantity ?? 1
+
     // Insert en pending_review — JAMAIS publié directement.
     const { data: inserted, error: prodErr } = await admin
       .from('supplier_products')
@@ -292,7 +300,7 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
         niche: clean.subcategory,
         description: clean.description,
         photos: [publicUrl],
-        min_quantity: 1,
+        min_quantity: minQuantity,
         origin_country: 'Maroc',
         availability_type: 'local_stock',
         target_buyer_type: 'wholesaler',
@@ -333,18 +341,31 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
 
     const productId = (inserted as { id: string }).id
 
+    // Paliers (Lot 2) — best-effort comme le web/CSV : une erreur d'insert de
+    // palier ne casse JAMAIS l'ingestion (la fiche est déjà en pending_review,
+    // l'admin peut corriger). Prix VERBATIM en devise source (unit_price →
+    // unit_price_usd) ; la conversion FX + marge se fait à l'approbation admin.
+    const { error: tierErr } = await insertMoqTiers(
+      admin,
+      productId,
+      moqTiers.map((t) => ({ min_quantity: t.min_quantity, unit_price_usd: t.unit_price })),
+    )
+    // Best-effort (n'interrompt jamais l'ingestion) MAIS observable — parité avec
+    // le log CAT-IA-SUGGEST plus bas (finding @finance : ne pas rester silencieux).
+    if (tierErr) console.error('ingest: insertMoqTiers', productId, tierErr)
+
     // Modération RÉUTILISÉE (même moteur que le formulaire web et l'import CSV).
     const moderation = moderateSupplierProduct({
       product_name: productName,
       description: clean.description,
       photos: [publicUrl],
       category: clean.category,
-      min_quantity: 1,
+      min_quantity: minQuantity,
       stock_quantity: clean.stock_quantity,
       lead_time_days: clean.lead_time_days,
       suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
       supplier_unit_price_usd: null,
-      moq_tier_count: 0,
+      moq_tier_count: moqTiers.length,
     })
     await admin
       .from('supplier_products')
