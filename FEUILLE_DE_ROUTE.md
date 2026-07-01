@@ -26,19 +26,19 @@
 
 ---
 
-## 🏗️ CHANTIER PALIERS TELEGRAM — EN COURS (Lot 1/5 fait, 2026-07-01)
+## 🏗️ CHANTIER PALIERS TELEGRAM — EN COURS (Lots 1-2-3 faits / 5, 2026-07-01)
 
 > **But** : paliers de prix dégressifs + minimum de commande venant du **fournisseur automatiquement** (Telegram), pour scaler à des milliers de produits, **sans saisie admin manuelle**.
 > **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : 1er palier = **minimum de commande** ; prix **strictement décroissant** quand la quantité monte (ex. `10→20, 50→18, 100→16, 500→14`). Format `{ min_quantity, unit_price }`.
-> **Contexte** : l'aval (stockage, auto-report `buildMirrorTiers`, affichage + prix dégressif au panier + MOQ imposé) **marche déjà** ; le trou est l'amont (faire entrer les paliers depuis Telegram). Tout passe par le **mur de modération** — aucune piste ne publie un prix en autonomie.
+> **✅ Pipeline COMPLET de bout en bout** : extraction Telegram → sanitizer → insert `supplier_product_moq_tiers` → modération → auto-report catalogue (`buildMirrorTiers`) → panier dégressif + MOQ imposé. Tout passe par le **mur de modération** — aucune piste ne publie un prix en autonomie.
 
-- ✅ **Lot 1 — sanitizer `sanitizeMoqTiers`** (strict : rejette croissant/égal/doublon/aberrant/>20, cross-check base ; 33 tests ; @finance 🟢). **ISOLÉ, NON BRANCHÉ.** Mergé `main` `6977e6d`.
-- ⬜ **Lot 2 — helper `insertMoqTiers` factorisé** (dédoublonner l'insert web `supplier-products.ts:160` + CSV `supplier-bulk.ts:243`) — socle, sans risque. **← PROCHAINE ACTION.**
-- ⬜ **Lot 3 — extraction IA** : champ `moq_tiers` au tool/prompt `extract.ts` + `aiExtractionRawSchema` ; brancher `sanitizeMoqTiers` + `insertMoqTiers` dans `ingest.ts` + **vrai MOQ** (au lieu de `min_quantity:1`) + désambiguïsation stock/minimum/palier. **⚠️ ARGENT → circuit @finance obligatoire.**
-- ⬜ **Lot 4 — éditeur paliers + MOQ en modération admin** (`supplier-product-review.tsx` + `approveSupplierProduct`) : l'admin corrige une extraction douteuse avant approbation.
+- ✅ **Lot 1 — sanitizer `sanitizeMoqTiers`** (strict : rejette croissant/égal/doublon/aberrant/>20, cross-check base ; 33 tests ; @finance 🟢). Mergé `main` `6977e6d`.
+- ✅ **Lot 2 — helper `insertMoqTiers` factorisé** (web + CSV, refactor pur prouvé identique, @tester 4/4). Mergé `main` `f075e4f`.
+- ✅ **Lot 3 — extraction IA** : `moq_tiers` au tool/prompt `extract.ts` + `aiExtractionRawSchema` ; `buildCleanExtraction`→`sanitizeMoqTiers` ; `ingest.ts` branché (vrai MOQ = 1er palier, désambiguïsation stock/palier). **⚠️ ARGENT — @finance 🟢**, @tester 3/3 LOCAL. Purement additif (web/CSV/affichage intacts). Mergé `main` `cfa6eed`.
+- ⬜ **Lot 4 — éditeur paliers + MOQ en modération admin** (`supplier-product-review.tsx` + `approveSupplierProduct`) : l'admin corrige une extraction douteuse avant approbation. **+ reco @finance** : flag informatif si prix de base `<` 1er palier (affichage trompeur, pas ledger). **← PROCHAINE ACTION.**
 - ⬜ **Lot 5 — message bot d'accueil** recommandant le format (FR + AR/darija).
 
-**Prochaine action : reprendre au Lot 2**, puis 3 (⚠️ @finance) / 4 / 5 — un lot à la fois, à tête reposée.
+**Prochaine action : Lot 4** (éditeur paliers modération admin + flag @finance), puis Lot 5 (message bot) — un lot à la fois, à tête reposée.
 
 ---
 

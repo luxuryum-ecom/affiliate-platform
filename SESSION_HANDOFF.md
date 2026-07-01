@@ -1,7 +1,7 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
 > **Dernière mise à jour :** 2026-07-01
-> **Branche prod :** `main` @ `6977e6d`
+> **Branche prod :** `main` @ `cfa6eed`
 > **Migrations prod :** 001→**110** appliquées (104→110 confirmées en **Remote** le 2026-06-30 ; **aucune nouvelle migration** en session 2026-07-01)
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
@@ -26,25 +26,26 @@ La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloqua
 | **LOT 1B** | Notifications commande COD affilié — in-app (admins + affilié concerné + personnel dépôt à casier COD) + Telegram admin, zéro PII | **109** | ✅ EN PROD |
 | **LOT 1F** | Assignation des commandes COD à un agent (RPC atomique `assign_cod_order_atomic`, casier `assign_orders`, UI + i18n + audit) | **110** | ✅ EN PROD |
 | **Cloche 1A** | UI cloche notifications in-app (badge + dropdown sur table `notifications`, FR/AR/EN + RTL) | — | ✅ EN PROD |
-| **Magic-link fournisseur** | Onboarding ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur) ; admin génère lien + QR + partage WhatsApp (`/admin/users/[id]`) ; TTL admin 15 min ; notif in-app à la liaison + cloche fournisseur (`e50b1f0`) | — (code) | ✅ EN PROD (Vercel) — ⚙️ poser `TELEGRAM_BOT_USERNAME` |
+| **Magic-link fournisseur** | Onboarding ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur) ; admin génère lien + QR + partage WhatsApp (`/admin/users/[id]`) ; TTL admin 15 min ; notif in-app à la liaison + cloche fournisseur (`e50b1f0`) | — (code) | ✅ EN PROD (Vercel) — ⚙️ `TELEGRAM_BOT_USERNAME` posé, **à re-vérifier** |
+| **Paliers Telegram (Lots 1-2-3)** | Extraction IA des paliers de gros dégressifs depuis Telegram, COMPLÈTE : sanitizer (`6977e6d`) + helper `insertMoqTiers` (`f075e4f`) + extraction IA branchée `ingest.ts` (vrai MOQ, `cfa6eed`). @finance 🟢 · @tester 3/3 LOCAL | — (code) | ✅ EN PROD (Vercel) — canal Telegram (0 fournisseur lié) |
 
 **Qualité :** @finance 🟢 · @security 🟢 sur tous les lots financiers/sensibles ; 4 checks verts (tsc 0 / build / vitest / smoke) à chaque lot. Détail complet par lot dans `ETAT_SYSTEME.md`.
 
 ---
 
-## 🏗️ CHANTIER EN COURS — PALIERS TELEGRAM (Lot 1/5 fait, session 2026-07-01)
+## 🏗️ CHANTIER EN COURS — PALIERS TELEGRAM (Lots 1-2-3 faits / 5, session 2026-07-01)
 
 > **But** : que les **paliers de prix dégressifs + le minimum de commande** viennent du **fournisseur automatiquement** (Telegram), pour scaler à des milliers de produits sans saisie admin manuelle.
 > **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : 1er palier = **minimum de commande** ; prix **strictement décroissant** quand la quantité monte (`10→20, 50→18, 100→16, 500→14`). Format `{ min_quantity, unit_price }`.
-> L'aval (stockage, auto-report `buildMirrorTiers`, panier dégressif + MOQ imposé) **marche déjà** ; le trou est l'amont (entrée des paliers depuis Telegram). Tout passe par le **mur de modération** — aucune piste ne publie un prix seule.
+> **✅ Pipeline COMPLET de bout en bout** : extraction Telegram → sanitizer → insert → modération → auto-report catalogue (`buildMirrorTiers`) → panier dégressif + MOQ imposé. Tout passe par le **mur de modération** — aucune piste ne publie un prix seule.
 
-- ✅ **Lot 1 — sanitizer `sanitizeMoqTiers`** (schema.ts) : strict (rejette croissant/égal/doublon/aberrant/>20, cross-check base), **33 tests**, **@finance 🟢**. **ISOLÉ, NON BRANCHÉ** (aucun appelant). Mergé `main` `6977e6d`.
-- ⬜ **Lot 2 — helper `insertMoqTiers` factorisé** (web `supplier-products.ts:160` + CSV `supplier-bulk.ts:243`) — socle sans risque. **← REPRENDRE ICI.**
-- ⬜ **Lot 3 — extraction IA** (`extract.ts`/`schema.ts` + branchement `ingest.ts` + vrai MOQ + désambiguïsation stock/min/palier). **⚠️ ARGENT → @finance obligatoire.**
-- ⬜ **Lot 4 — éditeur paliers + MOQ en modération admin.**
+- ✅ **Lot 1 — sanitizer `sanitizeMoqTiers`** (schema.ts) : strict (rejette croissant/égal/doublon/aberrant/>20), **33 tests**, **@finance 🟢**. Mergé `main` `6977e6d`.
+- ✅ **Lot 2 — helper `insertMoqTiers` factorisé** (web + CSV, refactor pur prouvé identique, @tester 4/4). Mergé `main` `f075e4f`.
+- ✅ **Lot 3 — extraction IA** (`extract.ts`/`schema.ts` + branchement `ingest.ts` : vrai MOQ = 1er palier, désambiguïsation stock/palier). **⚠️ ARGENT — @finance 🟢**, @tester 3/3 LOCAL, purement additif. Mergé `main` `cfa6eed`.
+- ⬜ **Lot 4 — éditeur paliers + MOQ en modération admin** (`supplier-product-review.tsx` + `approveSupplierProduct`) : l'admin corrige une extraction douteuse. **+ reco @finance** : flag si prix de base `<` 1er palier (affichage trompeur, pas ledger). **← REPRENDRE ICI.**
 - ⬜ **Lot 5 — message bot d'accueil FR/darija** (recommander le format).
 
-**➡️ Reprise du chantier dev : Lot 2**, puis 3 (⚠️ @finance) / 4 / 5, un lot à la fois. *(Distinct des 4 bloquants go-live ci-dessous, qui sont des actions ops.)*
+**➡️ Reprise du chantier dev : Lot 4**, puis Lot 5, un lot à la fois. *(Distinct des 4 bloquants go-live ci-dessous, qui sont des actions ops.)*
 
 ---
 
