@@ -1,7 +1,7 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
 > **Dernière mise à jour :** 2026-07-02
-> **Branche prod :** `origin/main` @ `0ae5daf` (déployé Vercel) — **`main` LOCAL @ `43d8704`, 2 commits d'avance NON POUSSÉS** (Lot 4 paliers).
+> **Branche prod :** `origin/main` @ `5c4d03c` — **Lot 4 POUSSÉ le 2026-07-02** → auto-deploy Vercel déclenché (**succès à CONFIRMER au dashboard** : pas de CLI vercel/gh dans l'env pour le certifier).
 > **Migrations prod :** 001→**110** appliquées (104→110 confirmées en **Remote** le 2026-06-30 ; **aucune nouvelle migration** en sessions 2026-07-01/02)
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
@@ -12,9 +12,13 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 
 ## ▶️ REPRENDRE ICI (dans l'ordre)
 
-1. **🔴 Décider le `git push` de `main`** — `main` LOCAL est **2 commits d'avance** sur `origin/main` (`43d8704` = merge Lot 4, `70d83c5` = feat). Le push **déclenche l'auto-deploy Vercel (prod)** → **à faire par Abdou en terminal** (`! git push origin main`), décision go-live non prise en session. Lot 4 est **sain et audité** (@finance 🟢 · @security 🟢, 4 checks verts) → le push est sans risque code ; c'est la **décision de déploiement** qui reste à Abdou. Branche `feat/moq-tiers-editor` **conservée**.
-2. **⬜ Lot 5 — message bot d'accueil FR/darija** (dernier lot du chantier paliers) : message que le bot envoie au fournisseur pour **recommander le format des paliers** (« produit, 50=18, 100=16, min 50 »). i18n FR + AR/darija.
-3. Puis, hors chantier paliers : les **4 bloquants go-live ops** (section plus bas) — rotation secrets, backups, mig 091, redirect `/auth/callback`.
+0. **✅ FAIT 2026-07-02** — **Lot 4 poussé** (`origin/main` @ `5c4d03c`, pre-push vert) → auto-deploy Vercel. **Backup prod réparé côté script** : `backup-prod.sh` basculé du DIRECT (cassé, `SSL SYSCALL EOF`) vers le **pooler session-mode** (`aws-1-eu-central-1.pooler.supabase.com:5432`, `--db-url`, mdp lu de `~/AI-FACTORY/backups/.db_password` mode 600 → run auto lundi sans trousseau). Dernier bon dump **06-26 sécurisé en triple** (`_safe/` + iCloud). `supabase/.temp/` désindexé (désormais ignoré).
+1. **🔴 CONFIRMER le deploy Vercel du Lot 4** (dashboard) — non certifiable depuis l'env agent (pas de CLI vercel/gh).
+2. **🟠 Preuve backup + test restauration** — (a) créer `~/AI-FACTORY/backups/.db_password` (Database password Supabase, `chmod 600`), (b) lancer le dump pooler 07-02 (schéma+data), (c) **test de restauration en LOCAL** (`127.0.0.1`, base jetable) = la vraie preuve. **⚠️ Le dump 07-02 n'a PAS encore tourné.**
+3. **🔴 Rotation secrets** — `SUPABASE_SERVICE_ROLE_KEY` (fuitée via `NEXT_PUBLIC_APP_URL`) + mdp admin `AdminTest2026!`.
+4. **🟢 Migration 091 en prod** — APRÈS deploy confirmé (`supabase db push`, lockstep). Vérifier d'abord si déjà en Remote.
+5. **🟠 Redirect `/auth/callback`** — ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` à l'allowlist dashboard Supabase (sinon reset MDP ne boucle pas).
+6. **⬜ Lot 5 — message bot d'accueil FR/darija** (dernier lot du chantier paliers) : recommander le format des paliers (« produit, 50=18, 100=16, min 50 »). i18n FR + AR/darija.
 
 ---
 
@@ -36,7 +40,7 @@ La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloqua
 | **Cloche 1A** | UI cloche notifications in-app (badge + dropdown sur table `notifications`, FR/AR/EN + RTL) | — | ✅ EN PROD |
 | **Magic-link fournisseur** | Onboarding ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur) ; admin génère lien + QR + partage WhatsApp (`/admin/users/[id]`) ; TTL admin 15 min ; notif in-app à la liaison + cloche fournisseur (`e50b1f0`) | — (code) | ✅ EN PROD (Vercel) — ⚙️ `TELEGRAM_BOT_USERNAME` posé, **à re-vérifier** |
 | **Paliers Telegram (Lots 1-2-3)** | Extraction IA des paliers de gros dégressifs depuis Telegram, COMPLÈTE : sanitizer (`6977e6d`) + helper `insertMoqTiers` (`f075e4f`) + extraction IA branchée `ingest.ts` (vrai MOQ, `cfa6eed`). @finance 🟢 · @tester 3/3 LOCAL | — (code) | ✅ EN PROD (Vercel) — canal Telegram (0 fournisseur lié) |
-| **Paliers Telegram (Lot 4)** | Éditeur paliers + MOQ en **modération admin** (module pur `moq-editor.ts` + `approveSupplierProduct` + UI) : l'admin corrige une extraction douteuse. Devise fournisseur + MAD lecture seule ; palier optionnel ; `sanitizeMoqTiers` seul juge ; write idempotent delete-then-insert scopé ; flag @finance base<1er palier. @finance 🟢 · @security 🟢 · @tester **405/405 LOCAL** | — (code) | 🔄 **MERGÉ `main` LOCAL** (`43d8704`) — **NON POUSSÉ** (origin intact, prod non déployée) |
+| **Paliers Telegram (Lot 4)** | Éditeur paliers + MOQ en **modération admin** (module pur `moq-editor.ts` + `approveSupplierProduct` + UI) : l'admin corrige une extraction douteuse. Devise fournisseur + MAD lecture seule ; palier optionnel ; `sanitizeMoqTiers` seul juge ; write idempotent delete-then-insert scopé ; flag @finance base<1er palier. @finance 🟢 · @security 🟢 · @tester **405/405 LOCAL** | — (code) | ✅ **EN PROD** — poussé `origin/main` @ `5c4d03c` (auto-deploy Vercel, succès à confirmer dashboard) |
 
 **Qualité :** @finance 🟢 · @security 🟢 sur tous les lots financiers/sensibles ; 4 checks verts (tsc 0 / build / vitest / smoke) à chaque lot. Détail complet par lot dans `ETAT_SYSTEME.md`.
 
@@ -51,7 +55,7 @@ La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloqua
 - ✅ **Lot 1 — sanitizer `sanitizeMoqTiers`** (schema.ts) : strict (rejette croissant/égal/doublon/aberrant/>20), **33 tests**, **@finance 🟢**. Mergé `main` `6977e6d`.
 - ✅ **Lot 2 — helper `insertMoqTiers` factorisé** (web + CSV, refactor pur prouvé identique, @tester 4/4). Mergé `main` `f075e4f`.
 - ✅ **Lot 3 — extraction IA** (`extract.ts`/`schema.ts` + branchement `ingest.ts` : vrai MOQ = 1er palier, désambiguïsation stock/palier). **⚠️ ARGENT — @finance 🟢**, @tester 3/3 LOCAL, purement additif. Mergé `main` `cfa6eed`.
-- ✅ **Lot 4 — éditeur paliers + MOQ en modération admin** : module pur `src/lib/supplier/moq-editor.ts` (parse/juge, testable) + `approveSupplierProduct` (write **idempotent delete-then-insert scopé**, mirror sur nouveaux paliers) + UI `supplier-product-review.tsx` (N paliers dynamiques ≤20, pré-rempli, MOQ éditable, **MAD lecture seule**, i18n FR/AR/EN+RTL). Palier **optionnel** ; `sanitizeMoqTiers` = **seul juge** (basePrice=null + flag @finance séparé, non bloquant) ; prix source **verbatim**. **⚠️ ARGENT — @finance 🟢 · @security 🟢**, @tester **405/405 LOCAL** (round-trip 6 paliers + delete scopé non-fuyant prouvés), 4 checks verts. **Mergé `main` LOCAL `--no-ff` (`43d8704`), NON POUSSÉ.** **🪵 Dette connue** : séquence UPDATE+delete/insert+miroir **non transactionnelle** (échec INSERT après DELETE → « MOQ à jour + 0 palier », repli sûr/idempotent, zéro impact ledger) → **RPC atomique si les paliers deviennent un prix facturé critique**.
+- ✅ **Lot 4 — éditeur paliers + MOQ en modération admin** : module pur `src/lib/supplier/moq-editor.ts` (parse/juge, testable) + `approveSupplierProduct` (write **idempotent delete-then-insert scopé**, mirror sur nouveaux paliers) + UI `supplier-product-review.tsx` (N paliers dynamiques ≤20, pré-rempli, MOQ éditable, **MAD lecture seule**, i18n FR/AR/EN+RTL). Palier **optionnel** ; `sanitizeMoqTiers` = **seul juge** (basePrice=null + flag @finance séparé, non bloquant) ; prix source **verbatim**. **⚠️ ARGENT — @finance 🟢 · @security 🟢**, @tester **405/405 LOCAL** (round-trip 6 paliers + delete scopé non-fuyant prouvés), 4 checks verts. **✅ EN PROD — poussé `origin/main` @ `5c4d03c` le 2026-07-02** (pre-push vert ; deploy Vercel à confirmer dashboard). **🪵 Dette connue** : séquence UPDATE+delete/insert+miroir **non transactionnelle** (échec INSERT après DELETE → « MOQ à jour + 0 palier », repli sûr/idempotent, zéro impact ledger) → **RPC atomique si les paliers deviennent un prix facturé critique**.
 - ⬜ **Lot 5 — message bot d'accueil FR/darija** (recommander le format). **← REPRENDRE ICI (après le push de `main`).**
 
 **➡️ Reprise du chantier dev : Lot 5** (dernier lot). *(Distinct des 4 bloquants go-live ci-dessous, qui sont des actions ops.)*
@@ -68,9 +72,7 @@ La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloqua
    - **`SUPABASE_SERVICE_ROLE_KEY`** — fuitée (incidents 2026-06-20/22 tests + 2026-06-27 via `NEXT_PUBLIC_APP_URL` inliné dans le bundle client) → **régénérer** (Supabase Dashboard → API Keys), reposer **uniquement** dans `SUPABASE_SERVICE_ROLE_KEY` (Vercel + `.env.local`), jamais en `NEXT_PUBLIC_*`, puis redeploy.
    - **Mot de passe admin** `AdminTest2026!` — **committé** → changer + nettoyer les comptes/secrets de test.
 
-**2. 🚧 BACKUPS AUTO PROD.** La base prod `owvtfzxvirttrbcsiveg` n'a **aucun backup automatique actif**. Le LaunchAgent local `com.mozouna.backup-prod` dépend du PC allumé + Docker → non fiable. Activer **l'un** :
-   - **(a) Supabase PITR** (plan Pro, payant) — backups continus côté serveur, restauration à la minute. **Recommandé.**
-   - **(b) Cron `pg_dump` hébergé** hors-PC (serveur/CI indépendant), dump quotidien.
+**2. 🟠 BACKUPS AUTO PROD — 🔧 RÉPARÉ CÔTÉ SCRIPT le 2026-07-02, preuve à produire.** Cause de l'échec (`SSL SYSCALL EOF` depuis le 2026-06-29) : `backup-prod.sh` dumpait via l'endpoint **DIRECT** (`supabase db dump --linked`, `db.<ref>.supabase.co`) rendu inatteignable par Supabase. **Corrigé** : bascule sur le **pooler session-mode** (`--db-url postgresql://postgres.owvtfzxvirttrbcsiveg:<pw>@aws-1-eu-central-1.pooler.supabase.com:5432/postgres`), mdp lu de `~/AI-FACTORY/backups/.db_password` (mode 600) → run auto lundi **sans trousseau**. Mdp masqué des logs. Dernier bon dump **06-26 sécurisé en triple** (`_safe/` + iCloud). **RESTE À FAIRE** : (a) créer `.db_password`, (b) lancer le dump pooler 07-02, (c) **test de restauration en LOCAL** (jamais fait — la vraie preuve). Le LaunchAgent reste dépendant du PC allumé + Docker → **PITR (plan Pro) recommandé à terme** pour un backup serveur indépendant.
 
 **3. ⚙️ VÉRIFIER / APPLIQUER MIG 091** (resserrage policy SELECT `products` → staff-only). Statut incohérent dans les docs (« appliquée » vs « reste à appliquer ») → **confirmer en prod** et `supabase db push` si absente. Sans elle, la table de base `products` reste lisible par les authentifiés (les pages passent déjà par la vue redacted, donc pas de fuite UI, mais policy à fermer).
 
