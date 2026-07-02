@@ -301,6 +301,16 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
                 platformMarginValue={product.platform_margin_value}
                 applyPlatformMargin={product.apply_platform_margin}
                 adminNotes={product.admin_notes}
+                minQuantity={product.min_quantity}
+                sourceCurrency={product.source_currency}
+                fxRateSourceToMad={product.fx_rate_source_to_mad}
+                existingTiers={tiers
+                  .slice()
+                  .sort((a, b) => a.min_quantity - b.min_quantity)
+                  .map((tier) => ({
+                    qty: String(tier.min_quantity),
+                    price: String(tier.unit_price_usd),
+                  }))}
               />
             </div>
 

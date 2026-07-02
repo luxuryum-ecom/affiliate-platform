@@ -9,6 +9,7 @@ import { buildSupplierPricing, applyPlatformMargin, buildMirrorTiers } from '@/l
 import { checkProductLimit } from '@/lib/product-limit'
 import { buildSupplierMirror } from '@/lib/supplier-mirror'
 import { insertMoqTiers } from '@/lib/supplier/moq-tiers'
+import { parseMoqEditorForm, judgeEditedTiers } from '@/lib/supplier/moq-editor'
 import { parseMoneyInput } from '@/lib/money'
 import { parsePercentInput } from '@/lib/rate'
 import type {
@@ -20,7 +21,15 @@ import type {
 import { isBuyerPurchaseProfile, isBuyerVolumeTier } from '@/lib/rfq-buyer-intake'
 import { moderateSupplierProduct, type ModerationInput } from '@/lib/supplier-product-moderation'
 
-export type SupplierProductState = { error: string | null; success?: boolean }
+export type SupplierProductState = {
+  error: string | null
+  success?: boolean
+  // @finance — LOT 4 : flag INFORMATIF non bloquant (affichage trompeur). Vrai si le
+  // prix de base (devise source) est < prix du 1er palier : la « remise » afficherait
+  // un prix supérieur à l'achat à l'unité. AUCUN impact ledger — l'approbation est
+  // autorisée quand même (règle Abdou). Rendu comme avertissement côté client.
+  priceBaseBelowFirstTier?: boolean
+}
 
 // RÈGLE ARGENT n°4 — le prix de palier (devise fournisseur) est validé en CHAÎNE
 // décimale stricte (money.ts) et passé verbatim à la colonne numeric : zéro parseFloat.
@@ -255,6 +264,14 @@ export async function approveSupplierProduct(
   }
   const admin_notes = (formData.get('admin_notes') as string)?.trim() || null
 
+  // ── LOT 4 — Éditeur MOQ + paliers (parsé AVANT tout write) ────────────────────
+  // L'éditeur n'écrit les paliers QUE s'il a réellement participé (drapeau caché) :
+  // un poster sans éditeur (test, autre appelant) ne DÉCLENCHE aucun delete → zéro
+  // wipe. Logique de parsing/jugement dans le module pur `moq-editor` (unit-testable).
+  const parsedEditor = parseMoqEditorForm(formData)
+  if (!parsedEditor.ok) return { error: parsedEditor.error }
+  const { editorPresent, editedMoq, editedTiers } = parsedEditor.value
+
   // ── Marge plateforme fournisseur (canal DIRECT) — prix FINAL calculé serveur ──
   // Toggle par produit (OFF par défaut tant que l'UI ne l'envoie pas). On lit le prix
   // converti (base) déjà figé à la soumission et on applique la marge si le toggle est ON.
@@ -262,11 +279,12 @@ export async function approveSupplierProduct(
   const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
   const { data: existing } = (await supabase
     .from('supplier_products')
-    .select('suggested_wholesale_price_mad, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos, category, subcategory, fx_rate_source_to_mad, supplier_product_moq_tiers(min_quantity, unit_price_usd)')
+    .select('suggested_wholesale_price_mad, price_source, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos, category, subcategory, fx_rate_source_to_mad, supplier_product_moq_tiers(min_quantity, unit_price_usd)')
     .eq('id', id)
     .single()) as {
     data: {
       suggested_wholesale_price_mad: number | null
+      price_source: number | null
       product_name: string
       availability_type: string
       stock_quantity: number | null
@@ -291,6 +309,17 @@ export async function approveSupplierProduct(
     marginValueNum,
   )
 
+  // ── LOT 4 — JUGEMENT des paliers édités (le seul juge = sanitizeMoqTiers) ──────
+  // AUCUN write encore : on rejette AVANT de toucher la base (garde-fou anti-wipe).
+  const judged = judgeEditedTiers({
+    editedMoq,
+    existingMoq: existing?.min_quantity ?? 1,
+    editedTiers,
+    basePriceSource: existing?.price_source ?? null,
+  })
+  if (!judged.ok) return { error: judged.error }
+  const { effectiveMoq, tiersToInsert, priceBaseBelowFirstTier } = judged
+
   const { error } = await supabase
     .from('supplier_products')
     .update({
@@ -306,10 +335,29 @@ export async function approveSupplierProduct(
       approved_by: userId,
       approved_at: new Date().toISOString(),
       rejected_at: null,
+      // LOT 4 — MOQ corrigé par l'admin (seulement si l'éditeur a participé).
+      ...(editorPresent ? { min_quantity: effectiveMoq } : {}),
     })
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  // ── LOT 4 — Écriture idempotente des paliers SOURCE, AVANT buildMirrorTiers ────
+  // Même esprit que le fix P0-1 du miroir : remplacement app-level (DELETE scopé →
+  // INSERT) car il n'existe pas de clé d'upsert naturelle sur (supplier_product_id).
+  // DELETE strictement scopé au produit courant, exécuté SEULEMENT après un jugement
+  // OK (garde-fou anti-wipe). Set vide = suppression intentionnelle (retour prix
+  // unique) : palier OPTIONNEL. service_role (parité avec insertMoqTiers / flux web).
+  if (editorPresent) {
+    const tierAdmin = createAdminClient()
+    const { error: delErr } = await tierAdmin
+      .from('supplier_product_moq_tiers')
+      .delete()
+      .eq('supplier_product_id', id)
+    if (delErr) return { error: delErr.message }
+    const { error: insErr } = await insertMoqTiers(tierAdmin, id, tiersToInsert)
+    if (insErr) return { error: insErr }
+  }
 
   // ── C-B : auto-provisionner le miroir catalogue (commande directe Maroc) ──────
   // Produit Maroc local_stock avec prix MAD → on crée/maj un miroir `products` pour
@@ -317,6 +365,13 @@ export async function approveSupplierProduct(
   // suggested (coût). Marge captée UNE fois. Idempotent sur source_supplier_product_id.
   // Import / sans taux FX / marge anormale → pas de miroir (le produit reste en devis).
   if (existing) {
+    // LOT 4 — le miroir se construit sur les paliers RÉELLEMENT en base après édition
+    // (nouveaux paliers si l'éditeur a participé, sinon les paliers source existants).
+    // Number() sur une chaîne money DÉJÀ validée (≤2 déc) = pattern établi (money.ts),
+    // pas de parseFloat ; buildMirrorTiers exige des unit_price_usd numériques.
+    const mirrorTierSource: { min_quantity: number; unit_price_usd: number }[] = editorPresent
+      ? tiersToInsert.map((t) => ({ min_quantity: t.min_quantity, unit_price_usd: Number(t.unit_price_usd) }))
+      : (existing.supplier_product_moq_tiers ?? [])
     const mirror = buildSupplierMirror({
       id,
       product_name: existing.product_name,
@@ -325,7 +380,7 @@ export async function approveSupplierProduct(
       suggested_wholesale_price_mad: suggested,
       final_wholesale_price_mad,
       stock_quantity: existing.stock_quantity,
-      min_quantity: existing.min_quantity,
+      min_quantity: effectiveMoq,
       // AFFICHAGE PUR — reporte l'unité/conditionnement au miroir (comme le flux Finaliser).
       unit: existing.unit,
       pack_size: existing.pack_size,
@@ -339,7 +394,7 @@ export async function approveSupplierProduct(
       // même chaîne que final_wholesale_price_mad (marge une fois, biais ½-cent écarté),
       // bornés pour getWholesaleTier. Grossiste-only. Pas de palier source → [] (prix unique).
       wholesale_tiers: buildMirrorTiers(
-        existing.supplier_product_moq_tiers,
+        mirrorTierSource,
         existing.fx_rate_source_to_mad,
         apply_platform_margin,
         platform_margin_type as PlatformMarginType,
@@ -386,7 +441,7 @@ export async function approveSupplierProduct(
   revalidatePath('/admin/supplier-products')
   revalidatePath(`/admin/supplier-products/${id}`)
   revalidatePath('/wholesale/marketplace')
-  return { error: null, success: true }
+  return { error: null, success: true, priceBaseBelowFirstTier }
 }
 
 // ── Admin: reject a supplier product ──────────────────────────────────────────
