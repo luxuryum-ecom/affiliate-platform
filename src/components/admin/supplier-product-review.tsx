@@ -34,6 +34,7 @@ interface ApproveFormProps {
   platformMarginType: string
   platformMarginValue: number | null
   applyPlatformMargin: boolean
+  autoTiersEnabled: boolean
   adminNotes: string | null
   // LOT 4 — éditeur MOQ + paliers
   minQuantity: number
@@ -49,6 +50,7 @@ export function ApproveSupplierProductForm({
   platformMarginType,
   platformMarginValue,
   applyPlatformMargin,
+  autoTiersEnabled,
   adminNotes,
   minQuantity,
   sourceCurrency,
@@ -159,6 +161,23 @@ export function ApproveSupplierProductForm({
           <span className="text-sm">
             <span className="block font-medium text-foreground">{t('applyMarginLabel')}</span>
             <span className="block text-xs text-muted mt-0.5">{t('applyMarginHint')}</span>
+          </span>
+        </label>
+      </div>
+
+      {/* Toggle génération auto de paliers dégressifs (uniquement si aucun palier saisi). */}
+      <div className="rounded-lg border border-line bg-surface-2 p-3">
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="auto_tiers_enabled"
+            defaultChecked={autoTiersEnabled}
+            disabled={isPending}
+            className="mt-0.5 h-4 w-4 rounded border-line text-gold-500 focus:ring-gold-400"
+          />
+          <span className="text-sm">
+            <span className="block font-medium text-foreground">{t('autoTiersLabel')}</span>
+            <span className="block text-xs text-muted mt-0.5">{t('autoTiersHint')}</span>
           </span>
         </label>
       </div>

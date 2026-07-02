@@ -147,6 +147,79 @@ export function buildMirrorTiers(
 }
 
 /**
+ * GÉNÉRATION AUTO de paliers dégressifs (ADDITIF — n'appeler QUE si le produit n'a
+ * AUCUN palier source, cf. approveSupplierProduct). PUR & testable. Ne réécrit AUCUNE
+ * formule existante : réutilise le coût (suggested) et le prix (final = applyPlatformMargin).
+ *
+ * RÈGLE MÉTIER (Abdou, ARGENT) — décote basée sur la MARGE, pas sur le prix :
+ *  - Palier 1 (MOQ) = prix unitaire ACTUEL du produit EXACTEMENT (`final_wholesale_price_mad`)
+ *    → aucun changement de prix visible sur petites quantités.
+ *  - Au dernier palier, on redonne jusqu'à 70 % de la marge au grossiste (garde ≥ 30 %),
+ *    interpolation LINÉAIRE des prix entre le 1er et le dernier palier (4 tranches).
+ *  - PLANCHER marge/unité = 8 % du prix de vente (POURCENTAGE SEUL, aucun montant DH fixe),
+ *    JAMAIS franchi. Si la marge pleine ≤ 8 % du prix (ou marge nulle/OFF) → AUCUN palier
+ *    auto ([]) → le produit reste au prix unitaire (bloc « Prix de gros »).
+ * Quantités ancrées au MOQ : MOQ, ×5, ×10, ×50. `max_qty` bornés (jamais le bug du 1er palier).
+ * Prix au CENTIME (2 déc.) → petits produits OK (paliers en centimes au-dessus du coût).
+ * MUR ABSOLU : aucun palier ne descend jamais sous `coût + plancher` (donc jamais sous le coût).
+ *
+ * @param factoryCostMad coût fournisseur converti MAD SANS marge (= suggested_wholesale_price_mad)
+ * @param sellPriceMad   prix de vente grossiste ACTUEL (= final_wholesale_price_mad, marge incluse)
+ * @param moq            minimum de commande (supplier_products.min_quantity)
+ */
+export function generateAutoTiers(
+  factoryCostMad: number | null,
+  sellPriceMad: number | null,
+  moq: number,
+): WholesaleTier[] {
+  if (factoryCostMad == null || sellPriceMad == null) return []
+  if (!Number.isFinite(factoryCostMad) || !Number.isFinite(sellPriceMad)) return []
+  if (sellPriceMad <= 0 || factoryCostMad < 0) return []
+
+  // Tout le calcul se fait en CENTIMES ENTIERS → zéro bruit flottant, money-safe (jamais de
+  // ½-centime fabriqué, jamais de palier bumpé d'un centime par imprécision binaire).
+  const costC = Math.round(factoryCostMad * 100)
+  const sellC = Math.round(sellPriceMad * 100)
+  const fullMarginC = sellC - costC
+  if (fullMarginC <= 0) return [] // marge nulle / OFF → aucun palier auto
+
+  // PLANCHER = 8 % du prix de vente, POURCENTAGE UNIQUEMENT (aucun montant DH fixe).
+  // → adapté aux PETITS produits (tomate 4 DH, sardine 6 DH, article 1 DH) : la marge minimale
+  // s'exprime en centimes au-dessus du coût, jamais bloquée par un seuil DH absurde.
+  // Toujours > 0 (prix > 0) ⇒ MUR ABSOLU : chaque palier reste STRICTEMENT au-dessus du coût.
+  // Marge pleine ≤ 8 % du prix → aucun palier auto ([] : le grossiste reste au prix unitaire).
+  const floorC = Math.round(0.08 * sellC)
+  if (fullMarginC <= floorC) return []
+
+  // Dernier palier : redonne jusqu'à 70 % (garde 30 %), MAIS jamais sous le plancher (8 %).
+  const lastMarginC = Math.max(floorC, Math.round(0.3 * fullMarginC))
+
+  // 1er palier = prix unitaire EXACT (`final_wholesale_price_mad`) ; dernier = coût + lastMargin
+  // (centimes entiers → marge = lastMarginC ≥ floorC garantie). Prix rendus en DH (÷100, 2 déc.).
+  const priceFirstC = sellC
+  const priceLastC = costC + lastMarginC
+
+  const minQty = Number.isInteger(moq) && moq >= 1 ? moq : 1
+  const qtys = [minQty, minQty * 5, minQty * 10, minQty * 50]
+
+  // Interpolation LINÉAIRE des prix (centimes entiers), 1er et dernier ancrés exactement.
+  const raw = qtys.map((q, i) => {
+    const priceC =
+      i === 0
+        ? priceFirstC
+        : i === qtys.length - 1
+          ? priceLastC
+          : Math.round(priceFirstC - ((priceFirstC - priceLastC) * i) / (qtys.length - 1))
+    return { min_qty: q, price_per_unit: priceC / 100 }
+  })
+
+  // Bornage max_qty (= min_qty suivant − 1), dernier ouvert → getWholesaleTier sert le bon palier.
+  return raw.map((tier, i, arr) =>
+    i < arr.length - 1 ? { ...tier, max_qty: arr[i + 1].min_qty - 1 } : tier,
+  )
+}
+
+/**
  * Compose les champs de prix (PUR, sans DB) à partir de la devise + taux résolus.
  * - currency null      → no_country, canSubmit=false (BLOQUER la soumission).
  * - currency, rate null→ no_rate, produit créé mais mad NULL + flag (admin pose le taux).

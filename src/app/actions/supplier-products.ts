@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
-import { buildSupplierPricing, applyPlatformMargin, buildMirrorTiers } from '@/lib/supplier-pricing'
+import { buildSupplierPricing, applyPlatformMargin, buildMirrorTiers, generateAutoTiers } from '@/lib/supplier-pricing'
 import { checkProductLimit } from '@/lib/product-limit'
 import { buildSupplierMirror } from '@/lib/supplier-mirror'
 import { insertMoqTiers } from '@/lib/supplier/moq-tiers'
@@ -277,9 +277,12 @@ export async function approveSupplierProduct(
   // converti (base) déjà figé à la soumission et on applique la marge si le toggle est ON.
   // `applyPlatformMargin` = miroir half-up de calculatePlatformPrice ; OFF → base inchangée.
   const apply_platform_margin = formData.get('apply_platform_margin') === 'on'
+  // Toggle génération auto de paliers (checkbox, ON par défaut). Ne s'applique QUE si le
+  // produit n'a AUCUN palier source (cf. bloc miroir plus bas). Additif, zéro impact ailleurs.
+  const auto_tiers_enabled = formData.get('auto_tiers_enabled') === 'on'
   const { data: existing } = (await supabase
     .from('supplier_products')
-    .select('suggested_wholesale_price_mad, price_source, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos, category, subcategory, fx_rate_source_to_mad, supplier_product_moq_tiers(min_quantity, unit_price_usd)')
+    .select('suggested_wholesale_price_mad, price_source, product_name, availability_type, stock_quantity, min_quantity, unit, pack_size, pack_unit, photos, category, subcategory, fx_rate_source_to_mad, auto_tiers_enabled, supplier_product_moq_tiers(min_quantity, unit_price_usd)')
     .eq('id', id)
     .single()) as {
     data: {
@@ -296,6 +299,7 @@ export async function approveSupplierProduct(
       category: string | null
       subcategory: string | null
       fx_rate_source_to_mad: number | null
+      auto_tiers_enabled: boolean | null
       supplier_product_moq_tiers: { min_quantity: number; unit_price_usd: number }[] | null
     } | null
     error: unknown
@@ -335,6 +339,7 @@ export async function approveSupplierProduct(
       approved_by: userId,
       approved_at: new Date().toISOString(),
       rejected_at: null,
+      auto_tiers_enabled,
       // LOT 4 — MOQ corrigé par l'admin (seulement si l'éditeur a participé).
       ...(editorPresent ? { min_quantity: effectiveMoq } : {}),
     })
@@ -372,6 +377,20 @@ export async function approveSupplierProduct(
     const mirrorTierSource: { min_quantity: number; unit_price_usd: number }[] = editorPresent
       ? tiersToInsert.map((t) => ({ min_quantity: t.min_quantity, unit_price_usd: Number(t.unit_price_usd) }))
       : (existing.supplier_product_moq_tiers ?? [])
+    // Paliers du miroir : les paliers SOURCE fournisseur PRIMENT (buildMirrorTiers). ADDITIF —
+    // si AUCUN palier source ET toggle ON → génération auto dégressive (decote/marge + plancher,
+    // 1er palier = final EXACT). Sinon (paliers source, ou toggle OFF) → comportement inchangé.
+    const mirrorTiers = buildMirrorTiers(
+      mirrorTierSource,
+      existing.fx_rate_source_to_mad,
+      apply_platform_margin,
+      platform_margin_type as PlatformMarginType,
+      marginValueNum,
+    )
+    const wholesaleTiers =
+      mirrorTierSource.length === 0 && auto_tiers_enabled
+        ? generateAutoTiers(suggested, final_wholesale_price_mad, effectiveMoq)
+        : mirrorTiers
     const mirror = buildSupplierMirror({
       id,
       product_name: existing.product_name,
@@ -390,16 +409,9 @@ export async function approveSupplierProduct(
       // CANAL D2 — catégorie canonique reportée au miroir (rangement/rayons grossiste).
       category: existing.category,
       subcategory: existing.subcategory,
-      // PALIERS D3 (ARGENT) — paliers source fournisseur convertis FX+marge en ENTIER MAD,
-      // même chaîne que final_wholesale_price_mad (marge une fois, biais ½-cent écarté),
-      // bornés pour getWholesaleTier. Grossiste-only. Pas de palier source → [] (prix unique).
-      wholesale_tiers: buildMirrorTiers(
-        mirrorTierSource,
-        existing.fx_rate_source_to_mad,
-        apply_platform_margin,
-        platform_margin_type as PlatformMarginType,
-        marginValueNum,
-      ),
+      // PALIERS (ARGENT) — source fournisseur (FX+marge, bornés) OU auto-générés si vides
+      // (decote/marge + plancher). Grossiste-only. cf. `wholesaleTiers` ci-dessus.
+      wholesale_tiers: wholesaleTiers,
     })
     if (mirror.create) {
       // P0-1 — l'index unique sur products.source_supplier_product_id est PARTIEL
