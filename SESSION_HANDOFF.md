@@ -1,8 +1,8 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
 > **Dernière mise à jour :** 2026-07-02
-> **Branche prod :** `origin/main` @ `5c4d03c` (Lot 4 EN PROD) — **`main` LOCAL @ `7bb5c57`, 3 commits d'avance NON POUSSÉS** (merge L5 `7bb5c57` + feat L5 `0880fae` + session-close L4 `11180f5`). ⚠️ **Lot 5 PAS en prod** tant que `main` n'est pas poussé.
-> **Migrations prod :** 001→**110** appliquées (104→110 confirmées en **Remote** le 2026-06-30 ; **aucune nouvelle migration** en sessions 2026-07-01/02)
+> **Branche prod :** `origin/main` @ `7eba3d6` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
+> **Migrations prod :** 001→**110** appliquées. ⚠️ **Migration 111 (fix données) NON appliquée** (à lancer par Abdou dans Supabase SQL Editor — PAS `supabase db push`, cf. REPRENDRE ICI). 091 toujours en attente.
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
 
@@ -10,13 +10,19 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 
 ---
 
-## ▶️ REPRENDRE ICI (dans l'ordre)
+## ✅ FAIT EN PROD — 2026-07-02 (tout mergé `main` + poussé + déployé Vercel)
+- **Lot 4** — éditeur paliers + MOQ en modération admin (@finance 🟢 @security 🟢).
+- **Lot 5** — message d'accueil bot 4 langues (`ar-MA`→darija, `ar*`→MSA, `fr*`→FR, reste→EN), nom **« Abdou Baba »**, devises MAD/AED/USD.
+- **Rebrand Mozouna → Abdou Baba** (texte visible : UI, bot, emails, titres/SEO). **« Mozouna Group » conservé** en footer/légal/entité (façon Alibaba Group). `MozounaLogo`=nom React, `@MozounaSupplierBot`, contrainte DB = intacts (non touchés).
+- **Uniformisation paliers (code/UI)** : produit local sans palier → bloc « Prix de gros » par défaut ; international → paliers **indicatifs** (« estimation — hors transport/douane, prix ferme au devis »). @finance 🟢 @security 🟢. **Chantier paliers Telegram CLOS (Lots 1→5).**
+- **Backup prod réparé côté script** (`backup-prod.sh` → pooler session-mode, mdp de `.db_password`, dump 06-26 sécurisé en triple) · `supabase/.temp/` désindexé.
 
-1. **🔴 Décider le `git push origin main`** — `main` LOCAL a **3 commits d'avance** (`7bb5c57` merge L5 + `0880fae` feat L5 + `11180f5` session-close L4). Le push **déclenche l'auto-deploy Vercel** et **met le Lot 5 en prod** (message d'accueil « Abdou Baba »). **À faire par Abdou en terminal** (`! git push origin main`) — décision de déploiement. *(Lot 4 déjà en prod ; Lot 5 sain, @tester 453/453, 4 checks verts.)*
-2. **🏷️ Rebrand global Mozouna → Abdou Baba** — **Phase 0 (cartographie)** : trouver **TOUS** les « Mozouna » du code (bot `src/lib/telegram/`, i18n FR/AR/EN `messages/*.json`, emails/templates, métadonnées/titres, header/footer, constantes). Modèle : **« Abdou Baba » = marketplace visible**, **« Mozouna » = maison-mère** (footer/légal, façon Alibaba Group). Aujourd'hui le nom est **INCOHÉRENT** (bot dit Abdou Baba, le reste dit Mozouna) → à traiter **avant l'ouverture fournisseurs**. Détail : `FEUILLE_DE_ROUTE.md` → « NOUVEAU CHANTIER — REBRAND ».
-3. **Bloquants go-live ops** (section « PROCHAINE ACTION » plus bas) : (a) **preuve backup + restauration LOCAL** (créer `~/AI-FACTORY/backups/.db_password` mode 600 → dump pooler 07-02 → restore test ; ⚠️ pas encore fait) · (b) **rotation** `SUPABASE_SERVICE_ROLE_KEY` + mdp admin `AdminTest2026!` · (c) **mig 091** en prod APRÈS deploy (lockstep, vérifier si déjà en Remote) · (d) **redirect `/auth/callback`** dans l'allowlist dashboard Supabase.
+## ▶️ REPRENDRE ICI — RESTE (à froid, pas urgent)
 
-**✅ Contexte fait 2026-07-02 :** Lot 4 (paliers modération) **EN PROD** · Lot 5 (accueil bot 4 langues) **mergé main LOCAL** · **backup prod réparé côté script** (`backup-prod.sh` → pooler session-mode, mdp de `.db_password`, dump 06-26 sécurisé en triple) · `supabase/.temp/` désindexé. **Chantier paliers Telegram CLOS (Lots 1→5).**
+1. **🧊 Migration 111 — fix DONNÉES (2 produits `wholesale_tiers` double-encodés)** : **rien n'est cassé** (le code d'affichage gère ces lignes). À lancer par **Abdou** dans **Supabase → SQL Editor** (coller le SQL de `supabase/migrations/111_fix_wholesale_tiers_double_encoding.sql`). **⛔ PAS `supabase db push`** (embarquerait la migration 091). Non urgent.
+2. **⚙️ `TELEGRAM_BOT_USERNAME`** — à **re-vérifier** dans les env vars Vercel.
+3. **🖼️ Filigrane hero landing « موزونا »** — **asset image** (pas du texte de code) affichant encore l'ancien nom → à **régénérer** (phase design/asset séparée).
+4. **🚧 4 bloquants go-live** : (a) **rotation secrets** `SUPABASE_SERVICE_ROLE_KEY` + mdp admin `AdminTest2026!` · (b) **backups auto prod** (preuve dump pooler 07-02 + restauration LOCAL ; plan Pro/PITR recommandé + `.db_password` mode 600) · (c) **migration 091** en prod · (d) **redirect `/auth/callback`** dans l'allowlist dashboard Supabase.
 
 ---
 
