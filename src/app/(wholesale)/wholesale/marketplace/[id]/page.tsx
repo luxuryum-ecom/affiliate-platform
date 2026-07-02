@@ -6,6 +6,8 @@ import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { MarketplaceQuoteForm } from '@/components/wholesale/marketplace-quote-form'
 import { MarketplaceDirectOrderForm } from '@/components/wholesale/marketplace-direct-order-form'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
+import { getIndicativeMadTiers } from '@/lib/supplier/indicative-tiers'
+import { IndicativeTiersEstimate } from '@/components/wholesale/indicative-tiers-estimate'
 import { computeStockFreshness, stockAgeDays, stockNeedsConfirmation, stockNeedsWatch } from '@/lib/supplier-stock-freshness'
 import { formatMAD, formatQty } from '@/lib/utils'
 import { getMeaningfulDescription } from '@/lib/product-media'
@@ -93,6 +95,11 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   const displayDesc = getMeaningfulDescription(displayName, product.public_description || product.description)
   const isMorocco = product.supplier_type === 'morocco'
   const directUnitPrice = product.suggested_wholesale_price_mad ?? 0
+
+  // Phase D — paliers de gros INDICATIFS, international UNIQUEMENT (pas de miroir catalogue
+  // pour un produit import → pas de wholesale_tiers stockés). [] si non convertible (fail-safe,
+  // cf. getIndicativeMadTiers) ou déjà Maroc (rendu géré via WholesaleSavingsHook côté miroir).
+  const indicativeTiers = isMorocco ? [] : await getIndicativeMadTiers(product.id)
 
   // CTA d'affichage (A1) — décidé UNIQUEMENT sur origine + stock fournisseur, SANS
   // dépendre du miroir catalogue : Maroc local_stock + prix + stock > 0 → 'direct' ;
@@ -329,6 +336,12 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
               <p className="text-xs text-muted bg-surface-2 rounded-lg px-3 py-2 border border-line">
                 {t('importPriceNote')}
               </p>
+            )}
+
+            {/* Phase D — paliers indicatifs (estimation, hors transport/douane). Gate ≥ 2
+                paliers : sinon rien. Pas de miroir, CTA « Demander un devis » inchangé. */}
+            {!isMorocco && indicativeTiers.length >= 2 && (
+              <IndicativeTiersEstimate tiers={indicativeTiers} unitLabel={product.unit?.trim() || undefined} />
             )}
 
             {ctaMode === 'direct' ? (
