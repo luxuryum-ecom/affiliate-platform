@@ -6,6 +6,8 @@ import { formatMAD } from '@/lib/utils'
 import { AddToCartForm } from '@/components/wholesale/add-to-cart-form'
 import { QuoteRequestForm } from '@/components/wholesale/quote-request-form'
 import { WholesaleSavingsHook } from '@/components/wholesale/wholesale-savings-hook'
+import { WholesaleDefaultPrice } from '@/components/wholesale/wholesale-default-price'
+import { computeWholesaleSavings } from '@/lib/wholesale-savings'
 import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
 import { PackBreakdown } from '@/components/shared/pack-breakdown'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
@@ -234,9 +236,18 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
               sectionLabel={variantsAvailableLabel}
             />
 
-            {/* Hook grossiste — économie totale en achetant gros (affichage pur, paliers stockés).
-                Rendu uniquement s'il y a ≥ 2 paliers avec économie (sinon retourne null). */}
-            <WholesaleSavingsHook tiers={product.wholesale_tiers} unitLabel={unitLabel ?? undefined} />
+            {/* Hook grossiste — économie totale en achetant gros (affichage pur, paliers stockés)
+                si ≥ 2 paliers avec économie ; sinon bloc « Prix de gros » par défaut (Phase C —
+                tout produit local a un bloc cohérent, jamais rien). */}
+            {computeWholesaleSavings(product.wholesale_tiers) ? (
+              <WholesaleSavingsHook tiers={product.wholesale_tiers} unitLabel={unitLabel ?? undefined} />
+            ) : (
+              <WholesaleDefaultPrice
+                sellPrice={product.sell_price}
+                minQty={product.wholesale_min_qty}
+                unitLabel={unitLabel ?? undefined}
+              />
+            )}
 
             {ctaMode === 'rfq' ? (
               <div className="space-y-2">
