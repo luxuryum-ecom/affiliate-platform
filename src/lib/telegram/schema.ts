@@ -21,6 +21,9 @@ export const telegramUserSchema = z.object({
   is_bot: z.boolean().optional(),
   username: z.string().optional(),
   first_name: z.string().optional(),
+  // Code langue du client Telegram (ex. 'fr', 'ar', 'ar-MA') → bascule FR/darija
+  // du message d'accueil (LOT 5). Optionnel : absent → FR par défaut.
+  language_code: z.string().optional(),
 })
 
 export const telegramChatSchema = z.object({

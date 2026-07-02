@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
 import { extractProductFromTelegram } from './extract'
 import { telegramDownloadPhoto, telegramSendMessage } from './client'
+import { buildSupplierWelcome } from './welcome'
 import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
 import { getRateToMad } from '@/lib/fx'
 import { checkProductLimit } from '@/lib/product-limit'
@@ -438,9 +439,12 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     if (code) {
       await handleLinkCommand(admin, msg, code)
     } else {
+      // LOT 5 — accueil bilingue (FR/darija) : guide l'envoi produit + recommande
+      // le format des paliers. Numéro WhatsApp depuis la config publique (jamais en dur).
+      const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '212600000000'
       await telegramSendMessage(
         msg.chat.id,
-        'Bienvenue 👋 Pour lier votre espace fournisseur : générez un code depuis le site, puis envoyez /link VOTRE_CODE. Ensuite, envoyez une photo de produit avec une courte description (nom + prix en DH).',
+        buildSupplierWelcome(msg.from.language_code, whatsappPhone),
       )
     }
     return
