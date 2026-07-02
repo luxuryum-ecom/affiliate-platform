@@ -300,6 +300,7 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
                 platformMarginType={product.platform_margin_type}
                 platformMarginValue={product.platform_margin_value}
                 applyPlatformMargin={product.apply_platform_margin}
+                autoTiersEnabled={product.auto_tiers_enabled ?? true}
                 adminNotes={product.admin_notes}
                 minQuantity={product.min_quantity}
                 sourceCurrency={product.source_currency}

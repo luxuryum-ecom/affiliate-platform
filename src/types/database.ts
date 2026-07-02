@@ -928,6 +928,10 @@ export interface SupplierProduct {
   // prix final (marge incluse si ON). Calcul serveur, jamais exposé au grossiste.
   apply_platform_margin: boolean
   final_wholesale_price_mad: number | null
+  // Toggle génération auto de paliers dégressifs à l'approbation (migration 112) — ON par
+  // défaut ; ne se déclenche que si le produit n'a AUCUN palier source. cf. generateAutoTiers.
+  // OPTIONNEL au type : la vue redacted grossiste ne l'expose PAS (interne admin uniquement).
+  auto_tiers_enabled?: boolean
 
   // Devise source + taux figé → MAD (migration 054). source_currency='MAD' ⇒ taux 1.
   // fx_rate NULL avec devise étrangère = « no_rate » : prix MAD non calculé (Sur devis).

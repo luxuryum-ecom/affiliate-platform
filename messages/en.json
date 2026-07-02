@@ -2299,7 +2299,9 @@
       "moqRowInvalid": "Each tier must have a quantity (integer > 0) and a valid price (> 0).",
       "moqTiersRejected": "Tiers rejected: the price must strictly decrease as quantity rises, with no duplicate quantity.",
       "moqFirstTierMismatch": "The 1st tier must exactly match the minimum order quantity (MOQ).",
-      "moqInvalid": "Invalid minimum order quantity (integer ≥ 1)."
+      "moqInvalid": "Invalid minimum order quantity (integer ≥ 1).",
+      "autoTiersLabel": "Auto-generate wholesale tiers",
+      "autoTiersHint": "If the product has no tiers, creates 4 decreasing ones from the MOQ (margin-based discount, protected floor). No effect if tiers are entered."
     },
     "bulkApprove": {
       "pendingCount": "{count, plural, one {Approve # pending commission} other {Approve # pending commissions}}",

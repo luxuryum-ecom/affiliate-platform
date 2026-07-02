@@ -2299,7 +2299,9 @@
       "moqRowInvalid": "Chaque palier doit avoir une quantité (entier > 0) et un prix valide (> 0).",
       "moqTiersRejected": "Paliers refusés : le prix doit être strictement décroissant quand la quantité monte, sans doublon de quantité.",
       "moqFirstTierMismatch": "Le 1er palier doit correspondre exactement au minimum de commande (MOQ).",
-      "moqInvalid": "Minimum de commande invalide (entier ≥ 1)."
+      "moqInvalid": "Minimum de commande invalide (entier ≥ 1).",
+      "autoTiersLabel": "Générer des paliers de gros automatiques",
+      "autoTiersHint": "Si le produit n’a pas de paliers, en crée 4 dégressifs depuis le MOQ (décote basée sur la marge, plancher protégé). Sans effet si des paliers sont saisis."
     },
     "bulkApprove": {
       "pendingCount": "{count, plural, one {Approuver # commission en attente} other {Approuver # commissions en attente}}",
