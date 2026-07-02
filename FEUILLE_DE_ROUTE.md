@@ -48,6 +48,7 @@
 - **Uniformisation paliers (code/UI)** : local sans palier → bloc « Prix de gros » par défaut ; international → paliers **indicatifs** (« estimation, prix ferme au devis »). @finance 🟢 @security 🟢, 4 checks verts, 458 tests.
 
 ### 🧊 RESTE (à froid, pas urgent)
+- **🐛 BUG `max_qty` (facturation gros)** — trouvé par la recette bout-en-bout 2026-07-02. `ProductForm` + `products.ts:476-508` peuvent sauver des paliers **sans `max_qty`** (optionnel, non calculé serveur) → `getWholesaleTier` (`utils.ts:104-120`, `.find`) facture **au 1er palier (le + cher)** → **prix facturé ≠ affiché**. **UNIQUEMENT** produits catalogue ≥2 paliers **saisis à la main sans borne**. Canal fournisseur/Telegram **SÛR** (`buildMirrorTiers:144-146` borne). **Pas urgent** (pas d'ouverture grossiste, 0 facturé). Avant correction : SQL de vérif prod (count/list produits à risque). Correction : borner `max_qty` serveur dans `products.ts`, via **@finance + @security**.
 - **Migration 111** (fix DONNÉES : 2 produits `wholesale_tiers` double-encodé) → Abdou dans **Supabase SQL Editor** (SQL de `supabase/migrations/111_*.sql`), **PAS `supabase db push`** (embarquerait 091). **Rien n'est cassé** (affichage tolérant).
 - **`TELEGRAM_BOT_USERNAME`** à re-vérifier dans Vercel.
 - **Filigrane hero landing « موزونا »** (asset image, pas du code) → à régénérer (phase design).
