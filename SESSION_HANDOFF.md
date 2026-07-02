@@ -1,8 +1,8 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
 > **Dernière mise à jour :** 2026-07-02
-> **Branche prod :** `origin/main` @ `7eba3d6` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
-> **Migrations prod :** 001→**110** appliquées. ⚠️ **Migration 111 (fix données) NON appliquée** (à lancer par Abdou dans Supabase SQL Editor — PAS `supabase db push`, cf. REPRENDRE ICI). 091 toujours en attente.
+> **Branche prod :** `origin/main` @ `fdf9562` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
+> **Migrations prod :** 001→**110** appliquées. 🔴 **Migration 112 (auto_tiers_enabled) — PRÉREQUIS DU CODE DÉPLOYÉ, à appliquer AVANT le 1er onboarding fournisseur** (cf. REPRENDRE ICI #0). ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
 
@@ -15,15 +15,30 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 - **Lot 5** — message d'accueil bot 4 langues (`ar-MA`→darija, `ar*`→MSA, `fr*`→FR, reste→EN), nom **« Abdou Baba »**, devises MAD/AED/USD.
 - **Rebrand Mozouna → Abdou Baba** (texte visible : UI, bot, emails, titres/SEO). **« Mozouna Group » conservé** en footer/légal/entité (façon Alibaba Group). `MozounaLogo`=nom React, `@MozounaSupplierBot`, contrainte DB = intacts (non touchés).
 - **Uniformisation paliers (code/UI)** : produit local sans palier → bloc « Prix de gros » par défaut ; international → paliers **indicatifs** (« estimation — hors transport/douane, prix ferme au devis »). @finance 🟢 @security 🟢. **Chantier paliers Telegram CLOS (Lots 1→5).**
+- **Moteur auto-tiers (génération auto de paliers dégressifs)** (`fdf9562`) : à l'approbation d'un produit fournisseur SANS palier source, génère 4 tranches (MOQ/×5/×10/×50), décote basée marge, **palier 1 = prix unitaire exact**, **plancher = 8% du prix seul** (mur absolu jamais sous coût), marge ≤ 8% → aucun palier, prix au centime, `max_qty` bornés. @finance 🟢 @security 🟢, **484 tests**. **⚠️ Requiert migration 112 (cf. #0).**
 - **Backup prod réparé côté script** (`backup-prod.sh` → pooler session-mode, mdp de `.db_password`, dump 06-26 sécurisé en triple) · `supabase/.temp/` désindexé.
 
-## ▶️ REPRENDRE ICI — RESTE (à froid, pas urgent)
+## ▶️ REPRENDRE ICI
 
-0. **🐛 BUG `max_qty` (facturation gros) — trouvé par la recette bout-en-bout 2026-07-02.** Le **formulaire catalogue admin** (`ProductForm` + `products.ts:476-508`) peut sauver des paliers **sans `max_qty`** : `max_qty` est optionnel et **non calculé serveur**. Or `getWholesaleTier` (`src/lib/utils.ts:104-120`, `.find` 1er match) renvoie alors **le 1er palier (le plus cher)** quelle que soit la quantité → **prix facturé ≠ prix affiché (surfacturation grossiste)**. **Périmètre : UNIQUEMENT** produits catalogue à **≥2 paliers saisis à la main sans borne**. **Canal fournisseur/Telegram/Lot 4 = SÛR** (`buildMirrorTiers` `supplier-pricing.ts:144-146` borne toujours). **Pas urgent** : pas d'ouverture grossiste, personne facturé. **Avant correction** : lancer le SQL de vérif prod (compter/lister les produits à risque — CTE `MATERIALIZED`, robuste au double-encodage). **Correction prévue** : borner `max_qty` serveur dans `products.ts` (comme `buildMirrorTiers`) via **@finance + @security**.
-1. **🧊 Migration 111 — fix DONNÉES (2 produits `wholesale_tiers` double-encodés)** : **rien n'est cassé** (le code d'affichage gère ces lignes). À lancer par **Abdou** dans **Supabase → SQL Editor** (coller le SQL de `supabase/migrations/111_fix_wholesale_tiers_double_encoding.sql`). **⛔ PAS `supabase db push`** (embarquerait la migration 091). Non urgent.
-2. **⚙️ `TELEGRAM_BOT_USERNAME`** — à **re-vérifier** dans les env vars Vercel.
-3. **🖼️ Filigrane hero landing « موزونا »** — **asset image** (pas du texte de code) affichant encore l'ancien nom → à **régénérer** (phase design/asset séparée).
-4. **🚧 4 bloquants go-live** : (a) **rotation secrets** `SUPABASE_SERVICE_ROLE_KEY` + mdp admin `AdminTest2026!` · (b) **backups auto prod** (preuve dump pooler 07-02 + restauration LOCAL ; plan Pro/PITR recommandé + `.db_password` mode 600) · (c) **migration 091** en prod · (d) **redirect `/auth/callback`** dans l'allowlist dashboard Supabase.
+### 🔴 #0 — AVANT TOUT DEMAIN : appliquer migration 112 en prod (PRÉREQUIS du code déployé)
+Le code auto-tiers déployé fait **`SELECT`/`UPDATE auto_tiers_enabled`** dans `approveSupplierProduct`. **Sans la colonne, la 1ʳᵉ approbation d'un produit fournisseur PLANTE** (« column does not exist »). **Pas cassé maintenant** (0 fournisseur lié → jamais appelé), mais **OBLIGATOIRE avant le 1er onboarding**. Coller **UNIQUEMENT** dans **Supabase → SQL Editor** (**PAS `supabase db push`** — embarquerait 091/111) :
+```sql
+ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS auto_tiers_enabled boolean NOT NULL DEFAULT true;
+```
+
+### 🧪 SESSION BÊTA — TEST COMPLET A→Z (après #0)
+**Prérequis** : (1) mig 112 ✅ ci-dessus · (2) **vérifier que le webhook Telegram pointe sur la PROD** (`scripts/telegram-setup.sh info` → `url` = `…vercel.app/api/telegram/webhook` ; sinon bot muet) · (3) **backfill auto-tiers** sur les produits fournisseur déjà approuvés (les paliers ne se génèrent qu'à la (ré)approbation) · (4) **corriger le bug `max_qty`** (cf. #1).
+**Parcours à tester de bout en bout, avec calculs @finance à CHAQUE étape** : création fournisseur Telegram → produit (photo+légende) → modération/approbation → visible grossiste → **commande de gros** → approbation → notifs → livraison → **devis (international)** → approbation devis → **parcours affilié COD** → dispatch.
+
+### 🧊 RESTE (à froid)
+
+1. **🐛 BUG `max_qty` (facturation gros) — trouvé par la recette bout-en-bout 2026-07-02.** Le **formulaire catalogue admin** (`ProductForm` + `products.ts:476-508`) peut sauver des paliers **sans `max_qty`** : `max_qty` est optionnel et **non calculé serveur**. Or `getWholesaleTier` (`src/lib/utils.ts:104-120`, `.find` 1er match) renvoie alors **le 1er palier (le plus cher)** quelle que soit la quantité → **prix facturé ≠ prix affiché (surfacturation grossiste)**. **Périmètre : UNIQUEMENT** produits catalogue à **≥2 paliers saisis à la main sans borne**. **Canal fournisseur/Telegram/Lot 4 = SÛR** (`buildMirrorTiers` `supplier-pricing.ts:144-146` borne toujours). **Pas urgent** : pas d'ouverture grossiste, personne facturé. **Avant correction** : lancer le SQL de vérif prod (compter/lister les produits à risque — CTE `MATERIALIZED`, robuste au double-encodage). **Correction prévue** : borner `max_qty` serveur dans `products.ts` (comme `buildMirrorTiers`) via **@finance + @security**.
+2. **🧊 Migration 111 — fix DONNÉES (2 produits `wholesale_tiers` double-encodés)** : **rien n'est cassé** (le code d'affichage gère ces lignes). À lancer par **Abdou** dans **Supabase → SQL Editor** (coller le SQL de `supabase/migrations/111_fix_wholesale_tiers_double_encoding.sql`). **⛔ PAS `supabase db push`** (embarquerait la migration 091). Non urgent.
+3. **⚙️ `TELEGRAM_BOT_USERNAME`** — à **re-vérifier** dans les env vars Vercel.
+4. **🖼️ Filigrane hero landing « موزونا »** — **asset image** (pas du texte de code) affichant encore l'ancien nom → à **régénérer** (phase design/asset séparée).
+
+### 🚧 BLOQUANTS GO-LIVE (avant vrais fournisseurs)
+- **Migration 112** (auto_tiers, PRÉREQUIS, cf. #0) · **rotation** `SUPABASE_SERVICE_ROLE_KEY` + mdp admin `AdminTest2026!` · **backups auto prod** (plan Pro Supabase + `.db_password` mode 600 ; preuve dump pooler + restauration LOCAL) · **redirect `/auth/callback`** (allowlist dashboard Supabase) · **migration 091** · **migration 111** (data-fix 2 produits) · **filigrane hero**.
 
 ---
 

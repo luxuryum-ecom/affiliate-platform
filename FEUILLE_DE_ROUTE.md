@@ -46,6 +46,16 @@
 - **Lot 4** éditeur paliers/MOQ modération · **Lot 5** message bot 4 langues « Abdou Baba ».
 - **Rebrand Mozouna → Abdou Baba** (texte visible : UI, bot, emails, titres/SEO). « Mozouna Group » **conservé** en footer/légal/entité (façon Alibaba Group). `MozounaLogo`=nom React, `@MozounaSupplierBot`, contrainte DB : intacts.
 - **Uniformisation paliers (code/UI)** : local sans palier → bloc « Prix de gros » par défaut ; international → paliers **indicatifs** (« estimation, prix ferme au devis »). @finance 🟢 @security 🟢, 4 checks verts, 458 tests.
+- **Moteur auto-tiers** (`fdf9562`) : produit fournisseur sans palier source → génère 4 tranches à l'approbation (MOQ/×5/×10/×50), décote/marge, **palier 1 = prix unitaire exact**, **plancher 8% du prix seul** (mur absolu jamais sous coût), marge ≤ 8% → aucun palier, centimes, `max_qty` bornés. @finance 🟢 @security 🟢, **484 tests**.
+
+### 🔴 PREMIÈRE ACTION DEMAIN — migration 112 (PRÉREQUIS du code déployé)
+Le code auto-tiers fait `SELECT`/`UPDATE auto_tiers_enabled` → **sans la colonne, la 1ʳᵉ approbation fournisseur PLANTE**. Pas cassé maintenant (0 fournisseur), OBLIGATOIRE avant onboarding. **Supabase SQL Editor** (PAS `db push`) : `ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS auto_tiers_enabled boolean NOT NULL DEFAULT true;`
+
+### 🧪 SESSION BÊTA A→Z (après mig 112)
+Prérequis : mig 112 ✅ · webhook Telegram sur la prod (`scripts/telegram-setup.sh info`) · backfill auto-tiers (produits déjà approuvés) · corriger bug `max_qty`. Parcours complet avec @finance à chaque étape : fournisseur Telegram → produit → modération → grossiste → commande gros → notifs → livraison → devis international → parcours affilié COD → dispatch.
+
+### 🚧 BLOQUANTS GO-LIVE (avant vrais fournisseurs)
+mig 112 (prérequis) · rotation `SUPABASE_SERVICE_ROLE_KEY` + mdp admin · backups (plan Pro + `.db_password`) · redirect `/auth/callback` · mig 091 · mig 111 (data-fix) · filigrane hero.
 
 ### 🧊 RESTE (à froid, pas urgent)
 - **🐛 BUG `max_qty` (facturation gros)** — trouvé par la recette bout-en-bout 2026-07-02. `ProductForm` + `products.ts:476-508` peuvent sauver des paliers **sans `max_qty`** (optionnel, non calculé serveur) → `getWholesaleTier` (`utils.ts:104-120`, `.find`) facture **au 1er palier (le + cher)** → **prix facturé ≠ affiché**. **UNIQUEMENT** produits catalogue ≥2 paliers **saisis à la main sans borne**. Canal fournisseur/Telegram **SÛR** (`buildMirrorTiers:144-146` borne). **Pas urgent** (pas d'ouverture grossiste, 0 facturé). Avant correction : SQL de vérif prod (count/list produits à risque). Correction : borner `max_qty` serveur dans `products.ts`, via **@finance + @security**.
