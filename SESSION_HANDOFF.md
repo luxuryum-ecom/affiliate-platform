@@ -1,12 +1,20 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
-> **Dernière mise à jour :** 2026-07-01
-> **Branche prod :** `main` @ `cfa6eed`
-> **Migrations prod :** 001→**110** appliquées (104→110 confirmées en **Remote** le 2026-06-30 ; **aucune nouvelle migration** en session 2026-07-01)
+> **Dernière mise à jour :** 2026-07-02
+> **Branche prod :** `origin/main` @ `0ae5daf` (déployé Vercel) — **`main` LOCAL @ `43d8704`, 2 commits d'avance NON POUSSÉS** (Lot 4 paliers).
+> **Migrations prod :** 001→**110** appliquées (104→110 confirmées en **Remote** le 2026-06-30 ; **aucune nouvelle migration** en sessions 2026-07-01/02)
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
 
 Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tête), `FEUILLE_DE_ROUTE.md`, `CLAUDE.md`.
+
+---
+
+## ▶️ REPRENDRE ICI (dans l'ordre)
+
+1. **🔴 Décider le `git push` de `main`** — `main` LOCAL est **2 commits d'avance** sur `origin/main` (`43d8704` = merge Lot 4, `70d83c5` = feat). Le push **déclenche l'auto-deploy Vercel (prod)** → **à faire par Abdou en terminal** (`! git push origin main`), décision go-live non prise en session. Lot 4 est **sain et audité** (@finance 🟢 · @security 🟢, 4 checks verts) → le push est sans risque code ; c'est la **décision de déploiement** qui reste à Abdou. Branche `feat/moq-tiers-editor` **conservée**.
+2. **⬜ Lot 5 — message bot d'accueil FR/darija** (dernier lot du chantier paliers) : message que le bot envoie au fournisseur pour **recommander le format des paliers** (« produit, 50=18, 100=16, min 50 »). i18n FR + AR/darija.
+3. Puis, hors chantier paliers : les **4 bloquants go-live ops** (section plus bas) — rotation secrets, backups, mig 091, redirect `/auth/callback`.
 
 ---
 
@@ -28,24 +36,27 @@ La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloqua
 | **Cloche 1A** | UI cloche notifications in-app (badge + dropdown sur table `notifications`, FR/AR/EN + RTL) | — | ✅ EN PROD |
 | **Magic-link fournisseur** | Onboarding ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur) ; admin génère lien + QR + partage WhatsApp (`/admin/users/[id]`) ; TTL admin 15 min ; notif in-app à la liaison + cloche fournisseur (`e50b1f0`) | — (code) | ✅ EN PROD (Vercel) — ⚙️ `TELEGRAM_BOT_USERNAME` posé, **à re-vérifier** |
 | **Paliers Telegram (Lots 1-2-3)** | Extraction IA des paliers de gros dégressifs depuis Telegram, COMPLÈTE : sanitizer (`6977e6d`) + helper `insertMoqTiers` (`f075e4f`) + extraction IA branchée `ingest.ts` (vrai MOQ, `cfa6eed`). @finance 🟢 · @tester 3/3 LOCAL | — (code) | ✅ EN PROD (Vercel) — canal Telegram (0 fournisseur lié) |
+| **Paliers Telegram (Lot 4)** | Éditeur paliers + MOQ en **modération admin** (module pur `moq-editor.ts` + `approveSupplierProduct` + UI) : l'admin corrige une extraction douteuse. Devise fournisseur + MAD lecture seule ; palier optionnel ; `sanitizeMoqTiers` seul juge ; write idempotent delete-then-insert scopé ; flag @finance base<1er palier. @finance 🟢 · @security 🟢 · @tester **405/405 LOCAL** | — (code) | 🔄 **MERGÉ `main` LOCAL** (`43d8704`) — **NON POUSSÉ** (origin intact, prod non déployée) |
 
 **Qualité :** @finance 🟢 · @security 🟢 sur tous les lots financiers/sensibles ; 4 checks verts (tsc 0 / build / vitest / smoke) à chaque lot. Détail complet par lot dans `ETAT_SYSTEME.md`.
 
 ---
 
-## 🏗️ CHANTIER EN COURS — PALIERS TELEGRAM (Lots 1-2-3 faits / 5, session 2026-07-01)
+## 🏗️ CHANTIER EN COURS — PALIERS TELEGRAM (Lots 1-2-3-4 faits / 5, session 2026-07-02)
 
 > **But** : que les **paliers de prix dégressifs + le minimum de commande** viennent du **fournisseur automatiquement** (Telegram), pour scaler à des milliers de produits sans saisie admin manuelle.
 > **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : 1er palier = **minimum de commande** ; prix **strictement décroissant** quand la quantité monte (`10→20, 50→18, 100→16, 500→14`). Format `{ min_quantity, unit_price }`.
-> **✅ Pipeline COMPLET de bout en bout** : extraction Telegram → sanitizer → insert → modération → auto-report catalogue (`buildMirrorTiers`) → panier dégressif + MOQ imposé. Tout passe par le **mur de modération** — aucune piste ne publie un prix seule.
+> **✅ Pipeline COMPLET de bout en bout** : extraction Telegram → sanitizer → insert → modération (**+ correction éditeur admin, Lot 4**) → auto-report catalogue (`buildMirrorTiers`) → panier dégressif + MOQ imposé. Tout passe par le **mur de modération** — aucune piste ne publie un prix seule.
 
 - ✅ **Lot 1 — sanitizer `sanitizeMoqTiers`** (schema.ts) : strict (rejette croissant/égal/doublon/aberrant/>20), **33 tests**, **@finance 🟢**. Mergé `main` `6977e6d`.
 - ✅ **Lot 2 — helper `insertMoqTiers` factorisé** (web + CSV, refactor pur prouvé identique, @tester 4/4). Mergé `main` `f075e4f`.
 - ✅ **Lot 3 — extraction IA** (`extract.ts`/`schema.ts` + branchement `ingest.ts` : vrai MOQ = 1er palier, désambiguïsation stock/palier). **⚠️ ARGENT — @finance 🟢**, @tester 3/3 LOCAL, purement additif. Mergé `main` `cfa6eed`.
-- ⬜ **Lot 4 — éditeur paliers + MOQ en modération admin** (`supplier-product-review.tsx` + `approveSupplierProduct`) : l'admin corrige une extraction douteuse. **+ reco @finance** : flag si prix de base `<` 1er palier (affichage trompeur, pas ledger). **← REPRENDRE ICI.**
-- ⬜ **Lot 5 — message bot d'accueil FR/darija** (recommander le format).
+- ✅ **Lot 4 — éditeur paliers + MOQ en modération admin** : module pur `src/lib/supplier/moq-editor.ts` (parse/juge, testable) + `approveSupplierProduct` (write **idempotent delete-then-insert scopé**, mirror sur nouveaux paliers) + UI `supplier-product-review.tsx` (N paliers dynamiques ≤20, pré-rempli, MOQ éditable, **MAD lecture seule**, i18n FR/AR/EN+RTL). Palier **optionnel** ; `sanitizeMoqTiers` = **seul juge** (basePrice=null + flag @finance séparé, non bloquant) ; prix source **verbatim**. **⚠️ ARGENT — @finance 🟢 · @security 🟢**, @tester **405/405 LOCAL** (round-trip 6 paliers + delete scopé non-fuyant prouvés), 4 checks verts. **Mergé `main` LOCAL `--no-ff` (`43d8704`), NON POUSSÉ.** **🪵 Dette connue** : séquence UPDATE+delete/insert+miroir **non transactionnelle** (échec INSERT après DELETE → « MOQ à jour + 0 palier », repli sûr/idempotent, zéro impact ledger) → **RPC atomique si les paliers deviennent un prix facturé critique**.
+- ⬜ **Lot 5 — message bot d'accueil FR/darija** (recommander le format). **← REPRENDRE ICI (après le push de `main`).**
 
-**➡️ Reprise du chantier dev : Lot 4**, puis Lot 5, un lot à la fois. *(Distinct des 4 bloquants go-live ci-dessous, qui sont des actions ops.)*
+**➡️ Reprise du chantier dev : Lot 5** (dernier lot). *(Distinct des 4 bloquants go-live ci-dessous, qui sont des actions ops.)*
+
+**ℹ️ Vérifié cette session (hors code)** : l'affichage acheteur d'un produit fournisseur **international** est **conforme, pas de bug** — prix affiché en **MAD** (label « Prix final TTC », jamais la devise source), mention explicite **hors transport** + « transport et douane calculés dans le devis » (FR/AR/EN, `importPriceNote`), **aucun tableau de paliers dégressifs** (produit international = **devis/RFQ**, pas de commande directe). Flags d'affichage : `supplier_type` (badge/label/mention) + `availability_type` (stock + CTA direct vs devis).
 
 ---
 
