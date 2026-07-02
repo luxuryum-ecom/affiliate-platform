@@ -26,7 +26,7 @@
 
 ---
 
-## 🏗️ CHANTIER PALIERS TELEGRAM — EN COURS (Lots 1-2-3-4 faits / 5, 2026-07-02)
+## 🏗️ CHANTIER PALIERS TELEGRAM — ✅ COMPLET & CLOS (Lots 1→5, 2026-07-02)
 
 > **But** : paliers de prix dégressifs + minimum de commande venant du **fournisseur automatiquement** (Telegram), pour scaler à des milliers de produits, **sans saisie admin manuelle**.
 > **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : 1er palier = **minimum de commande** ; prix **strictement décroissant** quand la quantité monte (ex. `10→20, 50→18, 100→16, 500→14`). Format `{ min_quantity, unit_price }`.
@@ -36,9 +36,19 @@
 - ✅ **Lot 2 — helper `insertMoqTiers` factorisé** (web + CSV, refactor pur prouvé identique, @tester 4/4). Mergé `main` `f075e4f`.
 - ✅ **Lot 3 — extraction IA** : `moq_tiers` au tool/prompt `extract.ts` + `aiExtractionRawSchema` ; `buildCleanExtraction`→`sanitizeMoqTiers` ; `ingest.ts` branché (vrai MOQ = 1er palier, désambiguïsation stock/palier). **⚠️ ARGENT — @finance 🟢**, @tester 3/3 LOCAL. Purement additif (web/CSV/affichage intacts). Mergé `main` `cfa6eed`.
 - ✅ **Lot 4 — éditeur paliers + MOQ en modération admin** (`supplier-product-review.tsx` + `approveSupplierProduct` + module pur `src/lib/supplier/moq-editor.ts`) : éditeur N paliers dynamiques (add/remove ≤20) pré-rempli, MOQ éditable, saisie en **devise fournisseur** + conversion **MAD lecture seule** (jamais stockée) ; palier **optionnel** (vide = prix unitaire) ; `sanitizeMoqTiers` reste **le seul juge** (décision : basePrice=null + flag séparé) ; write **idempotent delete-then-insert scopé** (garde `moq_editor_present`, sanitize AVANT delete) ; mirror sur les **nouveaux** paliers ; **flag @finance** informatif base `<` 1er palier (non bloquant). i18n FR/AR/EN+RTL. **⚠️ ARGENT — @finance 🟢 · @security 🟢**, @tester **405/405 LOCAL** (round-trip 6 paliers, delete scopé non-fuyant prouvés). 4 checks verts. **Décision prise seule (non-argent)** : extraction de la logique parse/juge dans un module pur `moq-editor.ts` (fichier `'use server'` ne peut exporter que des async → testabilité). **✅ EN PROD — poussé `origin/main` @ `5c4d03c` le 2026-07-02** (pre-push build+smoke vert ; auto-deploy Vercel déclenché, **succès à confirmer au dashboard**).
-- ⬜ **Lot 5 — message bot d'accueil** recommandant le format (FR + AR/darija). **← PROCHAINE ACTION.**
+- ✅ **Lot 5 — message d'accueil bot 4 langues** (`src/lib/telegram/welcome.ts` pur + `ingest.ts` + `language_code` schéma) : sur `/start`/premier contact, guide l'envoi produit + **recommande le format des paliers**. Routage `ar-MA`→darija (avant `ar`), `ar*`→MSA, `fr*`→FR, reste→EN. Nom **« Abdou Baba »**, devises **MAD/AED/USD**, WhatsApp via `NEXT_PUBLIC_WHATSAPP_PHONE`, chiffres latins ; linking + ingestion inchangés. @tester 453/453 LOCAL, 4 checks verts. **Mergé `main` LOCAL `--no-ff` (`7bb5c57`), NON POUSSÉ.**
 
-**Prochaine action : Lot 5** (message bot d'accueil FR/darija recommandant le format).
+**✅ Chantier paliers Telegram CLOS** (Lots 1→5). Reste ops : le push de `main` met le Lot 5 en prod (Lot 4 déjà en prod).
+
+---
+
+## 🏷️ NOUVEAU CHANTIER À VENIR — REBRAND GLOBAL Mozouna → Abdou Baba
+
+> **Déclencheur** : le Lot 5 a introduit le nom **« Abdou Baba »** côté bot, alors que le **site / emails / i18n / métadonnées disent encore « Mozouna »** → **nom INCOHÉRENT** aujourd'hui. À traiter **avant l'ouverture fournisseurs**.
+> **Modèle cible (façon Alibaba Group)** : **« Abdou Baba » = la marketplace visible** (bot, site, emails, titres, UI) ; **« Mozouna » = la maison-mère** (footer, mentions légales, entité juridique). On ne supprime pas Mozouna, on le repositionne.
+
+- ⬜ **Phase 0 (cartographie)** — trouver **TOUS** les « Mozouna » du code : bot (`src/lib/telegram/`), i18n **FR/AR/EN** (`messages/*.json`), emails/templates, métadonnées/titres (`generateMetadata`, `<title>`, OG), composants UI (header/footer), constantes. Aucune correction en Phase 0 : juste l'inventaire complet.
+- ⬜ Phases suivantes (à cadrer après Phase 0) : remplacer marketplace-visible → « Abdou Baba », garder maison-mère → « Mozouna » (footer/légal), i18n cohérent 3 langues + RTL, non-régression.
 
 **🪵 Dette connue Lot 4 (non bloquante, signalée @finance + @security)** : la séquence d'écriture de `approveSupplierProduct` (UPDATE `supplier_products` via client RLS + DELETE/INSERT `supplier_product_moq_tiers` via `service_role` + upsert miroir) **n'est PAS transactionnelle**. En cas d'échec INSERT après DELETE → état « MOQ à jour + 0 palier » (repli sûr : revendable au prix unitaire, rejouable — idempotence prouvée). **Zéro impact ledger.** À terme : envelopper dans un RPC transactionnel si les paliers deviennent un prix facturé critique.
 

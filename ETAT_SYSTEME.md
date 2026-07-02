@@ -36,7 +36,7 @@
 
 ---
 
-## 🏗️ CHANTIER PALIERS TELEGRAM — EN COURS (Lots 1-2-3-4 faits / 5)
+## 🏗️ CHANTIER PALIERS TELEGRAM — ✅ COMPLET (Lots 1→5)
 
 > **But** : que les **paliers de prix dégressifs + le minimum de commande** viennent du **fournisseur automatiquement** (via Telegram), pour scaler à des milliers de produits — sans saisie admin manuelle.
 > **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : le **1er palier démarre au minimum de commande** ; le prix unitaire est **STRICTEMENT décroissant** quand la quantité monte (ex. `10→20, 50→18, 100→16, 500→14`). Chaque produit a son propre minimum. Format `{ min_quantity, unit_price }`, identique aux produits web (« Pull ref 5 »).
@@ -48,10 +48,11 @@
 | **Lot 2** | Helper `insertMoqTiers` factorisé (web `supplier-products.ts` + CSV `supplier-bulk.ts`) — refactor pur, @tester 4/4 | ✅ **FAIT & MERGÉ** (`f075e4f`) |
 | **Lot 3** | **Extraction IA** : `moq_tiers` au tool/prompt `extract.ts` + `aiExtractionRawSchema` ; `buildCleanExtraction`→`sanitizeMoqTiers` ; `ingest.ts` branché (`insertMoqTiers` + **vrai MOQ** = 1er palier + désambiguïsation stock/palier). @finance 🟢, @tester 3/3 LOCAL | ✅ **FAIT & MERGÉ** (`cfa6eed`) |
 | **Lot 4** | Éditeur de paliers + MOQ dans la **modération admin** : module pur `src/lib/supplier/moq-editor.ts` (`parseMoqEditorForm` + `judgeEditedTiers`) + `approveSupplierProduct` (write **idempotent delete-then-insert scopé** `supplier_product_moq_tiers`, mirror sur nouveaux paliers) + UI `supplier-product-review.tsx` (N paliers dynamiques ≤20, pré-rempli, MOQ éditable, MAD **lecture seule** live, i18n FR/AR/EN+RTL). Palier **optionnel** ; `sanitizeMoqTiers` = **seul juge** (basePrice=null, flag séparé) ; **flag @finance** base `<` 1er palier (non bloquant). Prix source **verbatim** (zéro parseFloat). @finance 🟢 · @security 🟢 · @tester **405/405 LOCAL** (round-trip 6 paliers, delete scopé non-fuyant). | ✅ **EN PROD** — poussé `origin/main` @ `5c4d03c` (2026-07-02, pre-push vert ; auto-deploy Vercel, succès à confirmer dashboard) |
-| **Lot 5** | Message bot d'accueil recommandant le format (FR + AR/darija) | ⬜ à faire |
+| **Lot 5** | **Message d'accueil bot 4 langues** (`src/lib/telegram/welcome.ts` pur + branchement `ingest.ts` sur `/start`/`/link` sans code + `language_code` au schéma) : sur premier contact, guide l'envoi produit (photo + description) + **recommande le format des paliers** (`50=18, 200=16, 500=14`, 1er palier = MOQ). Routage `ar-MA`→**darija** (avant `ar`), `ar*`→**MSA**, `fr*`→**FR**, reste→**EN**. Nom **« Abdou Baba »**, devises **MAD/AED/USD**, CTA WhatsApp via `NEXT_PUBLIC_WHATSAPP_PHONE`, chiffres latins. Linking + ingestion **inchangés**. @tester 453/453 LOCAL, 4 checks verts. | ✅ **MERGÉ `main` LOCAL** (`--no-ff` `7bb5c57`) — **NON POUSSÉ** |
 
-**✅ Pipeline COMPLET de bout en bout** (extraction Telegram → sanitizer → insert → modération **+ correction éditeur admin (Lot 4)** → catalogue) : un fournisseur envoie « produit, 50=18, 100=16, min 50 » → paliers extraits, validés, stockés, **corrigeables en modération**, au catalogue après approbation.
-**Prochaine action : Lot 5** (message bot d'accueil FR/darija).
+**✅ Pipeline COMPLET de bout en bout** (accueil bot **Lot 5** → extraction Telegram → sanitizer → insert → modération **+ correction éditeur admin (Lot 4)** → catalogue) : un fournisseur envoie « produit, 50=18, 100=16, min 50 » → paliers extraits, validés, stockés, **corrigeables en modération**, au catalogue après approbation.
+
+**⚠️ ÉCART PROD (Lot 4 vs Lot 5) :** **Lot 4 EN PROD** (poussé) mais **Lot 5 PAS en prod** — le message d'accueil « Abdou Baba » **n'est PAS live côté bot** tant que `main` n'est pas poussé (`7bb5c57` + 2 commits d'avance non poussés). Le bot répond encore avec l'ancien message minimal en prod.
 
 **🪵 Dette connue Lot 4 (non bloquante)** : la séquence d'écriture de `approveSupplierProduct` (UPDATE `supplier_products` + DELETE/INSERT `supplier_product_moq_tiers` via `service_role` + upsert miroir) n'est **pas transactionnelle**. Échec INSERT après DELETE → « MOQ à jour + 0 palier » (repli sûr, revendable au prix unitaire, rejouable — idempotence prouvée). **Zéro impact ledger.** Signalé @finance + @security. À envelopper dans un RPC transactionnel si les paliers deviennent un prix facturé critique.
 

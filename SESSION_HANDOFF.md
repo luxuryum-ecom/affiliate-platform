@@ -1,7 +1,7 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
 > **Dernière mise à jour :** 2026-07-02
-> **Branche prod :** `origin/main` @ `5c4d03c` — **Lot 4 POUSSÉ le 2026-07-02** → auto-deploy Vercel déclenché (**succès à CONFIRMER au dashboard** : pas de CLI vercel/gh dans l'env pour le certifier).
+> **Branche prod :** `origin/main` @ `5c4d03c` (Lot 4 EN PROD) — **`main` LOCAL @ `7bb5c57`, 3 commits d'avance NON POUSSÉS** (merge L5 `7bb5c57` + feat L5 `0880fae` + session-close L4 `11180f5`). ⚠️ **Lot 5 PAS en prod** tant que `main` n'est pas poussé.
 > **Migrations prod :** 001→**110** appliquées (104→110 confirmées en **Remote** le 2026-06-30 ; **aucune nouvelle migration** en sessions 2026-07-01/02)
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
@@ -12,13 +12,11 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 
 ## ▶️ REPRENDRE ICI (dans l'ordre)
 
-0. **✅ FAIT 2026-07-02** — **Lot 4 poussé** (`origin/main` @ `5c4d03c`, pre-push vert) → auto-deploy Vercel. **Backup prod réparé côté script** : `backup-prod.sh` basculé du DIRECT (cassé, `SSL SYSCALL EOF`) vers le **pooler session-mode** (`aws-1-eu-central-1.pooler.supabase.com:5432`, `--db-url`, mdp lu de `~/AI-FACTORY/backups/.db_password` mode 600 → run auto lundi sans trousseau). Dernier bon dump **06-26 sécurisé en triple** (`_safe/` + iCloud). `supabase/.temp/` désindexé (désormais ignoré).
-1. **🔴 CONFIRMER le deploy Vercel du Lot 4** (dashboard) — non certifiable depuis l'env agent (pas de CLI vercel/gh).
-2. **🟠 Preuve backup + test restauration** — (a) créer `~/AI-FACTORY/backups/.db_password` (Database password Supabase, `chmod 600`), (b) lancer le dump pooler 07-02 (schéma+data), (c) **test de restauration en LOCAL** (`127.0.0.1`, base jetable) = la vraie preuve. **⚠️ Le dump 07-02 n'a PAS encore tourné.**
-3. **🔴 Rotation secrets** — `SUPABASE_SERVICE_ROLE_KEY` (fuitée via `NEXT_PUBLIC_APP_URL`) + mdp admin `AdminTest2026!`.
-4. **🟢 Migration 091 en prod** — APRÈS deploy confirmé (`supabase db push`, lockstep). Vérifier d'abord si déjà en Remote.
-5. **🟠 Redirect `/auth/callback`** — ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` à l'allowlist dashboard Supabase (sinon reset MDP ne boucle pas).
-6. **⬜ Lot 5 — message bot d'accueil FR/darija** (dernier lot du chantier paliers) : recommander le format des paliers (« produit, 50=18, 100=16, min 50 »). i18n FR + AR/darija.
+1. **🔴 Décider le `git push origin main`** — `main` LOCAL a **3 commits d'avance** (`7bb5c57` merge L5 + `0880fae` feat L5 + `11180f5` session-close L4). Le push **déclenche l'auto-deploy Vercel** et **met le Lot 5 en prod** (message d'accueil « Abdou Baba »). **À faire par Abdou en terminal** (`! git push origin main`) — décision de déploiement. *(Lot 4 déjà en prod ; Lot 5 sain, @tester 453/453, 4 checks verts.)*
+2. **🏷️ Rebrand global Mozouna → Abdou Baba** — **Phase 0 (cartographie)** : trouver **TOUS** les « Mozouna » du code (bot `src/lib/telegram/`, i18n FR/AR/EN `messages/*.json`, emails/templates, métadonnées/titres, header/footer, constantes). Modèle : **« Abdou Baba » = marketplace visible**, **« Mozouna » = maison-mère** (footer/légal, façon Alibaba Group). Aujourd'hui le nom est **INCOHÉRENT** (bot dit Abdou Baba, le reste dit Mozouna) → à traiter **avant l'ouverture fournisseurs**. Détail : `FEUILLE_DE_ROUTE.md` → « NOUVEAU CHANTIER — REBRAND ».
+3. **Bloquants go-live ops** (section « PROCHAINE ACTION » plus bas) : (a) **preuve backup + restauration LOCAL** (créer `~/AI-FACTORY/backups/.db_password` mode 600 → dump pooler 07-02 → restore test ; ⚠️ pas encore fait) · (b) **rotation** `SUPABASE_SERVICE_ROLE_KEY` + mdp admin `AdminTest2026!` · (c) **mig 091** en prod APRÈS deploy (lockstep, vérifier si déjà en Remote) · (d) **redirect `/auth/callback`** dans l'allowlist dashboard Supabase.
+
+**✅ Contexte fait 2026-07-02 :** Lot 4 (paliers modération) **EN PROD** · Lot 5 (accueil bot 4 langues) **mergé main LOCAL** · **backup prod réparé côté script** (`backup-prod.sh` → pooler session-mode, mdp de `.db_password`, dump 06-26 sécurisé en triple) · `supabase/.temp/` désindexé. **Chantier paliers Telegram CLOS (Lots 1→5).**
 
 ---
 
@@ -41,12 +39,13 @@ La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloqua
 | **Magic-link fournisseur** | Onboarding ultra-simple : lien magique `t.me/<bot>?start=CODE` + QR (fournisseur) ; admin génère lien + QR + partage WhatsApp (`/admin/users/[id]`) ; TTL admin 15 min ; notif in-app à la liaison + cloche fournisseur (`e50b1f0`) | — (code) | ✅ EN PROD (Vercel) — ⚙️ `TELEGRAM_BOT_USERNAME` posé, **à re-vérifier** |
 | **Paliers Telegram (Lots 1-2-3)** | Extraction IA des paliers de gros dégressifs depuis Telegram, COMPLÈTE : sanitizer (`6977e6d`) + helper `insertMoqTiers` (`f075e4f`) + extraction IA branchée `ingest.ts` (vrai MOQ, `cfa6eed`). @finance 🟢 · @tester 3/3 LOCAL | — (code) | ✅ EN PROD (Vercel) — canal Telegram (0 fournisseur lié) |
 | **Paliers Telegram (Lot 4)** | Éditeur paliers + MOQ en **modération admin** (module pur `moq-editor.ts` + `approveSupplierProduct` + UI) : l'admin corrige une extraction douteuse. Devise fournisseur + MAD lecture seule ; palier optionnel ; `sanitizeMoqTiers` seul juge ; write idempotent delete-then-insert scopé ; flag @finance base<1er palier. @finance 🟢 · @security 🟢 · @tester **405/405 LOCAL** | — (code) | ✅ **EN PROD** — poussé `origin/main` @ `5c4d03c` (auto-deploy Vercel, succès à confirmer dashboard) |
+| **Paliers Telegram (Lot 5)** | **Message d'accueil bot 4 langues** (`welcome.ts` pur + `ingest.ts` sur `/start`/`/link` sans code) : guide l'envoi produit + **recommande le format des paliers**. `ar-MA`→darija, `ar*`→MSA, `fr*`→FR, reste→EN. Nom **« Abdou Baba »**, devises **MAD/AED/USD**, WhatsApp via env, chiffres latins ; linking + ingestion inchangés. @tester 453/453 LOCAL | — (code) | 🔄 **MERGÉ `main` LOCAL** (`7bb5c57`) — **NON POUSSÉ** (pas live côté bot en prod) |
 
 **Qualité :** @finance 🟢 · @security 🟢 sur tous les lots financiers/sensibles ; 4 checks verts (tsc 0 / build / vitest / smoke) à chaque lot. Détail complet par lot dans `ETAT_SYSTEME.md`.
 
 ---
 
-## 🏗️ CHANTIER EN COURS — PALIERS TELEGRAM (Lots 1-2-3-4 faits / 5, session 2026-07-02)
+## 🏗️ CHANTIER PALIERS TELEGRAM — ✅ COMPLET & CLOS (Lots 1→5, session 2026-07-02)
 
 > **But** : que les **paliers de prix dégressifs + le minimum de commande** viennent du **fournisseur automatiquement** (Telegram), pour scaler à des milliers de produits sans saisie admin manuelle.
 > **⚖️ RÈGLE MÉTIER GRAVÉE (Abdou)** : 1er palier = **minimum de commande** ; prix **strictement décroissant** quand la quantité monte (`10→20, 50→18, 100→16, 500→14`). Format `{ min_quantity, unit_price }`.
@@ -56,9 +55,9 @@ La plateforme est **fonctionnellement prête pour la beta**. Il reste **4 bloqua
 - ✅ **Lot 2 — helper `insertMoqTiers` factorisé** (web + CSV, refactor pur prouvé identique, @tester 4/4). Mergé `main` `f075e4f`.
 - ✅ **Lot 3 — extraction IA** (`extract.ts`/`schema.ts` + branchement `ingest.ts` : vrai MOQ = 1er palier, désambiguïsation stock/palier). **⚠️ ARGENT — @finance 🟢**, @tester 3/3 LOCAL, purement additif. Mergé `main` `cfa6eed`.
 - ✅ **Lot 4 — éditeur paliers + MOQ en modération admin** : module pur `src/lib/supplier/moq-editor.ts` (parse/juge, testable) + `approveSupplierProduct` (write **idempotent delete-then-insert scopé**, mirror sur nouveaux paliers) + UI `supplier-product-review.tsx` (N paliers dynamiques ≤20, pré-rempli, MOQ éditable, **MAD lecture seule**, i18n FR/AR/EN+RTL). Palier **optionnel** ; `sanitizeMoqTiers` = **seul juge** (basePrice=null + flag @finance séparé, non bloquant) ; prix source **verbatim**. **⚠️ ARGENT — @finance 🟢 · @security 🟢**, @tester **405/405 LOCAL** (round-trip 6 paliers + delete scopé non-fuyant prouvés), 4 checks verts. **✅ EN PROD — poussé `origin/main` @ `5c4d03c` le 2026-07-02** (pre-push vert ; deploy Vercel à confirmer dashboard). **🪵 Dette connue** : séquence UPDATE+delete/insert+miroir **non transactionnelle** (échec INSERT après DELETE → « MOQ à jour + 0 palier », repli sûr/idempotent, zéro impact ledger) → **RPC atomique si les paliers deviennent un prix facturé critique**.
-- ⬜ **Lot 5 — message bot d'accueil FR/darija** (recommander le format). **← REPRENDRE ICI (après le push de `main`).**
+- ✅ **Lot 5 — message d'accueil bot 4 langues** (`welcome.ts` + `ingest.ts` + `language_code` schéma) : `/start`/premier contact → guide envoi produit + recommande le format des paliers. `ar-MA`→darija (avant `ar`), `ar*`→MSA, `fr*`→FR, reste→EN. Nom **« Abdou Baba »**, devises MAD/AED/USD, WhatsApp via env, chiffres latins. Linking + ingestion inchangés. @tester 453/453 LOCAL, 4 checks verts. Mergé `main` LOCAL `--no-ff` (`7bb5c57`), **NON POUSSÉ**.
 
-**➡️ Reprise du chantier dev : Lot 5** (dernier lot). *(Distinct des 4 bloquants go-live ci-dessous, qui sont des actions ops.)*
+**➡️ Chantier paliers CLOS (Lots 1→5).** Prochain chantier dev = **rebrand Mozouna → Abdou Baba** (Phase 0 cartographie ; cf. REPRENDRE ICI #2 + `FEUILLE_DE_ROUTE.md`). *(Distinct des bloquants go-live ci-dessous, qui sont des actions ops.)*
 
 **ℹ️ Vérifié cette session (hors code)** : l'affichage acheteur d'un produit fournisseur **international** est **conforme, pas de bug** — prix affiché en **MAD** (label « Prix final TTC », jamais la devise source), mention explicite **hors transport** + « transport et douane calculés dans le devis » (FR/AR/EN, `importPriceNote`), **aucun tableau de paliers dégressifs** (produit international = **devis/RFQ**, pas de commande directe). Flags d'affichage : `supplier_type` (badge/label/mention) + `availability_type` (stock + CTA direct vs devis).
 
