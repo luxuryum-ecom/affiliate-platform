@@ -9,7 +9,6 @@ import { getOriginConfig, TRUST_BADGES, PRODUCT_CATEGORIES, CATEGORY_ICONS as CA
 // ─── Mozouna Group Logo ────────────────────────────────────────────────────────
 
 export async function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const t = await getTranslations('badges')
   const sizes = {
     sm: { monogram: 'w-6 h-6 text-xs', name: 'text-xs', tagline: 'hidden' },
     md: { monogram: 'w-8 h-8 text-sm', name: 'text-sm', tagline: 'text-[10px]' },
@@ -20,11 +19,11 @@ export async function MozounaLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }
   return (
     <div className="flex items-center gap-2.5">
       <div className={`${s.monogram} rounded-lg bg-ink-900 ring-1 ring-gold-400/60 flex items-center justify-center font-bold text-gold-400 flex-shrink-0`}>
-        M
+        A
       </div>
       <div>
-        <p className={`${s.name} font-bold text-foreground leading-none`}>Mozouna Group</p>
-        <p className={`${s.tagline} text-gold-600 leading-none mt-0.5`}>{t('tagline')}</p>
+        <p className={`${s.name} font-bold text-foreground leading-none`}>Abdou Baba</p>
+        <p className={`${s.tagline} text-gold-600 leading-none mt-0.5`}>by Mozouna</p>
       </div>
     </div>
   )

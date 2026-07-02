@@ -52,7 +52,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     <div className="theme-dark bg-bg text-foreground min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <Link href="/" aria-label="Mozouna Group — accueil">
+          <Link href="/" aria-label="Abdou Baba — accueil">
             <MozounaLogo size="lg" />
           </Link>
         </div>

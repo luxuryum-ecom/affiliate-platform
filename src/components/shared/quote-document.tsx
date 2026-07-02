@@ -80,7 +80,7 @@ export function QuoteDocument({ data, labels, dateLocale = 'fr-MA' }: Props) {
       <div className="bg-indigo-700 px-8 py-6 text-white">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-lg font-bold tracking-wide">Mozouna Group</p>
+            <p className="text-lg font-bold tracking-wide">Abdou Baba by Mozouna</p>
             <p className="text-indigo-200 text-xs mt-0.5">Import &amp; Distribution B2B — Maroc</p>
           </div>
           <div className="text-right">

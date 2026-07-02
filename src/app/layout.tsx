@@ -11,7 +11,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Mozouna Group — COD & Sourcing Maroc',
+  title: 'Abdou Baba — COD & Sourcing Maroc',
   description: 'COD affiliate and wholesale marketplace — Morocco / MENA',
 }
 

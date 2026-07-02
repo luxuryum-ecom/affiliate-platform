@@ -69,7 +69,7 @@ export default async function HomePage() {
           <div className="mx-auto mb-6 h-0.5 w-16 rounded-full bg-gold-400" aria-hidden />
 
           <h1 className="text-4xl font-extrabold tracking-tight text-white drop-shadow-lg sm:text-5xl md:text-6xl">
-            Mozouna Group
+            Abdou Baba
           </h1>
 
           <p className="mt-5 text-lg font-semibold text-gold-400 drop-shadow-md sm:text-2xl">
