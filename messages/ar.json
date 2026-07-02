@@ -105,7 +105,7 @@
     },
     "finalCta": {
       "heading": "مستعدّ لتطوير تجارتك؟",
-      "text": "انضمّ إلى Mozouna Group اليوم، واستفد من التسويق بالعمولة بالدفع عند الاستلام، وكتالوج الجملة، والتوريد الدولي."
+      "text": "انضمّ إلى Abdou Baba اليوم، واستفد من التسويق بالعمولة بالدفع عند الاستلام، وكتالوج الجملة، والتوريد الدولي."
     },
     "footer": {
       "about": "منصة B2B — تسويق بالعمولة بالدفع عند الاستلام، وشراء بالجملة، وتوريد دولي. توصيل إلى كل المغرب، ودفع آمن.",
@@ -170,7 +170,7 @@
     "statCartItems": "عناصر في السلة",
     "statTotalSpent": "إجمالي الإنفاق",
     "cardCatalogTitle": "كتالوج المنتجات",
-    "cardCatalogDesc": "مخزون Mozouna الداخلي — طلب مباشر وتوصيل سريع. أسعار تصاعدية للجملة.",
+    "cardCatalogDesc": "مخزون Abdou Baba الداخلي — طلب مباشر وتوصيل سريع. أسعار تصاعدية للجملة.",
     "cardCatalogCta": "عرض الكتالوج",
     "cardCartTitle": "سلتي",
     "cartItems": "{count, plural, one {# عنصر بالانتظار.} other {# عناصر بالانتظار.}}",
@@ -512,7 +512,7 @@
       "labelOrigin": "المنشأ: {value}",
       "labelMinQty": "الحد الأدنى: {count} وحدة",
       "labelSuggestedPrice": "السعر المقترح: {price} درهم",
-      "blockedNotice": "منتج مرفوض — تواصل مع Mozouna للمزيد من المعلومات.",
+      "blockedNotice": "منتج مرفوض — تواصل مع Abdou Baba للمزيد من المعلومات.",
       "awaitingFxRate": "السعر في انتظار سعر صرف {currency} — يظهر «حسب الطلب» إلى أن يقوم المسؤول بإعداده.",
       "submittedOn": "مقترح بتاريخ {date}",
       "stockManualLabel": "المخزون:",
@@ -662,7 +662,7 @@
       "faq3A": "نعم. تعرض منتجاتك شارة في السوق، ويظهر الموردون المميَّزون في مقدمة القائمة.",
       "faq4Q": "هل يمكنني الإلغاء في أي وقت؟",
       "faq4A": "نعم. تواصل مع فريقنا وسنُلغي اشتراكك دون رسوم إضافية.",
-      "waMessage": "مرحبًا، أرغب في الترقية إلى خطة {plan} على Mozouna Marketplace."
+      "waMessage": "مرحبًا، أرغب في الترقية إلى خطة {plan} على Abdou Baba Marketplace."
     },
     "analytics": {
       "metaTitle": "التحليلات — فضاء المورّد",
@@ -813,7 +813,7 @@
       "tiersLabel": "شرائح السعر (الكمية الدنيا + سعر USD / وحدة)",
       "tierQtyPlaceholder": "الشريحة {i} — الكمية الدنيا",
       "tierPricePlaceholder": "السعر USD / وحدة",
-      "tiersHelper": "يحدد المورّد الأسعار. Mozouna لا تخترعها — اعتماد المدير إلزامي.",
+      "tiersHelper": "يحدد المورّد الأسعار. Abdou Baba لا تخترعها — اعتماد المدير إلزامي.",
       "sectionMedia": "الوسائط",
       "photosLabel": "الصور (رابط واحد في كل سطر)",
       "photosPlaceholder": "https://example.com/photo1.jpg",
@@ -822,7 +822,7 @@
       "privateNotesLabel": "ملاحظات خاصة (للاستخدام الداخلي فقط)",
       "privateNotesPlaceholder": "مهل، شروط، جهات اتصال، معلومات لوجستية...",
       "privateNotesHelper": "لن تظهر هذه الملاحظات للمشترين أبدًا.",
-      "ctaSubmit": "اقتراح للمراجعة من Mozouna",
+      "ctaSubmit": "اقتراح للمراجعة من Abdou Baba",
       "submitting": "جارٍ الاقتراح…"
     }
   },
@@ -844,7 +844,7 @@
     "products": {
       "metaTitle": "الكتالوج — فضاء الجملة",
       "pageTitle": "كتالوج الجملة",
-      "subtitle": "{count, plural, one {# منتج متاح.} other {# منتجات متاحة.}} مخزون Mozouna الداخلي — طلب مباشر.",
+      "subtitle": "{count, plural, one {# منتج متاح.} other {# منتجات متاحة.}} مخزون Abdou Baba الداخلي — طلب مباشر.",
       "empty": "لا توجد منتجات متاحة في الوقت الحالي.",
       "viewCart": "عرض السلة ({count})",
       "browseMarketplace": "البحث لدى موردينا → السوق",
@@ -1359,7 +1359,7 @@
       "infoPriceMorocco": "سعر الجملة",
       "infoPriceImport": "السعر الإجمالي شامل الضريبة",
       "infoOnQuote": "حسب الطلب",
-      "importPriceNote": "السعر محدد من قِبل المنصة، دون الشحن. يُحتسب الشحن والجمارك في عرض السعر حسب الكمية ونوع النقل (بحري/جوي). الدفع عبر Mozouna Group حصرًا.",
+      "importPriceNote": "السعر محدد من قِبل المنصة، دون الشحن. يُحتسب الشحن والجمارك في عرض السعر حسب الكمية ونوع النقل (بحري/جوي). الدفع عبر Abdou Baba حصرًا.",
       "directOrderTitle": "طلب بالجملة",
       "directOrderSubtitle": "السعر والمخزون والحد الأدنى معروفة — أضف إلى السلة ثم أكّد طلبك.",
       "sampleTitle": "طلب عيّنة / مستند",
@@ -1490,7 +1490,7 @@
       "statusRejected": "مرفوض (الإدارة)",
       "statusConvertedToOrder": "تحوّل إلى طلب",
       "bannerQuoteReadyTitle": "عرض السعر الخاص بك جاهز",
-      "bannerQuoteReadyBody": "أعدّت مجموعة مزونة عرض السعر الخاص بك. راجع المستند للاطلاع على الأسعار والرسوم وأوقات التسليم التقديرية.",
+      "bannerQuoteReadyBody": "أعدّت Abdou Baba عرض السعر الخاص بك. راجع المستند للاطلاع على الأسعار والرسوم وأوقات التسليم التقديرية.",
       "bannerQuoteReadyCta": "عرض التسعيرة →",
       "bannerAcceptedTitle": "تم قبول العرض — بانتظار تأكيد الطلب",
       "bannerAcceptedOn": "تم القبول بتاريخ {date}",
@@ -1570,8 +1570,8 @@
   },
   "publicProduct": {
     "metaUnavailable": "المنتج غير متوفر",
-    "metaTitleSuffix": "— Mozouna Group",
-    "ariaHomeLogo": "Mozouna Group — الصفحة الرئيسية",
+    "metaTitleSuffix": "— Abdou Baba",
+    "ariaHomeLogo": "Abdou Baba — الصفحة الرئيسية",
     "badgeCod": "الدفع عند الاستلام · المغرب",
     "badgeStockMorocco": "مخزون المغرب",
     "badgeInStock": "{count} في المخزون",
@@ -1614,7 +1614,7 @@
     "deliveryDays": "{min}–{max} أيام عمل"
   },
   "orderTrack": {
-    "metaTitle": "تتبع الطلب — Mozouna Group",
+    "metaTitle": "تتبع الطلب — Abdou Baba",
     "metaDescription": "تتبع حالة طلبك بالدفع عند الاستلام عبر إدخال رقم هاتفك.",
     "headerLabel": "تتبع الطلب",
     "heroTitle": "تتبع طلبي",
@@ -1657,7 +1657,7 @@
     "roleWholesaler": "أشتري بالجملة",
     "roleSupplier": "أبيع منتجاتي",
     "login": {
-      "metaTitle": "تسجيل الدخول — Mozouna Group",
+      "metaTitle": "تسجيل الدخول — Abdou Baba",
       "title": "تسجيل الدخول",
       "subtitle": "ادخل إلى مساحة عملك.",
       "passwordPlaceholder": "كلمة المرور الخاصة بك",
@@ -1668,7 +1668,7 @@
       "forgotLink": "نسيت كلمة المرور؟"
     },
     "signup": {
-      "metaTitle": "إنشاء حساب — Mozouna Group",
+      "metaTitle": "إنشاء حساب — Abdou Baba",
       "title": "إنشاء حساب",
       "subtitle": "كيف تنوي استخدام المنصة؟",
       "subAffiliate": "شارك الروابط واكسب عمولات الدفع عند الاستلام",
@@ -1693,7 +1693,7 @@
       "phoneInvalid": "رقم غير صالح. الصيغة الدولية متوقَّعة، مثال: +212600000000."
     },
     "pending": {
-      "metaTitle": "الحساب قيد المراجعة — Mozouna Group",
+      "metaTitle": "الحساب قيد المراجعة — Abdou Baba",
       "nextSteps": "الخطوات التالية",
       "signOut": "تسجيل الخروج",
       "hello": "مرحبًا {name}،",
@@ -1726,7 +1726,7 @@
       }
     },
     "forgotPassword": {
-      "metaTitle": "نسيت كلمة المرور — Mozouna Group",
+      "metaTitle": "نسيت كلمة المرور — Abdou Baba",
       "title": "نسيت كلمة المرور",
       "intro": "أدخل بريدك الإلكتروني. إن وُجد حساب مرتبط به، ستصلك رسالة لإعادة تعيين كلمة المرور.",
       "submit": "إرسال الرابط",
@@ -1735,7 +1735,7 @@
       "backToLogin": "العودة إلى تسجيل الدخول"
     },
     "resetPassword": {
-      "metaTitle": "كلمة مرور جديدة — Mozouna Group",
+      "metaTitle": "كلمة مرور جديدة — Abdou Baba",
       "title": "اختيار كلمة مرور جديدة",
       "newPasswordLabel": "كلمة المرور الجديدة",
       "newPasswordPlaceholder": "8 أحرف على الأقل",
@@ -2306,7 +2306,7 @@
       "internalQuotesLink": "← طلبات عروض الأسعار",
       "kpiDue": "المبالغ المستحقة",
       "kpiPaid": "المبالغ المدفوعة",
-      "kpiCommission": "عمولة مزونة",
+      "kpiCommission": "عمولة Abdou Baba",
       "filterAll": "الكل",
       "empty": "لا توجد عروض أسعار من الموردين.",
       "supplier": "المورد",
@@ -2330,7 +2330,7 @@
       "adminNotes": "ملاحظات داخلية للمسؤول",
       "financialSection": "التفصيل المالي — للمسؤول فقط",
       "supplierCost": "تكلفة المورد",
-      "commissionLabel": "عمولة مزونة",
+      "commissionLabel": "عمولة Abdou Baba",
       "commissionPercent": "{value}%",
       "commissionFixed": "ثابت {amount}",
       "transport": "النقل والجمارك",
@@ -2405,7 +2405,7 @@
       "kpiDueHint": "{pending} بانتظار · {partial} جزئي",
       "kpiPaid": "الدفعات المدفوعة",
       "kpiPaidHint": "{count, plural, one {# عرض مسوَّى} other {# عروض مسوَّاة}}",
-      "kpiCommission": "عمولة مزونة",
+      "kpiCommission": "عمولة Abdou Baba",
       "kpiCommissionHint": "على {count, plural, one {# عرض} other {# عروض}}",
       "kpiRevenue": "رقم الأعمال للعملاء",
       "kpiRevenueHint": "إجمالي الفواتير للمشترين",
@@ -2426,7 +2426,7 @@
       "title": "الشؤون المالية للمورد",
       "unitPriceRow": "سعر الوحدة في العرض",
       "totalClientRow": "الإجمالي للعميل",
-      "commissionRow": "عمولة مزونة",
+      "commissionRow": "عمولة Abdou Baba",
       "transportRow": "النقل والجمارك",
       "payoutRow": "الدفعة للمورد",
       "supplierCostLabel": "تكلفة المورد (درهم)",
@@ -2606,7 +2606,7 @@
         "generating": "جارٍ الإنشاء…",
         "openLink": "فتح رابط تيليغرام",
         "shareWhatsApp": "المشاركة عبر واتساب",
-        "waMessage": "مرحبًا، هذا رابطك لربط تيليغرام بمساحة المورّد Mozouna: {url}",
+        "waMessage": "مرحبًا، هذا رابطك لربط تيليغرام بمساحة المورّد Abdou Baba: {url}",
         "scanQr": "رمز QR ليمسحه المورّد",
         "validity": "الرابط صالح لمدة {minutes} دقيقة، للاستعمال مرة واحدة.",
         "linkedAlready": "هذا المورّد ربط تيليغرام بالفعل."
@@ -3081,7 +3081,7 @@
       "deliveryCostLabel": "تكلفة التوصيل (درهم)",
       "deliveryRebillLabel": "إعادة الفوترة على الزبون (درهم)",
       "deliveryRebillHint": "يجب أن تكون أكبر من أو تساوي تكلفة التوصيل.",
-      "supplierBearsCost": "يتحمّل المورّد تكلفة التوصيل — لا تكلفة ولا إعادة فوترة على موزونة.",
+      "supplierBearsCost": "يتحمّل المورّد تكلفة التوصيل — لا تكلفة ولا إعادة فوترة على Abdou Baba.",
       "rebillCollected": "تمّ تحصيل إعادة فوترة النقل: {amount}",
       "rebillNotCollected": "لم يتمّ بعد تحصيل إعادة فوترة النقل.",
       "saved": "تمّ حفظ إعداد التوصيل.",
@@ -3520,7 +3520,7 @@
       "pageTitle": "طلبات التوريد — دولي",
       "subtitle": "هذه هي طلبات التوريد الخاصة بالدول المعيَّنة لك. لا تظهر هنا أي معلومات تخص تجار الجملة.",
       "myCountriesLabel": "دولك",
-      "confidentialityNote": "بيانات تاجر الجملة (الاسم، الشركة، الهاتف) غير مرئية هنا. تواصل مع فريق مزونة لأي تنسيق.",
+      "confidentialityNote": "بيانات تاجر الجملة (الاسم، الشركة، الهاتف) غير مرئية هنا. تواصل مع فريق Abdou Baba لأي تنسيق.",
       "requestCount": "{count, plural, =0 {لا يوجد طلبات} one {طلب واحد} other {{count} طلبات}}",
       "quantityValue": "{qty} وحدة",
       "deadlineLabel": "الأجل : {date}",

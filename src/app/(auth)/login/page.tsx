@@ -15,7 +15,7 @@ export default async function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo / wordmark */}
         <div className="flex justify-center mb-8">
-          <Link href="/" aria-label="Mozouna Group — accueil">
+          <Link href="/" aria-label="Abdou Baba — accueil">
             <MozounaLogo size="lg" />
           </Link>
         </div>

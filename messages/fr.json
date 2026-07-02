@@ -105,7 +105,7 @@
     },
     "finalCta": {
       "heading": "Prêt à développer votre activité ?",
-      "text": "Rejoignez Mozouna Group et accédez dès aujourd'hui à l'affiliation COD, au catalogue grossiste et au sourcing international."
+      "text": "Rejoignez Abdou Baba et accédez dès aujourd'hui à l'affiliation COD, au catalogue grossiste et au sourcing international."
     },
     "footer": {
       "about": "Plateforme B2B — affiliation COD, achat en gros et sourcing international. Livraison partout au Maroc, paiement sécurisé.",
@@ -170,7 +170,7 @@
     "statCartItems": "Articles dans le panier",
     "statTotalSpent": "Total dépensé",
     "cardCatalogTitle": "Catalogue produits",
-    "cardCatalogDesc": "Stock interne Mozouna — commande directe, livraison rapide. Paliers de prix grossiste.",
+    "cardCatalogDesc": "Stock interne Abdou Baba — commande directe, livraison rapide. Paliers de prix grossiste.",
     "cardCatalogCta": "Voir le catalogue",
     "cardCartTitle": "Mon panier",
     "cartItems": "{count, plural, one {# article en attente.} other {# articles en attente.}}",
@@ -512,7 +512,7 @@
       "labelOrigin": "Origine : {value}",
       "labelMinQty": "Min. : {count} u.",
       "labelSuggestedPrice": "Prix suggéré : {price} MAD",
-      "blockedNotice": "Produit refusé — contactez Mozouna pour plus d'informations.",
+      "blockedNotice": "Produit refusé — contactez Abdou Baba pour plus d'informations.",
       "awaitingFxRate": "Prix en attente du taux de change {currency} — affiché « Sur devis » jusqu'à sa configuration par l'administrateur.",
       "submittedOn": "Soumis le {date}",
       "stockManualLabel": "Stock :",
@@ -662,7 +662,7 @@
       "faq3A": "Oui. Vos produits affichent un badge dans la marketplace, et les fournisseurs Vedette apparaissent en tête de liste.",
       "faq4Q": "Puis-je annuler à tout moment ?",
       "faq4A": "Oui. Contactez notre équipe et nous résilierons votre abonnement sans frais supplémentaires.",
-      "waMessage": "Bonjour, je souhaite passer au plan {plan} sur Mozouna Marketplace."
+      "waMessage": "Bonjour, je souhaite passer au plan {plan} sur Abdou Baba Marketplace."
     },
     "analytics": {
       "metaTitle": "Analytiques — Espace Fournisseur",
@@ -813,7 +813,7 @@
       "tiersLabel": "Paliers de prix (quantité min. + prix USD / unité)",
       "tierQtyPlaceholder": "Palier {i} — qté min.",
       "tierPricePlaceholder": "Prix USD / u.",
-      "tiersHelper": "Les prix sont définis par le fournisseur. Mozouna ne les invente pas — validation admin obligatoire.",
+      "tiersHelper": "Les prix sont définis par le fournisseur. Abdou Baba ne les invente pas — validation admin obligatoire.",
       "sectionMedia": "Médias",
       "photosLabel": "Photos (une URL par ligne)",
       "photosPlaceholder": "https://exemple.com/photo1.jpg",
@@ -822,7 +822,7 @@
       "privateNotesLabel": "Notes privées (usage interne uniquement)",
       "privateNotesPlaceholder": "Délais, conditions, contacts, informations logistiques...",
       "privateNotesHelper": "Ces notes ne seront jamais visibles par les acheteurs.",
-      "ctaSubmit": "Soumettre pour validation Mozouna",
+      "ctaSubmit": "Soumettre pour validation Abdou Baba",
       "submitting": "Soumission en cours…"
     }
   },
@@ -844,7 +844,7 @@
     "products": {
       "metaTitle": "Catalogue — Espace Grossiste",
       "pageTitle": "Catalogue grossiste",
-      "subtitle": "{count, plural, one {# produit disponible.} other {# produits disponibles.}} Stock interne Mozouna — commande directe.",
+      "subtitle": "{count, plural, one {# produit disponible.} other {# produits disponibles.}} Stock interne Abdou Baba — commande directe.",
       "empty": "Aucun produit disponible pour le moment.",
       "viewCart": "Voir le panier ({count})",
       "browseMarketplace": "Chercher chez nos fournisseurs → Marketplace",
@@ -1359,7 +1359,7 @@
       "infoPriceMorocco": "Prix de gros",
       "infoPriceImport": "Prix final TTC",
       "infoOnQuote": "Sur devis",
-      "importPriceNote": "Prix défini par la plateforme, hors transport. Transport et douane calculés dans le devis selon la quantité et le mode (maritime/aérien). Paiement via Mozouna Group uniquement.",
+      "importPriceNote": "Prix défini par la plateforme, hors transport. Transport et douane calculés dans le devis selon la quantité et le mode (maritime/aérien). Paiement via Abdou Baba uniquement.",
       "directOrderTitle": "Commander en gros",
       "directOrderSubtitle": "Prix affiché, stock et MOQ connus — ajout au panier puis validation de commande.",
       "sampleTitle": "Demander un échantillon / document",
@@ -1490,7 +1490,7 @@
       "statusRejected": "Refusé (admin)",
       "statusConvertedToOrder": "Converti en commande",
       "bannerQuoteReadyTitle": "Votre devis est prêt",
-      "bannerQuoteReadyBody": "Mozouna Group a préparé votre devis. Consultez le document pour connaître les prix, frais et délais estimés.",
+      "bannerQuoteReadyBody": "Abdou Baba a préparé votre devis. Consultez le document pour connaître les prix, frais et délais estimés.",
       "bannerQuoteReadyCta": "Consulter le devis →",
       "bannerAcceptedTitle": "Devis accepté — en attente de confirmation de commande",
       "bannerAcceptedOn": "Accepté le {date}",
@@ -1570,8 +1570,8 @@
   },
   "publicProduct": {
     "metaUnavailable": "Produit non disponible",
-    "metaTitleSuffix": "— Mozouna Group",
-    "ariaHomeLogo": "Mozouna Group — accueil",
+    "metaTitleSuffix": "— Abdou Baba",
+    "ariaHomeLogo": "Abdou Baba — accueil",
     "badgeCod": "COD · Maroc",
     "badgeStockMorocco": "Stock Maroc",
     "badgeInStock": "{count} en stock",
@@ -1614,7 +1614,7 @@
     "deliveryDays": "{min}–{max} jours ouvrables"
   },
   "orderTrack": {
-    "metaTitle": "Suivi de commande — Mozouna Group",
+    "metaTitle": "Suivi de commande — Abdou Baba",
     "metaDescription": "Suivez le statut de votre commande COD en entrant votre numéro de téléphone.",
     "headerLabel": "Suivi de commande",
     "heroTitle": "Suivre ma commande",
@@ -1657,7 +1657,7 @@
     "roleWholesaler": "J'achète en gros",
     "roleSupplier": "Je vends mes produits",
     "login": {
-      "metaTitle": "Connexion — Mozouna Group",
+      "metaTitle": "Connexion — Abdou Baba",
       "title": "Connexion",
       "subtitle": "Accédez à votre espace de travail.",
       "passwordPlaceholder": "Votre mot de passe",
@@ -1668,7 +1668,7 @@
       "forgotLink": "Mot de passe oublié ?"
     },
     "signup": {
-      "metaTitle": "Inscription — Mozouna Group",
+      "metaTitle": "Inscription — Abdou Baba",
       "title": "Créer un compte",
       "subtitle": "Comment comptez-vous utiliser la plateforme ?",
       "subAffiliate": "Partagez des liens, encaissez des commissions COD",
@@ -1693,7 +1693,7 @@
       "phoneInvalid": "Numéro invalide. Format international attendu, ex. +212600000000."
     },
     "pending": {
-      "metaTitle": "Compte en attente — Mozouna Group",
+      "metaTitle": "Compte en attente — Abdou Baba",
       "nextSteps": "Prochaines étapes",
       "signOut": "Se déconnecter",
       "hello": "Bonjour {name},",
@@ -1726,7 +1726,7 @@
       }
     },
     "forgotPassword": {
-      "metaTitle": "Mot de passe oublié — Mozouna Group",
+      "metaTitle": "Mot de passe oublié — Abdou Baba",
       "title": "Mot de passe oublié",
       "intro": "Saisissez votre adresse email. Si un compte existe, vous recevrez un lien de réinitialisation.",
       "submit": "Envoyer le lien",
@@ -1735,7 +1735,7 @@
       "backToLogin": "Retour à la connexion"
     },
     "resetPassword": {
-      "metaTitle": "Nouveau mot de passe — Mozouna Group",
+      "metaTitle": "Nouveau mot de passe — Abdou Baba",
       "title": "Choisir un nouveau mot de passe",
       "newPasswordLabel": "Nouveau mot de passe",
       "newPasswordPlaceholder": "8 caractères minimum",
@@ -2306,7 +2306,7 @@
       "internalQuotesLink": "Demandes de devis →",
       "kpiDue": "À verser",
       "kpiPaid": "Versé",
-      "kpiCommission": "Commission Mozouna",
+      "kpiCommission": "Commission Abdou Baba",
       "filterAll": "Tous",
       "empty": "Aucun devis fournisseur.",
       "supplier": "Fournisseur",
@@ -2330,7 +2330,7 @@
       "adminNotes": "Notes admin internes",
       "financialSection": "Décomposition financière — Admin uniquement",
       "supplierCost": "Coût fournisseur",
-      "commissionLabel": "Commission Mozouna",
+      "commissionLabel": "Commission Abdou Baba",
       "commissionPercent": "{value}%",
       "commissionFixed": "fixe {amount}",
       "transport": "Transport & douanes",
@@ -2405,7 +2405,7 @@
       "kpiDueHint": "{pending} en attente · {partial} partiel",
       "kpiPaid": "Reversements versés",
       "kpiPaidHint": "{count, plural, one {# devis soldé} other {# devis soldés}}",
-      "kpiCommission": "Commission Mozouna",
+      "kpiCommission": "Commission Abdou Baba",
       "kpiCommissionHint": "Sur {count, plural, one {# devis} other {# devis}}",
       "kpiRevenue": "Chiffre d'affaires client",
       "kpiRevenueHint": "Total facturé aux acheteurs",
@@ -2426,7 +2426,7 @@
       "title": "Finances fournisseur",
       "unitPriceRow": "Prix unitaire devis",
       "totalClientRow": "Total client",
-      "commissionRow": "Commission Mozouna",
+      "commissionRow": "Commission Abdou Baba",
       "transportRow": "Transport & douanes",
       "payoutRow": "Reversement fournisseur",
       "supplierCostLabel": "Coût fournisseur (MAD)",
@@ -2606,7 +2606,7 @@
         "generating": "Génération…",
         "openLink": "Ouvrir le lien Telegram",
         "shareWhatsApp": "Partager sur WhatsApp",
-        "waMessage": "Bonjour, voici votre lien pour connecter Telegram à votre espace fournisseur Mozouna : {url}",
+        "waMessage": "Bonjour, voici votre lien pour connecter Telegram à votre espace fournisseur Abdou Baba : {url}",
         "scanQr": "QR code à scanner par le fournisseur",
         "validity": "Lien valable {minutes} minutes, à usage unique.",
         "linkedAlready": "Ce fournisseur a déjà lié son Telegram."
@@ -3081,7 +3081,7 @@
       "deliveryCostLabel": "Coût de livraison (MAD)",
       "deliveryRebillLabel": "Refacturation au client (MAD)",
       "deliveryRebillHint": "Doit être supérieure ou égale au coût de livraison.",
-      "supplierBearsCost": "Le fournisseur prend en charge la livraison — aucun coût ni refacturation côté Mozouna.",
+      "supplierBearsCost": "Le fournisseur prend en charge la livraison — aucun coût ni refacturation côté Abdou Baba.",
       "rebillCollected": "Refacturation transport encaissée : {amount}",
       "rebillNotCollected": "Refacturation transport non encore encaissée.",
       "saved": "Configuration de livraison enregistrée.",
@@ -3520,7 +3520,7 @@
       "pageTitle": "Demandes de sourcing — mes pays",
       "subtitle": "Voici les demandes de sourcing pour les pays qui vous sont affectés. Aucune information grossiste n'est visible ici.",
       "myCountriesLabel": "Vos pays",
-      "confidentialityNote": "Les informations grossiste (nom, société, téléphone) ne sont pas affichées. Contactez l'équipe Mozouna pour toute coordination.",
+      "confidentialityNote": "Les informations grossiste (nom, société, téléphone) ne sont pas affichées. Contactez l'équipe Abdou Baba pour toute coordination.",
       "requestCount": "{count, plural, =0 {Aucune demande} one {1 demande} other {{count} demandes}}",
       "quantityValue": "{qty} unités",
       "deadlineLabel": "Délai : {date}",
