@@ -8,6 +8,24 @@ import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
 import { extractProductFromTelegram } from './extract'
 import { telegramDownloadPhoto, telegramSendMessage } from './client'
 import { buildSupplierWelcome } from './welcome'
+import {
+  msgLinkCodeInvalid,
+  msgAlreadyLinked,
+  msgCodeNotFound,
+  msgCodeExpired,
+  msgLinkFailed,
+  msgLinkedSuccess,
+  msgNotLinkedYet,
+  msgRateLimited,
+  msgNoCountry,
+  msgLimitReached,
+  msgPriceWithMad,
+  msgPriceNoRate,
+  msgPriceUnknown,
+  msgProductReceived,
+  msgAnalysisFailed,
+  msgGuide,
+} from './messages'
 import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
 import { getRateToMad } from '@/lib/fx'
 import { checkProductLimit } from '@/lib/product-limit'
@@ -119,17 +137,18 @@ async function resolveSupplierId(admin: Admin, telegramUserId: number): Promise<
 async function handleLinkCommand(admin: Admin, msg: TelegramMessage, codeRaw: string): Promise<void> {
   const chatId = msg.chat.id
   const telegramUserId = msg.from!.id
+  const lc = msg.from!.language_code
   const code = codeRaw.trim().toUpperCase()
 
   if (!isValidLinkCodeFormat(code)) {
-    await telegramSendMessage(chatId, 'Code invalide. Format attendu : 8 caractères (ex. /link A7K2P9QX).')
+    await telegramSendMessage(chatId, msgLinkCodeInvalid(lc))
     return
   }
 
   // Déjà lié ?
   const existingId = await resolveSupplierId(admin, telegramUserId)
   if (existingId) {
-    await telegramSendMessage(chatId, 'Votre compte Telegram est déjà lié à votre espace fournisseur. ✅')
+    await telegramSendMessage(chatId, msgAlreadyLinked(lc))
     return
   }
 
@@ -142,11 +161,11 @@ async function handleLinkCommand(admin: Admin, msg: TelegramMessage, codeRaw: st
 
   const link = row as { id: string; supplier_id: string; link_code_expires_at: string | null } | null
   if (!link) {
-    await telegramSendMessage(chatId, 'Code introuvable. Générez un nouveau code depuis votre espace fournisseur.')
+    await telegramSendMessage(chatId, msgCodeNotFound(lc))
     return
   }
   if (link.link_code_expires_at && new Date(link.link_code_expires_at).getTime() < Date.now()) {
-    await telegramSendMessage(chatId, 'Ce code a expiré. Générez-en un nouveau depuis votre espace fournisseur.')
+    await telegramSendMessage(chatId, msgCodeExpired(lc))
     return
   }
 
@@ -164,7 +183,7 @@ async function handleLinkCommand(admin: Admin, msg: TelegramMessage, codeRaw: st
     .is('telegram_user_id', null)
 
   if (error) {
-    await telegramSendMessage(chatId, 'Liaison impossible (ce compte Telegram est peut-être déjà utilisé). Contactez le support.')
+    await telegramSendMessage(chatId, msgLinkFailed(lc))
     return
   }
 
@@ -182,10 +201,7 @@ async function handleLinkCommand(admin: Admin, msg: TelegramMessage, codeRaw: st
     console.error('notify supplier_telegram_linked', e)
   }
 
-  await telegramSendMessage(
-    chatId,
-    'Compte lié ✅ Envoyez désormais une photo de produit avec une courte description (nom + prix en DH). Chaque produit sera vérifié par un administrateur avant publication.',
-  )
+  await telegramSendMessage(chatId, msgLinkedSuccess(lc))
 }
 
 // ── Ingestion d'un message produit (photo + légende) ─────────────────────────
@@ -193,6 +209,7 @@ async function handleLinkCommand(admin: Admin, msg: TelegramMessage, codeRaw: st
 async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise<void> {
   const chatId = msg.chat.id
   const telegramUserId = msg.from!.id
+  const lc = msg.from!.language_code
   const messageKey = buildMessageKey(msg.chat.id, msg.message_id)
   const largest = pickLargestPhoto(msg.photo ?? [])
   if (!largest) return
@@ -213,17 +230,14 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
   // Compte non lié → on journalise et on guide, aucun produit créé.
   if (!supplierId) {
     await markInbound(admin, messageKey, { status: 'rejected', error: 'compte_non_lie' })
-    await telegramSendMessage(
-      chatId,
-      "Votre compte Telegram n'est pas encore lié. Ouvrez votre espace fournisseur, générez un code, puis envoyez : /link VOTRE_CODE.",
-    )
+    await telegramSendMessage(chatId, msgNotLinkedYet(lc))
     return
   }
 
   // Anti-abus / coût IA : plafond par compte Telegram et par heure.
   if ((await countRecentInbound(admin, telegramUserId)) > MAX_PRODUCTS_PER_HOUR) {
     await markInbound(admin, messageKey, { status: 'rejected', error: 'rate_limit' })
-    await telegramSendMessage(chatId, 'Trop de produits envoyés en peu de temps. Réessayez dans une heure.')
+    await telegramSendMessage(chatId, msgRateLimited(lc))
     return
   }
 
@@ -233,10 +247,7 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
   const currency = await resolveSupplierCurrency(db, supplierId)
   if (!currency) {
     await markInbound(admin, messageKey, { status: 'rejected', error: 'no_country' })
-    await telegramSendMessage(
-      chatId,
-      "Configurez d'abord votre PAYS dans votre profil fournisseur (il détermine votre devise) avant d'envoyer un produit.",
-    )
+    await telegramSendMessage(chatId, msgNoCountry(lc))
     return
   }
 
@@ -246,7 +257,11 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
     await markInbound(admin, messageKey, { status: 'rejected', error: 'limit_reached' })
     await telegramSendMessage(
       chatId,
-      `Limite de produits atteinte (${limit.currentCount}/${limit.maxAllowed} — plan ${limit.planName}). Passez à un plan supérieur pour en ajouter.`,
+      msgLimitReached(lc, {
+        current: limit.currentCount,
+        max: limit.maxAllowed,
+        plan: limit.planName,
+      }),
     )
     return
   }
@@ -402,23 +417,32 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
 
     const priceLine =
       pricing.suggested_wholesale_price_mad != null
-        ? `Prix : ${pricing.price_source} ${pricing.source_currency} ≈ ${pricing.suggested_wholesale_price_mad} DH`
+        ? msgPriceWithMad(lc, {
+            price: pricing.price_source ?? '?',
+            currency: pricing.source_currency,
+            mad: pricing.suggested_wholesale_price_mad,
+          })
         : pricing.reason === 'no_rate'
-          ? `Prix : ${pricing.price_source ?? '?'} ${pricing.source_currency} (taux non encore configuré — l'admin le fixera)`
-          : 'Prix : non détecté (à compléter)'
+          ? msgPriceNoRate(lc, {
+              price: pricing.price_source ?? '?',
+              currency: pricing.source_currency,
+            })
+          : msgPriceUnknown(lc)
     await telegramSendMessage(
       chatId,
-      `Produit reçu ✅\n• ${productName}\n• Catégorie : ${clean.category}${clean.subcategory ? ' / ' + clean.subcategory : ''}\n• ${priceLine}\nEn attente de validation par un administrateur avant publication.`,
+      msgProductReceived(lc, {
+        productName,
+        category: clean.category,
+        subcategory: clean.subcategory,
+        priceLine,
+      }),
     )
   } catch (e) {
     await markInbound(admin, messageKey, {
       status: 'failed',
       error: String(e instanceof Error ? e.message : e),
     })
-    await telegramSendMessage(
-      chatId,
-      "Désolé, l'analyse de ce produit a échoué. Réessayez avec une photo nette et une courte description.",
-    )
+    await telegramSendMessage(chatId, msgAnalysisFailed(lc))
   }
 }
 
@@ -456,8 +480,5 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
   }
 
   // Message texte simple sans commande : guider.
-  await telegramSendMessage(
-    msg.chat.id,
-    'Envoyez une photo du produit accompagnée d\'une courte description (nom + prix en DH). Si ce n\'est pas encore fait, liez votre compte avec /link VOTRE_CODE.',
-  )
+  await telegramSendMessage(msg.chat.id, msgGuide(msg.from.language_code))
 }
