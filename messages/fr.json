@@ -493,6 +493,7 @@
       "limitReachedSub": "Passez Premium pour ajouter sans limite",
       "goPremium": "Passer Premium →",
       "openTelegramButton": "Ouvrir Telegram et lier mon compte",
+      "sendProductButton": "Envoyer un produit",
       "qrHint": "Ou scannez ce QR code avec votre téléphone",
       "fallbackToggle": "Le bouton ne marche pas ? Lier manuellement"
     },

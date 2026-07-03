@@ -81,7 +81,12 @@ export function TelegramLinkCard({
     </p>
   )
 
-  // ── État LIÉ : en-tête + guide complet + quota / incitation Premium ──────────
+  // ── État LIÉ : en-tête + guide + bouton PERMANENT « Envoyer un produit » ──────
+  // Lien direct vers le bot (t.me/<bot>, SANS code) : le compte est déjà lié, le
+  // fournisseur retrouve le bot en 1 clic pour envoyer une photo. Construit
+  // uniquement si le username du bot est connu (sinon on omet le bouton, le guide
+  // textuel reste). NE remplace PAS le bouton « Activer » (état non lié, ci-dessous).
+  const botDirectUrl = botUsername ? `https://t.me/${botUsername}` : null
   if (linked) {
     return (
       <div className="space-y-4 rounded-xl border border-line bg-surface p-5">
@@ -93,6 +98,16 @@ export function TelegramLinkCard({
             {t('linkedGuide', { bot: botLabel })}
           </p>
         </div>
+        {botDirectUrl && (
+          <a
+            href={botDirectUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <span aria-hidden="true">📸</span> {t('sendProductButton')}
+          </a>
+        )}
         {quotaSection}
       </div>
     )
