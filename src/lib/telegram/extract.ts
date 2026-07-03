@@ -245,13 +245,27 @@ const RECORD_REPLY_TOOL: Anthropic.Tool = {
   } as Anthropic.Tool['input_schema'],
 }
 
-const REPLY_SYSTEM = `Tu extrais UNIQUEMENT un prix et/ou des paliers de gros depuis une courte réponse d'un fournisseur (français, arabe ou darija).
-Appelle l'outil "record_reply".
+const REPLY_SYSTEM = `Tu extrais UNIQUEMENT un prix et/ou des paliers de gros depuis une courte réponse de fournisseur, en FRANÇAIS, ANGLAIS, ARABE ou DARIJA (arabe marocain). Appelle l'outil "record_reply".
+
 Règles STRICTES :
 - "price" : le prix unitaire TEL QU'ÉCRIT (nombre seul, sans devise ni conversion) s'il figure, sinon null. Ne JAMAIS inventer ni estimer.
-- "moq_tiers" : couples { min_quantity, unit_price } quand des prix BAISSENT selon la quantité (ex. « 50=220, 100=200 »). [] si aucun.
-- Une quantité SEULE sans prix n'est PAS un palier. Un « non / لا / walo » = aucun prix (price=null, moq_tiers=[]).
-- Ne convertis aucune devise. Ne juge pas la cohérence — un autre système valide.`
+  Exemples prix : « 150 dh » / « الثمن 150 » / « 150 درهم » / « ب 150 » → price = 150. Un simple nombre « 140 » → price = 140.
+- "moq_tiers" : couples { min_quantity, unit_price } quand des prix BAISSENT selon la quantité. [] si aucun.
+  ACCEPTE TOUS LES FORMATS, y compris libres : « 50=140 », « 50 140 », « 50 pièces 140 », « 50pcs=140dh », plusieurs d'un coup « 50=140, 200=120, 500=100 », arabe « 50 = 140 درهم » / « من 50 : 140 » / « 50 قطعة 140 ».
+  Le fournisseur peut donner 0, 1, 2 ou 3 paliers — capture-les TOUS.
+- CHIFFRES ARABES : convertis toujours ٠١٢٣٤٥٦٧٨٩ (et ۰۱۲۳۴۵۶۷۸۹) en chiffres latins (ex. « ٥٠ = ١٤٠ » → { min_quantity: 50, unit_price: 140 }).
+- Une quantité SEULE sans prix n'est PAS un palier. Un prix SEUL sans quantité (« 140 ») → price = 140, moq_tiers = [] (un autre système demandera la quantité).
+- « non / no / لا / والو / makayn / ماكاين » = aucun prix, aucun palier (price = null, moq_tiers = []).
+- Ne convertis aucune devise. Ne juge pas la cohérence (ordre, décroissance) — un autre système validera.`
+
+// Chiffres arabes (Arabic-Indic ٠-٩ U+0660–0669 et Perso/Eastern ۰-۹ U+06F0–06F9)
+// → chiffres latins. Ceinture+bretelles : Haiku les gère déjà (tool = number), mais
+// on normalise en amont pour robustesse + cohérence de tout parsing déterministe.
+export function normalizeArabicDigits(text: string): string {
+  return text
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+}
 
 export type ReplyExtraction = { price_source: number | null; moq_tiers: SanitizedMoqTier[] }
 
@@ -265,6 +279,8 @@ export async function extractProductReply(text: string): Promise<ReplyExtraction
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY manquant')
 
   const client = new Anthropic({ apiKey })
+  // Normalise les chiffres arabes en amont (robustesse ; Haiku les gère aussi).
+  const norm = normalizeArabicDigits(text.trim())
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 512,
@@ -272,7 +288,7 @@ export async function extractProductReply(text: string): Promise<ReplyExtraction
     tools: [RECORD_REPLY_TOOL],
     tool_choice: { type: 'tool', name: 'record_reply' },
     messages: [
-      { role: 'user', content: [{ type: 'text', text: `Réponse du fournisseur : « ${text.trim()} »` }] },
+      { role: 'user', content: [{ type: 'text', text: `Réponse du fournisseur : « ${norm} »` }] },
     ],
   })
 

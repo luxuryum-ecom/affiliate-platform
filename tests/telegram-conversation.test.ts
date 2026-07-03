@@ -13,6 +13,7 @@ import {
   REMINDER_AFTER_MS,
   MAX_REASK,
 } from '@/lib/telegram/conversation'
+import { normalizeArabicDigits } from '@/lib/telegram/extract'
 
 describe('decideAwaiting — ce qui manque à demander', () => {
   it('prix absent → demander le prix', () => {
@@ -57,16 +58,27 @@ describe('interpretPriceReply', () => {
   })
 })
 
-describe('interpretTiersReply', () => {
+describe('interpretTiersReply — paliers flexibles', () => {
   it('« non » → declined', () => {
-    expect(interpretTiersReply('non', { moq_tiers: [] })).toEqual({ kind: 'declined' })
+    expect(interpretTiersReply('non', { price_source: null, moq_tiers: [] })).toEqual({ kind: 'declined' })
   })
-  it('paliers fournis → got_tiers', () => {
-    const tiers = [{ min_quantity: 50, unit_price: 220 }]
-    expect(interpretTiersReply('50=220', { moq_tiers: tiers })).toEqual({ kind: 'got_tiers', tiers })
+  it('1 palier → got_tiers', () => {
+    const tiers = [{ min_quantity: 50, unit_price: 140 }]
+    expect(interpretTiersReply('50=140', { price_source: null, moq_tiers: tiers })).toEqual({ kind: 'got_tiers', tiers })
   })
-  it('réponse floue sans « non » ni paliers → unusable', () => {
-    expect(interpretTiersReply('euh je sais pas', { moq_tiers: [] })).toEqual({ kind: 'unusable' })
+  it('3 paliers → got_tiers (tous acceptés)', () => {
+    const tiers = [
+      { min_quantity: 50, unit_price: 140 },
+      { min_quantity: 200, unit_price: 120 },
+      { min_quantity: 500, unit_price: 100 },
+    ]
+    expect(interpretTiersReply('50=140, 200=120, 500=100', { price_source: null, moq_tiers: tiers })).toEqual({ kind: 'got_tiers', tiers })
+  })
+  it('prix SANS quantité (« 140 ») → bare_price (on demandera la quantité)', () => {
+    expect(interpretTiersReply('140', { price_source: 140, moq_tiers: [] })).toEqual({ kind: 'bare_price', price: 140 })
+  })
+  it('réponse floue sans « non » ni prix ni paliers → unusable', () => {
+    expect(interpretTiersReply('euh je sais pas', { price_source: null, moq_tiers: [] })).toEqual({ kind: 'unusable' })
   })
 })
 
@@ -75,6 +87,20 @@ describe('shouldReask — 1 seule redemande', () => {
     expect(shouldReask(0)).toBe(true)
     expect(shouldReask(MAX_REASK)).toBe(false)
     expect(shouldReask(MAX_REASK + 1)).toBe(false)
+  })
+})
+
+describe('normalizeArabicDigits — chiffres arabes → latins', () => {
+  it('Arabic-Indic ٠-٩', () => {
+    expect(normalizeArabicDigits('١٥٠ درهم')).toBe('150 درهم')
+    expect(normalizeArabicDigits('٥٠ = ١٤٠')).toBe('50 = 140')
+    expect(normalizeArabicDigits('٠١٢٣٤٥٦٧٨٩')).toBe('0123456789')
+  })
+  it('Perso/Eastern ۰-۹', () => {
+    expect(normalizeArabicDigits('۵۰=۱۴۰')).toBe('50=140')
+  })
+  it('laisse le texte latin/arabe non-chiffre intact', () => {
+    expect(normalizeArabicDigits('50 = 140 درهم')).toBe('50 = 140 درهم')
   })
 })
 

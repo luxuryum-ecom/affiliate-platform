@@ -87,21 +87,24 @@ export function interpretPriceReply(
 // Résultat de l'interprétation d'une réponse quand on ATTEND les paliers.
 export type TiersReplyOutcome =
   | { kind: 'declined' } // « non » → pas de paliers, produit finalisé
-  | { kind: 'got_tiers'; tiers: SanitizedMoqTier[] } // paliers fournis
-  | { kind: 'unusable' } // ni « non » ni paliers exploitables
+  | { kind: 'got_tiers'; tiers: SanitizedMoqTier[] } // paliers fournis (1 à 3)
+  | { kind: 'bare_price'; price: number } // prix sans quantité (« 140 ») → demander la quantité
+  | { kind: 'unusable' } // ni « non » ni prix/paliers exploitables
 
 /**
  * Interprète une réponse alors qu'on ATTEND les paliers de gros.
- * Priorité au « non » explicite ; sinon on prend les paliers extraits ; sinon
- * inexploitable.
+ * Ordre : « non » explicite → paliers extraits (1 à 3, tous acceptés) → prix nu
+ * sans quantité (on demandera la quantité) → inexploitable.
  */
 export function interpretTiersReply(
   text: string | null | undefined,
-  clean: Pick<CleanExtraction, 'moq_tiers'>,
+  clean: Pick<CleanExtraction, 'price_source' | 'moq_tiers'>,
 ): TiersReplyOutcome {
   if (isNegativeReply(text)) return { kind: 'declined' }
   const tiers = clean.moq_tiers ?? []
   if (tiers.length > 0) return { kind: 'got_tiers', tiers }
+  // Prix seul sans quantité rattachée (« 140 ») → il manque la quantité minimum.
+  if (clean.price_source != null) return { kind: 'bare_price', price: clean.price_source }
   return { kind: 'unusable' }
 }
 

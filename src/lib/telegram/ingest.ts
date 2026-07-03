@@ -27,6 +27,7 @@ import {
   msgGuide,
   msgAskPrice,
   msgAskTiers,
+  msgAskTierQty,
   msgReaskPrice,
   msgReaskTiers,
 } from './messages'
@@ -663,10 +664,21 @@ async function handleSupplierReply(admin: Admin, msg: TelegramMessage): Promise<
     return true
   }
 
-  // awaiting === 'tiers'
-  const outcome = interpretTiersReply(text, { moq_tiers: reply.moq_tiers })
+  // awaiting === 'tiers' — paliers flexibles (0 à 3), « non », ou prix sans quantité.
+  const outcome = interpretTiersReply(text, { price_source: reply.price_source, moq_tiers: reply.moq_tiers })
   if (outcome.kind === 'unusable') {
     await reaskOrGiveUp(admin, pending, lc)
+    return true
+  }
+  if (outcome.kind === 'bare_price') {
+    // Prix donné SANS quantité (« 140 ») → demander la quantité (prix échoé). Borné
+    // comme un reask pour éviter toute boucle ; épuisé → on finalise (prix déjà là).
+    if (shouldReask(pending.reask_count)) {
+      await bumpReask(admin, pending)
+      await telegramSendMessage(pending.telegram_chat_id, msgAskTierQty(lc, { price: outcome.price }))
+    } else {
+      await finalizeProduct(admin, pending, lc, 0)
+    }
     return true
   }
   if (outcome.kind === 'got_tiers') {
