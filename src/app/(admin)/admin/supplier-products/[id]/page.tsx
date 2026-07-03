@@ -146,6 +146,11 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
   const product = data as unknown as SupplierProductFull
   const badge = SUPPLIER_PRODUCT_STATUS_BADGES[product.approval_status]
   const tiers = product.supplier_product_moq_tiers ?? []
+  // AFFICHAGE — devise RÉELLE des paliers/prix fournisseur : les montants sont
+  // stockés VERBATIM en devise source (colonne `unit_price_usd` mal nommée). On
+  // affiche donc `source_currency` (Maroc→MAD, UAE→AED, international→USD…), plus
+  // jamais « USD » en dur. Fallback si devise inconnue (produits legacy).
+  const tierCurrency = product.source_currency ?? t('sourceCurrencyFallback')
 
   const supplierTypeLabelKey = product.supplier_type === 'morocco'
     ? 'supplierTypeMorocco'
@@ -213,7 +218,7 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
                     {product.suggested_wholesale_price_mad != null
                       ? `${product.suggested_wholesale_price_mad} MAD`
                       : product.supplier_unit_price_usd != null
-                        ? `${product.supplier_unit_price_usd} USD / u.`
+                        ? `${product.supplier_unit_price_usd} ${tierCurrency} / u.`
                         : '—'}
                   </dd>
                 </div>
@@ -227,8 +232,9 @@ export default async function AdminSupplierProductDetailPage({ params }: PagePro
                           .map((tier, i) => (
                             <li key={i} className="bg-surface-2 rounded px-2 py-1">
                               {t('detailTierLine', {
-                                qty:   tier.min_quantity,
-                                price: tier.unit_price_usd,
+                                qty:      tier.min_quantity,
+                                price:    tier.unit_price_usd,
+                                currency: tierCurrency,
                               })}
                             </li>
                           ))}
