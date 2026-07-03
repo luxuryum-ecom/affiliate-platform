@@ -226,14 +226,25 @@ export function msgAskPrice(lc: string | null | undefined, vars: { name: string 
   })
 }
 
-// 15 — Prix présent mais AUCUN palier → proposer d'ajouter des prix de gros.
+// 15 — Prix présent mais AUCUN palier → proposer jusqu'à 3 niveaux (suggérés, pas obligés).
 export function msgAskTiers(lc: string | null | undefined, vars: { name: string }): string {
   const { name } = vars
   return t(lc, {
-    fr: `Avez-vous des prix de gros pour ${name} ? (ex : 50 pièces = 220 dh). Sinon répondez « non ».`,
-    en: `Do you have wholesale prices for ${name}? (e.g. 50 pcs = 220 dh). Otherwise reply "no".`,
-    msa: `هل لديك أسعار جملة لـ ${name}؟ (مثال: 50 قطعة = 220 درهم). وإلا أجب «لا».`,
-    darija: `واش عندك أثمنة ديال الجملة لـ ${name}؟ (مثال: 50 قطعة = 220 درهم). وإلا جاوب «لا».`,
+    fr: `Avez-vous de meilleurs prix pour de grosses quantités de ${name} ? Donnez jusqu'à 3 niveaux — écrivez : quantité = prix (ex : 50 = 140, 200 = 120, 500 = 100). Ou tapez « non ».`,
+    en: `Do you have better prices for large quantities of ${name}? Give up to 3 levels — write: quantity = price (e.g. 50 = 140, 200 = 120, 500 = 100). Or type "no".`,
+    msa: `هل لديك أسعار أفضل للكميات الكبيرة من ${name}؟ أعطِ حتى 3 مستويات — اكتب: الكمية = السعر (مثال: 50 = 140، 200 = 120، 500 = 100). أو اكتب «لا».`,
+    darija: `واش عندك أثمنة حسن للكميات الكبيرة ديال ${name}؟ عطي حتى 3 مستويات — كتب: الكمية = الثمن (مثال: 50 = 140، 200 = 120، 500 = 100). ولا كتب «لا».`,
+  })
+}
+
+// 15-bis — Réponse = prix SANS quantité (« 140 ») → demander la quantité (prix échoé).
+export function msgAskTierQty(lc: string | null | undefined, vars: { price: string | number }): string {
+  const { price } = vars
+  return t(lc, {
+    fr: `Pour quelle quantité minimum ce prix de ${price} s'applique-t-il ? Écrivez la quantité et le prix ensemble (ex : 50 = ${price}).`,
+    en: `For what minimum quantity does this price of ${price} apply? Write the quantity and the price together (e.g. 50 = ${price}).`,
+    msa: `لأي كمية دنيا ينطبق هذا السعر ${price}؟ اكتب الكمية والسعر معاً (مثال: 50 = ${price}).`,
+    darija: `لأينا كمية دنيا كيطبق هاد الثمن ${price}؟ كتب الكمية والثمن مع بعض (مثال: 50 = ${price}).`,
   })
 }
 
