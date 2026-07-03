@@ -16,18 +16,39 @@ export const REMINDER_AFTER_MS = 60 * 60 * 1000
 export const MAX_REASK = 1
 
 /**
- * Décide ce qui manque d'IMPORTANT et qu'il faut demander, à partir d'une
- * extraction (photo+légende OU réponse). L'ordre reflète la priorité métier :
- *  1) le PRIX unitaire (impossible à deviner, critique) ;
- *  2) sinon les PALIERS de gros (si prix connu mais aucun palier).
- * Tout le reste (catégorie, description, unité…) est DEVINÉ par l'IA → jamais
- * demandé. Renvoie null quand le produit est « complet » (prix + au moins l'info
- * paliers tranchée).
+ * Décide ce qui manque d'IMPORTANT et qu'il faut demander depuis une extraction
+ * photo. SEUL le PRIX est obligatoire (impossible à deviner). Les paliers sont
+ * FACULTATIFS : on ne les demande PLUS en relance — le fournisseur les donne (ou
+ * non) dans sa réponse, tout d'un coup (fini le ping-pong). Prix présent → produit
+ * complet (avec ou sans paliers). Tout le reste (catégorie, description, unité) est
+ * deviné par l'IA. NB : `moq_tiers` gardé dans la signature pour compat d'appel.
  */
 export function decideAwaiting(clean: Pick<CleanExtraction, 'price_source' | 'moq_tiers'>): Awaiting | null {
   if (clean.price_source == null) return 'price'
-  if (!clean.moq_tiers || clean.moq_tiers.length === 0) return 'tiers'
   return null
+}
+
+/**
+ * Détecte une réponse de CONFUSION (« je ne comprends pas », « ? », « kifach »…)
+ * dans les 4 langues → on ré-explique simplement. Distinct de « je ne sais pas »
+ * (le fournisseur ignore le prix), qui reste une réponse inexploitable ordinaire.
+ */
+export function isConfusedReply(text: string | null | undefined): boolean {
+  const t = (text ?? '').trim().toLowerCase().replace(/[ً-ْ]/g, '')
+  if (!t) return false
+  // Question nue (« ? » / « ؟ ») = confusion.
+  if (/^[?؟]+$/.test(t)) return true
+  const NEEDLES = [
+    // FR
+    'comprends pas', 'compris pas', 'comprend pas', 'pas compris', 'comment ça marche', 'comment ca marche', 'je comprends rien',
+    // EN
+    "don't understand", 'dont understand', "don't get", 'how does', 'how do i', 'what do you mean',
+    // darija translittéré
+    'mafhemtch', 'mafhamtch', 'ma fhemtch', 'kifach', 'kifash', 'chnahwa', 'chno',
+    // arabe / darija
+    'مافهمتش', 'ما فهمتش', 'ما فهمت', 'لم أفهم', 'كيفاش', 'كيفية', 'شنو', 'شنهي',
+  ]
+  return NEEDLES.some((n) => t.includes(n))
 }
 
 /**

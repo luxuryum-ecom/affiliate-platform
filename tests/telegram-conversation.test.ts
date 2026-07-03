@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest'
 import {
   decideAwaiting,
   isNegativeReply,
+  isConfusedReply,
   interpretPriceReply,
   interpretTiersReply,
   shouldReask,
@@ -15,16 +16,29 @@ import {
 } from '@/lib/telegram/conversation'
 import { normalizeArabicDigits } from '@/lib/telegram/extract'
 
-describe('decideAwaiting — ce qui manque à demander', () => {
+describe('decideAwaiting — seul le PRIX est obligatoire (paliers facultatifs)', () => {
   it('prix absent → demander le prix', () => {
     expect(decideAwaiting({ price_source: null, moq_tiers: [] })).toBe('price')
     expect(decideAwaiting({ price_source: null, moq_tiers: [{ min_quantity: 50, unit_price: 18 }] })).toBe('price')
   })
-  it('prix présent sans palier → demander les paliers', () => {
-    expect(decideAwaiting({ price_source: 250, moq_tiers: [] })).toBe('tiers')
+  it('prix présent SANS palier → complet (plus de relance paliers)', () => {
+    expect(decideAwaiting({ price_source: 250, moq_tiers: [] })).toBeNull()
   })
-  it('prix + paliers → complet (null)', () => {
+  it('prix + paliers → complet', () => {
     expect(decideAwaiting({ price_source: 250, moq_tiers: [{ min_quantity: 50, unit_price: 220 }] })).toBeNull()
+  })
+})
+
+describe('isConfusedReply — fournisseur perdu', () => {
+  it('confusions (4 langues)', () => {
+    for (const s of ['je comprends pas', '?', '؟', 'kifach', 'مافهمتش', 'ما فهمتش', "I don't understand", 'chno hadchi']) {
+      expect(isConfusedReply(s), s).toBe(true)
+    }
+  })
+  it('PAS des confusions (« je sais pas », prix, non)', () => {
+    for (const s of ['je sais pas', '160 dh', '50=140', 'non', 'oui', '', null]) {
+      expect(isConfusedReply(s), String(s)).toBe(false)
+    }
   })
 })
 

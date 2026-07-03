@@ -43,7 +43,7 @@ import { telegramSendMessage } from '@/lib/telegram/client'
 import { extractProductFromTelegram, extractProductReply } from '@/lib/telegram/extract'
 import { handleTelegramUpdate } from '@/lib/telegram/ingest'
 import { sendDueReminders } from '@/lib/telegram/reminders'
-import { msgAskPrice, msgAskTiers, msgAskTierQty, msgReaskPrice } from '@/lib/telegram/messages'
+import { msgAskPriceAndTiers, msgReexplain, msgReaskPrice } from '@/lib/telegram/messages'
 import type { CleanExtraction } from '@/lib/telegram/schema'
 import type { TelegramUpdate } from '@/lib/telegram/schema'
 
@@ -177,29 +177,29 @@ afterEach(async () => {
 })
 
 describe('BRIQUE 3 — flux conversationnel (LOCAL)', () => {
-  it('1) photo SANS prix → demande prix ; « 250 dh » → prix figé (MAD) puis demande paliers', async () => {
+  it('1) photo SANS prix → UN message explicatif ; « 160 dh, 50=140, 200=120 » (tout d\'un coup) → prix + 2 paliers, complété', async () => {
     mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Ceinture cuir', price_source: null }))
     await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 111001))
 
-    let pend = await pendingFor(supplierA)
+    const pend = await pendingFor(supplierA)
     expect(pend?.awaiting).toBe('price')
-    expect(lastSent().text).toBe(msgAskPrice('fr', { name: 'Ceinture cuir' }))
+    // UN message explicatif complet (prix + paliers + exemple tout-d'un-coup)
+    expect(lastSent().text).toBe(msgAskPriceAndTiers('fr', { name: 'Ceinture cuir' }))
     const productId = pend!.supplier_product_id
 
-    // Réponse « 250 dh » → prix 250, pas de paliers
-    mocked(extractProductReply).mockResolvedValueOnce({ price_source: 250, moq_tiers: [] })
-    await handleTelegramUpdate(textUpdate(chatA, userA, '250 dh', 'fr', 111002))
+    // Réponse TOUT D'UN COUP : prix + 2 paliers → complété directement, PAS de question paliers
+    mocked(extractProductReply).mockResolvedValueOnce({
+      price_source: 160,
+      moq_tiers: [{ min_quantity: 50, unit_price: 140 }, { min_quantity: 200, unit_price: 120 }],
+    })
+    await handleTelegramUpdate(textUpdate(chatA, userA, '160 dh, 50=140, 200=120', 'fr', 111002))
 
     const price = await productPrice(productId)
-    expect(price?.suggested_wholesale_price_mad).toBe(250) // MAD, rate=1
+    expect(price?.suggested_wholesale_price_mad).toBe(160) // MAD, rate=1
     expect(price?.source_currency).toBe('MAD')
-    pend = await pendingFor(supplierA)
-    expect(pend?.awaiting).toBe('tiers') // enchaîne sur les paliers
-    expect(lastSent().text).toBe(msgAskTiers('fr', { name: 'Ceinture cuir' }))
-
-    // « non » → finalisé sans paliers, pending supprimé
-    await handleTelegramUpdate(textUpdate(chatA, userA, 'non', 'fr', 111003))
-    expect(await pendingFor(supplierA)).toBeNull()
+    expect(await pendingFor(supplierA)).toBeNull() // complété, plus d'attente
+    const { count } = await admin.from('supplier_product_moq_tiers').select('id', { count: 'exact', head: true }).eq('supplier_product_id', productId)
+    expect(count).toBe(2)
     await admin.from('supplier_products').delete().eq('id', productId)
   })
 
@@ -213,14 +213,27 @@ describe('BRIQUE 3 — flux conversationnel (LOCAL)', () => {
     await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
   })
 
-  it('3) prix sans paliers → demande paliers → « non » → OK', async () => {
-    mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Tapis', price_source: 300, moq_tiers: [] }))
+  it('3) réponse « 160 » SEUL → complété SANS paliers, AUCUNE relance paliers', async () => {
+    mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Tapis', price_source: null }))
     await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 333001))
-    expect((await pendingFor(supplierA))?.awaiting).toBe('tiers')
-    expect(lastSent().text).toBe(msgAskTiers('fr', { name: 'Tapis' }))
+    const productId = (await pendingFor(supplierA))!.supplier_product_id
 
-    await handleTelegramUpdate(textUpdate(chatA, userA, 'non', 'fr', 333002))
-    expect(await pendingFor(supplierA)).toBeNull()
+    // Juste le prix → produit complété, pas de question paliers
+    mocked(extractProductReply).mockResolvedValueOnce({ price_source: 160, moq_tiers: [] })
+    await handleTelegramUpdate(textUpdate(chatA, userA, '160', 'fr', 333002))
+    expect(await pendingFor(supplierA)).toBeNull() // complété, pas de relance paliers
+    expect(lastSent().text).toContain('✅') // accusé « Produit reçu ✅ »
+    expect((await productPrice(productId))?.suggested_wholesale_price_mad).toBe(160)
+    await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
+  })
+
+  it('3-bis) réponse CONFUSION « مافهمتش » → ré-explication, reste en attente', async () => {
+    mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Djellaba', price_source: null }))
+    await handleTelegramUpdate(photoUpdate(chatA, userA, 'ar', 334001))
+    // Confusion → extract renvoie rien d'exploitable (défaut mock), le bot ré-explique
+    await handleTelegramUpdate(textUpdate(chatA, userA, 'مافهمتش', 'ar', 334002))
+    expect(lastSent().text).toBe(msgReexplain('ar', { name: 'Djellaba' }))
+    expect((await pendingFor(supplierA))?.awaiting).toBe('price') // toujours en attente du prix
     await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
   })
 
@@ -293,52 +306,22 @@ describe('BRIQUE 3 — flux conversationnel (LOCAL)', () => {
     await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
   })
 
-  it('8) 4 langues — la question prix est rendue dans la langue du fournisseur', async () => {
+  it('8) 4 langues — le message explicatif complet est rendu dans la langue du fournisseur', async () => {
     for (const [lang, mid] of [['en', 888001], ['ar', 888002], ['ar-MA', 888003]] as const) {
       mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'X', price_source: null }))
       await handleTelegramUpdate(photoUpdate(chatA, userA, lang, mid))
-      expect(lastSent().text).toBe(msgAskPrice(lang, { name: 'X' }))
+      expect(lastSent().text).toBe(msgAskPriceAndTiers(lang, { name: 'X' }))
       await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
     }
   })
 
-  it('9) paliers flexibles — prix nu « 140 » → demande quantité ; « 50 = 140 » → palier appliqué', async () => {
-    mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Bracelet', price_source: 150, moq_tiers: [] }))
-    await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 991001))
-    expect((await pendingFor(supplierA))?.awaiting).toBe('tiers')
-    const pid = (await pendingFor(supplierA))!.supplier_product_id
-
-    // Prix nu « 140 » → le bot demande la quantité (prix échoé), reste en attente
-    mocked(extractProductReply).mockResolvedValueOnce({ price_source: 140, moq_tiers: [] })
-    await handleTelegramUpdate(textUpdate(chatA, userA, '140', 'fr', 991002))
-    expect(lastSent().text).toBe(msgAskTierQty('fr', { price: 140 }))
-    expect((await pendingFor(supplierA))?.awaiting).toBe('tiers')
-
-    // « 50 = 140 » → palier appliqué, produit finalisé
-    mocked(extractProductReply).mockResolvedValueOnce({ price_source: null, moq_tiers: [{ min_quantity: 50, unit_price: 140 }] })
-    await handleTelegramUpdate(textUpdate(chatA, userA, '50 = 140', 'fr', 991003))
-    expect(await pendingFor(supplierA)).toBeNull()
-    const { count } = await admin.from('supplier_product_moq_tiers').select('id', { count: 'exact', head: true }).eq('supplier_product_id', pid)
-    expect(count).toBe(1)
-    await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
-  })
-
-  it('10) paliers flexibles — 3 niveaux d\'un coup « 50=140, 200=120, 500=100 » → 3 paliers', async () => {
-    mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Foulard', price_source: 150, moq_tiers: [] }))
-    await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 992001))
-    const pid = (await pendingFor(supplierA))!.supplier_product_id
-    mocked(extractProductReply).mockResolvedValueOnce({
-      price_source: null,
-      moq_tiers: [
-        { min_quantity: 50, unit_price: 140 },
-        { min_quantity: 200, unit_price: 120 },
-        { min_quantity: 500, unit_price: 100 },
-      ],
-    })
-    await handleTelegramUpdate(textUpdate(chatA, userA, '50=140, 200=120, 500=100', 'fr', 992002))
-    expect(await pendingFor(supplierA)).toBeNull()
-    const { count } = await admin.from('supplier_product_moq_tiers').select('id', { count: 'exact', head: true }).eq('supplier_product_id', pid)
-    expect(count).toBe(3)
+  it('9) réponse SANS prix (« je sais pas ») → redemande juste le prix (pas de ré-explication)', async () => {
+    mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Vase', price_source: null }))
+    await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 993001))
+    mocked(extractProductReply).mockResolvedValueOnce({ price_source: null, moq_tiers: [] })
+    await handleTelegramUpdate(textUpdate(chatA, userA, 'je sais pas', 'fr', 993002))
+    expect(lastSent().text).toBe(msgReaskPrice('fr'))
+    expect((await pendingFor(supplierA))?.awaiting).toBe('price')
     await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
   })
 })
