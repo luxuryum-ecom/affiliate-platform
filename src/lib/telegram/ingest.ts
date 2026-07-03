@@ -26,6 +26,8 @@ import {
   msgAnalysisFailed,
   msgGuide,
   msgAskPrice,
+  msgAskPriceAndTiers,
+  msgReexplain,
   msgAskTiers,
   msgAskTierQty,
   msgReaskPrice,
@@ -35,13 +37,13 @@ import {
   decideAwaiting,
   interpretPriceReply,
   interpretTiersReply,
+  isConfusedReply,
   shouldReask,
 } from './conversation'
 import {
   upsertPending,
   getMostRecentPending,
   deletePending,
-  switchPendingTo,
   bumpReask,
   type PendingRow,
 } from './pending-store'
@@ -447,10 +449,13 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
         telegram_lang: lc ?? null,
         awaiting,
       })
+      // Un SEUL message explicatif : prix (obligatoire) + paliers (option), tout d'un
+      // coup. Fini le ping-pong — le fournisseur répond en une fois. (awaiting = 'price'
+      // uniquement depuis une photo ; la branche 'tiers' ne subsiste que pour compat.)
       await telegramSendMessage(
         chatId,
         awaiting === 'price'
-          ? msgAskPrice(lc, { name: productName })
+          ? msgAskPriceAndTiers(lc, { name: productName })
           : msgAskTiers(lc, { name: productName }),
       )
     } else {
@@ -648,19 +653,26 @@ async function handleSupplierReply(admin: Admin, msg: TelegramMessage): Promise<
 
   if (pending.awaiting === 'price') {
     const outcome = interpretPriceReply({ price_source: reply.price_source, moq_tiers: reply.moq_tiers })
-    if (outcome.kind === 'unusable') {
-      await reaskOrGiveUp(admin, pending, lc)
+    if (outcome.kind === 'got_price') {
+      // Prix (± paliers) obtenus dans la MÊME réponse → produit COMPLÉTÉ directement.
+      // AUCUNE relance paliers : s'il n'en a pas donné, c'est fini (paliers facultatifs).
+      await applyPriceToProduct(admin, pending.supplier_product_id, supplierId, outcome.price, outcome.tiers)
+      await finalizeProduct(admin, pending, lc, outcome.tiers.length)
       return true
     }
-    await applyPriceToProduct(admin, pending.supplier_product_id, supplierId, outcome.price, outcome.tiers)
-    if (outcome.tiers.length > 0) {
-      await finalizeProduct(admin, pending, lc, outcome.tiers.length) // prix + paliers → complet
-    } else {
-      // Prix obtenu, pas de paliers → on enchaîne sur la question paliers.
-      await switchPendingTo(admin, pending.supplier_product_id, 'tiers')
-      const p = await fetchProductForAck(admin, pending.supplier_product_id)
-      await telegramSendMessage(pending.telegram_chat_id, msgAskTiers(lc, { name: p?.productName ?? '' }))
+    // Pas de prix exploitable. Confusion (« je comprends pas », « ? ») → ré-expliquer
+    // simplement (borné). Sinon → redemander UNIQUEMENT le prix.
+    if (isConfusedReply(text)) {
+      if (shouldReask(pending.reask_count)) {
+        await bumpReask(admin, pending)
+        const p = await fetchProductForAck(admin, pending.supplier_product_id)
+        await telegramSendMessage(pending.telegram_chat_id, msgReexplain(lc, { name: p?.productName ?? '' }))
+      } else {
+        await telegramSendMessage(pending.telegram_chat_id, msgReaskPrice(lc))
+      }
+      return true
     }
+    await reaskOrGiveUp(admin, pending, lc)
     return true
   }
 

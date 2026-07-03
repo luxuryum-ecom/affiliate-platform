@@ -215,7 +215,30 @@ export function msgAnalysisFailed(lc: string | null | undefined): string {
 
 // ── BRIQUE 3 — CONVERSATION (le bot demande l'info manquante, 1 question à la fois) ──
 
-// 14 — Produit reçu mais PRIX manquant → demander le prix unitaire.
+// 14-bis — Produit reçu, PRIX manquant → TOUT expliquer d'un coup (fini le ping-pong).
+// Le fournisseur peut répondre en une seule fois : prix (obligatoire) + paliers (option).
+export function msgAskPriceAndTiers(lc: string | null | undefined, vars: { name: string }): string {
+  const { name } = vars
+  return t(lc, {
+    fr: `J'ai bien reçu votre ${name} 📸\nPour le publier, envoyez-moi :\n💰 Le PRIX unitaire (obligatoire, ex : 160 dh)\n📦 Vos prix de gros si vous en avez (ex : 50 = 140, 200 = 120). Sinon ignorez.\n\n👉 Vous pouvez tout écrire d'un coup, exemple :\n« 160 dh, 50 = 140, 200 = 120 »`,
+    en: `I've received your ${name} 📸\nTo publish it, send me:\n💰 The unit PRICE (required, e.g. 160 dh)\n📦 Your wholesale prices if you have any (e.g. 50 = 140, 200 = 120). Otherwise skip.\n\n👉 You can write it all at once, example:\n"160 dh, 50 = 140, 200 = 120"`,
+    msa: `استلمت ${name} 📸\nلنشره، أرسل لي:\n💰 سعر الوحدة (إلزامي، مثال: 160 درهم)\n📦 أسعار الجملة إن وُجدت (مثال: 50 = 140، 200 = 120). وإلا تجاوز.\n\n👉 يمكنك كتابة كل شيء دفعة واحدة، مثال:\n«160 درهم، 50 = 140، 200 = 120»`,
+    darija: `توصلت بـ ${name} 📸\nباش ننشرو، صيفط لي:\n💰 الثمن ديال الوحدة (إجباري، مثال: 160 درهم)\n📦 أثمنة الجملة إلا كانو عندك (مثال: 50 = 140، 200 = 120). وإلا ماتكتبش.\n\n👉 تقدر تكتب كلشي مرة وحدة، مثال:\n«160 درهم، 50 = 140، 200 = 120»`,
+  })
+}
+
+// 14-ter — Fournisseur PERDU (« je comprends pas », « ? », « kifach ») → ré-expliquer simple.
+export function msgReexplain(lc: string | null | undefined, vars: { name: string }): string {
+  const { name } = vars
+  return t(lc, {
+    fr: `Pas de souci 🙂 Envoyez-moi juste le PRIX de votre ${name} (ex : 160 dh). Si vous avez des prix de gros, ajoutez-les après (ex : 160, 50 = 140). Sinon, le prix suffit.`,
+    en: `No worries 🙂 Just send me the PRICE of your ${name} (e.g. 160 dh). If you have wholesale prices, add them after (e.g. 160, 50 = 140). Otherwise, the price is enough.`,
+    msa: `لا تقلق 🙂 أرسل لي فقط سعر ${name} (مثال: 160 درهم). إن كانت لديك أسعار جملة، أضفها بعده (مثال: 160، 50 = 140). وإلا يكفي السعر.`,
+    darija: `ماكاين مشكل 🙂 صيفط لي غير الثمن ديال ${name} (مثال: 160 درهم). إلا عندك أثمنة الجملة، زيدهم من بعد (مثال: 160، 50 = 140). وإلا الثمن كافي.`,
+  })
+}
+
+// 14 — (conservé, compat) Produit reçu mais PRIX manquant → demander le prix unitaire.
 export function msgAskPrice(lc: string | null | undefined, vars: { name: string }): string {
   const { name } = vars
   return t(lc, {
