@@ -1,8 +1,8 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
-> **Dernière mise à jour :** 2026-07-03
-> **Branche prod :** `origin/main` @ `f93333a` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
-> **Migrations prod :** 001→**112** appliquées. ✅ **Migration 112 (auto_tiers_enabled) APPLIQUÉE** (auto-tiers actifs — bloquant #0 levé). ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
+> **Dernière mise à jour :** 2026-07-03 (soir)
+> **Branche prod :** `origin/main` @ `92ab450` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
+> **Migrations prod :** 001→**113** appliquées. ✅ **112 (auto_tiers) + 113 (état conversationnel `telegram_pending_products`) APPLIQUÉES.** ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
 
@@ -15,7 +15,10 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 - **Onboarding fournisseur 1-clic** (`e087e81`) : bouton **« Activer sur Telegram »** sur `/pending` (seul écran atteignable avant approbation). Deep-link `t.me/<bot>?start=<code>` → 1 clic → « Démarrer » → lié. Code émis au rendu (`ensureSupplierTelegramCode`, anti-churn, TTL 30 min, gate `role='supplier'`). i18n FR/AR/EN+RTL. @tester 6/6 · @security 🟢 (note MINEUR/INFO : émission au rendu GET, bornée, assumée).
 - **Messages du bot Telegram en 4 langues** (`26f2c68`) : les 13 messages (liaison, garde-fous, accusé produit, guidage) routés FR/EN/AR-fus'ha/AR-darija via le même `pickWelcomeLang` que l'accueil. **Erreurs GUIDANTES** (finissent par l'action + emoji). Module pur `src/lib/telegram/messages.ts`, `ingest.ts` = textes seuls (pipeline/sécu inchangés). 26 tests unitaires.
 - **Correctif devise des paliers en modération** (`f93333a`) : la fiche `/admin/supplier-products/[id]` affichait « USD » EN DUR ; désormais `source_currency` (Maroc→MAD, UAE→AED, international→USD). **AFFICHAGE uniquement** — `extract.ts`/facturation/miroir NON touchés. @tester 3/3 LOCAL.
-- **Test A→Z partiel validé** : inscription fournisseur → activation Telegram 1-clic → envoi produit (photo+légende) → arrivée en modération. **OK.**
+- **Bouton permanent « 📸 Envoyer un produit »** (`c605c07`) : dans l'espace fournisseur LIÉ (`/supplier/dashboard` + `/supplier/products`), lien direct `t.me/<bot>`. @tester 6/6.
+- **Migration 113 (`telegram_pending_products`, état conversationnel) APPLIQUÉE** en prod.
+- **BOT CONVERSATIONNEL COMPLET** (`f8697f1` + `92ab450`) : produit incomplet → le bot **demande le prix** (obligatoire) puis les **paliers** (jusqu'à 3, langage naturel, tous formats ; prix nu → demande la quantité ; « non » accepté). **Arabe/darija des réponses compris** (prompt `extractProductReply` + `normalizeArabicDigits`, **prouvé LIVE Haiku**). Relance **in-conversation**, reformulation bornée. État = table 113, scopé `supplier_id`. @tester 8/8 puis 10/10 · @security 🟢. **547 tests.** ⚙️ Relance auto ~1h = optionnelle (`CRON_SECRET` + Vercel Cron `/api/telegram/reminders`).
+- **Test A→Z fournisseur validé jusqu'à modération** : inscription → activation 1-clic → envoi photo → **conversation prix/paliers** → fiche COMPLÈTE en modération. **OK.**
 
 ## ✅ FAIT EN PROD — 2026-07-02 (tout mergé `main` + poussé + déployé Vercel)
 - **Lot 4** — éditeur paliers + MOQ en modération admin (@finance 🟢 @security 🟢).
@@ -38,10 +41,13 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 4. **Parcours affilié** (lien COD) **+ parcours devis international** (approbation devis, prix ferme).
 **Prérequis avant de reprendre** : (a) **webhook Telegram → PROD** (`scripts/telegram-setup.sh info` → `url` = `…vercel.app/api/telegram/webhook`) ✅ vérifié ce jour · (b) **backfill auto-tiers** sur produits fournisseur déjà approuvés avant mig 112 (les paliers ne se génèrent qu'à la (ré)approbation).
 
-### 🧱 BRIQUES À CONSTRUIRE — vision « SaaS où l'IA gère/corrige/valide, l'admin ne traite que les cas douteux »
-- **BRIQUE 2 — Contrôle qualité IA à la réception photo** : rejeter photo **floue / non-produit / interdite** et **prévenir le fournisseur** (message guidant, déjà multilingue) au lieu de créer une fiche inexploitable. S'insère dans le pipeline `ingest.ts` AVANT/APRÈS l'extraction Haiku.
-- **BRIQUE 3 — Chat conversationnel IA fournisseur** : si une info **critique manque (prix)**, le bot **demande dans Telegram** au lieu de créer un produit incomplet (`price=null`). Nécessite un **état conversationnel** (aujourd'hui le bot est **stateless one-shot** — chaque message indépendant) : nouvelle table de session + machine à états dans `handleTelegramUpdate`.
-- **OPTION B — Inscription 100% Telegram** : QR → bot → **inscription conversationnelle** (nom, pays/devise, etc.) **sans aucun formulaire web**. Supprime l'étape `/signup` pour les fournisseurs peu à l'aise avec le web. S'appuie sur BRIQUE 3 (état conversationnel).
+### 🧱 PRIORITÉS DE REPRISE — vision « SaaS où l'IA gère/corrige/valide, l'admin ne traite que les cas douteux »
+1. **LOT UNITÉS UNIVERSELLES** : unité de vente en **champ libre** (safran/gramme, tissu/mètre, légume/kg, huile/litre…) réutilisant `sale_unit` existant (mig 080). **INCLURE la Part 3 taille/unité conversationnelle** : le bot demande une précision taille/unité si l'IA ne peut PAS deviner → nécessite une **nouvelle phase `awaiting='detail'`** = **migration de la contrainte CHECK** de `telegram_pending_products` (table 113) + colonne `detail_question`.
+2. **FINIR LE TEST A→Z** (cf. section ci-dessus) : approuver un produit → vitrine grossiste → commande de gros (prix/palier/total) → affilié COD + devis international. Calculs @finance à chaque étape.
+3. **BRIQUE 2 — Contrôle qualité IA à la réception photo** : rejeter photo **floue / non-produit / interdite** et **prévenir le fournisseur** (message guidant multilingue). S'insère dans `ingest.ts` autour de l'extraction Haiku.
+4. **Questions QUOTAS / PLANS** (à cadrer) : la **suppression d'un produit libère-t-elle le quota** ? Comment **modifier / offrir un plan** à un fournisseur ? (impacte `checkProductLimit` + espace premium).
+- ✅ **BRIQUE 3 (conversationnel) = FAITE ET EN PROD** (cf. section FAIT ci-dessus).
+- **OPTION B — Inscription 100% Telegram** (plus tard) : QR → bot → inscription conversationnelle sans formulaire web. S'appuie sur l'état conversationnel (table 113) déjà en place.
 
 ### 🧊 RESTE (à froid)
 
@@ -51,7 +57,7 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 4. **🖼️ Filigrane hero landing « موزونا »** — **asset image** (pas du texte de code) affichant encore l'ancien nom → à **régénérer** (phase design/asset séparée).
 
 ### 🚧 BLOQUANTS GO-LIVE (avant vrais fournisseurs)
-- **Migration 112** (auto_tiers, PRÉREQUIS, cf. #0) · **rotation** `SUPABASE_SERVICE_ROLE_KEY` + mdp admin `AdminTest2026!` · **backups auto prod** (plan Pro Supabase + `.db_password` mode 600 ; preuve dump pooler + restauration LOCAL) · **redirect `/auth/callback`** (allowlist dashboard Supabase) · **migration 091** · **migration 111** (data-fix 2 produits) · **filigrane hero**.
+- **rotation** `SUPABASE_SERVICE_ROLE_KEY` + mdp admin · **backups auto prod** (plan Pro Supabase + `.db_password` mode 600 ; preuve dump pooler + restauration LOCAL) · **redirect `/auth/callback`** (allowlist dashboard Supabase) · **migration 091** · **DETTE suppression de compte (RGPD)** : `deleteUser`/`DELETE auth.users` échoue pour tout compte déjà connecté (verrou `admin_audit_log` append-only + FK `ON DELETE SET NULL`) → à cadrer via `@backend-db` + `@security` · **filigrane hero « موزونا »**. *(mig 112 + 113 = FAITES ; mig 111 data-fix non-urgente.)*
 
 ---
 

@@ -29,6 +29,7 @@
   - ✅ **BRIQUE 3+ — paliers en langage naturel + arabe/darija compris** (`feat/bot-natural-tiers-arabic`, sans migration) : réponses paliers flexibles (jusqu'à 3 niveaux suggérés, tous formats, prix nu → demande la quantité) ; compréhension arabe/darija des réponses (prompt enrichi + `normalizeArabicDigits`, prouvé LIVE Haiku). @tester 10/10, 4 checks verts.
   - ⬜ **LOT UNITÉS UNIVERSELLES (à faire)** : unité de vente en **champ libre** (safran/gramme, tissu/mètre, légume/kg, huile/litre…) réutilisant `sale_unit` existant (mig 080) + inclure la **Part 3 taille/unité conversationnelle** (le bot demande une précision taille/unité si l'IA ne peut pas deviner → nécessite `awaiting='detail'` + migration de la contrainte CHECK de la table 113 `telegram_pending_products`).
   - ⬜ **BRIQUE 2** = contrôle qualité IA à la réception photo (rejeter floue/non-produit/interdite + prévenir le fournisseur).
+  - ⬜ **QUESTIONS QUOTAS / PLANS (à cadrer)** : la suppression d'un produit **libère-t-elle le quota** (`checkProductLimit`) ? Comment **modifier / offrir un plan** à un fournisseur (espace premium) ?
   - ⬜ **OPTION B** = inscription 100% Telegram (QR→bot→inscription conversationnelle, zéro formulaire web ; s'appuie sur l'état conversationnel de la BRIQUE 3).
 
 **🚧 RESTE UNE SEULE CONDITION AVANT GO-LIVE PUBLIC : backups auto prod** (la base `owvtfzxvirttrbcsiveg` n'a aucun backup automatique → activer **Supabase PITR** OU **cron `pg_dump`** hébergé). Voir section DETTES TECHNIQUES & GO-LIVE PUBLIC + `ETAT_SYSTEME.md` → SÉCURITÉ / BACKUP.
