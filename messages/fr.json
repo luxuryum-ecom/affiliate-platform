@@ -1704,6 +1704,10 @@
       "nextSteps": "Prochaines étapes",
       "signOut": "Se déconnecter",
       "hello": "Bonjour {name},",
+      "telegramTitle": "Recevez et publiez vos produits sur Telegram",
+      "telegramHelp": "Cliquez, puis appuyez sur « Démarrer » dans Telegram — c'est tout.",
+      "telegramActivate": "Activer sur Telegram",
+      "telegramConnected": "Telegram connecté",
       "affiliate": {
         "title": "Votre compte affiliation est en cours de validation",
         "intro": "Votre demande pour faire de l'affiliation (dropshipping COD) a bien été reçue. Notre équipe la traitera sous 24 à 48 heures.",
