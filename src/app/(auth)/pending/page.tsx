@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
+import { ensureSupplierTelegramCode } from '@/app/actions/telegram-link'
 import type { Profile } from '@/types/database'
 
 export async function generateMetadata() {
@@ -41,6 +42,18 @@ export default async function PendingPage() {
     await supabase.auth.signOut()
     redirect('/login?rejected=1')
   }
+
+  // ── Onboarding Telegram 1-clic (fournisseur uniquement) ──────────────────────
+  // /pending est le SEUL écran atteignable avant approbation (le dashboard fournisseur
+  // est gaté sur status='approved'). On y émet/réutilise un code (TTL 30 min, anti-churn)
+  // et on construit le deep-link `t.me/<bot>?start=<code>` : 1 clic → « Démarrer » → lié.
+  // Le gate est role='supplier' (pas le statut) : lier avant approbation est OK côté bot.
+  const telegram =
+    profile.role === 'supplier' ? await ensureSupplierTelegramCode() : null
+  const telegramStartUrl =
+    telegram && !telegram.linked && telegram.botUsername && telegram.code
+      ? `https://t.me/${telegram.botUsername}?start=${telegram.code}`
+      : null
 
   const roleKey = ['affiliate', 'wholesaler', 'supplier'].includes(profile.role)
     ? profile.role
@@ -91,6 +104,32 @@ export default async function PendingPage() {
             ))}
           </ol>
         </div>
+
+        {/* Onboarding Telegram 1-clic — fournisseur uniquement */}
+        {profile.role === 'supplier' && telegram && (
+          <div className="mt-4 bg-surface rounded-xl border border-line p-5 text-center">
+            {telegram.linked ? (
+              <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-success">
+                <span aria-hidden="true">✅</span> {t('telegramConnected')}
+              </p>
+            ) : telegramStartUrl ? (
+              <>
+                <p className="text-sm font-semibold text-foreground">
+                  {t('telegramTitle')}
+                </p>
+                <p className="mt-1 mb-3 text-xs text-muted">{t('telegramHelp')}</p>
+                <a
+                  href={telegramStartUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  <span aria-hidden="true">✈️</span> {t('telegramActivate')}
+                </a>
+              </>
+            ) : null}
+          </div>
+        )}
 
         <form action={signOut} className="mt-6">
           <button

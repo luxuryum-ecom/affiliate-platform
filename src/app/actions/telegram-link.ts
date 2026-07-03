@@ -66,10 +66,17 @@ export async function getTelegramLinkStatus(): Promise<TelegramLinkState> {
   return { error: null, linked: false, code: validCode, botUsername }
 }
 
-export async function generateTelegramLinkCode(
-  _prevState: TelegramLinkState,
-  _formData: FormData,
-): Promise<TelegramLinkState> {
+/**
+ * Cœur de la génération de code, appelable AU RENDU (Server Component) — aucun
+ * argument de formulaire. Réutilisé par la form-action `generateTelegramLinkCode`
+ * ET par l'écran `/pending` (bouton « Activer sur Telegram »). Anti-churn intact :
+ * réutilise un code encore valide (TTL 30 min) au lieu d'en créer un à chaque rendu.
+ * Gate uniquement sur `role='supplier'` (PAS le statut) → fonctionne pour un compte
+ * fraîchement inscrit encore `pending`. Sécurité du code (usage unique, TTL,
+ * anti-course) inchangée : ce module ne fait qu'ÉMETTRE le code, la liaison reste
+ * côté bot (service_role).
+ */
+export async function ensureSupplierTelegramCode(): Promise<TelegramLinkState> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié.' }
@@ -138,6 +145,18 @@ export async function generateTelegramLinkCode(
     expiresInMinutes: LINK_CODE_TTL_MINUTES,
     botUsername,
   }
+}
+
+/**
+ * Form-action (useActionState) — délègue au cœur render-friendly. Les arguments
+ * de formulaire ne sont pas utilisés (le code dépend uniquement de l'utilisateur
+ * authentifié). Comportement strictement inchangé vs. l'implémentation historique.
+ */
+export async function generateTelegramLinkCode(
+  _prevState: TelegramLinkState,
+  _formData: FormData,
+): Promise<TelegramLinkState> {
+  return ensureSupplierTelegramCode()
 }
 
 /**

@@ -1704,6 +1704,10 @@
       "nextSteps": "Next steps",
       "signOut": "Sign out",
       "hello": "Hello {name},",
+      "telegramTitle": "Receive and publish your products on Telegram",
+      "telegramHelp": "Tap the button, then press “Start” in Telegram — that's it.",
+      "telegramActivate": "Activate on Telegram",
+      "telegramConnected": "Telegram connected",
       "affiliate": {
         "title": "Your affiliate account is under review",
         "intro": "Your request to become an affiliate (COD dropshipping) has been received. Our team will process it within 24 to 48 hours.",
