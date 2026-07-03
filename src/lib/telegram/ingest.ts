@@ -5,7 +5,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
-import { extractProductFromTelegram } from './extract'
+import { extractProductFromTelegram, extractProductReply } from './extract'
 import { telegramDownloadPhoto, telegramSendMessage } from './client'
 import { buildSupplierWelcome } from './welcome'
 import {
@@ -25,7 +25,25 @@ import {
   msgProductReceived,
   msgAnalysisFailed,
   msgGuide,
+  msgAskPrice,
+  msgAskTiers,
+  msgReaskPrice,
+  msgReaskTiers,
 } from './messages'
+import {
+  decideAwaiting,
+  interpretPriceReply,
+  interpretTiersReply,
+  shouldReask,
+} from './conversation'
+import {
+  upsertPending,
+  getMostRecentPending,
+  deletePending,
+  switchPendingTo,
+  bumpReask,
+  type PendingRow,
+} from './pending-store'
 import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
 import { getRateToMad } from '@/lib/fx'
 import { checkProductLimit } from '@/lib/product-limit'
@@ -415,28 +433,38 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
       ai_extraction: clean,
     })
 
-    const priceLine =
-      pricing.suggested_wholesale_price_mad != null
-        ? msgPriceWithMad(lc, {
-            price: pricing.price_source ?? '?',
-            currency: pricing.source_currency,
-            mad: pricing.suggested_wholesale_price_mad,
-          })
-        : pricing.reason === 'no_rate'
-          ? msgPriceNoRate(lc, {
-              price: pricing.price_source ?? '?',
-              currency: pricing.source_currency,
-            })
-          : msgPriceUnknown(lc)
-    await telegramSendMessage(
-      chatId,
-      msgProductReceived(lc, {
-        productName,
-        category: clean.category,
-        subcategory: clean.subcategory,
-        priceLine,
-      }),
-    )
+    // BRIQUE 3 — le produit est-il COMPLET, ou faut-il DEMANDER l'info manquante ?
+    // Prix absent → on demande le prix ; prix présent sans palier → on propose les
+    // paliers. Sinon (complet) → accusé de réception classique. Une question à la fois.
+    const awaiting = decideAwaiting({ price_source: clean.price_source, moq_tiers: moqTiers })
+    if (awaiting) {
+      // Mémorise l'attente : la prochaine réponse TEXTE de ce fournisseur = cette info.
+      await upsertPending(admin, {
+        supplier_product_id: productId,
+        supplier_id: supplierId,
+        telegram_chat_id: chatId,
+        telegram_lang: lc ?? null,
+        awaiting,
+      })
+      await telegramSendMessage(
+        chatId,
+        awaiting === 'price'
+          ? msgAskPrice(lc, { name: productName })
+          : msgAskTiers(lc, { name: productName }),
+      )
+    } else {
+      await telegramSendMessage(
+        chatId,
+        buildProductAck(lc, {
+          productName,
+          category: clean.category,
+          subcategory: clean.subcategory,
+          suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
+          price_source: pricing.price_source,
+          source_currency: pricing.source_currency,
+        }),
+      )
+    }
   } catch (e) {
     await markInbound(admin, messageKey, {
       status: 'failed',
@@ -444,6 +472,211 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
     })
     await telegramSendMessage(chatId, msgAnalysisFailed(lc))
   }
+}
+
+// ─── BRIQUE 3 — Complétion conversationnelle d'un produit en attente ──────────
+
+type AckFields = {
+  productName: string
+  category: string
+  subcategory: string
+  suggested_wholesale_price_mad: number | null
+  price_source: number | null
+  source_currency: string | null
+}
+
+/** Accusé « Produit reçu ✅ » — ligne prix dérivée des champs FIGÉS du produit. */
+function buildProductAck(lc: string | null | undefined, a: AckFields): string {
+  const priceLine =
+    a.suggested_wholesale_price_mad != null
+      ? msgPriceWithMad(lc, { price: a.price_source ?? '?', currency: a.source_currency, mad: a.suggested_wholesale_price_mad })
+      : a.source_currency != null && a.price_source != null
+        ? msgPriceNoRate(lc, { price: a.price_source, currency: a.source_currency })
+        : msgPriceUnknown(lc)
+  return msgProductReceived(lc, {
+    productName: a.productName,
+    category: a.category,
+    subcategory: a.subcategory,
+    priceLine,
+  })
+}
+
+type ProductAckRow = AckFields & {
+  description: string | null
+  photos: string[] | null
+  min_quantity: number
+  stock_quantity: number | null
+  lead_time_days: number | null
+}
+
+/** Relit les champs du produit nécessaires à l'accusé + à la re-modération. */
+async function fetchProductForAck(admin: Admin, productId: string): Promise<ProductAckRow | null> {
+  const { data } = await admin
+    .from('supplier_products')
+    .select('product_name, category, subcategory, description, photos, min_quantity, stock_quantity, lead_time_days, suggested_wholesale_price_mad, price_source, source_currency')
+    .eq('id', productId)
+    .maybeSingle()
+  if (!data) return null
+  const r = data as Record<string, unknown>
+  return {
+    productName: (r.product_name as string) ?? '',
+    category: (r.category as string) ?? '',
+    subcategory: (r.subcategory as string) ?? '',
+    description: (r.description as string | null) ?? null,
+    photos: (r.photos as string[] | null) ?? null,
+    min_quantity: (r.min_quantity as number) ?? 1,
+    stock_quantity: (r.stock_quantity as number | null) ?? null,
+    lead_time_days: (r.lead_time_days as number | null) ?? null,
+    suggested_wholesale_price_mad: (r.suggested_wholesale_price_mad as number | null) ?? null,
+    price_source: (r.price_source as number | null) ?? null,
+    source_currency: (r.source_currency as string | null) ?? null,
+  }
+}
+
+/** Re-modère le produit désormais complété (mêmes règles que le flux photo). */
+async function rerunModeration(admin: Admin, productId: string, moqTierCount: number): Promise<void> {
+  const p = await fetchProductForAck(admin, productId)
+  if (!p) return
+  const moderation = moderateSupplierProduct({
+    product_name: p.productName,
+    description: p.description,
+    photos: p.photos ?? [],
+    category: p.category,
+    min_quantity: p.min_quantity,
+    stock_quantity: p.stock_quantity,
+    lead_time_days: p.lead_time_days,
+    suggested_wholesale_price_mad: p.suggested_wholesale_price_mad,
+    supplier_unit_price_usd: null,
+    moq_tier_count: moqTierCount,
+  })
+  await admin
+    .from('supplier_products')
+    .update({
+      moderation_flag: moderation.moderation_flag,
+      ai_risk_score: moderation.ai_risk_score,
+      moderation_reason: moderation.moderation_reason,
+      moderation_signals: moderation.moderation_signals,
+    })
+    .eq('id', productId)
+}
+
+/** Fige le PRIX (± paliers) obtenu par réponse sur le produit (conversion FX incluse). */
+async function applyPriceToProduct(
+  admin: Admin,
+  productId: string,
+  supplierId: string,
+  price: number,
+  tiers: { min_quantity: number; unit_price: number }[],
+): Promise<void> {
+  const db = admin as unknown as Parameters<typeof resolveSupplierCurrency>[0]
+  const currency = await resolveSupplierCurrency(db, supplierId)
+  const rate = currency ? await getRateToMad(db, currency) : null
+  const pricing = composePricing(currency, rate, price)
+  const minQuantity = tiers[0]?.min_quantity ?? 1
+  await admin
+    .from('supplier_products')
+    .update({
+      suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
+      source_currency: pricing.source_currency,
+      price_source: pricing.price_source,
+      fx_rate_source_to_mad: pricing.fx_rate_source_to_mad,
+      min_quantity: minQuantity,
+    })
+    .eq('id', productId)
+  if (tiers.length > 0) {
+    await insertMoqTiers(admin, productId, tiers.map((t) => ({ min_quantity: t.min_quantity, unit_price_usd: t.unit_price })))
+  }
+}
+
+/** Fige les PALIERS obtenus par réponse (le prix unitaire était déjà présent). */
+async function applyTiersToProduct(
+  admin: Admin,
+  productId: string,
+  tiers: { min_quantity: number; unit_price: number }[],
+): Promise<void> {
+  if (tiers.length === 0) return
+  await insertMoqTiers(admin, productId, tiers.map((t) => ({ min_quantity: t.min_quantity, unit_price_usd: t.unit_price })))
+  await admin.from('supplier_products').update({ min_quantity: tiers[0].min_quantity }).eq('id', productId)
+}
+
+/** Produit complété → re-modère, supprime l'attente, envoie l'accusé « reçu ✅ ». */
+async function finalizeProduct(admin: Admin, pending: PendingRow, lc: string | null | undefined, moqTierCount: number): Promise<void> {
+  await rerunModeration(admin, pending.supplier_product_id, moqTierCount)
+  await deletePending(admin, pending.supplier_product_id)
+  const p = await fetchProductForAck(admin, pending.supplier_product_id)
+  if (p) await telegramSendMessage(pending.telegram_chat_id, buildProductAck(lc, p))
+}
+
+/** Réponse inexploitable → redemander UNE fois, sinon abandonner (finaliser tel quel). */
+async function reaskOrGiveUp(admin: Admin, pending: PendingRow, lc: string | null | undefined): Promise<void> {
+  if (shouldReask(pending.reask_count)) {
+    await bumpReask(admin, pending)
+    await telegramSendMessage(
+      pending.telegram_chat_id,
+      pending.awaiting === 'price' ? msgReaskPrice(lc) : msgReaskTiers(lc),
+    )
+    return
+  }
+  // Abandon : on arrête de solliciter, le produit reste en modération (admin tranche).
+  await finalizeProduct(admin, pending, lc, 0)
+}
+
+/**
+ * Réponse TEXTE d'un fournisseur : est-ce la réponse à une question en attente ?
+ * Renvoie true si géré (attente trouvée + traitée), false sinon (→ guidage générique).
+ * Scopé au fournisseur : on ne complète QUE ses propres produits.
+ */
+async function handleSupplierReply(admin: Admin, msg: TelegramMessage): Promise<boolean> {
+  const telegramUserId = msg.from!.id
+  const supplierId = await resolveSupplierId(admin, telegramUserId)
+  if (!supplierId) return false
+
+  const pending = await getMostRecentPending(admin, supplierId)
+  if (!pending) return false
+
+  const lc = msg.from!.language_code
+  const text = (msg.text ?? '').trim()
+
+  // L'IA lit la réponse (mêmes sanitizers que la photo). Échec IA → inexploitable.
+  let reply: { price_source: number | null; moq_tiers: { min_quantity: number; unit_price: number }[] }
+  try {
+    reply = await extractProductReply(text)
+  } catch {
+    reply = { price_source: null, moq_tiers: [] }
+  }
+
+  if (pending.awaiting === 'price') {
+    const outcome = interpretPriceReply({ price_source: reply.price_source, moq_tiers: reply.moq_tiers })
+    if (outcome.kind === 'unusable') {
+      await reaskOrGiveUp(admin, pending, lc)
+      return true
+    }
+    await applyPriceToProduct(admin, pending.supplier_product_id, supplierId, outcome.price, outcome.tiers)
+    if (outcome.tiers.length > 0) {
+      await finalizeProduct(admin, pending, lc, outcome.tiers.length) // prix + paliers → complet
+    } else {
+      // Prix obtenu, pas de paliers → on enchaîne sur la question paliers.
+      await switchPendingTo(admin, pending.supplier_product_id, 'tiers')
+      const p = await fetchProductForAck(admin, pending.supplier_product_id)
+      await telegramSendMessage(pending.telegram_chat_id, msgAskTiers(lc, { name: p?.productName ?? '' }))
+    }
+    return true
+  }
+
+  // awaiting === 'tiers'
+  const outcome = interpretTiersReply(text, { moq_tiers: reply.moq_tiers })
+  if (outcome.kind === 'unusable') {
+    await reaskOrGiveUp(admin, pending, lc)
+    return true
+  }
+  if (outcome.kind === 'got_tiers') {
+    await applyTiersToProduct(admin, pending.supplier_product_id, outcome.tiers)
+    await finalizeProduct(admin, pending, lc, outcome.tiers.length)
+  } else {
+    // 'declined' → pas de paliers, produit finalisé tel quel.
+    await finalizeProduct(admin, pending, lc, 0)
+  }
+  return true
 }
 
 // ── Point d'entrée appelé par le webhook ─────────────────────────────────────
@@ -474,11 +707,20 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     return
   }
 
+  // Une PHOTO est TOUJOURS un nouveau produit — jamais la réponse à une question
+  // (cas limite : autre photo au lieu de répondre → NOUVEAU produit).
   if (msg.photo && msg.photo.length > 0) {
     await ingestProductMessage(admin, msg)
     return
   }
 
-  // Message texte simple sans commande : guider.
+  // BRIQUE 3 — un texte peut être la RÉPONSE à une question en attente (prix/paliers).
+  // Si oui, on complète le produit ; sinon on retombe sur le guidage générique.
+  if (text) {
+    const handled = await handleSupplierReply(admin, msg)
+    if (handled) return
+  }
+
+  // Message texte simple sans commande ni attente : guider.
   await telegramSendMessage(msg.chat.id, msgGuide(msg.from.language_code))
 }

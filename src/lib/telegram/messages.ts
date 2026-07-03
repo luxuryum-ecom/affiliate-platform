@@ -213,6 +213,72 @@ export function msgAnalysisFailed(lc: string | null | undefined): string {
   })
 }
 
+// ── BRIQUE 3 — CONVERSATION (le bot demande l'info manquante, 1 question à la fois) ──
+
+// 14 — Produit reçu mais PRIX manquant → demander le prix unitaire.
+export function msgAskPrice(lc: string | null | undefined, vars: { name: string }): string {
+  const { name } = vars
+  return t(lc, {
+    fr: `J'ai bien reçu votre ${name} 📸. Quel est son prix unitaire ? (ex : 250 dh)`,
+    en: `I've received your ${name} 📸. What's its unit price? (e.g. 250 dh)`,
+    msa: `استلمت ${name} 📸. ما هو سعر الوحدة؟ (مثال: 250 درهم)`,
+    darija: `توصلت بـ ${name} 📸. شحال الثمن ديال الوحدة؟ (مثال: 250 درهم)`,
+  })
+}
+
+// 15 — Prix présent mais AUCUN palier → proposer d'ajouter des prix de gros.
+export function msgAskTiers(lc: string | null | undefined, vars: { name: string }): string {
+  const { name } = vars
+  return t(lc, {
+    fr: `Avez-vous des prix de gros pour ${name} ? (ex : 50 pièces = 220 dh). Sinon répondez « non ».`,
+    en: `Do you have wholesale prices for ${name}? (e.g. 50 pcs = 220 dh). Otherwise reply "no".`,
+    msa: `هل لديك أسعار جملة لـ ${name}؟ (مثال: 50 قطعة = 220 درهم). وإلا أجب «لا».`,
+    darija: `واش عندك أثمنة ديال الجملة لـ ${name}؟ (مثال: 50 قطعة = 220 درهم). وإلا جاوب «لا».`,
+  })
+}
+
+// 16 — Réponse prix inexploitable → redemander UNE fois, plus simplement.
+export function msgReaskPrice(lc: string | null | undefined): string {
+  return t(lc, {
+    fr: 'Je n\'ai pas bien compris le prix 🙏. Envoyez juste le montant (ex : 250 dh).',
+    en: 'I didn\'t quite get the price 🙏. Just send the amount (e.g. 250 dh).',
+    msa: 'لم أفهم السعر جيداً 🙏. أرسل المبلغ فقط (مثال: 250 درهم).',
+    darija: 'ما فهمتش الثمن مزيان 🙏. صيفط غير المبلغ (مثال: 250 درهم).',
+  })
+}
+
+// 17 — Réponse paliers inexploitable → redemander UNE fois (ou « non »).
+export function msgReaskTiers(lc: string | null | undefined): string {
+  return t(lc, {
+    fr: 'Je n\'ai pas bien compris 🙏. Donnez les prix de gros (ex : 50 = 220) ou répondez « non ».',
+    en: 'I didn\'t quite get that 🙏. Give the wholesale prices (e.g. 50 = 220) or reply "no".',
+    msa: 'لم أفهم جيداً 🙏. أعطِ أسعار الجملة (مثال: 50 = 220) أو أجب «لا».',
+    darija: 'ما فهمتش مزيان 🙏. عطي أثمنة الجملة (مثال: 50 = 220) ولا جاوب «لا».',
+  })
+}
+
+// 18 — Relance UNIQUE (~1h) quand le fournisseur n'a pas répondu (prix attendu).
+export function msgReminderPrice(lc: string | null | undefined, vars: { name: string }): string {
+  const { name } = vars
+  return t(lc, {
+    fr: `Votre ${name} attend son prix pour être publié 🙂. Répondez avec le prix quand vous voulez.`,
+    en: `Your ${name} is waiting for its price to be published 🙂. Reply with the price whenever you like.`,
+    msa: `${name} في انتظار سعره ليُنشر 🙂. أرسل السعر متى شئت.`,
+    darija: `${name} كيتسنى الثمن ديالو باش يتنشر 🙂. صيفط الثمن فاش بغيتي.`,
+  })
+}
+
+// 19 — Relance UNIQUE (~1h) quand paliers attendus (le prix est déjà là).
+export function msgReminderTiers(lc: string | null | undefined, vars: { name: string }): string {
+  const { name } = vars
+  return t(lc, {
+    fr: `Votre ${name} est presque prêt 🙂. Avez-vous des prix de gros ? Sinon répondez « non ».`,
+    en: `Your ${name} is almost ready 🙂. Do you have wholesale prices? Otherwise reply "no".`,
+    msa: `${name} شبه جاهز 🙂. هل لديك أسعار جملة؟ وإلا أجب «لا».`,
+    darija: `${name} تقريباً واجد 🙂. واش عندك أثمنة ديال الجملة؟ وإلا جاوب «لا».`,
+  })
+}
+
 // ── GUIDAGE ──────────────────────────────────────────────────────────────────
 
 // 13 — Message texte sans commande → comment ajouter un produit / se connecter.
