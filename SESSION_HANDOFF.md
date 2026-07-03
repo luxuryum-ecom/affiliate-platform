@@ -1,14 +1,21 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
-> **Dernière mise à jour :** 2026-07-02
-> **Branche prod :** `origin/main` @ `fdf9562` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
-> **Migrations prod :** 001→**110** appliquées. 🔴 **Migration 112 (auto_tiers_enabled) — PRÉREQUIS DU CODE DÉPLOYÉ, à appliquer AVANT le 1er onboarding fournisseur** (cf. REPRENDRE ICI #0). ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
+> **Dernière mise à jour :** 2026-07-03
+> **Branche prod :** `origin/main` @ `f93333a` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
+> **Migrations prod :** 001→**112** appliquées. ✅ **Migration 112 (auto_tiers_enabled) APPLIQUÉE** (auto-tiers actifs — bloquant #0 levé). ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
 
 Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tête), `FEUILLE_DE_ROUTE.md`, `CLAUDE.md`.
 
 ---
+
+## ✅ FAIT EN PROD — 2026-07-03 (tout mergé `main` + poussé + déployé Vercel)
+- **Migration 112 (auto_tiers_enabled) APPLIQUÉE** en prod → le moteur auto-tiers est actif (le bloquant #0 de la veille est levé).
+- **Onboarding fournisseur 1-clic** (`e087e81`) : bouton **« Activer sur Telegram »** sur `/pending` (seul écran atteignable avant approbation). Deep-link `t.me/<bot>?start=<code>` → 1 clic → « Démarrer » → lié. Code émis au rendu (`ensureSupplierTelegramCode`, anti-churn, TTL 30 min, gate `role='supplier'`). i18n FR/AR/EN+RTL. @tester 6/6 · @security 🟢 (note MINEUR/INFO : émission au rendu GET, bornée, assumée).
+- **Messages du bot Telegram en 4 langues** (`26f2c68`) : les 13 messages (liaison, garde-fous, accusé produit, guidage) routés FR/EN/AR-fus'ha/AR-darija via le même `pickWelcomeLang` que l'accueil. **Erreurs GUIDANTES** (finissent par l'action + emoji). Module pur `src/lib/telegram/messages.ts`, `ingest.ts` = textes seuls (pipeline/sécu inchangés). 26 tests unitaires.
+- **Correctif devise des paliers en modération** (`f93333a`) : la fiche `/admin/supplier-products/[id]` affichait « USD » EN DUR ; désormais `source_currency` (Maroc→MAD, UAE→AED, international→USD). **AFFICHAGE uniquement** — `extract.ts`/facturation/miroir NON touchés. @tester 3/3 LOCAL.
+- **Test A→Z partiel validé** : inscription fournisseur → activation Telegram 1-clic → envoi produit (photo+légende) → arrivée en modération. **OK.**
 
 ## ✅ FAIT EN PROD — 2026-07-02 (tout mergé `main` + poussé + déployé Vercel)
 - **Lot 4** — éditeur paliers + MOQ en modération admin (@finance 🟢 @security 🟢).
@@ -20,15 +27,21 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 
 ## ▶️ REPRENDRE ICI
 
-### 🔴 #0 — AVANT TOUT DEMAIN : appliquer migration 112 en prod (PRÉREQUIS du code déployé)
-Le code auto-tiers déployé fait **`SELECT`/`UPDATE auto_tiers_enabled`** dans `approveSupplierProduct`. **Sans la colonne, la 1ʳᵉ approbation d'un produit fournisseur PLANTE** (« column does not exist »). **Pas cassé maintenant** (0 fournisseur lié → jamais appelé), mais **OBLIGATOIRE avant le 1er onboarding**. Coller **UNIQUEMENT** dans **Supabase → SQL Editor** (**PAS `supabase db push`** — embarquerait 091/111) :
-```sql
-ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS auto_tiers_enabled boolean NOT NULL DEFAULT true;
-```
+### ✅ #0 — Migration 112 APPLIQUÉE en prod (2026-07-03) — bloquant levé
+`ALTER TABLE public.supplier_products ADD COLUMN IF NOT EXISTS auto_tiers_enabled boolean NOT NULL DEFAULT true;` **exécutée en prod** → le moteur auto-tiers est actif. Plus de risque de plantage à l'approbation fournisseur.
 
-### 🧪 SESSION BÊTA — TEST COMPLET A→Z (après #0)
-**Prérequis** : (1) mig 112 ✅ ci-dessus · (2) **vérifier que le webhook Telegram pointe sur la PROD** (`scripts/telegram-setup.sh info` → `url` = `…vercel.app/api/telegram/webhook` ; sinon bot muet) · (3) **backfill auto-tiers** sur les produits fournisseur déjà approuvés (les paliers ne se génèrent qu'à la (ré)approbation) · (4) **corriger le bug `max_qty`** (cf. #1).
-**Parcours à tester de bout en bout, avec calculs @finance à CHAQUE étape** : création fournisseur Telegram → produit (photo+légende) → modération/approbation → visible grossiste → **commande de gros** → approbation → notifs → livraison → **devis (international)** → approbation devis → **parcours affilié COD** → dispatch.
+### 🧪 SESSION BÊTA — FINIR LE TEST A→Z (partie faite : inscription→activation→envoi→modération ✅)
+**Reste à valider, avec calculs @finance à CHAQUE étape :**
+1. **Approuver la ceinture test (ou un nouveau produit) en modération** → vérifier **génération auto-tiers** (paliers dégressifs, plancher 8%) **+ devise MAD** (affichage corrigé ce jour).
+2. **Côté grossiste** (`/wholesale/marketplace`) : produit **publié** avec ses **paliers**.
+3. **Passer une commande de gros** → vérifier **calcul prix / palier / total** (attention **bug `max_qty`** #1 : produits catalogue à ≥2 paliers manuels sans borne facturent au 1er palier ; canal fournisseur SÛR via `buildMirrorTiers`).
+4. **Parcours affilié** (lien COD) **+ parcours devis international** (approbation devis, prix ferme).
+**Prérequis avant de reprendre** : (a) **webhook Telegram → PROD** (`scripts/telegram-setup.sh info` → `url` = `…vercel.app/api/telegram/webhook`) ✅ vérifié ce jour · (b) **backfill auto-tiers** sur produits fournisseur déjà approuvés avant mig 112 (les paliers ne se génèrent qu'à la (ré)approbation).
+
+### 🧱 BRIQUES À CONSTRUIRE — vision « SaaS où l'IA gère/corrige/valide, l'admin ne traite que les cas douteux »
+- **BRIQUE 2 — Contrôle qualité IA à la réception photo** : rejeter photo **floue / non-produit / interdite** et **prévenir le fournisseur** (message guidant, déjà multilingue) au lieu de créer une fiche inexploitable. S'insère dans le pipeline `ingest.ts` AVANT/APRÈS l'extraction Haiku.
+- **BRIQUE 3 — Chat conversationnel IA fournisseur** : si une info **critique manque (prix)**, le bot **demande dans Telegram** au lieu de créer un produit incomplet (`price=null`). Nécessite un **état conversationnel** (aujourd'hui le bot est **stateless one-shot** — chaque message indépendant) : nouvelle table de session + machine à états dans `handleTelegramUpdate`.
+- **OPTION B — Inscription 100% Telegram** : QR → bot → **inscription conversationnelle** (nom, pays/devise, etc.) **sans aucun formulaire web**. Supprime l'étape `/signup` pour les fournisseurs peu à l'aise avec le web. S'appuie sur BRIQUE 3 (état conversationnel).
 
 ### 🧊 RESTE (à froid)
 
