@@ -6,7 +6,14 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { getCategoryContext } from '@/lib/categories'
-import { aiExtractionRawSchema, buildCleanExtraction, type CleanExtraction } from './schema'
+import {
+  aiExtractionRawSchema,
+  buildCleanExtraction,
+  sanitizeExtractedPrice,
+  sanitizeMoqTiers,
+  type CleanExtraction,
+  type SanitizedMoqTier,
+} from './schema'
 
 const MODEL = 'claude-haiku-4-5'
 
@@ -201,4 +208,83 @@ export async function extractProductFromTelegram(input: ExtractInput): Promise<C
 
   const validated = aiExtractionRawSchema.parse(toolUse.input)
   return buildCleanExtraction(validated, taxonomySource)
+}
+
+// ─── BRIQUE 3 — Extraction d'une RÉPONSE TEXTE (prix / paliers) ───────────────
+// Passe IA text-only (pas d'image) : le fournisseur répond à une question du bot
+// (« 250 dh », « 50=220, 100=200 », « non »…). On ne veut QUE le prix + les
+// paliers ; les sanitizers existants (mêmes règles que la photo) valident.
+
+const RECORD_REPLY_TOOL: Anthropic.Tool = {
+  name: 'record_reply',
+  description: "Enregistre le prix et/ou les paliers de gros lus dans la réponse du fournisseur.",
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      price: {
+        type: ['number', 'null'],
+        description: "Prix unitaire TEL QU'ÉCRIT (nombre seul, sans devise ni conversion) si présent, sinon null.",
+      },
+      moq_tiers: {
+        type: 'array',
+        description:
+          'Paliers de gros dégressifs { min_quantity, unit_price } si le fournisseur en donne (prix qui BAISSE quand la quantité monte). [] sinon.',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            min_quantity: { type: ['integer', 'null'], description: 'Quantité seuil (entier > 0).' },
+            unit_price: { type: ['number', 'null'], description: "Prix à ce palier, tel qu'écrit." },
+          },
+          required: ['min_quantity', 'unit_price'],
+        },
+      },
+    },
+    required: ['price', 'moq_tiers'],
+  } as Anthropic.Tool['input_schema'],
+}
+
+const REPLY_SYSTEM = `Tu extrais UNIQUEMENT un prix et/ou des paliers de gros depuis une courte réponse d'un fournisseur (français, arabe ou darija).
+Appelle l'outil "record_reply".
+Règles STRICTES :
+- "price" : le prix unitaire TEL QU'ÉCRIT (nombre seul, sans devise ni conversion) s'il figure, sinon null. Ne JAMAIS inventer ni estimer.
+- "moq_tiers" : couples { min_quantity, unit_price } quand des prix BAISSENT selon la quantité (ex. « 50=220, 100=200 »). [] si aucun.
+- Une quantité SEULE sans prix n'est PAS un palier. Un « non / لا / walo » = aucun prix (price=null, moq_tiers=[]).
+- Ne convertis aucune devise. Ne juge pas la cohérence — un autre système valide.`
+
+export type ReplyExtraction = { price_source: number | null; moq_tiers: SanitizedMoqTier[] }
+
+/**
+ * Lit une réponse texte du fournisseur → { price_source, moq_tiers } déjà nettoyés
+ * par les MÊMES sanitizers que la photo. Lève si la clé API manque ou si la réponse
+ * IA est inexploitable (l'appelant journalise / redemande).
+ */
+export async function extractProductReply(text: string): Promise<ReplyExtraction> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY manquant')
+
+  const client = new Anthropic({ apiKey })
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 512,
+    system: [{ type: 'text', text: REPLY_SYSTEM, cache_control: { type: 'ephemeral' } }],
+    tools: [RECORD_REPLY_TOOL],
+    tool_choice: { type: 'tool', name: 'record_reply' },
+    messages: [
+      { role: 'user', content: [{ type: 'text', text: `Réponse du fournisseur : « ${text.trim()} »` }] },
+    ],
+  })
+
+  const toolUse = response.content.find(
+    (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+  )
+  if (!toolUse) throw new Error('Réponse IA sans tool_use')
+
+  const input = toolUse.input as { price: unknown; moq_tiers: unknown }
+  const price_source = sanitizeExtractedPrice(input.price)
+  // basePrice = prix unitaire → garantit que le 1er palier == prix de base (règle
+  // sanitizeMoqTiers), cohérent avec le flux photo.
+  const moq_tiers = sanitizeMoqTiers(input.moq_tiers, price_source)
+  return { price_source, moq_tiers }
 }
