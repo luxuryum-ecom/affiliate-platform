@@ -1,7 +1,7 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
-> **Dernière mise à jour :** 2026-07-03 (soir)
-> **Branche prod :** `origin/main` @ `92ab450` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
+> **Dernière mise à jour :** 2026-07-03 (nuit)
+> **Branche prod :** `origin/main` @ `d4b8227` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
 > **Migrations prod :** 001→**113** appliquées. ✅ **112 (auto_tiers) + 113 (état conversationnel `telegram_pending_products`) APPLIQUÉES.** ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
@@ -17,8 +17,9 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 - **Correctif devise des paliers en modération** (`f93333a`) : la fiche `/admin/supplier-products/[id]` affichait « USD » EN DUR ; désormais `source_currency` (Maroc→MAD, UAE→AED, international→USD). **AFFICHAGE uniquement** — `extract.ts`/facturation/miroir NON touchés. @tester 3/3 LOCAL.
 - **Bouton permanent « 📸 Envoyer un produit »** (`c605c07`) : dans l'espace fournisseur LIÉ (`/supplier/dashboard` + `/supplier/products`), lien direct `t.me/<bot>`. @tester 6/6.
 - **Migration 113 (`telegram_pending_products`, état conversationnel) APPLIQUÉE** en prod.
-- **BOT CONVERSATIONNEL COMPLET** (`f8697f1` + `92ab450`) : produit incomplet → le bot **demande le prix** (obligatoire) puis les **paliers** (jusqu'à 3, langage naturel, tous formats ; prix nu → demande la quantité ; « non » accepté). **Arabe/darija des réponses compris** (prompt `extractProductReply` + `normalizeArabicDigits`, **prouvé LIVE Haiku**). Relance **in-conversation**, reformulation bornée. État = table 113, scopé `supplier_id`. @tester 8/8 puis 10/10 · @security 🟢. **547 tests.** ⚙️ Relance auto ~1h = optionnelle (`CRON_SECRET` + Vercel Cron `/api/telegram/reminders`).
-- **Test A→Z fournisseur validé jusqu'à modération** : inscription → activation 1-clic → envoi photo → **conversation prix/paliers** → fiche COMPLÈTE en modération. **OK.**
+- **BOT CONVERSATIONNEL COMPLET** (`f8697f1` → `d4b8227`) : à la photo sans prix, **UN seul message explicatif** (`msgAskPriceAndTiers` : 💰 prix obligatoire + 📦 paliers facultatifs + exemple « 160 dh, 50=140, 200=120 »). Réponse en **une fois** → `extractProductReply` extrait prix ET paliers (**langage naturel + arabe/darija**, prouvé LIVE Haiku) → produit **complété directement** (avec/sans paliers, **plus de ping-pong, plus de relance paliers**). Prix absent → redemande juste le prix. **Confusion** (« je comprends pas / kifach / مافهمتش ») → **ré-explication** (`msgReexplain`). Relance in-conversation. État = table 113, scopé `supplier_id`. @tester 10/10 · @security 🟢. **549 tests.** ⚙️ Relance auto ~1h = optionnelle (`CRON_SECRET` + Vercel Cron `/api/telegram/reminders`).
+- **Upgrade premium admin FONCTIONNEL** (existant, confirmé par inspection) : `/admin/premium` → `assignPlan` (`src/app/actions/premium.ts:107`) attribue un plan **sans paiement** (Gratuit=5 / Professionnel=50 / Entreprise=illimité, `premium_plans.max_products`, 0=illimité). Pour débloquer un fournisseur bloqué à 5/5 : lui offrir un plan supérieur, statut `active`, `expires_at` vide = permanent. Trace `subscription_audit_log`.
+- **Test A→Z fournisseur validé jusqu'à modération** : inscription → activation 1-clic → envoi photo → **conversation prix/paliers en une fois** → fiche COMPLÈTE en modération. **OK.**
 
 ## ✅ FAIT EN PROD — 2026-07-02 (tout mergé `main` + poussé + déployé Vercel)
 - **Lot 4** — éditeur paliers + MOQ en modération admin (@finance 🟢 @security 🟢).
@@ -42,11 +43,11 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 **Prérequis avant de reprendre** : (a) **webhook Telegram → PROD** (`scripts/telegram-setup.sh info` → `url` = `…vercel.app/api/telegram/webhook`) ✅ vérifié ce jour · (b) **backfill auto-tiers** sur produits fournisseur déjà approuvés avant mig 112 (les paliers ne se génèrent qu'à la (ré)approbation).
 
 ### 🧱 PRIORITÉS DE REPRISE — vision « SaaS où l'IA gère/corrige/valide, l'admin ne traite que les cas douteux »
-1. **LOT UNITÉS UNIVERSELLES** : unité de vente en **champ libre** (safran/gramme, tissu/mètre, légume/kg, huile/litre…) réutilisant `sale_unit` existant (mig 080). **INCLURE la Part 3 taille/unité conversationnelle** : le bot demande une précision taille/unité si l'IA ne peut PAS deviner → nécessite une **nouvelle phase `awaiting='detail'`** = **migration de la contrainte CHECK** de `telegram_pending_products` (table 113) + colonne `detail_question`.
-2. **FINIR LE TEST A→Z** (cf. section ci-dessus) : approuver un produit → vitrine grossiste → commande de gros (prix/palier/total) → affilié COD + devis international. Calculs @finance à chaque étape.
+1. **FINIR LE TEST A→Z** (cf. section ci-dessus, calculs @finance à chaque étape) : **approuver un produit** en modération → **vitrine grossiste** (`/wholesale/marketplace`, produit publié avec paliers) → **commande de gros** (vérifier prix/palier/total) → **parcours affilié COD** + **devis international**.
+2. **LOT UNITÉS UNIVERSELLES** : unité de vente en **champ libre** (safran/gramme, tissu/mètre, légume/kg, huile/litre…) réutilisant `sale_unit` existant (mig 080). **INCLURE la Part 3 taille/unité conversationnelle** : le bot demande une précision taille/unité si l'IA ne peut PAS deviner → nécessite une **nouvelle phase `awaiting='detail'`** = **migration de la contrainte CHECK** de `telegram_pending_products` (table 113) + colonne `detail_question`.
 3. **BRIQUE 2 — Contrôle qualité IA à la réception photo** : rejeter photo **floue / non-produit / interdite** et **prévenir le fournisseur** (message guidant multilingue). S'insère dans `ingest.ts` autour de l'extraction Haiku.
-4. **Questions QUOTAS / PLANS** (à cadrer) : la **suppression d'un produit libère-t-elle le quota** ? Comment **modifier / offrir un plan** à un fournisseur ? (impacte `checkProductLimit` + espace premium).
-- ✅ **BRIQUE 3 (conversationnel) = FAITE ET EN PROD** (cf. section FAIT ci-dessus).
+- ✅ **BRIQUE 3 (conversationnel) + « explique tout d'un coup » = FAITS ET EN PROD** (cf. section FAIT ci-dessus).
+- ✅ **Upgrade premium admin = EXISTANT ET FONCTIONNEL** (`/admin/premium` → `assignPlan`) — plus besoin de le construire. *(Reste à cadrer si besoin : la suppression d'un produit libère-t-elle le quota ?)*
 - **OPTION B — Inscription 100% Telegram** (plus tard) : QR → bot → inscription conversationnelle sans formulaire web. S'appuie sur l'état conversationnel (table 113) déjà en place.
 
 ### 🧊 RESTE (à froid)
