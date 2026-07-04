@@ -269,6 +269,7 @@ export default async function WholesaleProductDetailPage({ params }: Params) {
                     minQty={product.wholesale_min_qty}
                     stockCount={defaultVariantStock}
                     defaultVariantId={defaultVariantId}
+                    unitLabel={unitLabel}
                   />
                 </div>
                 {/* Sur-commande / rupture → devis (cible de l'ancre #quote depuis AddToCartForm) */}

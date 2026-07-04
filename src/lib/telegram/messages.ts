@@ -8,6 +8,7 @@
 
 import { pickWelcomeLang, type WelcomeLang } from './welcome'
 import { formatQty } from '@/lib/utils'
+import { matchKnownSaleUnit, type SaleUnit } from '@/lib/units'
 
 type Table = Record<WelcomeLang, string>
 
@@ -236,6 +237,64 @@ export function msgReexplain(lc: string | null | undefined, vars: { name: string
     en: `No worries 🙂 Just send me the PRICE of your ${name} (e.g. 160 dh). If you have wholesale prices, add them after (e.g. 160, 50 = 140). Otherwise, the price is enough.`,
     msa: `لا تقلق 🙂 أرسل لي فقط سعر ${name} (مثال: 160 درهم). إن كانت لديك أسعار جملة، أضفها بعده (مثال: 160، 50 = 140). وإلا يكفي السعر.`,
     darija: `ماكاين مشكل 🙂 صيفط لي غير الثمن ديال ${name} (مثال: 160 درهم). إلا عندك أثمنة الجملة، زيدهم من بعد (مثال: 160، 50 = 140). وإلا الثمن كافي.`,
+  })
+}
+
+// ── C1a — CONFIRMATION DE L'UNITÉ DE VENTE ───────────────────────────────────
+// Le bot confirme l'unité détectée par l'IA ; le fournisseur valide (« oui ») ou
+// écrit la bonne unité (texte LIBRE). Unité CONNUE → label traduit ; unité LIBRE
+// (« botte ») → verbatim identique dans les 4 langues. En arabe, l'unité est
+// ISOLÉE (FSI U+2068 / PDI U+2069) pour que l'ordre RTL reste correct même si
+// c'est un mot latin (« botte »). Textes VALIDÉS par Abdou (capture RTL).
+
+/** Libellés d'unités CONNUES pour le bot, par langue (verbatim si inconnue). */
+const BOT_UNIT_LABELS: Record<SaleUnit, Record<WelcomeLang, string>> = {
+  piece: { fr: 'pièce', en: 'piece', msa: 'قطعة', darija: 'حبة' },
+  gramme: { fr: 'gramme', en: 'gram', msa: 'غرام', darija: 'غرام' },
+  kg: { fr: 'kilo', en: 'kilo', msa: 'كيلوغرام', darija: 'كيلو' },
+  metre: { fr: 'mètre', en: 'metre', msa: 'متر', darija: 'متر' },
+  ml: { fr: 'ml', en: 'ml', msa: 'ملّيلتر', darija: 'ميلي' },
+  litre: { fr: 'litre', en: 'litre', msa: 'لتر', darija: 'لتر' },
+  paquet: { fr: 'paquet', en: 'pack', msa: 'حزمة', darija: 'كيس' },
+  carton: { fr: 'carton', en: 'carton', msa: 'كرطونة', darija: 'كرطونة' },
+}
+
+/** Label d'unité pour le bot : unité connue → traduite ; libre → texte brut verbatim. */
+function unitLabelForLang(rawUnit: string | null | undefined, lang: WelcomeLang): string {
+  const canon = matchKnownSaleUnit(rawUnit)
+  if (canon) return BOT_UNIT_LABELS[canon][lang]
+  return (rawUnit ?? '').trim()
+}
+
+/** Isolat bidi (FSI…PDI) — garde un mot (latin ou arabe) à sa place en contexte RTL. */
+function isolate(s: string): string {
+  return `⁨${s}⁩`
+}
+
+// C1a — le bot CONFIRME l'unité détectée. Réponse « oui » = valider ; sinon = corriger.
+export function msgConfirmUnit(lc: string | null | undefined, vars: { unit: string }): string {
+  const lang = pickWelcomeLang(lc)
+  const label = unitLabelForLang(vars.unit, lang)
+  const u = isolate(label) // version isolée pour l'arabe (RTL)
+  switch (lang) {
+    case 'fr':
+      return `📏 J'ai compris que ton unité de vente est : ${label}. Le prix s'affichera « par ${label} ». C'est bien ça ?\nRéponds « oui », ou écris la bonne unité (ex : gramme, litre, mètre, botte…).`
+    case 'en':
+      return `📏 I understood your sale unit is: ${label}. The price will show as "per ${label}". Is that right?\nReply "yes", or write the correct unit (e.g. gram, litre, metre, bunch…).`
+    case 'msa':
+      return `📏 فهمت أن وحدة البيع عندك هي: ${u}. سيظهر السعر «لكل ${u}». هل هذا صحيح؟\nأجب «نعم»، أو اكتب الوحدة الصحيحة (مثال: غرام، لتر، متر…).`
+    case 'darija':
+      return `📏 فهمت بلي وحدة البيع ديالك هي: ${u}. غادي يبان الثمن «لكل ${u}». واش هاكا؟\nجاوب «واه»، ولا كتب الوحدة الصحيحة (مثال: غرام، لتر، متر…).`
+  }
+}
+
+// C1a — réponse à la confirmation d'unité inexploitable → redemander UNE fois, simplement.
+export function msgReaskUnit(lc: string | null | undefined): string {
+  return t(lc, {
+    fr: 'Je n\'ai pas bien compris 🙏. Écris juste ton unité de vente (ex : gramme, litre, mètre, pièce, botte…).',
+    en: 'I didn\'t quite get that 🙏. Just write your sale unit (e.g. gram, litre, metre, piece, bunch…).',
+    msa: 'لم أفهم جيداً 🙏. اكتب فقط وحدة البيع (مثال: غرام، لتر، متر، قطعة…).',
+    darija: 'ما فهمتش مزيان 🙏. كتب غير وحدة البيع ديالك (مثال: غرام، لتر، متر، حبة…).',
   })
 }
 

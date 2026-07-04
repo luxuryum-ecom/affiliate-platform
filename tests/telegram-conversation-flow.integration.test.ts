@@ -43,7 +43,7 @@ import { telegramSendMessage } from '@/lib/telegram/client'
 import { extractProductFromTelegram, extractProductReply } from '@/lib/telegram/extract'
 import { handleTelegramUpdate } from '@/lib/telegram/ingest'
 import { sendDueReminders } from '@/lib/telegram/reminders'
-import { msgAskPriceAndTiers, msgReexplain, msgReaskPrice } from '@/lib/telegram/messages'
+import { msgAskPriceAndTiers, msgReexplain, msgReaskPrice, msgConfirmUnit } from '@/lib/telegram/messages'
 import type { CleanExtraction } from '@/lib/telegram/schema'
 import type { TelegramUpdate } from '@/lib/telegram/schema'
 
@@ -177,7 +177,7 @@ afterEach(async () => {
 })
 
 describe('BRIQUE 3 — flux conversationnel (LOCAL)', () => {
-  it('1) photo SANS prix → UN message explicatif ; « 160 dh, 50=140, 200=120 » (tout d\'un coup) → prix + 2 paliers, complété', async () => {
+  it('1) photo SANS prix → prix+paliers d\'un coup → CONFIRMATION unité → « oui » → complété', async () => {
     mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Ceinture cuir', price_source: null }))
     await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 111001))
 
@@ -187,43 +187,66 @@ describe('BRIQUE 3 — flux conversationnel (LOCAL)', () => {
     expect(lastSent().text).toBe(msgAskPriceAndTiers('fr', { name: 'Ceinture cuir' }))
     const productId = pend!.supplier_product_id
 
-    // Réponse TOUT D'UN COUP : prix + 2 paliers → complété directement, PAS de question paliers
+    // Réponse TOUT D'UN COUP : prix + 2 paliers → prix appliqué, PUIS confirmation d'unité (C1a)
     mocked(extractProductReply).mockResolvedValueOnce({
       price_source: 160,
       moq_tiers: [{ min_quantity: 50, unit_price: 140 }, { min_quantity: 200, unit_price: 120 }],
     })
     await handleTelegramUpdate(textUpdate(chatA, userA, '160 dh, 50=140, 200=120', 'fr', 111002))
 
+    // C1a — le prix est DÉJÀ appliqué (+ paliers), mais on confirme d'abord l'unité.
+    expect((await pendingFor(supplierA))?.awaiting).toBe('unit')
+    expect(lastSent().text).toBe(msgConfirmUnit('fr', { unit: 'piece' }))
+    expect((await productPrice(productId))?.suggested_wholesale_price_mad).toBe(160)
+
+    // « oui » → produit finalisé.
+    mocked(extractProductReply).mockResolvedValueOnce({ price_source: null, moq_tiers: [] })
+    await handleTelegramUpdate(textUpdate(chatA, userA, 'oui', 'fr', 111003))
+
     const price = await productPrice(productId)
     expect(price?.suggested_wholesale_price_mad).toBe(160) // MAD, rate=1
     expect(price?.source_currency).toBe('MAD')
-    expect(await pendingFor(supplierA)).toBeNull() // complété, plus d'attente
+    expect(await pendingFor(supplierA)).toBeNull() // finalisé après confirmation unité
     const { count } = await admin.from('supplier_product_moq_tiers').select('id', { count: 'exact', head: true }).eq('supplier_product_id', productId)
     expect(count).toBe(2)
     await admin.from('supplier_products').delete().eq('id', productId)
   })
 
-  it('2) photo COMPLÈTE → aucune question, aucune attente', async () => {
+  it('2) photo COMPLÈTE → CONFIRMATION unité → « oui » → accusé reçu ✅', async () => {
     mocked(extractProductFromTelegram).mockResolvedValueOnce(
       fakeClean({ product_name: 'Sac complet', price_source: 250, moq_tiers: [{ min_quantity: 50, unit_price: 220 }] }),
     )
     await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 222001))
+    // C1a — prix déjà présent → on confirme l'unité AVANT l'accusé.
+    expect((await pendingFor(supplierA))?.awaiting).toBe('unit')
+    expect(lastSent().text).toBe(msgConfirmUnit('fr', { unit: 'piece' }))
+
+    mocked(extractProductReply).mockResolvedValueOnce({ price_source: null, moq_tiers: [] })
+    await handleTelegramUpdate(textUpdate(chatA, userA, 'oui', 'fr', 222002))
     expect(await pendingFor(supplierA)).toBeNull()
     expect(lastSent().text).toContain('✅') // accusé « Produit reçu ✅ »
     await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
   })
 
-  it('3) réponse « 160 » SEUL → complété SANS paliers, AUCUNE relance paliers', async () => {
+  it('3) réponse « 160 » SEUL → confirmation unité CORRIGÉE (« botte » libre) → complété, unité verbatim', async () => {
     mocked(extractProductFromTelegram).mockResolvedValueOnce(fakeClean({ product_name: 'Tapis', price_source: null }))
     await handleTelegramUpdate(photoUpdate(chatA, userA, 'fr', 333001))
     const productId = (await pendingFor(supplierA))!.supplier_product_id
 
-    // Juste le prix → produit complété, pas de question paliers
+    // Juste le prix → prix appliqué (pas de relance paliers), PUIS confirmation d'unité.
     mocked(extractProductReply).mockResolvedValueOnce({ price_source: 160, moq_tiers: [] })
     await handleTelegramUpdate(textUpdate(chatA, userA, '160', 'fr', 333002))
-    expect(await pendingFor(supplierA)).toBeNull() // complété, pas de relance paliers
+    expect((await pendingFor(supplierA))?.awaiting).toBe('unit')
+
+    // Le fournisseur CORRIGE l'unité en texte LIBRE « botte » → figée verbatim + finalisé.
+    mocked(extractProductReply).mockResolvedValueOnce({ price_source: null, moq_tiers: [] })
+    await handleTelegramUpdate(textUpdate(chatA, userA, 'botte', 'fr', 333003))
+    expect(await pendingFor(supplierA)).toBeNull() // complété
     expect(lastSent().text).toContain('✅') // accusé « Produit reçu ✅ »
     expect((await productPrice(productId))?.suggested_wholesale_price_mad).toBe(160)
+    // Unité LIBRE stockée VERBATIM (jamais écrasée vers pièce).
+    const { data: prod } = await admin.from('supplier_products').select('unit').eq('id', productId).maybeSingle()
+    expect((prod as { unit: string }).unit).toBe('botte')
     await admin.from('supplier_products').delete().eq('supplier_id', supplierA)
   })
 

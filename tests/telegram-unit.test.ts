@@ -13,49 +13,28 @@ const base: AiExtractionRaw = {
   lead_time_days: null,
 }
 
-describe('P2 — extraction IA de l’unité de vente', () => {
-  it('« le mètre » / « metre » / arabe → metre', () => {
+describe('C1a — extraction IA de l’unité de vente (TEXTE LIBRE verbatim)', () => {
+  // C1a : buildCleanExtraction ne NORMALISE PLUS vers un enum — il garde le texte
+  // BRUT verbatim (la résolution du label i18n se fait à l'AFFICHAGE, via
+  // resolveUnitLabel/matchKnownSaleUnit — voir tests/c1a-unit-free-text.test.ts).
+  it('unité CONNUE conservée telle quelle (verbatim, pas d’enum)', () => {
     expect(buildCleanExtraction({ ...base, unit: 'metre' }).unit).toBe('metre')
-    expect(buildCleanExtraction({ ...base, unit: 'le mètre' }).unit).toBe('metre')
-    expect(buildCleanExtraction({ ...base, unit: 'متر' }).unit).toBe('metre')
-  })
-  it('« 12 dh le kg » → kg (le kilo / كيلو)', () => {
+    expect(buildCleanExtraction({ ...base, unit: 'le mètre' }).unit).toBe('le mètre')
     expect(buildCleanExtraction({ ...base, unit: 'kg' }).unit).toBe('kg')
-    expect(buildCleanExtraction({ ...base, unit: 'le kilo' }).unit).toBe('kg')
-    expect(buildCleanExtraction({ ...base, unit: 'كيلو' }).unit).toBe('kg')
+    expect(buildCleanExtraction({ ...base, unit: 'غرام' }).unit).toBe('غرام')
   })
-  it('« 8 dh le carton » → carton (la caisse / كرطونة)', () => {
-    expect(buildCleanExtraction({ ...base, unit: 'carton' }).unit).toBe('carton')
-    expect(buildCleanExtraction({ ...base, unit: 'la caisse' }).unit).toBe('carton')
-    expect(buildCleanExtraction({ ...base, unit: 'كرطونة' }).unit).toBe('carton')
+  it('unité LIBRE inconnue (« botte », « bidule ») GARDÉE verbatim, JAMAIS écrasée vers pièce', () => {
+    expect(buildCleanExtraction({ ...base, unit: 'botte' }).unit).toBe('botte')
+    expect(buildCleanExtraction({ ...base, unit: 'sachet plastique' }).unit).toBe('sachet plastique')
+    expect(buildCleanExtraction({ ...base, unit: 'bidule-inconnu' }).unit).toBe('bidule-inconnu')
   })
-  it('« le paquet » / « le sac » → paquet', () => {
-    expect(buildCleanExtraction({ ...base, unit: 'paquet' }).unit).toBe('paquet')
-    expect(buildCleanExtraction({ ...base, unit: 'le sac' }).unit).toBe('paquet')
+  it('unité bornée à 40 caractères', () => {
+    expect(buildCleanExtraction({ ...base, unit: 'x'.repeat(100) }).unit.length).toBe(40)
   })
-  it('« le litre » / « L » / « لتر » → litre', () => {
-    expect(buildCleanExtraction({ ...base, unit: 'litre' }).unit).toBe('litre')
-    expect(buildCleanExtraction({ ...base, unit: 'le litre' }).unit).toBe('litre')
-    expect(buildCleanExtraction({ ...base, unit: 'L' }).unit).toBe('litre')
-    expect(buildCleanExtraction({ ...base, unit: 'لتر' }).unit).toBe('litre')
-  })
-  it('« les 100 ml » / « ml » / « مل » → ml', () => {
-    expect(buildCleanExtraction({ ...base, unit: 'ml' }).unit).toBe('ml')
-    expect(buildCleanExtraction({ ...base, unit: 'les 100 ml' }).unit).toBe('ml')
-    expect(buildCleanExtraction({ ...base, unit: 'مل' }).unit).toBe('ml')
-  })
-  it('« le gramme » / « g » / « غرام » → gramme', () => {
-    expect(buildCleanExtraction({ ...base, unit: 'gramme' }).unit).toBe('gramme')
-    expect(buildCleanExtraction({ ...base, unit: 'le gramme' }).unit).toBe('gramme')
-    expect(buildCleanExtraction({ ...base, unit: 'g' }).unit).toBe('gramme')
-    expect(buildCleanExtraction({ ...base, unit: 'غرام' }).unit).toBe('gramme')
-  })
-  it('description SANS unité → piece (défaut, jamais d’erreur)', () => {
+  it('SANS unité (null / undefined / vide / absente) → piece (défaut, jamais d’erreur)', () => {
     expect(buildCleanExtraction({ ...base, unit: null }).unit).toBe('piece')
     expect(buildCleanExtraction({ ...base, unit: undefined }).unit).toBe('piece')
     expect(buildCleanExtraction({ ...base, unit: '' }).unit).toBe('piece')
-    expect(buildCleanExtraction({ ...base, unit: 'bidule-inconnu' }).unit).toBe('piece')
-    // unit absent du tout (fiche pré-P2) → piece
     expect(buildCleanExtraction(base).unit).toBe('piece')
   })
 

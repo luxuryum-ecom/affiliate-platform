@@ -12,7 +12,7 @@
 // supplier_product au miroir comme le fait déjà le flux Finaliser, pour qu'un produit APPROUVÉ
 // (non finalisé) garde son unité au catalogue. ZÉRO impact sur l'argent (sell/factory/marge).
 
-import { normalizeSaleUnit } from '@/lib/units'
+import { matchKnownSaleUnit } from '@/lib/units'
 import { isValidMediaUrl } from '@/lib/product-media'
 import type { MediaItem, WholesaleTier } from '@/types/database'
 
@@ -103,9 +103,14 @@ export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
   if (sell <= 0) return { create: false, reason: 'non_positive_price' } // CHECK sell_price > 0
   if (sell < factory) return { create: false, reason: 'negative_margin' } // C-B2 (garde défensive)
 
-  // Unité de vente reportée (AFFICHAGE PUR) — unité RÉELLE seulement : pcs/null → null = pièce
-  // implicite (inchangé). Identique au flux Finaliser. Aucun impact argent.
-  const saleUnit = normalizeSaleUnit(sp.unit)
+  // Unité de vente reportée (AFFICHAGE PUR, C1a). Règles :
+  //   • toute variante de « pièce » (ou vide/'pcs') → null = pièce implicite (INCHANGÉ) ;
+  //   • unité CONNUE (« le mètre », « غرام ») → forme canonique (display i18n identique) ;
+  //   • unité LIBRE inconnue (« botte », « sachet ») → TEXTE BRUT verbatim (jamais perdu).
+  // Aucun impact argent — l'unité ne touche aucun calcul de prix/palier/commission.
+  const rawSaleUnit = (sp.unit ?? '').trim()
+  const canonSaleUnit = matchKnownSaleUnit(rawSaleUnit)
+  const saleUnit = !rawSaleUnit || canonSaleUnit === 'piece' ? null : (canonSaleUnit ?? rawSaleUnit)
 
   // Photos — AFFICHAGE PUR : on ne garde que les URLs http(s) valides (même filtre que le
   // form admin). text[] fournisseur → media jsonb + images legacy, sans aucune transformation
@@ -142,8 +147,8 @@ export function buildSupplierMirror(sp: SupplierMirrorInput): MirrorDecision {
       subcategory: sp.subcategory ?? '',
       // Paliers grossiste (D3) — convertis FX+marge entier MAD par l'action (buildMirrorTiers).
       wholesale_tiers: sp.wholesale_tiers,
-      // AFFICHAGE PUR — reporté tel quel, comme le flux Finaliser. Aucun calcul.
-      sale_unit: saleUnit === 'piece' ? null : saleUnit,
+      // AFFICHAGE PUR — reporté tel quel (texte libre), comme le flux Finaliser. Aucun calcul.
+      sale_unit: saleUnit,
       pack_size: sp.pack_size ?? null,
       pack_unit: sp.pack_unit ?? null,
       ...photoCols,

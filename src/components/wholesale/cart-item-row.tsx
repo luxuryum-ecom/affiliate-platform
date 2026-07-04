@@ -7,6 +7,7 @@ import { updateCartQty, removeCartItem } from '@/app/actions/cart'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { getWholesaleTier, formatMAD } from '@/lib/utils'
+import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
 import type { WholesaleCartItemWithProduct } from '@/types/database'
 
 interface CartItemRowProps {
@@ -22,8 +23,14 @@ interface CartItemRowProps {
 
 export function CartItemRow({ item, variantStock }: CartItemRowProps) {
   const t = useTranslations('wholesale.cart')
+  const tUnits = useTranslations('units')
   const { product } = item
   const [qty, setQty] = useState(item.quantity)
+
+  // Suffixe d'unité (C1a) — résolu CLIENT via le hook next-intl (pattern déjà utilisé
+  // dans ce Client Component, ex. ProductForm). null si sale_unit non posé → affichage
+  // du prix INCHANGÉ (zéro régression pour les produits sans unité).
+  const unitLabel = product.sale_unit ? resolveUnitLabel(product.sale_unit, tUnits) : null
 
   // Référence de stock = variante (mig 105), fallback agrégat produit.
   const stockCap = variantStock ?? product.stock_count
@@ -88,7 +95,7 @@ export function CartItemRow({ item, variantStock }: CartItemRowProps) {
         {tier ? (
           <p className="text-xs text-success-fg">{tier.label}</p>
         ) : (
-          <p className="text-xs text-faint">{formatMAD(product.sell_price)}/u.</p>
+          <p className="text-xs text-faint">{unitLabel ? priceWithUnit(formatMAD(product.sell_price), unitLabel) : `${formatMAD(product.sell_price)}/u.`}</p>
         )}
 
         {/* Qty + price row */}
@@ -139,7 +146,7 @@ export function CartItemRow({ item, variantStock }: CartItemRowProps) {
 
           {/* Live subtotal */}
           <div className="ms-auto text-end">
-            <p className="text-xs text-faint">{formatMAD(unitPrice)}/u.</p>
+            <p className="text-xs text-faint">{unitLabel ? priceWithUnit(formatMAD(unitPrice), unitLabel) : `${formatMAD(unitPrice)}/u.`}</p>
             <p className="font-bold text-foreground text-sm">{formatMAD(subtotal)}</p>
           </div>
         </div>

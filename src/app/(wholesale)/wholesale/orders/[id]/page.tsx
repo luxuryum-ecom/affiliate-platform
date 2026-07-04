@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { formatMAD } from '@/lib/utils'
+import { resolveUnitLabel, priceWithUnit } from '@/lib/units'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildWholesaleTimeline, buildImportHistoryTimeline, buildPaymentHistoryTimeline } from '@/components/shared/order-timeline'
@@ -28,7 +29,7 @@ interface Params {
 }
 
 type OrderItemWithProduct = WholesaleOrderItem & {
-  product: Pick<Product, 'id' | 'name' | 'images' | 'media'>
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sale_unit'>
 }
 
 type BillingProfile = Pick<
@@ -75,9 +76,10 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
   const { submitted } = await searchParams
   const showSubmittedBanner = submitted === '1'
 
-  const [t, tc, locale] = await Promise.all([
+  const [t, tc, tUnits, locale] = await Promise.all([
     getTranslations('wholesale.orderDetail'),
     getTranslations('wholesale.common'),
+    getTranslations('units'),
     getLocale(),
   ])
 
@@ -98,7 +100,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
       .single(),
     supabase
       .from('wholesale_order_items')
-      .select('*, product:products(id,name,images,media)')
+      .select('*, product:products(id,name,images,media,sale_unit)')
       .eq('order_id', id),
     supabase
       .from('wholesale_order_import_history')
@@ -208,6 +210,11 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
               <div className="divide-y divide-line">
                 {items.map((item) => {
                   const coverUrl = getProductCoverUrl(item.product)
+                  // Suffixe d'unité (C1a) — résolu SERVEUR (string). null si sale_unit
+                  // non posé → priceWithUnit renvoie le prix INCHANGÉ (zéro régression).
+                  const unitLabel = item.product.sale_unit
+                    ? resolveUnitLabel(item.product.sale_unit, tUnits)
+                    : null
                   return (
                     <div key={item.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                       <ProductThumbnail
@@ -220,7 +227,7 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
                           {item.product.name}
                         </p>
                         <p className="text-xs text-muted mt-0.5">
-                          {item.tier_label_snapshot} · {item.quantity} × {formatMAD(item.unit_price_snapshot)}
+                          {item.tier_label_snapshot} · {item.quantity} × {priceWithUnit(formatMAD(item.unit_price_snapshot), unitLabel)}
                         </p>
                       </div>
                       <p className="text-sm font-bold text-foreground shrink-0">
