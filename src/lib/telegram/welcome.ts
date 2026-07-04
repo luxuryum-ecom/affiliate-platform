@@ -15,6 +15,8 @@
 // NEXT_PUBLIC_WHATSAPP_PHONE (config publique), injecté par l'appelant. Texte BRUT
 // (pas de parse_mode) → les URL wa.me s'auto-linkent. Chiffres en NUMÉRAUX LATINS.
 
+import { formatQty } from '@/lib/utils'
+
 export type WelcomeLang = 'darija' | 'msa' | 'fr' | 'en'
 
 /**
@@ -39,7 +41,7 @@ function frenchWelcome(waUrl: string): string {
     '',
     '💰 Le prix — écrivez-le comme ça (ça accélère la validation) :',
     '• Le prix à l’unité, dans votre devise — MAD (DH), AED, ou USD à l’international.',
-    '• Puis les prix de gros dégressifs, dans la même devise : 50 pcs = 18, 200 pcs = 16, 500 pcs = 14.',
+    '• Puis les prix de gros dégressifs (prix par pièce), dans la même devise : 50 pièces à 18 l’unité, 200 pièces à 16 l’unité, 500 pièces à 14 l’unité.',
     '• Le 1er palier correspond à la quantité minimum de commande.',
     '',
     'Chaque produit est vérifié par un administrateur avant sa publication.',
@@ -58,7 +60,7 @@ function englishWelcome(waUrl: string): string {
     '',
     '💰 The price — write it like this (it speeds up approval):',
     '• The unit price, in your currency — MAD (DH), AED, or USD internationally.',
-    '• Then the decreasing wholesale prices, in the same currency: 50 pcs = 18, 200 pcs = 16, 500 pcs = 14.',
+    '• Then the decreasing wholesale prices (price per piece), in the same currency: 50 pieces at 18 per unit, 200 pieces at 16 per unit, 500 pieces at 14 per unit.',
     '• The 1st tier is the minimum order quantity.',
     '',
     'Every product is checked by an admin before it goes live.',
@@ -77,7 +79,7 @@ function msaWelcome(waUrl: string): string {
     '',
     '💰 السعر — اكتبه بهذا الشكل (لتسريع المراجعة):',
     '• سعر الوحدة بعملتك — الدرهم المغربي (MAD)، الدرهم الإماراتي (AED)، أو الدولار (USD) دولياً.',
-    '• ثم أسعار الجملة المتناقصة بنفس العملة: 50 قطعة = 18، 200 قطعة = 16، 500 قطعة = 14.',
+    `• ثم أسعار الجملة المتناقصة (السعر لكل وحدة) بنفس العملة: ${formatQty(50)} قطعة بسعر ${formatQty(18)} للوحدة، ${formatQty(200)} قطعة بسعر ${formatQty(16)} للوحدة، ${formatQty(500)} قطعة بسعر ${formatQty(14)} للوحدة.`,
     '• الشريحة الأولى تمثّل الحد الأدنى للطلب.',
     '',
     'يخضع كل منتج لمراجعة المشرف قبل نشره.',
@@ -96,7 +98,7 @@ function darijaWelcome(waUrl: string): string {
     '',
     '💰 الثمن — كتبو بهاد الشكل (باش نصادقو عليه بزربة):',
     '• الثمن ديال الوحدة بالعملة ديالك — الدرهم المغربي (MAD)، الدرهم الإماراتي (AED)، ولا الدولار (USD) فالخارج.',
-    '• ومن بعد أثمنة الجملة اللي كتنقص بنفس العملة: 50 حبة = 18، 200 حبة = 16، 500 حبة = 14.',
+    `• ومن بعد أثمنة الجملة اللي كتنقص (الثمن لكل حبة) بنفس العملة: ${formatQty(50)} حبة بـ ${formatQty(18)} للحبة، ${formatQty(200)} حبة بـ ${formatQty(16)} للحبة، ${formatQty(500)} حبة بـ ${formatQty(14)} للحبة.`,
     '• أول شريحة هي الكمية الدنيا ديال الطلب.',
     '',
     'كل منتج كيتشيك من طرف الأدمين قبل ما يتنشر.',
