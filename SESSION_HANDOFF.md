@@ -1,8 +1,10 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
 > **Dernière mise à jour :** 2026-07-04
-> **Branche prod :** `origin/main` @ `d4b8227` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
-> **✅ LOT A2 + A3 FAITS le 2026-07-04.** A2 (fix surfacturation `max_qty`) **mergé `main`**, diagnostic prod = **0 produit à risque**. A3 (test A→Z gros) **verdict GO** — chaîne gros prouvée bout-en-bout, montants signés @finance. **Graphify activé** (`graphify-out/graph.json` = carte du code). `main` **non poussé** (push manuel Abdou). **➡️ PROCHAINE SESSION = AUDIT RLS CIBLÉ tables gros/fournisseur (Palier 1, Bloc 1A).**
+> **Branche prod :** `main` **en avance sur `origin` (bot prix/paliers pédagogue + docs — NON poussé)**. Abdou pousse lui-même. `origin` déployé Vercel.
+> **✅ LOT A2 + A3 FAITS le 2026-07-04.** A2 (fix surfacturation `max_qty`) **mergé `main`**, diagnostic prod = **0 produit à risque**. A3 (test A→Z gros) **verdict GO** — chaîne gros prouvée bout-en-bout, montants signés @finance. **Graphify activé** (`graphify-out/graph.json` = carte du code).
+> **✅ BOT PRIX/PALIERS PÉDAGOGUE le 2026-07-04** (mergé `main`, `--no-ff`, non poussé) — message bot fournisseur (`msgAskPriceAndTiers` + accueil) : format **« [quantité] pièces à [prix] dh l'unité »** (prix PAR UNITÉ explicite, dégressif) remplaçant l'ancien « 50 = 140 » ambigu. **4 langues** (FR/AR-fusha/AR-darija/EN), **isolation RTL FSI/PDI** des nombres en arabe (rendu **validé par Abdou sur capture**). **✅ en prod après push.**
+> **➡️ PROCHAIN LOT = C1 — DÉTECTION AUTO DES UNITÉS** (gramme / litre / mètre / kg). (RLS ciblé tables gros/fournisseur, Palier 1 Bloc 1A, reste au programme ensuite.)
 > **Migrations prod :** 001→**113** appliquées. ✅ **112 (auto_tiers) + 113 (état conversationnel `telegram_pending_products`) APPLIQUÉES.** ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
@@ -12,6 +14,11 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 ---
 
 ## ✅ FAIT CETTE SESSION — 2026-07-04 (MERGÉ dans `main`, non poussé — push manuel Abdou)
+- **BOT PRIX/PALIERS PÉDAGOGUE. ✅ MERGÉ `main` (`--no-ff`, `b742153`). Texte bot — pas de migration.**
+  - **But** : le bot demandait le prix en chiffres secs (`50 = 140`) — ambigu (total ? unité ?) pour un fournisseur peu tech. Nouveau format **explicite prix PAR UNITÉ dégressif** : « 30 pièces à 120 dh l'unité, 200 pièces à 110 dh l'unité ».
+  - **Fichiers** : `messages.ts` (`msgAskPriceAndTiers`, garde « dh ») + `welcome.ts` (`buildSupplierWelcome`, **sans « dh »** car accueil multi-devises MAD/AED/USD ; « 1er palier = MOQ » conservé) — **4 langues** (FR/AR-fusha/AR-darija/EN). Nombres **isolés FSI/PDI** en arabe via `formatQty()` (helper existant) → ordre RTL correct. `extract.ts` : prompt Haiku enrichi du nouveau format (**l'ancien « 50=140 » reste accepté** — parseur LLM tolérant, rétrocompat prouvée). Tests `lot5-welcome*` alignés.
+  - **Cartographie de bout en bout** (règle CLAUDE.md) : vérifié que l'extraction texte→paliers est un **LLM Haiku tolérant** (pas une regex rigide) → un fournisseur qui recopie le nouvel exemple est compris. **Aucun parseur modifié.**
+  - **Validation** : FR/EN + décisions validés par Abdou ; **rendu arabe RTL validé sur capture** (`Desktop/rendu-bot-arabe.png`). **4 checks verts** (tsc 0 · build · vitest **563/563** · smoke 16). @tester anti-régression : reste des textes bot inchangé.
 - **LOT A2 — FIX BUG `max_qty` (surfacturation gros catalogue). ⚠️ ARGENT. ✅ MERGÉ `main` (`--no-ff`). Diagnostic prod = 0 produit à risque → aucune réparation lancée.**
   - **Cause** : `upsertProduct` (`src/app/actions/products.ts`) pouvait sauver des paliers catalogue SANS `max_qty` → `getWholesaleTier` (`.find`) facturait le 1er palier (le plus cher) pour toute quantité → prix facturé ≠ affiché. Canal fournisseur (`buildMirrorTiers`) **non concerné, non touché**.
   - **Fix** : nouveau helper pur `boundWholesaleTierMaxQty` (`src/lib/utils.ts`) — borne chaque palier par `min du suivant − 1`, dernier ouvert (logique **identique** à `buildMirrorTiers`) ; appelé dans `upsertProduct` après validation, avant persistance → couvre **création ET modification**. **Aucun prix touché.**
