@@ -163,3 +163,6 @@ commission = prix_vente − coût_usine − marge_plateforme − livraison(ville
 
 ## Règle budget subagents
 - Lance les audits EN SÉQUENCE uniquement (jamais en parallèle) : @finance → @security → @navigator. Un subagent à la fois.
+
+## Graphify — carte du code avant lecture
+- Avant de lire des fichiers, consulte d'abord graphify-out/graph.json pour comprendre la structure et ne lire que le strict nécessaire.

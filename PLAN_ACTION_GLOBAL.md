@@ -28,7 +28,7 @@ Pro+backups, migs propres, redirect OK).
 
 Bloc 1A — Verrouiller (séquentiel, cette semaine)
 - ✅ A2 — Fix bug max_qty (surfacturation). ⚠️ ARGENT. FAIT 2026-07-04, mergé `main`. @finance 🟢 + @security 🟢. Diagnostic prod = 0 produit à risque.
-- ⬜ A3 — Test A→Z gros complet, calculs signés @finance. Verdict GO/NO-GO.
+- ✅ A3 — Test A→Z gros complet, calculs signés @finance. **Verdict GO** (2026-07-04). Chaîne gros prouvée bout-en-bout (auto-tiers → commande 4 quantités prix=facturé → COD affilié → devis international) ; preuve A2 en conditions réelles ; anti-régression verte.
 - ⬜ Audit RLS ciblé tables gros/fournisseur (périmètre réduit du futur B1 complet).
 
 Bloc 1B — Merger l'existant prêt (décisions Abdou, une branche à la fois)

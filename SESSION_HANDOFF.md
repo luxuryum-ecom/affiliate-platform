@@ -2,7 +2,7 @@
 
 > **Dernière mise à jour :** 2026-07-04
 > **Branche prod :** `origin/main` @ `d4b8227` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
-> **✅ LOT A2 MERGÉ dans `main` le 2026-07-04** (fix surfacturation `max_qty`). Diagnostic prod lancé par Abdou = **0 produit à risque** (aucune réparation nécessaire). `main` **non poussé** (push manuel Abdou) — contient aussi `PLAN_ACTION_GLOBAL.md` + session-close 2026-07-03 non poussés.
+> **✅ LOT A2 + A3 FAITS le 2026-07-04.** A2 (fix surfacturation `max_qty`) **mergé `main`**, diagnostic prod = **0 produit à risque**. A3 (test A→Z gros) **verdict GO** — chaîne gros prouvée bout-en-bout, montants signés @finance. **Graphify activé** (`graphify-out/graph.json` = carte du code). `main` **non poussé** (push manuel Abdou). **➡️ PROCHAINE SESSION = AUDIT RLS CIBLÉ tables gros/fournisseur (Palier 1, Bloc 1A).**
 > **Migrations prod :** 001→**113** appliquées. ✅ **112 (auto_tiers) + 113 (état conversationnel `telegram_pending_products`) APPLIQUÉES.** ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
@@ -19,7 +19,10 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
   - **Audits** : **@finance 🟢** (3 exemples chiffrés prix affiché = facturé) · **@security 🟢** (RAS critique, 2 P2 traités).
   - **2 SQL manuels** dans `scripts/sql-manuels/` (HORS `supabase/migrations/`, **PAS de `db push`**) : `A2_diagnostic_max_qty.sql` (lecture seule, robuste double-encodage) + `A2_repair_max_qty.sql` (réparation idempotente, garde-fou anti-malformé). **À lancer par Abdou en SQL Editor.**
   - **✅ Diagnostic prod lancé par Abdou (2026-07-04)** : « No rows returned » → **0 produit catalogue à risque**. Le fix protège désormais toute nouvelle saisie ; le SQL de réparation reste disponible dans `scripts/sql-manuels/` si besoin futur.
-  - **➡️ Reste (Abdou)** : pousser `main` quand il le décide. **Prochain lot = A3 (test A→Z gros)** — pas encore démarré (attend GO Abdou).
+  - **✅ Diagnostic prod lancé par Abdou (2026-07-04)** : 0 produit à risque. **A2 clôturé.**
+- **LOT A3 — TEST A→Z GROS COMPLET. ✅ VERDICT GO.** Chaîne gros prouvée bout-en-bout sur un scénario chiffré, avec câblage réel d'`orders.ts` répliqué à l'identique et montants **signés @finance 🟢** : (1) auto-tiers `generateAutoTiers` (4 tranches, plancher 8%, palier 1 = prix exact) ; (2+3) commande gros sur 4 quantités = **prix affiché = prix facturé** (preuve A2 en conditions réelles : qté 100 → 1600 au lieu de 2000) ; (4) commission COD affilié (250 → commission 35, livraison jamais nulle) ; (5) `import_on_demand` → COD bloqué, passe par devis. Harness de vérification temporaire (13 checks verts, supprimé après capture). Anti-régression : suite complète verte (563 tests). **Aucun bug détecté, aucune règle 🔒 touchée, aucun commit de code.**
+- **GRAPHIFY activé** : `graphify-out/graph.json` (3239 nœuds / 6792 arêtes) = carte du code à consulter AVANT toute lecture de fichiers (règle ajoutée à `CLAUDE.md`). Update code-only sans coût token.
+  - **➡️ Reste (Abdou)** : pousser `main` quand il le décide. **PROCHAINE SESSION = AUDIT RLS CIBLÉ** tables gros/fournisseur (Palier 1, Bloc 1A ; périmètre réduit du futur B1). Puis Bloc 1B : merges des branches prêtes (WMS-1, Vitrine grossiste, Rôles 2 étages, décision V5-bis).
 
 ---
 
