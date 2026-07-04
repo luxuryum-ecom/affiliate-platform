@@ -2,7 +2,7 @@
 
 > **Dernière mise à jour :** 2026-07-04
 > **Branche prod :** `origin/main` @ `d4b8227` — **à jour, 0 commit d'avance**. Tout est poussé & déployé Vercel.
-> **🔧 EN COURS (non mergé) :** branche **`fix/max-qty-server-bound`** — **LOT A2 (fix surfacturation `max_qty`) COMMITÉ, en attente GO merge + GO push d'Abdou.** SQL diagnostic à lancer par Abdou AVANT merge (voir « REPRENDRE ICI »).
+> **✅ LOT A2 MERGÉ dans `main` le 2026-07-04** (fix surfacturation `max_qty`). Diagnostic prod lancé par Abdou = **0 produit à risque** (aucune réparation nécessaire). `main` **non poussé** (push manuel Abdou) — contient aussi `PLAN_ACTION_GLOBAL.md` + session-close 2026-07-03 non poussés.
 > **Migrations prod :** 001→**113** appliquées. ✅ **112 (auto_tiers) + 113 (état conversationnel `telegram_pending_products`) APPLIQUÉES.** ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
@@ -11,14 +11,15 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 
 ---
 
-## 🔧 FAIT CETTE SESSION — 2026-07-04 (branche `fix/max-qty-server-bound`, PAS encore mergé/poussé)
-- **LOT A2 — FIX BUG `max_qty` (surfacturation gros catalogue). ⚠️ ARGENT. COMMITÉ sur la branche, en attente GO merge + push + SQL prod Abdou.**
+## ✅ FAIT CETTE SESSION — 2026-07-04 (MERGÉ dans `main`, non poussé — push manuel Abdou)
+- **LOT A2 — FIX BUG `max_qty` (surfacturation gros catalogue). ⚠️ ARGENT. ✅ MERGÉ `main` (`--no-ff`). Diagnostic prod = 0 produit à risque → aucune réparation lancée.**
   - **Cause** : `upsertProduct` (`src/app/actions/products.ts`) pouvait sauver des paliers catalogue SANS `max_qty` → `getWholesaleTier` (`.find`) facturait le 1er palier (le plus cher) pour toute quantité → prix facturé ≠ affiché. Canal fournisseur (`buildMirrorTiers`) **non concerné, non touché**.
   - **Fix** : nouveau helper pur `boundWholesaleTierMaxQty` (`src/lib/utils.ts`) — borne chaque palier par `min du suivant − 1`, dernier ouvert (logique **identique** à `buildMirrorTiers`) ; appelé dans `upsertProduct` après validation, avant persistance → couvre **création ET modification**. **Aucun prix touché.**
   - **Tests** : `tests/max-qty-server-bound.test.ts` (14 tests : bornage / bon palier par tranche / idempotence). **4 checks verts** (tsc 0 · build · vitest **563/563** · smoke 16).
   - **Audits** : **@finance 🟢** (3 exemples chiffrés prix affiché = facturé) · **@security 🟢** (RAS critique, 2 P2 traités).
   - **2 SQL manuels** dans `scripts/sql-manuels/` (HORS `supabase/migrations/`, **PAS de `db push`**) : `A2_diagnostic_max_qty.sql` (lecture seule, robuste double-encodage) + `A2_repair_max_qty.sql` (réparation idempotente, garde-fou anti-malformé). **À lancer par Abdou en SQL Editor.**
-  - **➡️ Reste à faire (Abdou)** : (1) lancer le diagnostic en prod ; (2) selon résultat, GO merge `fix/max-qty-server-bound` → `main` + push ; (3) lancer la réparation SQL si des produits sont à risque. **Ne pas démarrer A3 avant.**
+  - **✅ Diagnostic prod lancé par Abdou (2026-07-04)** : « No rows returned » → **0 produit catalogue à risque**. Le fix protège désormais toute nouvelle saisie ; le SQL de réparation reste disponible dans `scripts/sql-manuels/` si besoin futur.
+  - **➡️ Reste (Abdou)** : pousser `main` quand il le décide. **Prochain lot = A3 (test A→Z gros)** — pas encore démarré (attend GO Abdou).
 
 ---
 
@@ -64,7 +65,7 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 
 ### 🧊 RESTE (à froid)
 
-1. **✅ 🐛 BUG `max_qty` (facturation gros) — CORRIGÉ 2026-07-04 (LOT A2, branche `fix/max-qty-server-bound`, en attente GO merge+push).** Le **formulaire catalogue admin** (`ProductForm` + `products.ts:476-508`) pouvait sauver des paliers **sans `max_qty`** → `getWholesaleTier` (`.find`) facturait le 1er palier (le plus cher) → surfacturation. **Corrigé** : bornage serveur `boundWholesaleTierMaxQty` (`src/lib/utils.ts`, logique identique à `buildMirrorTiers`), couvre création+modification. @finance 🟢 (3 exemples chiffrés) · @security 🟢. **Reste (Abdou)** : lancer `scripts/sql-manuels/A2_diagnostic_max_qty.sql` en SQL Editor → si produits à risque, lancer `A2_repair_max_qty.sql` (idempotent) ; puis GO merge + push. **Canal fournisseur/Telegram/Lot 4 = SÛR** (`buildMirrorTiers`), **non touché**.
+1. **✅ 🐛 BUG `max_qty` (facturation gros) — CORRIGÉ ET MERGÉ `main` 2026-07-04 (LOT A2).** Bornage serveur `boundWholesaleTierMaxQty` (`src/lib/utils.ts`, logique identique à `buildMirrorTiers`), couvre création+modification, aucun prix touché. @finance 🟢 (3 exemples chiffrés) · @security 🟢. **Diagnostic prod = 0 produit à risque** (rien à réparer). SQL de réparation disponible dans `scripts/sql-manuels/` si besoin futur. **Canal fournisseur/Telegram/Lot 4 = SÛR** (`buildMirrorTiers`), **non touché**. **Clôturé.**
 2. **🧊 Migration 111 — fix DONNÉES (2 produits `wholesale_tiers` double-encodés)** : **rien n'est cassé** (le code d'affichage gère ces lignes). À lancer par **Abdou** dans **Supabase → SQL Editor** (coller le SQL de `supabase/migrations/111_fix_wholesale_tiers_double_encoding.sql`). **⛔ PAS `supabase db push`** (embarquerait la migration 091). Non urgent.
 3. **⚙️ `TELEGRAM_BOT_USERNAME`** — à **re-vérifier** dans les env vars Vercel.
 4. **🖼️ Filigrane hero landing « موزونا »** — **asset image** (pas du texte de code) affichant encore l'ancien nom → à **régénérer** (phase design/asset séparée).

@@ -27,7 +27,7 @@ Pro+backups, migs propres, redirect OK).
 > But : encaisser les premières commandes de gros. ~80 % existe déjà.
 
 Bloc 1A — Verrouiller (séquentiel, cette semaine)
-- ⬜ A2 — Fix bug max_qty (surfacturation). ⚠️ ARGENT.
+- ✅ A2 — Fix bug max_qty (surfacturation). ⚠️ ARGENT. FAIT 2026-07-04, mergé `main`. @finance 🟢 + @security 🟢. Diagnostic prod = 0 produit à risque.
 - ⬜ A3 — Test A→Z gros complet, calculs signés @finance. Verdict GO/NO-GO.
 - ⬜ Audit RLS ciblé tables gros/fournisseur (périmètre réduit du futur B1 complet).
 
