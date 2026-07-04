@@ -1,3 +1,89 @@
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- ⬇️ BLOC AJOUTÉ LE 2026-07-04 — PLAN DE LANCEMENT A→Z (2 vagues).          -->
+<!-- Ajout PUR en tête. RIEN supprimé/modifié dessous. Indexe l'existant.      -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+# 🎯 PLAN DE LANCEMENT A→Z — 2 VAGUES (validé Abdou 2026-07-04)
+
+> Découverte clé du 2026-07-04 : ~80 % du lancement GROS est déjà en prod, et la plupart des « grands systèmes » (WMS, Gardien IA, Vitrine intelligente) sont déjà cadrés voire construits sur branches plus bas dans ce fichier. Ce bloc ne réinvente rien : il ordonne l'existant en 2 vagues + grave 3 nouveautés décidées ce jour.
+> Stratégie : lancer le GROS d'abord (cash rapide, moins de machinerie), construire l'AFFILIATION en parallèle, ouvrir l'affiliation en vague 2. Un chantier à la fois.
+
+## 🔒 RÈGLES INTOUCHABLES (gravées Abdou 2026-07-04)
+1. Thème / design visuel (couleurs, style) : ON N'Y TOUCHE PAS.
+2. Nombre + disposition des cartes marketplace : grille INCHANGÉE.
+3. Hooks + textes validés (UI, bot, accroches) : AUCUN MOT ne change.
+4. Forme d'affichage des paliers : INCHANGÉE.
+5. Ce qui marche ne se casse pas. Acquis prod = protégé.
+6. Toute exception → montrer AVANT/APRÈS + attendre GO Abdou. Pas de GO = pas de changement.
+> Chaque prompt agent porte un bloc INTERDICTIONS. @tester = mission anti-régression renforcée (9 features prod + paliers + textes bot 4 langues strictement identiques).
+
+## 🧭 PRINCIPE DIRECTEUR
+« Rien ne se modifie, tout s'écrit, tout se scanne, tout se rapproche, tout se signe. » Argent, colis, unités = des ACTIFS avec un détenteur identifié à chaque instant. Déjà ancré via : ledger append-only + idempotence (DÉCISIONS FIGÉES), WMS (custody/scan), Gardien IA (calculs exacts + blocage + trace).
+
+## 🆕 LES 3 NOUVEAUTÉS DU 2026-07-04
+
+### N1 — RÈGLE COMMISSION LIÉE AU VERSEMENT LIVREUR (« règle en or » d'Abdou)
+« Livré » ≠ « payable ». La commission affilié ne devient DISPONIBLE que quand le versement du livreur est RÉELLEMENT reçu sur le compte d'Abdou. Machine à états :
+1. en_attente — commande confirmée, commission calculée, visible non acquise.
+2. livree_encaissement_en_cours — statut livreur « livré » ; le cash est une CRÉANCE « en transit chez livreur X » (écriture ledger), PAS de l'argent disponible.
+3. encaissee — bordereau de versement du livreur reçu ET rapproché ligne par ligne → commission passe DISPONIBLE dans le solde affilié.
+4. payee — Abdou verse l'affilié ; écriture ledger ; marge plateforme écrite aussi.
+5. contre_passee — retour/refus : commission annulée, stock ré-entré, frais imputés.
+> L'affilié voit chaque état en temps réel (FR/AR/EN). Abdou n'avance JAMAIS un dirham non reçu. Le même principe = protection anti-fraude livreur : colis « livré » mais absent des versements après X jours → alerte nominative. À intégrer au ledger (Phase 2) + module livreurs (N2) + réconciliation WMS-4.
+
+### N2 — MODULE LIVREURS (Ozone + Cathedis API déjà utilisées sur Egrow + livreur local manuel)
+- Ozone + Cathedis : l'API existe et Abdou l'utilise DÉJÀ sur Egrow → récupérer la config existante. Création d'expédition auto, webhooks statut, bordereaux de versement (point clé : réconciliation livré vs payé).
+- Livreur local Casa : compte plateforme avec rôle « livreur » très limité (login/mdp) → voit uniquement SES colis, saisit le statut (Livré / Retourné) depuis son mobile, interface ultra-simple FR/darija, gros boutons. Chaque saisie = événement signé (custody).
+- Webhooks signés + idempotents. Scoring livreur par société ET par ville. Alertes créances jusqu'à extinction.
+> ⚠️ ARGENT → @finance + @security. À brancher sur WMS-3/WMS-4 + N1. Accès API Ozone/Cathedis à rassembler tôt (via WhatsApp du contact commercial).
+
+### N3 — STRATÉGIE 2 VAGUES (gros d'abord, affiliation ensuite)
+Le séquencement de lancement qui manquait, détaillé ci-dessous.
+
+## 🌊 VAGUE 1 — LANCEMENT GROS (cible ~7-10 jours, ~80 % déjà en prod)
+
+PHASE A — VERROUILLER
+- ✅ A1 — Sécurité ops (FAIT le 2026-07-04) : rotation service_role (déjà faite 27/06, vérifiée) · Supabase Pro activé + backups quotidiens vérifiés (8 backups) · mig 091 confirmée appliquée en Remote · mig 111 vérifiée (0 ligne double-encodée) · redirect /auth/callback déjà dans l'allowlist · comptes test = soft-ban (réglé en B1). Les 4 bloquants go-live historiques sont LEVÉS.
+- ✅ A2 — FIX BUG max_qty (surfacturation gros) — FAIT le 2026-07-04, branche `fix/max-qty-server-bound` (COMMITÉ, en attente GO merge+push+SQL Abdou). Bornage serveur `boundWholesaleTierMaxQty` (`src/lib/utils.ts`, logique identique à buildMirrorTiers), couvre création+modification, aucun prix touché. 14 tests, 4 checks verts (563 tests). ⚠️ ARGENT → @finance 🟢 (3 exemples chiffrés) + @security 🟢 (RAS). 2 SQL manuels dans `scripts/sql-manuels/` (diagnostic + réparation idempotente, HORS migrations). Reste Abdou : lancer diagnostic → réparation si besoin → merge+push.
+- ⬜ A3 — TEST A→Z GROS COMPLET (boucle jamais fermée, priorité n°1 du handoff). Modération/auto-tiers → vitrine grossiste → commande gros (4 quantités, calculs @finance signés) → affilié COD → devis international. Prompt prêt : PROMPT_A3. Livrable = verdict GO/NO-GO.
+
+PHASE GROS — OUVERTURE (surtout de la vérification, le code existe)
+- ⬜ Audit RLS ciblé tables gros/fournisseur (= début du B1, périmètre gros).
+- ⬜ Onboarding fournisseurs réels TR/AE via Telegram (bot 1-clic déjà en prod, 0 fournisseur lié → 1er test réel). Dépend d'Abdou + fournisseurs.
+- ⬜ Niche déclarée simple à l'inscription grossiste (couche 1 de la Vitrine intelligente déjà construite).
+- ⬜ 🚀 LANCEMENT GROS Maroc : commandes directes aux paliers + devis international. Paiements virement/COD à la main (volume faible OK).
+
+## 🔨 EN PARALLÈLE — CONSTRUIRE LE SOCLE AFFILIATION
+Déjà construit sur branches (attend GO merge Abdou) :
+- 🔄 WMS-1 stock central (feat/wms-1-stock-central, mig 092-095, @finance+@security GO) → candidat merge n°1.
+- 🔄 Vitrine grossiste intelligente (feat/vitrine-grossiste-perso, @security GO) → candidat merge Vague 1.
+- 🔄 Rôles 2 étages (feat/roles-2-etages, mig 087-088) → base rôle « livreur » (N2).
+- 🔄 V5-bis stock multimodes (feat/supplier-stock-multimodes, mig 104 déjà prod) → décision merge.
+
+À construire (ordre gravé : rôles → WMS → Finance → Gardien) :
+- ⬜ B1 — Audit RLS complet (chaque table × chaque rôle, deny par défaut). Prérequis de tout.
+- ⬜ B2 — GRAND LIVRE double entrée (Phase 2) : comptes internes dont « cash en transit chez livreur X », append-only, idempotent, somme=0, rapprochement nocturne + alertes. Intègre N1.
+- ⬜ B3 — Machine à états COMMISSIONS liée aux versements = N1, branchée sur le ledger.
+- ⬜ WMS-2/3/4 (custody scan + réconciliation) : intègre N2 (livreurs) + QR interne muet (identifiant opaque, données derrière autorisation serveur).
+- ⬜ B7 — Anti-fraude : score commande avant expédition, taux livraison/affilié, multi-comptes, blocage modif prix post-approbation.
+- ⬜ B8 — Suppression compte RGPD (dette bloquante documentée, @backend-db + @security).
+
+## 🌊 VAGUE 2 — LANCEMENT AFFILIATION (~2-3 sem après le gros)
+- ⬜ Socle finance + livreurs + custody testés sur les VRAIES commandes gros de la Vague 1.
+- ⬜ Affiliation avancée : liens trackés + stats temps réel branchées sur le ledger, matériel marketing auto FR/AR/Darija, volet INFLUENCEURS (codes promo nominatifs + dashboard dédié).
+- ⬜ Cockpit performance humaine = tableaux perf agents + Gardien IA (couronnement).
+- ⬜ 🚀 OUVERTURE AFFILIATION avec la règle N1 en place.
+- Puis en continu : unités universelles, BRIQUE 2 (QC photo IA), échantillons payants, RFQ Telegram, perso couches 2-3 — tous déjà cadrés dans ce fichier.
+
+## 📦 PHASE 2 POST-LANCEMENT (ne pas construire avant)
+Chat négociation (WhatsApp en attendant) · PayTabs Dubaï · sous-affiliés/paliers commission · inscription 100 % Telegram · perso couches 2-3 · douchettes physiques · facturation auto Stripe (PB-10) · créas payantes (PB-4).
+
+## 📅 CALENDRIER
+- Vague 1 (gros) : ~7-10 jours. Socle affiliation en // : ~2-3 semaines. Vague 2 : ~3-4 semaines après le gros.
+- Variable n°1 = disponibilité d'Abdou. Accès API livreurs = à demander tôt (externe).
+
+<!-- ⬆️ FIN DU BLOC AJOUTÉ LE 2026-07-04. Contenu original inchangé ci-dessous. -->
+
 # FEUILLE DE ROUTE — SaaS d'affiliation Mozouna
 
 > **Réorganisée le 2026-06-20 en 3 ÉTAPES claires.** ZÉRO suppression : **tout**
