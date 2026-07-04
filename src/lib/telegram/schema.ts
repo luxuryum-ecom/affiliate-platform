@@ -4,7 +4,7 @@
 
 import { z } from 'zod'
 import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
-import { normalizeSaleUnit, type SaleUnit } from '@/lib/units'
+import { sanitizeSaleUnitFreeText } from '@/lib/units'
 
 // ── 1. Payload webhook Telegram (sous-ensemble consommé) ─────────────────────
 
@@ -395,8 +395,9 @@ export type CleanExtraction = {
   price_source: number | null
   stock_quantity: number | null
   lead_time_days: number | null
-  /** Unité de VENTE normalisée (enum). Toujours une valeur — 'piece' par défaut. */
-  unit: SaleUnit
+  /** Unité de VENTE en TEXTE LIBRE (C1a) — verbatim (« botte », « sachet »… non
+   *  écrasés). Toujours une valeur non vide — 'piece' par défaut. AFFICHAGE PUR. */
+  unit: string
   /** Conditionnement DESCRIPTIF (P3). null si non détecté ou incomplet. */
   pack_size: number | null
   pack_unit: string | null
@@ -430,8 +431,9 @@ export function buildCleanExtraction(
     price_source: sanitizeExtractedPrice(raw.price),
     stock_quantity: sanitizeNonNegativeInt(raw.stock_quantity, MAX_STOCK_QUANTITY),
     lead_time_days: sanitizeNonNegativeInt(raw.lead_time_days, MAX_LEAD_TIME_DAYS),
-    // Réutilise le helper P1 (FR/AR/darija → enum, inconnu/null → 'piece', jamais d'erreur).
-    unit: normalizeSaleUnit(raw.unit),
+    // C1a — unité en TEXTE LIBRE : on garde le brut verbatim (« botte » n'est PAS
+    // écrasé vers 'piece'), borné 40 car., défaut 'piece' si vide. Plus d'enum figé.
+    unit: sanitizeSaleUnitFreeText(raw.unit),
     ...normalizePack(raw.pack_size, raw.pack_unit),
     // Proposition de catégorie (seulement si category résolue = 'Autres' + label inédit).
     suggested_category: sanitizeSuggestedCategory(raw.suggested_category, category, source),

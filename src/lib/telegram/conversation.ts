@@ -6,9 +6,11 @@
 // des messages est fait par ingest.ts ; ce module ne fait que RAISONNER.
 
 import type { CleanExtraction, SanitizedMoqTier } from './schema'
+import { matchKnownSaleUnit } from '@/lib/units'
 
 // Ce que le bot peut attendre d'un fournisseur pour un produit donné.
-export type Awaiting = 'price' | 'tiers'
+// 'unit' (C1a) = confirmation de l'unité de vente détectée par l'IA.
+export type Awaiting = 'price' | 'tiers' | 'unit'
 
 // Délai avant la relance UNIQUE (~1h). Anti-spam : une seule relance.
 export const REMINDER_AFTER_MS = 60 * 60 * 1000
@@ -126,6 +128,66 @@ export function interpretTiersReply(
   if (tiers.length > 0) return { kind: 'got_tiers', tiers }
   // Prix seul sans quantité rattachée (« 140 ») → il manque la quantité minimum.
   if (clean.price_source != null) return { kind: 'bare_price', price: clean.price_source }
+  return { kind: 'unusable' }
+}
+
+/**
+ * Détecte une réponse AFFIRMATIVE (« oui, c'est ça ») dans les 4 langues — utilisé
+ * quand on demande de CONFIRMER l'unité détectée. Tolérant ponctuation/casse/diacritiques.
+ */
+export function isAffirmativeReply(text: string | null | undefined): boolean {
+  const t = (text ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[.!،؛?…]/g, ' ')
+    .replace(/[ً-ْ]/g, '')
+    .trim()
+  if (!t) return false
+  const YES = new Set([
+    // FR
+    'oui', 'ouais', 'exact', 'exactement', 'voila', 'voilà', 'ok', 'okay', 'daccord', "d'accord", 'cest ca', "c'est ca", "c'est ça", 'cest ça',
+    // EN
+    'yes', 'yep', 'yeah', 'yup', 'correct', 'right',
+    // AR fus'ha / darija (translittéré + arabe)
+    'na3am', 'ah', 'aywa', 'wah', 'hakka', 'sahih', 'mzian', 'tamam',
+    'نعم', 'اجل', 'أجل', 'ايه', 'أيوه', 'ايوا', 'واه', 'هاكا', 'هاكاك', 'بالضبط', 'صحيح', 'مزيان', 'تمام',
+  ])
+  const tokens = t.split(/\s+/)
+  return YES.has(t) || (tokens.length > 0 && YES.has(tokens[0]))
+}
+
+// Résultat de l'interprétation d'une réponse quand on CONFIRME l'unité de vente.
+export type UnitReplyOutcome =
+  | { kind: 'confirmed' } // « oui » → on garde l'unité proposée
+  | { kind: 'corrected'; unit: string } // le fournisseur écrit la bonne unité (texte libre)
+  | { kind: 'confused' } // « je comprends pas » → ré-expliquer
+  | { kind: 'unusable' } // ni « oui » ni unité exploitable → redemander
+
+/**
+ * Interprète une réponse alors qu'on demande de CONFIRMER l'unité de vente détectée.
+ * Ordre : confusion → affirmation (« oui ») → unité écrite (connue → canonique ;
+ * libre → verbatim « botte »). Une négation SEULE (« non ») sans unité, ou une phrase
+ * trop verbeuse (> 2 mots sans unité connue) → inexploitable (on redemande d'écrire l'unité).
+ * L'unité corrigée n'est JAMAIS écrasée vers 'piece' — le libre reste libre (C1a).
+ */
+export function interpretUnitReply(text: string | null | undefined): UnitReplyOutcome {
+  if (isConfusedReply(text)) return { kind: 'confused' }
+  if (isAffirmativeReply(text)) return { kind: 'confirmed' }
+  const tokens = (text ?? '')
+    .replace(/[.!؟?…،؛«»"']/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  if (tokens.length === 0) return { kind: 'unusable' }
+  const last = tokens[tokens.length - 1].slice(0, 40)
+  // Unité CONNUE (dernier mot, ou la phrase entière : « au kilo » → kg) → forme canonique.
+  const known = matchKnownSaleUnit(last) ?? matchKnownSaleUnit(text)
+  if (known) return { kind: 'corrected', unit: known }
+  // « non » seul (sans unité reconnaissable) → on ne sait pas laquelle → redemander.
+  if (isNegativeReply(text)) return { kind: 'unusable' }
+  // Texte LIBRE inconnu (« botte », « sachet ») : accepté SEULEMENT si réponse courte
+  // (≤ 2 mots). Au-delà = phrase ambiguë → on redemande (évite de stocker du bruit).
+  if (tokens.length <= 2) return { kind: 'corrected', unit: last }
   return { kind: 'unusable' }
 }
 

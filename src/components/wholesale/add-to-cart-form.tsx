@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { addToCart, type CartState } from '@/app/actions/cart'
 import { getWholesaleTier, formatMAD } from '@/lib/utils'
+import { priceWithUnit } from '@/lib/units'
 import type { WholesaleTier } from '@/types/database'
 
 interface AddToCartFormProps {
@@ -15,6 +16,11 @@ interface AddToCartFormProps {
   stockCount: number
   /** Lot B : variante défaut résolue côté serveur. Propagée en hidden input → addToCart. */
   defaultVariantId?: string | null
+  /**
+   * Libellé d'unité déjà résolu côté SERVEUR (string, jamais une fonction — cf. règle
+   * projet sur les Client Components). Non fourni / null → aucun suffixe (C1a).
+   */
+  unitLabel?: string | null
 }
 
 const initialState: CartState = { error: null, success: false }
@@ -26,6 +32,7 @@ export function AddToCartForm({
   minQty,
   stockCount,
   defaultVariantId,
+  unitLabel,
 }: AddToCartFormProps) {
   const t = useTranslations('wholesale.productDetail')
   const [state, action, isPending] = useActionState(addToCart, initialState)
@@ -95,7 +102,7 @@ export function AddToCartForm({
                         )}
                       </td>
                       <td className="px-3 py-2 text-end font-medium text-foreground">
-                        {formatMAD(tier.price_per_unit)}
+                        {priceWithUnit(formatMAD(tier.price_per_unit), unitLabel)}
                       </td>
                     </tr>
                   )
@@ -180,7 +187,7 @@ export function AddToCartForm({
             )}
             <div className="flex justify-between text-sm">
               <span className="text-muted">{t('addToCartUnitPrice')}</span>
-              <span className="font-medium text-foreground">{formatMAD(unitPrice)}</span>
+              <span className="font-medium text-foreground">{priceWithUnit(formatMAD(unitPrice), unitLabel)}</span>
             </div>
             <div className="flex justify-between text-sm border-t border-line pt-1.5 mt-1.5">
               <span className="text-foreground font-medium">{t('addToCartSubtotal')}</span>

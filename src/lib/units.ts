@@ -41,15 +41,46 @@ export function normalizeSaleUnit(raw: string | null | undefined): SaleUnit {
 }
 
 /**
+ * Résout une unité brute vers l'enum CANONIQUE si elle correspond à une unité
+ * CONNUE (kg, mètre, litre…), sinon `null`. Contrairement à `normalizeSaleUnit`,
+ * NE retombe PAS sur 'piece' — l'appelant garde alors le texte LIBRE verbatim
+ * (« botte », « sachet »… non traduisibles). Tolère les articles en tête. (C1a)
+ */
+export function matchKnownSaleUnit(raw: string | null | undefined): SaleUnit | null {
+  if (!raw) return null
+  const v = raw.trim().toLowerCase().replace(/^(les |le |la |l'|au |du |de |des |un |une )/, '').trim()
+  if (SALE_UNIT_ALIASES[v]) return SALE_UNIT_ALIASES[v]
+  const last = v.split(/\s+/).pop() ?? ''
+  return SALE_UNIT_ALIASES[last] ?? null
+}
+
+/**
+ * Unité de vente LIBRE nettoyée pour STOCKAGE (extraction IA / réponse fournisseur).
+ * Garde le texte BRUT verbatim — « botte », « sachet » ne sont PAS écrasés vers
+ * 'piece' —, borné à 40 caractères. Vide/null → 'piece' (défaut). Ne normalise PAS
+ * vers l'enum : le libre reste libre de bout en bout (LOT C1a). N'ALTÈRE aucun prix.
+ */
+export function sanitizeSaleUnitFreeText(raw: string | null | undefined): string {
+  const v = (raw ?? '').trim()
+  return v ? v.slice(0, 40) : 'piece'
+}
+
+/**
  * Label i18n d'une unité. `t` = traducteur du namespace 'units' (getTranslations
  * ou useTranslations). Renvoie une STRING (jamais une fonction → sûr à passer à un
- * Client Component). Valeur inconnue/null → label « pièce ».
+ * Client Component).
+ *   • unité CONNUE (kg, mètre…) → traduction i18n ;
+ *   • unité LIBRE inconnue (« botte », « sachet ») → texte BRUT verbatim (C1a) ;
+ *   • vide/null → label « pièce » (défaut, comportement inchangé).
  */
 export function resolveUnitLabel(
   raw: string | null | undefined,
   t: (key: SaleUnit) => string,
 ): string {
-  return t(normalizeSaleUnit(raw))
+  const trimmed = (raw ?? '').trim()
+  if (!trimmed) return t('piece')
+  const canon = matchKnownSaleUnit(trimmed)
+  return canon ? t(canon) : trimmed
 }
 
 /**

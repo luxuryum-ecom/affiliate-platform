@@ -32,11 +32,14 @@ import {
   msgAskTierQty,
   msgReaskPrice,
   msgReaskTiers,
+  msgConfirmUnit,
+  msgReaskUnit,
 } from './messages'
 import {
   decideAwaiting,
   interpretPriceReply,
   interpretTiersReply,
+  interpretUnitReply,
   isConfusedReply,
   shouldReask,
 } from './conversation'
@@ -45,9 +48,11 @@ import {
   getMostRecentPending,
   deletePending,
   bumpReask,
+  switchPendingTo,
   type PendingRow,
 } from './pending-store'
 import { resolveSupplierCurrency, composePricing } from '@/lib/supplier-pricing'
+import { matchKnownSaleUnit } from '@/lib/units'
 import { getRateToMad } from '@/lib/fx'
 import { checkProductLimit } from '@/lib/product-limit'
 import { insertMoqTiers } from '@/lib/supplier/moq-tiers'
@@ -351,10 +356,11 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
         stock_mode: 'telegram',
         stock_quantity_updated_at: clean.stock_quantity != null ? nowIso() : null,
         lead_time_days: clean.lead_time_days,
-        // P2 — unité de vente devinée par l'IA. On NE pose `unit` QUE si une unité
-        // NON-pièce a été détectée → un produit sans unité garde le défaut colonne
-        // ('pcs') : comportement existant strictement inchangé (RÈGLE ABSOLUE).
-        ...(clean.unit !== 'piece' ? { unit: clean.unit } : {}),
+        // C1a — unité de vente en TEXTE LIBRE devinée par l'IA. On NE pose `unit` QUE
+        // si ce n'est PAS une « pièce » (toute variante FR/AR/darija reconnue comme
+        // pièce → on laisse le défaut colonne 'pcs') : produit sans unité strictement
+        // inchangé (RÈGLE ABSOLUE). Le libre (« botte ») est stocké verbatim.
+        ...(matchKnownSaleUnit(clean.unit) !== 'piece' ? { unit: clean.unit } : {}),
         // P3 — conditionnement DESCRIPTIF, posé UNIQUEMENT si détecté (les deux champs).
         // Non détecté → colonnes NULL → aucun conditionnement affiché (inchangé).
         ...(clean.pack_size != null && clean.pack_unit != null
@@ -439,37 +445,33 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
     // BRIQUE 3 — le produit est-il COMPLET, ou faut-il DEMANDER l'info manquante ?
     // Prix absent → on demande le prix ; prix présent sans palier → on propose les
     // paliers. Sinon (complet) → accusé de réception classique. Une question à la fois.
+    // BRIQUE 3 / C1a — le prix manque-t-il ? Sinon on CONFIRME directement l'unité.
+    // `proposed_unit` (unité détectée par l'IA, texte libre) est mémorisé dans les
+    // DEUX cas → réutilisé pour la confirmation, avant ou après le prix.
     const awaiting = decideAwaiting({ price_source: clean.price_source, moq_tiers: moqTiers })
-    if (awaiting) {
-      // Mémorise l'attente : la prochaine réponse TEXTE de ce fournisseur = cette info.
+    if (awaiting === 'price') {
+      // Prix manquant → on le demande d'abord (l'unité sera confirmée APRÈS le prix).
       await upsertPending(admin, {
         supplier_product_id: productId,
         supplier_id: supplierId,
         telegram_chat_id: chatId,
         telegram_lang: lc ?? null,
-        awaiting,
+        awaiting: 'price',
+        proposed_unit: clean.unit,
       })
-      // Un SEUL message explicatif : prix (obligatoire) + paliers (option), tout d'un
-      // coup. Fini le ping-pong — le fournisseur répond en une fois. (awaiting = 'price'
-      // uniquement depuis une photo ; la branche 'tiers' ne subsiste que pour compat.)
-      await telegramSendMessage(
-        chatId,
-        awaiting === 'price'
-          ? msgAskPriceAndTiers(lc, { name: productName })
-          : msgAskTiers(lc, { name: productName }),
-      )
+      await telegramSendMessage(chatId, msgAskPriceAndTiers(lc, { name: productName }))
     } else {
-      await telegramSendMessage(
-        chatId,
-        buildProductAck(lc, {
-          productName,
-          category: clean.category,
-          subcategory: clean.subcategory,
-          suggested_wholesale_price_mad: pricing.suggested_wholesale_price_mad,
-          price_source: pricing.price_source,
-          source_currency: pricing.source_currency,
-        }),
-      )
+      // Prix déjà présent (légende) → étape de CONFIRMATION de l'unité de vente (C1a).
+      // L'accusé « reçu ✅ » n'est envoyé qu'APRÈS la confirmation (finalizeProduct).
+      await upsertPending(admin, {
+        supplier_product_id: productId,
+        supplier_id: supplierId,
+        telegram_chat_id: chatId,
+        telegram_lang: lc ?? null,
+        awaiting: 'unit',
+        proposed_unit: clean.unit,
+      })
+      await telegramSendMessage(chatId, msgConfirmUnit(lc, { unit: clean.unit }))
     }
   } catch (e) {
     await markInbound(admin, messageKey, {
@@ -605,6 +607,27 @@ async function applyTiersToProduct(
   await admin.from('supplier_products').update({ min_quantity: tiers[0].min_quantity }).eq('id', productId)
 }
 
+/** Fige l'UNITÉ DE VENTE confirmée/corrigée par le fournisseur (texte LIBRE, C1a).
+ *  AFFICHAGE PUR : n'altère AUCUN prix / palier / commission (audit @finance). */
+async function applyUnitToProduct(admin: Admin, productId: string, unit: string): Promise<void> {
+  await admin.from('supplier_products').update({ unit }).eq('id', productId)
+}
+
+/** Compte les paliers réellement enregistrés (pour la re-modération à la finalisation). */
+async function countMoqTiers(admin: Admin, productId: string): Promise<number> {
+  const { count } = await admin
+    .from('supplier_product_moq_tiers')
+    .select('supplier_product_id', { count: 'exact', head: true })
+    .eq('supplier_product_id', productId)
+  return count ?? 0
+}
+
+/** C1a — passe à l'étape de CONFIRMATION de l'unité et envoie le message dédié. */
+async function askUnitConfirmation(admin: Admin, pending: PendingRow, lc: string | null | undefined): Promise<void> {
+  await switchPendingTo(admin, pending.supplier_product_id, 'unit', pending.proposed_unit)
+  await telegramSendMessage(pending.telegram_chat_id, msgConfirmUnit(lc, { unit: pending.proposed_unit ?? 'piece' }))
+}
+
 /** Produit complété → re-modère, supprime l'attente, envoie l'accusé « reçu ✅ ». */
 async function finalizeProduct(admin: Admin, pending: PendingRow, lc: string | null | undefined, moqTierCount: number): Promise<void> {
   await rerunModeration(admin, pending.supplier_product_id, moqTierCount)
@@ -654,10 +677,11 @@ async function handleSupplierReply(admin: Admin, msg: TelegramMessage): Promise<
   if (pending.awaiting === 'price') {
     const outcome = interpretPriceReply({ price_source: reply.price_source, moq_tiers: reply.moq_tiers })
     if (outcome.kind === 'got_price') {
-      // Prix (± paliers) obtenus dans la MÊME réponse → produit COMPLÉTÉ directement.
-      // AUCUNE relance paliers : s'il n'en a pas donné, c'est fini (paliers facultatifs).
+      // Prix (± paliers) obtenus dans la MÊME réponse. AUCUNE relance paliers (facultatifs).
+      // C1a — au lieu de finaliser tout de suite, on CONFIRME l'unité de vente détectée ;
+      // l'accusé « reçu ✅ » suivra la confirmation.
       await applyPriceToProduct(admin, pending.supplier_product_id, supplierId, outcome.price, outcome.tiers)
-      await finalizeProduct(admin, pending, lc, outcome.tiers.length)
+      await askUnitConfirmation(admin, pending, lc)
       return true
     }
     // Pas de prix exploitable. Confusion (« je comprends pas », « ? ») → ré-expliquer
@@ -673,6 +697,29 @@ async function handleSupplierReply(admin: Admin, msg: TelegramMessage): Promise<
       return true
     }
     await reaskOrGiveUp(admin, pending, lc)
+    return true
+  }
+
+  if (pending.awaiting === 'unit') {
+    // C1a — confirmation de l'unité de vente. « oui » → on garde l'unité détectée ;
+    // sinon le fournisseur écrit la bonne unité (texte LIBRE) → on la fige. Puis le
+    // produit est finalisé (accusé « reçu ✅ »). L'unité est AFFICHAGE PUR (aucun prix).
+    const unitOutcome = interpretUnitReply(text)
+    if (unitOutcome.kind === 'corrected') {
+      await applyUnitToProduct(admin, pending.supplier_product_id, unitOutcome.unit)
+    }
+    if (unitOutcome.kind === 'corrected' || unitOutcome.kind === 'confirmed') {
+      await finalizeProduct(admin, pending, lc, await countMoqTiers(admin, pending.supplier_product_id))
+      return true
+    }
+    // Confusion (« je comprends pas ») ou réponse inexploitable → redemander l'unité
+    // UNE fois (borné) ; épuisé → on finalise avec l'unité déjà détectée (admin tranche).
+    if (shouldReask(pending.reask_count)) {
+      await bumpReask(admin, pending)
+      await telegramSendMessage(pending.telegram_chat_id, msgReaskUnit(lc))
+    } else {
+      await finalizeProduct(admin, pending, lc, await countMoqTiers(admin, pending.supplier_product_id))
+    }
     return true
   }
 

@@ -6,6 +6,7 @@
 
 import { getTranslations } from 'next-intl/server'
 import { formatMAD, formatQty } from '@/lib/utils'
+import { priceWithUnit } from '@/lib/units'
 
 export async function WholesaleDefaultPrice({
   sellPrice,
@@ -32,7 +33,7 @@ export async function WholesaleDefaultPrice({
         {t('defaultPriceTitle')}
       </p>
       <p className="text-2xl font-extrabold text-foreground tabular-nums">
-        {formatMAD(sellPrice)}
+        {priceWithUnit(formatMAD(sellPrice), unitLabel)}
       </p>
       <p className="text-sm text-muted">
         {t('defaultPriceMinOrder', { qty: formatQty(minQty), unit })}

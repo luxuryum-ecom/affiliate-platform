@@ -14,10 +14,16 @@ export type PendingRow = {
   telegram_chat_id: number
   telegram_lang: string | null
   awaiting: Awaiting
+  /** Unité détectée par l'IA (texte libre), portée pendant awaiting='unit' (C1a). */
+  proposed_unit: string | null
   asked_at: string
   reminded_at: string | null
   reask_count: number
 }
+
+/** Colonnes lues pour reconstituer une PendingRow (proposed_unit inclus, C1a). */
+const PENDING_COLS =
+  'supplier_product_id, supplier_id, telegram_chat_id, telegram_lang, awaiting, proposed_unit, asked_at, reminded_at, reask_count'
 
 const nowIso = () => new Date().toISOString()
 
@@ -30,6 +36,7 @@ export async function upsertPending(
     telegram_chat_id: number
     telegram_lang: string | null
     awaiting: Awaiting
+    proposed_unit?: string | null
   },
 ): Promise<{ error: string | null }> {
   const { error } = await admin.from('telegram_pending_products').upsert(
@@ -51,7 +58,7 @@ export async function getMostRecentPending(
 ): Promise<PendingRow | null> {
   const { data } = await admin
     .from('telegram_pending_products')
-    .select('supplier_product_id, supplier_id, telegram_chat_id, telegram_lang, awaiting, asked_at, reminded_at, reask_count')
+    .select(PENDING_COLS)
     .eq('supplier_id', supplierId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -64,15 +71,19 @@ export async function deletePending(admin: Admin, supplierProductId: string): Pr
   await admin.from('telegram_pending_products').delete().eq('supplier_product_id', supplierProductId)
 }
 
-/** Passe l'attente à un AUTRE champ (ex. prix obtenu → on attend les paliers). */
+/** Passe l'attente à un AUTRE champ (ex. prix obtenu → on confirme l'unité).
+ *  `proposedUnit` (C1a) : posé quand on passe à awaiting='unit' (unité détectée). */
 export async function switchPendingTo(
   admin: Admin,
   supplierProductId: string,
   awaiting: Awaiting,
+  proposedUnit?: string | null,
 ): Promise<void> {
+  const patch: Record<string, unknown> = { awaiting, asked_at: nowIso(), reminded_at: null, reask_count: 0 }
+  if (proposedUnit !== undefined) patch.proposed_unit = proposedUnit
   await admin
     .from('telegram_pending_products')
-    .update({ awaiting, asked_at: nowIso(), reminded_at: null, reask_count: 0 })
+    .update(patch)
     .eq('supplier_product_id', supplierProductId)
 }
 
@@ -91,7 +102,7 @@ export async function getDueReminders(
 ): Promise<PendingRow[]> {
   const { data } = await admin
     .from('telegram_pending_products')
-    .select('supplier_product_id, supplier_id, telegram_chat_id, telegram_lang, awaiting, asked_at, reminded_at, reask_count')
+    .select(PENDING_COLS)
     .is('reminded_at', null)
     .lt('asked_at', beforeIso)
   return (data as PendingRow[] | null) ?? []

@@ -102,9 +102,19 @@ describe('buildSupplierMirror', () => {
     expect(d.row.factory_cost_mad).toBe(100)
   })
 
-  it('unité brute normalisée (« le mètre » → metre)', () => {
+  it('unité CONNUE normalisée (« le mètre » → metre)', () => {
     const d = buildSupplierMirror({ ...base, unit: 'le mètre' })
     expect(d.create && d.row.sale_unit).toBe('metre')
+  })
+
+  it('C1a — unité LIBRE inconnue (« botte ») reportée VERBATIM (jamais écrasée vers pièce)', () => {
+    const d = buildSupplierMirror({ ...base, unit: 'botte' })
+    expect(d.create && d.row.sale_unit).toBe('botte')
+  })
+
+  it('C1a — variante de « pièce » (« قطعة ») → null = pièce implicite (inchangé)', () => {
+    const d = buildSupplierMirror({ ...base, unit: 'قطعة' })
+    expect(d.create && d.row.sale_unit).toBe(null)
   })
 
   it('CANAL D2 — un miroir est TOUJOURS grossiste : affiliate_enabled=false explicite (jamais le défaut true)', () => {

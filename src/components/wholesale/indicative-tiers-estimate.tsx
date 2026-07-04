@@ -8,6 +8,7 @@
 
 import { getTranslations } from 'next-intl/server'
 import { formatSavingMad, formatSavingQty } from '@/lib/wholesale-savings'
+import { priceWithUnit } from '@/lib/units'
 
 export async function IndicativeTiersEstimate({
   tiers,
@@ -49,7 +50,7 @@ export async function IndicativeTiersEstimate({
                 {unit}
               </td>
               <td className="py-1.5 text-end font-medium text-foreground tabular-nums">
-                ≈ {formatSavingMad(tier.price_per_unit)}
+                ≈ {priceWithUnit(formatSavingMad(tier.price_per_unit), unitLabel)}
               </td>
             </tr>
           ))}
