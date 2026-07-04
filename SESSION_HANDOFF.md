@@ -1,11 +1,12 @@
 # SESSION_HANDOFF.md — Reprise sans contexte
 
 > **Dernière mise à jour :** 2026-07-04
-> **Branche prod :** `main` **en avance sur `origin` (bot prix/paliers pédagogue + docs — NON poussé)**. Abdou pousse lui-même. `origin` déployé Vercel.
+> **Branche prod :** `main` **en avance sur `origin` (bot prix/paliers + C1a unité libre + docs — NON poussé)**. Abdou pousse lui-même. `origin` déployé Vercel.
+> **✅ LOT C1a — UNITÉ DE VENTE LIBRE le 2026-07-04** (mergé `main`, `--no-ff` `75544f4`, non poussé) — unité de vente en **CHAMP LIBRE** par produit (gramme/litre/mètre/botte/sachet…, plus d'enum figé). Détection IA à l'ingestion Telegram + **confirmation fournisseur** par le bot (`msgConfirmUnit`, état `awaiting='unit'`, l'IA propose toujours, le fournisseur valide « oui » ou corrige). Affichage **« prix / [unité] »** côté grossiste (fiche/paliers/panier/commande), 4 langues, RTL FSI/PDI. Connu → i18n, libre → verbatim (« botte » jamais écrasé). **Affichage PUR** (@finance 🟢 prix/paliers/commission intacts, @security 🟢 RLS+scoping+injection). **⚠️ Migration 114 À APPLIQUER EN PROD** (Abdou, SQL Editor) : `telegram_pending_products.awaiting += 'unit'` + colonne `proposed_unit`. **✅ en prod après migration 114 + push.** C1b (multi-unités carton+pièce) **reporté**.
 > **✅ LOT A2 + A3 FAITS le 2026-07-04.** A2 (fix surfacturation `max_qty`) **mergé `main`**, diagnostic prod = **0 produit à risque**. A3 (test A→Z gros) **verdict GO** — chaîne gros prouvée bout-en-bout, montants signés @finance. **Graphify activé** (`graphify-out/graph.json` = carte du code).
 > **✅ BOT PRIX/PALIERS PÉDAGOGUE le 2026-07-04** (mergé `main`, `--no-ff`, non poussé) — message bot fournisseur (`msgAskPriceAndTiers` + accueil) : format **« [quantité] pièces à [prix] dh l'unité »** (prix PAR UNITÉ explicite, dégressif) remplaçant l'ancien « 50 = 140 » ambigu. **4 langues** (FR/AR-fusha/AR-darija/EN), **isolation RTL FSI/PDI** des nombres en arabe (rendu **validé par Abdou sur capture**). **✅ en prod après push.**
-> **➡️ PROCHAIN LOT = C1 — DÉTECTION AUTO DES UNITÉS** (gramme / litre / mètre / kg). (RLS ciblé tables gros/fournisseur, Palier 1 Bloc 1A, reste au programme ensuite.)
-> **Migrations prod :** 001→**113** appliquées. ✅ **112 (auto_tiers) + 113 (état conversationnel `telegram_pending_products`) APPLIQUÉES.** ⚠️ **111 (fix données) + 091** toujours en attente (à lancer en SQL Editor, PAS `db push`).
+> **➡️ PROCHAINE SESSION = AUDIT RLS CIBLÉ** tables gros/fournisseur (Palier 1, Bloc 1A). (C1 ✅ fait ; C1b multi-unités reporté.)
+> **Migrations prod :** 001→**113** appliquées ; **114 (état `awaiting='unit'` + `proposed_unit`) EN ATTENTE** — à lancer en SQL Editor par Abdou (appliquée en LOCAL pour les tests). ✅ **112 + 113 APPLIQUÉES.** ⚠️ **111 (fix données) + 091** toujours en attente (SQL Editor, PAS `db push`).
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
 
@@ -14,6 +15,14 @@ Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tê
 ---
 
 ## ✅ FAIT CETTE SESSION — 2026-07-04 (MERGÉ dans `main`, non poussé — push manuel Abdou)
+- **LOT C1a — UNITÉ DE VENTE LIBRE PAR PRODUIT. ✅ MERGÉ `main` (`--no-ff`, `75544f4`). Affichage pur — @finance + @security 🟢.**
+  - **Existant réutilisé (pas reconstruit)** : `products.sale_unit` (mig 079), helpers `units.ts` (`resolveUnitLabel`/`priceWithUnit`), mirror `supplier_products.unit → products.sale_unit`, affichage fiche déjà câblé. Le vrai périmètre = rendre l'unité *vraiment* libre + ajouter la confirmation.
+  - **Free text réel** : `extract.ts` (prompt IA texte libre, plus d'enum), `schema.ts` (`CleanExtraction.unit: string` verbatim via `sanitizeSaleUnitFreeText`), `units.ts` (`matchKnownSaleUnit` + `resolveUnitLabel` : connu → i18n, **libre → verbatim**, « botte » jamais écrasé vers pièce), `supplier-mirror.ts` (stocke le brut ; connu → canonique, libre → verbatim).
+  - **Confirmation bot** : nouvel état `awaiting='unit'` (`conversation.ts` : `interpretUnitReply`/`isAffirmativeReply`), `msgConfirmUnit` (4 langues, validé Abdou capture, isolation RTL FSI/PDI), câblage `ingest.ts` (prix → confirmation → finalisation). Scopé fournisseur (pas de complétion croisée). `pending-store.ts` : `proposed_unit`.
+  - **Affichage grossiste** « prix / [unité] » : fiche + paliers + panier + commande (`priceWithUnit`). Sous-totaux/totaux **non** suffixés. Produit sans unité = **inchangé** (`/u.` panier préservé).
+  - **⚠️ Migration 114** (`supabase/migrations/114_telegram_unit_confirmation.sql`) : `awaiting += 'unit'` + colonne `proposed_unit`. **Appliquée LOCAL (tests) ; À LANCER EN PROD par Abdou** (SQL Editor). Additive, RLS inchangée.
+  - **Tests LOCAL** : `c1a-unit-free-text.test.ts` (24) + mirror (2 cas) + intégration (flux confirmation, 3 scénarios). **4 checks verts** (tsc 0 · build · vitest **585** · smoke 16). **@finance 🟢** (affichage pur, aucun montant/palier/commission touché) · **@security 🟢** (RLS deny-défaut hérité, écritures scopées, pas d'injection — Telegram texte brut, JSX échappé, unité bornée 40 car.).
+  - **C1b (multi-unités carton+pièce) REPORTÉ** (hors périmètre, sur décision Abdou).
 - **BOT PRIX/PALIERS PÉDAGOGUE. ✅ MERGÉ `main` (`--no-ff`, `b742153`). Texte bot — pas de migration.**
   - **But** : le bot demandait le prix en chiffres secs (`50 = 140`) — ambigu (total ? unité ?) pour un fournisseur peu tech. Nouveau format **explicite prix PAR UNITÉ dégressif** : « 30 pièces à 120 dh l'unité, 200 pièces à 110 dh l'unité ».
   - **Fichiers** : `messages.ts` (`msgAskPriceAndTiers`, garde « dh ») + `welcome.ts` (`buildSupplierWelcome`, **sans « dh »** car accueil multi-devises MAD/AED/USD ; « 1er palier = MOQ » conservé) — **4 langues** (FR/AR-fusha/AR-darija/EN). Nombres **isolés FSI/PDI** en arabe via `formatQty()` (helper existant) → ordre RTL correct. `extract.ts` : prompt Haiku enrichi du nouveau format (**l'ancien « 50=140 » reste accepté** — parseur LLM tolérant, rétrocompat prouvée). Tests `lot5-welcome*` alignés.

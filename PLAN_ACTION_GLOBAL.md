@@ -91,7 +91,7 @@ Bloc 2B — Le cœur argent (séquentiel, ⚠️ chaque lot @finance + @security
 - ⬜ 🚀 OUVERTURE AFFILIATION (règle N1 active, anti-fraude v1 actif).
 
 En continu pendant le palier (petits lots indépendants) :
-- ⬜ C1 Unités universelles (champ libre + phase conversationnelle 'detail').
+- ✅ C1a Unité de vente LIBRE par produit (champ libre réel + détection IA + confirmation fournisseur bot + affichage « prix / unité » 4 langues). Mergé `main` `75544f4`, migration 114 à appliquer en prod. ⬜ C1b (multi-unités carton+pièce) reporté.
 - ⬜ C2 BRIQUE 2 — contrôle qualité photo IA à la réception (textes validés Abdou 🔒).
 - ⬜ C3 Échantillons payants (mini-commande qty 1).
 - ⬜ C4 RFQ asynchrone via bot Telegram existant (chat intégré = plus tard, bouton WhatsApp en attendant).
