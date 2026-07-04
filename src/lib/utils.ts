@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { PlatformMarginType } from '@/types/database'
+import type { PlatformMarginType, WholesaleTier } from '@/types/database'
 
 /** Merge Tailwind classes safely — resolves conflicts in priority order. */
 export function cn(...inputs: ClassValue[]) {
@@ -95,6 +95,32 @@ export function calculateNetAffiliateCommission(params: {
   // mise à l'échelle ×100 absorbe l'erreur flottante du calcul (netPerUnit est
   // fractionnaire — la marge en % produit des décimales arbitraires).
   return Math.round(netPerUnit * params.quantity * 100) / 100
+}
+
+/**
+ * Borne le `max_qty` d'un tableau de paliers grossiste TRIÉS croissants par `min_qty`
+ * — correctif de la SURFACTURATION du catalogue.
+ *
+ * PROBLÈME : `getWholesaleTier` (.find) renvoie le PREMIER palier dont `min_qty ≤ quantité`
+ * et (`max_qty` absent OU `quantité ≤ max_qty`). Un palier NON-dernier SANS `max_qty` capte
+ * donc TOUTES les grandes quantités → le 1er palier (le plus cher) est facturé au lieu du
+ * palier volume attendu → le prix facturé ≠ le prix affiché.
+ *
+ * CORRECTIF : chaque palier reçoit `max_qty = (min_qty du palier suivant − 1)` ; le DERNIER
+ * palier reste ouvert (`max_qty` retiré / undefined, conformément à l'invariant WholesaleTier).
+ * Logique IDENTIQUE au bornage de `buildMirrorTiers` (canal fournisseur, déjà sûr) — répliquée
+ * ici et NON partagée pour ne pas toucher `buildMirrorTiers`.
+ *
+ * PUR et IDEMPOTENT : des paliers déjà bornés (`max_qty = min suivant − 1`) restent identiques.
+ * N'altère JAMAIS `min_qty` ni `price_per_unit` (aucun prix touché — RÈGLE ARGENT).
+ * PRÉREQUIS : `tiers` trié croissant par `min_qty`, sans doublon (garanti par l'appelant).
+ */
+export function boundWholesaleTierMaxQty(tiers: WholesaleTier[]): WholesaleTier[] {
+  return tiers.map((tier, i, arr) =>
+    i < arr.length - 1
+      ? { min_qty: tier.min_qty, max_qty: arr[i + 1].min_qty - 1, price_per_unit: tier.price_per_unit }
+      : { min_qty: tier.min_qty, price_per_unit: tier.price_per_unit },
+  )
 }
 
 /**

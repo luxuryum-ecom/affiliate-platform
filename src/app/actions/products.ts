@@ -21,7 +21,7 @@ import type {
 function shippingModeToUnit(mode: ImportShippingMode | null): ImportPriceUnit {
   return mode === 'sea_volume_cbm' ? 'cbm' : 'kg'
 }
-import { calculatePlatformPrice, calculateNetAffiliateCommission, MIN_DELIVERY_FEE_MAD, DELIVERY_PROVISION_MAD } from '@/lib/utils'
+import { calculatePlatformPrice, calculateNetAffiliateCommission, boundWholesaleTierMaxQty, MIN_DELIVERY_FEE_MAD, DELIVERY_PROVISION_MAD } from '@/lib/utils'
 import { getLogisticsSettings } from './logistics'
 import { getRateToMad } from '@/lib/fx'
 import { parseMoneyInput } from '@/lib/money'
@@ -503,6 +503,15 @@ export async function upsertProduct(
       if (cur.min_qty <= prev.min_qty) return { error: 'Paliers de prix en doublon ou mal ordonnés.' }
       if (prev.max_qty != null && prev.max_qty >= cur.min_qty) return { error: 'Paliers de prix qui se chevauchent.' }
     }
+    // ── FIX SURFACTURATION — bornage serveur du max_qty ───────────────────────
+    // Le formulaire peut envoyer des paliers SANS max_qty (champ optionnel). Sur un
+    // produit à ≥2 paliers, un palier non-dernier sans borne fait renvoyer par
+    // getWholesaleTier (.find) le 1er palier — le PLUS CHER — pour toute quantité →
+    // prix facturé ≠ prix affiché (surfacturation grossiste). On borne ici chaque
+    // palier par (min_qty du suivant − 1), dernier ouvert : EXACTEMENT la logique de
+    // buildMirrorTiers (canal fournisseur, déjà sûr). Sur paliers déjà triés/dédupliqués
+    // → idempotent, aucun prix touché. Couvre création ET modification (chemin partagé).
+    wholesale_tiers = boundWholesaleTierMaxQty(wholesale_tiers)
   } catch {
     return { error: 'Format des paliers de prix invalide.' }
   }
