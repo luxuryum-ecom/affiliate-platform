@@ -33,7 +33,7 @@ Règles STRICTES :
 - "moq_tiers" : PALIERS DE GROS DÉGRESSIFS = liste de couples { min_quantity, unit_price } quand le fournisseur donne des prix qui BAISSENT selon la quantité commandée.
   RÈGLE DE DÉSAMBIGUÏSATION (cruciale — ne pas confondre palier, stock, prix de base) :
   • Une quantité ASSOCIÉE À UN PRIX = un palier → { min_quantity: la quantité, unit_price: le prix à cette quantité }.
-    Ex. « 50=18, 100=16 » / « à partir de 50 : 18 » / « 50 pièces 18 dh » / arabe « 50 قطعة ب 18 » → paliers {50,18} et {100,16}.
+    Ex. « 50=18, 100=16 » / « à partir de 50 : 18 » / « 50 pièces 18 dh » / « 30 pièces à 120 dh l'unité, 200 pièces à 110 dh l'unité » / arabe « 50 قطعة ب 18 » / « 30 قطعة بسعر 120 درهم للوحدة » / darija « 30 حبة بـ 120 درهم للحبة » → capture CHAQUE couple quantité→prix par unité (ex. {50,18}, {100,16}, {30,120}, {200,110}).
   • Une quantité SEULE, SANS prix = du STOCK (→ "stock_quantity"), JAMAIS un palier ni un minimum.
     Ex. « quantité 500 » / « 500 disponibles » / darija/arabe « الكمية 500 » / « كمية 500 » → stock_quantity=500 ; moq_tiers ne le contient PAS.
   • Un prix SEUL sans quantité rattachée = le "price" de base, PAS un palier.

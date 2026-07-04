@@ -73,15 +73,16 @@ describe('LOT 5 — pickWelcomeLang', () => {
 
 const WHATSAPP_PHONE = '212600000000'
 
-// Contenu commun aux 4 langues : les paliers 50/18, 200/16, 500/14 en chiffres LATINS
-// dans cet ordre, plus le lien wa.me. NB : le mot-unité varie selon la langue
-// (« pcs » en FR/EN, mais l'unité est traduite en arabe pour darija/MSA — « قطعة »/
-// « حبة » — seuls les CHIFFRES restent latins, cf. règle i18n numéraux). On vérifie
-// donc les nombres et leur ordre, pas la chaîne littérale "pcs" (spécifique fr/en).
+// Contenu commun aux 4 langues : les paliers 50→18, 200→16, 500→14 en chiffres LATINS
+// dans cet ordre, plus le lien wa.me. NB : le format est désormais « quantité … prix
+// PAR UNITÉ » (fini le « = » ambigu). Le libellé varie selon la langue (« pièces … à …
+// l'unité » FR, « pieces … at … per unit » EN, « قطعة … بسعر … للوحدة » MSA, « حبة …
+// بـ … للحبة » darija) — seuls les CHIFFRES restent latins (isolés FSI/PDI en arabe).
+// On vérifie donc chaque COUPLE quantité→prix et leur ordre, pas un séparateur littéral.
 function expectCommonContent(text: string) {
-  const m50 = text.match(/50\s*\S*\s*=\s*18/)
-  const m200 = text.match(/200\s*\S*\s*=\s*16/)
-  const m500 = text.match(/500\s*\S*\s*=\s*14/)
+  const m50 = text.match(/50[^\d]*18/)
+  const m200 = text.match(/200[^\d]*16/)
+  const m500 = text.match(/500[^\d]*14/)
   expect(m50).not.toBeNull()
   expect(m200).not.toBeNull()
   expect(m500).not.toBeNull()
@@ -98,11 +99,18 @@ function expectCommonContent(text: string) {
   expect(text).not.toMatch(/[٠-٩]/)
 }
 
-// Contenu spécifique fr/en : littéralement "N pcs = M" (unité non traduite).
-function expectPcsContent(text: string) {
-  expect(text).toContain('50 pcs = 18')
-  expect(text).toContain('200 pcs = 16')
-  expect(text).toContain('500 pcs = 14')
+// Contenu littéral FR : « quantité pièces à prix l'unité » (prix PAR UNITÉ explicite).
+function expectFrTierContent(text: string) {
+  expect(text).toContain('50 pièces à 18 l’unité')
+  expect(text).toContain('200 pièces à 16 l’unité')
+  expect(text).toContain('500 pièces à 14 l’unité')
+}
+
+// Contenu littéral EN : « quantity pieces at price per unit ».
+function expectEnTierContent(text: string) {
+  expect(text).toContain('50 pieces at 18 per unit')
+  expect(text).toContain('200 pieces at 16 per unit')
+  expect(text).toContain('500 pieces at 14 per unit')
 }
 
 describe('LOT 5 — buildSupplierWelcome (darija / ar-MA)', () => {
@@ -148,8 +156,8 @@ describe('LOT 5 — buildSupplierWelcome (fr)', () => {
     expectCommonContent(text)
   })
 
-  it('paliers au format littéral "N pcs = M"', () => {
-    expectPcsContent(text)
+  it('paliers au format « quantité pièces à prix l’unité »', () => {
+    expectFrTierContent(text)
   })
 
   it('mentionne la devise', () => {
@@ -168,8 +176,8 @@ describe('LOT 5 — buildSupplierWelcome (en)', () => {
     expectCommonContent(text)
   })
 
-  it('paliers au format littéral "N pcs = M"', () => {
-    expectPcsContent(text)
+  it('paliers au format « quantity pieces at price per unit »', () => {
+    expectEnTierContent(text)
   })
 
   it('mentionne "currency"', () => {

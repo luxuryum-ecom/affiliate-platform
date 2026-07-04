@@ -7,6 +7,7 @@
 // (ingest.ts) n'est pas touchée : ce module ne fournit QUE des chaînes de texte.
 
 import { pickWelcomeLang, type WelcomeLang } from './welcome'
+import { formatQty } from '@/lib/utils'
 
 type Table = Record<WelcomeLang, string>
 
@@ -220,10 +221,10 @@ export function msgAnalysisFailed(lc: string | null | undefined): string {
 export function msgAskPriceAndTiers(lc: string | null | undefined, vars: { name: string }): string {
   const { name } = vars
   return t(lc, {
-    fr: `J'ai bien reçu votre ${name} 📸\nPour le publier, envoyez-moi :\n💰 Le PRIX unitaire (obligatoire, ex : 160 dh)\n📦 Vos prix de gros si vous en avez (ex : 50 = 140, 200 = 120). Sinon ignorez.\n\n👉 Vous pouvez tout écrire d'un coup, exemple :\n« 160 dh, 50 = 140, 200 = 120 »`,
-    en: `I've received your ${name} 📸\nTo publish it, send me:\n💰 The unit PRICE (required, e.g. 160 dh)\n📦 Your wholesale prices if you have any (e.g. 50 = 140, 200 = 120). Otherwise skip.\n\n👉 You can write it all at once, example:\n"160 dh, 50 = 140, 200 = 120"`,
-    msa: `استلمت ${name} 📸\nلنشره، أرسل لي:\n💰 سعر الوحدة (إلزامي، مثال: 160 درهم)\n📦 أسعار الجملة إن وُجدت (مثال: 50 = 140، 200 = 120). وإلا تجاوز.\n\n👉 يمكنك كتابة كل شيء دفعة واحدة، مثال:\n«160 درهم، 50 = 140، 200 = 120»`,
-    darija: `توصلت بـ ${name} 📸\nباش ننشرو، صيفط لي:\n💰 الثمن ديال الوحدة (إجباري، مثال: 160 درهم)\n📦 أثمنة الجملة إلا كانو عندك (مثال: 50 = 140، 200 = 120). وإلا ماتكتبش.\n\n👉 تقدر تكتب كلشي مرة وحدة، مثال:\n«160 درهم، 50 = 140، 200 = 120»`,
+    fr: `J'ai bien reçu votre ${name} 📸\nPour le publier, envoyez-moi :\n💰 Le PRIX unitaire (obligatoire, ex : 160 dh)\n📦 Vos prix de gros si vous en avez — prix PAR PIÈCE, dégressif (ex : 30 pièces à 120 dh l'unité, 200 pièces à 110 dh l'unité). Sinon ignorez.\n\n👉 Vous pouvez tout écrire d'un coup, exemple :\n« 160 dh, 30 pièces à 120 dh l'unité, 200 pièces à 110 dh l'unité »`,
+    en: `I've received your ${name} 📸\nTo publish it, send me:\n💰 The unit PRICE (required, e.g. 160 dh)\n📦 Your wholesale prices if you have any — price PER PIECE, decreasing (e.g. 30 pieces at 120 dh per unit, 200 pieces at 110 dh per unit). Otherwise skip.\n\n👉 You can write it all at once, example:\n"160 dh, 30 pieces at 120 dh per unit, 200 pieces at 110 dh per unit"`,
+    msa: `استلمت ${name} 📸\nلنشره، أرسل لي:\n💰 سعر الوحدة (إلزامي، مثال: ${formatQty(160)} درهم)\n📦 أسعار الجملة إن وُجدت — السعر لكل وحدة، يتناقص كلما زادت الكمية (مثال: ${formatQty(30)} قطعة بسعر ${formatQty(120)} درهم للوحدة، ${formatQty(200)} قطعة بسعر ${formatQty(110)} درهم للوحدة). وإلا تجاوز.\n\n👉 يمكنك كتابة كل شيء دفعة واحدة، مثال:\n«${formatQty(160)} درهم، ${formatQty(30)} قطعة بسعر ${formatQty(120)} درهم للوحدة، ${formatQty(200)} قطعة بسعر ${formatQty(110)} درهم للوحدة»`,
+    darija: `توصلت بـ ${name} 📸\nباش ننشرو، صيفط لي:\n💰 الثمن ديال الوحدة (إجباري، مثال: ${formatQty(160)} درهم)\n📦 أثمنة الجملة إلا كانو عندك — الثمن لكل حبة، كينقص ملي كتزيد الكمية (مثال: ${formatQty(30)} حبة بـ ${formatQty(120)} درهم للحبة، ${formatQty(200)} حبة بـ ${formatQty(110)} درهم للحبة). وإلا ماتكتبش.\n\n👉 تقدر تكتب كلشي مرة وحدة، مثال:\n«${formatQty(160)} درهم، ${formatQty(30)} حبة بـ ${formatQty(120)} درهم للحبة، ${formatQty(200)} حبة بـ ${formatQty(110)} درهم للحبة»`,
   })
 }
 

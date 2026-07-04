@@ -105,9 +105,10 @@ describe('LOT 5 — handleTelegramUpdate : routage accueil fournisseur (4 langue
     expect(text).toBe(buildSupplierWelcome('ar-MA', WHATSAPP_PHONE))
     expect(text).toMatch(/[؀-ۿ]/) // contient de l'arabe
     // Chiffres des paliers en latin (l'unité elle-même est traduite en arabe : "حبة").
-    expect(text).toMatch(/50\s*\S*\s*=\s*18/)
-    expect(text).toMatch(/200\s*\S*\s*=\s*16/)
-    expect(text).toMatch(/500\s*\S*\s*=\s*14/)
+    // Format « quantité … prix par unité » (plus de « = ») ; on vérifie chaque couple.
+    expect(text).toMatch(/50[^\d]*18/)
+    expect(text).toMatch(/200[^\d]*16/)
+    expect(text).toMatch(/500[^\d]*14/)
     expect(text).toContain(`https://wa.me/${WHATSAPP_PHONE}`)
   })
 
@@ -130,9 +131,9 @@ describe('LOT 5 — handleTelegramUpdate : routage accueil fournisseur (4 langue
     const [chatId, text] = mocked(telegramSendMessage).mock.calls[0] as [number, string]
     expect(chatId).toBe(999)
     expect(text).toBe(buildSupplierWelcome('fr', WHATSAPP_PHONE))
-    expect(text).toContain('50 pcs = 18')
-    expect(text).toContain('200 pcs = 16')
-    expect(text).toContain('500 pcs = 14')
+    expect(text).toContain('50 pièces à 18 l’unité')
+    expect(text).toContain('200 pièces à 16 l’unité')
+    expect(text).toContain('500 pièces à 14 l’unité')
     expect(text).toContain(`https://wa.me/${WHATSAPP_PHONE}`)
   })
 
@@ -163,7 +164,7 @@ describe('LOT 5 — handleTelegramUpdate : routage accueil fournisseur (4 langue
     const [, text] = mocked(telegramSendMessage).mock.calls[0] as [number, string]
     // Le message envoyé par la branche linking ne doit JAMAIS être l'accueil.
     expect(text).not.toBe(buildSupplierWelcome('fr', WHATSAPP_PHONE))
-    expect(text).not.toContain('50 pcs = 18')
+    expect(text).not.toContain('50 pièces à 18 l’unité')
     expect(text).not.toContain('wa.me')
   })
 
@@ -174,7 +175,7 @@ describe('LOT 5 — handleTelegramUpdate : routage accueil fournisseur (4 langue
     expect(telegramSendMessage).toHaveBeenCalledTimes(1)
     const [, text] = mocked(telegramSendMessage).mock.calls[0] as [number, string]
     expect(text).not.toBe(buildSupplierWelcome('fr', WHATSAPP_PHONE))
-    expect(text).not.toContain('50 pcs = 18')
+    expect(text).not.toContain('50 pièces à 18 l’unité')
   })
 
   it('photo (sans commande) → route vers ingestion, PAS l\'accueil', async () => {
@@ -190,7 +191,7 @@ describe('LOT 5 — handleTelegramUpdate : routage accueil fournisseur (4 langue
     expect(telegramSendMessage).toHaveBeenCalledTimes(1)
     const [, text] = mocked(telegramSendMessage).mock.calls[0] as [number, string]
     expect(text).not.toBe(buildSupplierWelcome('fr', WHATSAPP_PHONE))
-    expect(text).not.toContain('50 pcs = 18')
+    expect(text).not.toContain('50 pièces à 18 l’unité')
   })
 
   it('texte simple sans commande (pas /start, pas photo) → guidage générique, pas l\'accueil', async () => {
@@ -200,6 +201,6 @@ describe('LOT 5 — handleTelegramUpdate : routage accueil fournisseur (4 langue
     expect(telegramSendMessage).toHaveBeenCalledTimes(1)
     const [, text] = mocked(telegramSendMessage).mock.calls[0] as [number, string]
     expect(text).not.toBe(buildSupplierWelcome('fr', WHATSAPP_PHONE))
-    expect(text).not.toContain('50 pcs = 18')
+    expect(text).not.toContain('50 pièces à 18 l’unité')
   })
 })
