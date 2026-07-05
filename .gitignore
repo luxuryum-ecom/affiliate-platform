@@ -58,3 +58,9 @@ playwright-report-*
 
 # Test artefacts (nav proofs — never commit)
 .nav-proofs/
+graphify-out/
+
+# Secrets & backups prod — JAMAIS committés (mot de passe DB, dumps prod)
+.db_password
+**/.db_password
+/backups/
