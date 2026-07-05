@@ -52,6 +52,7 @@ Règles STRICTES :
   Ex : « 90 dh le sac de 10 kg » → unit="sac" (on vend LE SAC à 90 dh), surtout PAS "kg".
   « 280 dh le carton de 50 boîtes » → unit="carton" (on vend LE CARTON), pas "boîte".
   Si l'unité n'est PAS explicite dans la légende → "pièce" (défaut). Ne JAMAIS inventer une unité au-delà de ce qui est écrit.
+  Un mot d'unité GÉNÉRIQUE (« l'unité », « la pièce », « à l'unité », « /u ») = "pièce" — NE le remplace PAS par le nom du produit (« œufs à l'unité » → unit="pièce", surtout PAS "œuf"). En revanche, si le fournisseur ÉCRIT explicitement une unité propre (« l'œuf », « la botte », « le bouquet »), recopie-la telle quelle.
 - "pack_size" + "pack_unit" : CONDITIONNEMENT = un emballage qui GROUPE plusieurs sous-unités D'UNE NATURE DIFFÉRENTE de l'unité de vente.
   RÈGLE CONTENANT/CONTENU (anti-inversion) : pack_unit = ce qu'il y a À L'INTÉRIEUR (le CONTENU) ; pack_size = COMBIEN il y en a. Le CONTENANT est déjà l'unité de vente (unit), on ne le répète PAS dans pack_unit.
     ✅ « carton de 50 boîtes » → unit="carton", pack_size=50, pack_unit="boîte" (le carton CONTIENT 50 boîtes).
