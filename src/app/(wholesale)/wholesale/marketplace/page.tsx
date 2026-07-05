@@ -50,7 +50,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     supabase
       .from('supplier_products_wholesaler_read')
       .select(
-        'id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, is_featured, is_verified, supplier_product_attachments(attachment_type, admin_status), supplier_product_moq_tiers(min_quantity, unit_price_usd)'
+        'id, product_name, category, subcategory, niche, description, photos, min_quantity, origin_country, availability_type, target_buyer_type, suggested_wholesale_price_mad, public_name, public_description, approval_status, supplier_type, unit, stock_quantity, lead_time_days, export_countries, created_at, is_featured, is_verified, supplier_product_attachments(attachment_type, admin_status)'
       )
       .order('created_at', { ascending: false }),
     supabase
@@ -80,7 +80,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const nicheLabel = niche ? (cats.find((c) => c.value === niche)?.label ?? niche) : null
   const nicheIcon = niche ? (catIconMap.get(niche) ?? CATEGORY_ICONS[niche] ?? '🎯') : null
 
-  type MoqTierRow = { min_quantity: number; unit_price_usd: number }
+  type MoqTierRow = { min_quantity: number }
   type MarketplaceProduct = SupplierProductPublic & {
     supplier_type: SupplierType
     subcategory: string
@@ -102,6 +102,28 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
     ...(row as unknown as MarketplaceProduct),
     __source: 'supplier' as const,
   }))
+
+  // ── Paliers MOQ (C1 — mig 115) : vue redacted, AUCUN prix ─────────────────
+  // La policy base "spmt: wholesaler read approved" a été retirée (fuite unit_price_usd,
+  // secret fournisseur). Seul le NOMBRE de paliers est utilisé ici (chip « paliers
+  // dispo », hasTiers ci-dessous) — jamais un prix — donc on lit la vue redacted
+  // (supplier_product_id, min_quantity uniquement). Comportement d'affichage IDENTIQUE.
+  const supplierProductIds = supplierProducts.map((p) => p.id)
+  const moqTiersByProduct = new Map<string, MoqTierRow[]>()
+  if (supplierProductIds.length > 0) {
+    const { data: tiersRows } = await supabase
+      .from('supplier_product_moq_tiers_wholesaler_read')
+      .select('supplier_product_id, min_quantity')
+      .in('supplier_product_id', supplierProductIds)
+    for (const row of (tiersRows ?? []) as { supplier_product_id: string; min_quantity: number }[]) {
+      const list = moqTiersByProduct.get(row.supplier_product_id) ?? []
+      list.push({ min_quantity: row.min_quantity })
+      moqTiersByProduct.set(row.supplier_product_id, list)
+    }
+  }
+  for (const p of supplierProducts) {
+    p.supplier_product_moq_tiers = moqTiersByProduct.get(p.id) ?? []
+  }
 
   // Map internal rows from wholesale_catalog_read — no supplier/cost/margin data exposed
   const internalRows = (internalResult.data ?? []) as WholesaleCatalogRow[]
@@ -758,7 +780,7 @@ function ImportCountryGrid({ activeOrigin, t }: { activeOrigin?: string; t: any 
 
 // ─── Marketplace product card ─────────────────────────────────────────────────
 
-type MoqTierRow = { min_quantity: number; unit_price_usd: number }
+type MoqTierRow = { min_quantity: number }
 
 function MarketplaceProductCard({
   product,

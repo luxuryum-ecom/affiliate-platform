@@ -3,7 +3,9 @@ import { loadEnvLocal } from './e2e/env'
 
 loadEnvLocal()
 
-const PORT = 3000
+// Port configurable via SMOKE_PORT (défaut 3000). Permet de lancer le smoke sur un
+// autre port (ex. 3100) quand le 3000 est occupé par un autre projet — sans conflit.
+const PORT = Number(process.env.SMOKE_PORT ?? 3000)
 const BASE_URL = process.env.SMOKE_BASE_URL ?? `http://localhost:${PORT}`
 
 export default defineConfig({
@@ -51,7 +53,7 @@ export default defineConfig({
   // Binaire direct = contournement du gotcha pnpm sharp/unrs-resolver.
   // ⚠️ Ne pas laisser un `next dev` tourner sur le port : reuseExistingServer le réutiliserait.
   webServer: {
-    command: './node_modules/.bin/next start -p 3000',
+    command: `./node_modules/.bin/next start -p ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

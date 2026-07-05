@@ -17,7 +17,12 @@ npx next build || { echo "❌ Build en échec — push BLOQUÉ."; exit 1; }
 # Sinon on prévient et on laisse passer (les routes protégées ne sont pas couvertes localement,
 # mais le rendu reste vérifiable manuellement via `pnpm smoke` une fois les creds renseignés).
 if grep -qE '^SMOKE_[A-Z]+_EMAIL=.+' .env.local 2>/dev/null; then
-  echo "💨 pre-push · smoke (playwright test)…"
+  # Smoke sur SMOKE_PORT (défaut 3200) pour ne PAS entrer en collision avec un autre
+  # projet : Mozouna dev = 3000, cargo-crm = 3100. 3200 est à l'écart des deux.
+  # Override possible : `SMOKE_PORT=3300 git push`. Port libre → next start propre,
+  # jamais reuse d'un serveur tiers (sinon Playwright testerait la mauvaise appli).
+  export SMOKE_PORT="${SMOKE_PORT:-3200}"
+  echo "💨 pre-push · smoke (playwright test, port $SMOKE_PORT)…"
   npx playwright test || { echo "❌ Smoke en échec — push BLOQUÉ."; exit 1; }
 else
   echo "⚠️  pre-push · smoke SKIPPÉ : aucun compte test dans .env.local."

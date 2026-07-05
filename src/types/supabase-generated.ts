@@ -7,13 +7,52 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          created_at: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          target_id: string | null
+          target_table: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_clicks: {
         Row: {
           affiliate_id: string
@@ -55,6 +94,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_clicks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
             referencedColumns: ["id"]
           },
           {
@@ -104,6 +150,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_product_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
             referencedColumns: ["id"]
           },
           {
@@ -758,6 +811,7 @@ export type Database = {
       notifications: {
         Row: {
           channels: string[]
+          cod_order_id: string | null
           created_at: string
           event: string
           id: string
@@ -768,6 +822,7 @@ export type Database = {
         }
         Insert: {
           channels?: string[]
+          cod_order_id?: string | null
           created_at?: string
           event: string
           id?: string
@@ -778,6 +833,7 @@ export type Database = {
         }
         Update: {
           channels?: string[]
+          cod_order_id?: string | null
           created_at?: string
           event?: string
           id?: string
@@ -787,6 +843,13 @@ export type Database = {
           recipient_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_cod_order_id_fkey"
+            columns: ["cod_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_order_id_fkey"
             columns: ["order_id"]
@@ -864,6 +927,13 @@ export type Database = {
             columns: ["related_product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_proofs_related_product_id_fkey"
+            columns: ["related_product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
             referencedColumns: ["id"]
           },
           {
@@ -980,6 +1050,7 @@ export type Database = {
           total_amount: number
           tracking_number: string | null
           updated_at: string
+          variant_id: string | null
         }
         Insert: {
           affiliate_commission_mad_snapshot?: number | null
@@ -1022,6 +1093,7 @@ export type Database = {
           total_amount: number
           tracking_number?: string | null
           updated_at?: string
+          variant_id?: string | null
         }
         Update: {
           affiliate_commission_mad_snapshot?: number | null
@@ -1064,11 +1136,19 @@ export type Database = {
           total_amount?: number
           tracking_number?: string | null
           updated_at?: string
+          variant_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "orders_affiliate_id_fkey"
             columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_assigned_to_fkey"
+            columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1091,7 +1171,28 @@ export type Database = {
             foreignKeyName: "orders_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
             referencedColumns: ["id"]
           },
         ]
@@ -1190,6 +1291,64 @@ export type Database = {
           verified_badge?: boolean
         }
         Relationships: []
+      }
+      product_variants: {
+        Row: {
+          active: boolean
+          attributes: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          product_id: string
+          sku: string | null
+          stock_count: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          attributes?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          product_id: string
+          sku?: string | null
+          stock_count?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          attributes?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          product_id?: string
+          sku?: string | null
+          stock_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -1600,6 +1759,13 @@ export type Database = {
             foreignKeyName: "quote_requests_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products_public_read"
             referencedColumns: ["id"]
           },
@@ -1853,6 +2019,87 @@ export type Database = {
           },
         ]
       }
+      scan_events: {
+        Row: {
+          actor_id: string | null
+          carrier_name: string | null
+          carrier_tracking_ref: string | null
+          condition: string | null
+          id: string
+          order_id: string | null
+          order_type: string | null
+          product_id: string | null
+          scan_type: string
+          scanned_at: string
+          scanned_qty: number
+          variant_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          carrier_name?: string | null
+          carrier_tracking_ref?: string | null
+          condition?: string | null
+          id?: string
+          order_id?: string | null
+          order_type?: string | null
+          product_id?: string | null
+          scan_type: string
+          scanned_at?: string
+          scanned_qty: number
+          variant_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          carrier_name?: string | null
+          carrier_tracking_ref?: string | null
+          condition?: string | null
+          id?: string
+          order_id?: string | null
+          order_type?: string | null
+          product_id?: string | null
+          scan_type?: string
+          scanned_at?: string
+          scanned_qty?: number
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_events_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_events_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sourcing_requests: {
         Row: {
           admin_notes: string | null
@@ -2016,6 +2263,171 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_anomalies: {
+        Row: {
+          actor_id: string | null
+          anomaly_type: string
+          channel: string | null
+          created_at: string
+          detail: Json
+          id: string
+          product_id: string | null
+          qty: number | null
+          shortfall: number | null
+          stock_before: number | null
+          variant_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          anomaly_type: string
+          channel?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          product_id?: string | null
+          qty?: number | null
+          shortfall?: number | null
+          stock_before?: number | null
+          variant_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          anomaly_type?: string
+          channel?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          product_id?: string | null
+          qty?: number | null
+          shortfall?: number | null
+          stock_before?: number | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_anomalies_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_anomalies_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_anomalies_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_anomalies_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_anomalies_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          actor_id: string | null
+          balance_after: number
+          channel: string
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          order_id: string | null
+          order_type: string | null
+          product_id: string
+          qty_delta: number
+          reason: string
+          to_status: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          balance_after: number
+          channel: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          order_type?: string | null
+          product_id: string
+          qty_delta: number
+          reason: string
+          to_status?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          balance_after?: number
+          channel?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          order_type?: string | null
+          product_id?: string
+          qty_delta?: number
+          reason?: string
+          to_status?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
             referencedColumns: ["id"]
           },
         ]
@@ -2477,6 +2889,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           archived_at: string | null
+          auto_tiers_enabled: boolean
           availability_type: string
           category: string
           created_at: string
@@ -2504,7 +2917,9 @@ export type Database = {
           rejected_at: string | null
           source: string
           source_currency: string | null
+          stock_mode: string
           stock_quantity: number | null
+          stock_quantity_updated_at: string | null
           subcategory: string
           suggested_wholesale_price_mad: number | null
           supplier_id: string
@@ -2515,6 +2930,7 @@ export type Database = {
           telegram_message_id: string | null
           unit: string
           updated_at: string
+          variant_id: string | null
         }
         Insert: {
           admin_notes?: string | null
@@ -2524,6 +2940,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          auto_tiers_enabled?: boolean
           availability_type?: string
           category?: string
           created_at?: string
@@ -2551,7 +2968,9 @@ export type Database = {
           rejected_at?: string | null
           source?: string
           source_currency?: string | null
+          stock_mode?: string
           stock_quantity?: number | null
+          stock_quantity_updated_at?: string | null
           subcategory?: string
           suggested_wholesale_price_mad?: number | null
           supplier_id: string
@@ -2562,6 +2981,7 @@ export type Database = {
           telegram_message_id?: string | null
           unit?: string
           updated_at?: string
+          variant_id?: string | null
         }
         Update: {
           admin_notes?: string | null
@@ -2571,6 +2991,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          auto_tiers_enabled?: boolean
           availability_type?: string
           category?: string
           created_at?: string
@@ -2598,7 +3019,9 @@ export type Database = {
           rejected_at?: string | null
           source?: string
           source_currency?: string | null
+          stock_mode?: string
           stock_quantity?: number | null
+          stock_quantity_updated_at?: string | null
           subcategory?: string
           suggested_wholesale_price_mad?: number | null
           supplier_id?: string
@@ -2609,6 +3032,7 @@ export type Database = {
           telegram_message_id?: string | null
           unit?: string
           updated_at?: string
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -2630,6 +3054,20 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_products_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_products_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
             referencedColumns: ["id"]
           },
         ]
@@ -2916,6 +3354,67 @@ export type Database = {
           },
         ]
       }
+      telegram_pending_products: {
+        Row: {
+          asked_at: string
+          awaiting: string
+          created_at: string
+          proposed_unit: string | null
+          reask_count: number
+          reminded_at: string | null
+          supplier_id: string
+          supplier_product_id: string
+          telegram_chat_id: number
+          telegram_lang: string | null
+        }
+        Insert: {
+          asked_at?: string
+          awaiting: string
+          created_at?: string
+          proposed_unit?: string | null
+          reask_count?: number
+          reminded_at?: string | null
+          supplier_id: string
+          supplier_product_id: string
+          telegram_chat_id: number
+          telegram_lang?: string | null
+        }
+        Update: {
+          asked_at?: string
+          awaiting?: string
+          created_at?: string
+          proposed_unit?: string | null
+          reask_count?: number
+          reminded_at?: string | null
+          supplier_id?: string
+          supplier_product_id?: string
+          telegram_chat_id?: number
+          telegram_lang?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_pending_products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_pending_products_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_pending_products_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_supplier_links: {
         Row: {
           created_at: string
@@ -2967,6 +3466,7 @@ export type Database = {
           id: string
           product_id: string
           quantity: number
+          variant_id: string | null
         }
         Insert: {
           added_at?: string
@@ -2974,6 +3474,7 @@ export type Database = {
           id?: string
           product_id: string
           quantity: number
+          variant_id?: string | null
         }
         Update: {
           added_at?: string
@@ -2981,6 +3482,7 @@ export type Database = {
           id?: string
           product_id?: string
           quantity?: number
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -3001,7 +3503,28 @@ export type Database = {
             foreignKeyName: "wholesale_cart_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_cart_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_cart_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
             referencedColumns: ["id"]
           },
         ]
@@ -3119,6 +3642,7 @@ export type Database = {
           subtotal: number
           tier_label_snapshot: string
           unit_price_snapshot: number
+          variant_id: string | null
         }
         Insert: {
           id?: string
@@ -3128,6 +3652,7 @@ export type Database = {
           subtotal: number
           tier_label_snapshot: string
           unit_price_snapshot: number
+          variant_id?: string | null
         }
         Update: {
           id?: string
@@ -3137,6 +3662,7 @@ export type Database = {
           subtotal?: number
           tier_label_snapshot?: string
           unit_price_snapshot?: number
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -3171,7 +3697,28 @@ export type Database = {
             foreignKeyName: "wholesale_order_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
             referencedColumns: ["id"]
           },
         ]
@@ -3533,6 +4080,162 @@ export type Database = {
           },
         ]
       }
+      product_variants_read: {
+        Row: {
+          active: boolean | null
+          attributes: Json | null
+          id: string | null
+          is_default: boolean | null
+          product_id: string | null
+          stock_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products_catalog_read: {
+        Row: {
+          active: boolean | null
+          affiliate_enabled: boolean | null
+          approval_status: string | null
+          availability_type: string | null
+          category: string | null
+          commission_amount: number | null
+          confirmation_fee_mad: number | null
+          created_at: string | null
+          delivery_fee_config: Json | null
+          delivery_fee_mad: number | null
+          description: string | null
+          estimated_delivery_days: number | null
+          estimated_import_price_mad: number | null
+          id: string | null
+          images: string[] | null
+          import_price_unit: string | null
+          import_pricing_mode: string | null
+          import_shipping_mode: string | null
+          media: Json | null
+          name: string | null
+          origin_country: string | null
+          origin_detail: string | null
+          pack_size: number | null
+          pack_unit: string | null
+          packaging_fee_mad: number | null
+          sale_unit: string | null
+          sell_price: number | null
+          source_supplier_product_id: string | null
+          stock_count: number | null
+          subcategory: string | null
+          tariff_mode: string | null
+          wholesale_min_qty: number | null
+          wholesale_tiers: Json | null
+        }
+        Insert: {
+          active?: boolean | null
+          affiliate_enabled?: boolean | null
+          approval_status?: string | null
+          availability_type?: string | null
+          category?: string | null
+          commission_amount?: number | null
+          confirmation_fee_mad?: number | null
+          created_at?: string | null
+          delivery_fee_config?: Json | null
+          delivery_fee_mad?: number | null
+          description?: string | null
+          estimated_delivery_days?: number | null
+          estimated_import_price_mad?: number | null
+          id?: string | null
+          images?: string[] | null
+          import_price_unit?: string | null
+          import_pricing_mode?: string | null
+          import_shipping_mode?: string | null
+          media?: Json | null
+          name?: string | null
+          origin_country?: string | null
+          origin_detail?: string | null
+          pack_size?: number | null
+          pack_unit?: string | null
+          packaging_fee_mad?: number | null
+          sale_unit?: string | null
+          sell_price?: number | null
+          source_supplier_product_id?: string | null
+          stock_count?: number | null
+          subcategory?: string | null
+          tariff_mode?: string | null
+          wholesale_min_qty?: number | null
+          wholesale_tiers?: Json | null
+        }
+        Update: {
+          active?: boolean | null
+          affiliate_enabled?: boolean | null
+          approval_status?: string | null
+          availability_type?: string | null
+          category?: string | null
+          commission_amount?: number | null
+          confirmation_fee_mad?: number | null
+          created_at?: string | null
+          delivery_fee_config?: Json | null
+          delivery_fee_mad?: number | null
+          description?: string | null
+          estimated_delivery_days?: number | null
+          estimated_import_price_mad?: number | null
+          id?: string | null
+          images?: string[] | null
+          import_price_unit?: string | null
+          import_pricing_mode?: string | null
+          import_shipping_mode?: string | null
+          media?: Json | null
+          name?: string | null
+          origin_country?: string | null
+          origin_detail?: string | null
+          pack_size?: number | null
+          pack_unit?: string | null
+          packaging_fee_mad?: number | null
+          sale_unit?: string | null
+          sell_price?: number | null
+          source_supplier_product_id?: string | null
+          stock_count?: number | null
+          subcategory?: string | null
+          tariff_mode?: string | null
+          wholesale_min_qty?: number | null
+          wholesale_tiers?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_source_supplier_product_id_fkey"
+            columns: ["source_supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_source_supplier_product_id_fkey"
+            columns: ["source_supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products_public_read: {
         Row: {
           affiliate_enabled: boolean | null
@@ -3587,6 +4290,28 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_product_moq_tiers_wholesaler_read: {
+        Row: {
+          min_quantity: number | null
+          supplier_product_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_product_moq_tiers_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_moq_tiers_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_products_wholesaler_read: {
         Row: {
           approval_status: string | null
@@ -3607,7 +4332,9 @@ export type Database = {
           product_name: string | null
           public_description: string | null
           public_name: string | null
+          stock_mode: string | null
           stock_quantity: number | null
+          stock_quantity_updated_at: string | null
           subcategory: string | null
           suggested_wholesale_price_mad: number | null
           supplier_type: string | null
@@ -3634,7 +4361,9 @@ export type Database = {
           product_name?: string | null
           public_description?: string | null
           public_name?: string | null
+          stock_mode?: string | null
           stock_quantity?: number | null
+          stock_quantity_updated_at?: string | null
           subcategory?: string | null
           suggested_wholesale_price_mad?: never
           supplier_type?: string | null
@@ -3661,7 +4390,9 @@ export type Database = {
           product_name?: string | null
           public_description?: string | null
           public_name?: string | null
+          stock_mode?: string | null
           stock_quantity?: number | null
+          stock_quantity_updated_at?: string | null
           subcategory?: string | null
           suggested_wholesale_price_mad?: never
           supplier_type?: string | null
@@ -3721,6 +4452,56 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      variant_status_balance: {
+        Row: {
+          product_id: string | null
+          qty_at_warehouse: number | null
+          qty_damaged: number | null
+          qty_delivered: number | null
+          qty_in_transit: number | null
+          qty_reserved: number | null
+          qty_return_expected: number | null
+          qty_return_received: number | null
+          variant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants_read"
             referencedColumns: ["id"]
           },
         ]
@@ -3794,6 +4575,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_catalog_read"
             referencedColumns: ["id"]
           },
           {
@@ -3994,6 +4782,17 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_stock_manual: {
+        Args: {
+          p_actor?: string
+          p_note?: string
+          p_product_id: string
+          p_qty_delta: number
+          p_reason?: string
+          p_variant_id?: string
+        }
+        Returns: number
+      }
       assign_cod_order_atomic: {
         Args: { p_assignee: string; p_order_id: string }
         Returns: undefined
@@ -4030,6 +4829,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      default_variant_id: { Args: { p_product_id: string }; Returns: string }
       fx_rate_to_mad: { Args: { p_code: string }; Returns: number }
       get_orders_by_phone: {
         Args: { p_phone: string }
@@ -4099,10 +4899,71 @@ export type Database = {
           supplier_product_id: string
         }[]
       }
+      log_admin_action: {
+        Args: {
+          p_action: string
+          p_new: Json
+          p_old: Json
+          p_target_id: string
+          p_target_table: string
+        }
+        Returns: undefined
+      }
       my_role: { Args: never; Returns: string }
+      record_anomaly: {
+        Args: {
+          p_actor?: string
+          p_channel?: string
+          p_detail?: Json
+          p_product_id?: string
+          p_qty?: number
+          p_shortfall?: number
+          p_stock_before?: number
+          p_type: string
+        }
+        Returns: undefined
+      }
+      record_scan: {
+        Args: {
+          p_carrier_name?: string
+          p_condition?: string
+          p_order_id?: string
+          p_order_type?: string
+          p_product_id: string
+          p_scan_type: string
+          p_scanned_qty: number
+          p_tracking_ref?: string
+          p_variant_id?: string
+        }
+        Returns: string
+      }
+      record_stock_movement: {
+        Args: {
+          p_actor?: string
+          p_channel: string
+          p_from_status?: string
+          p_note?: string
+          p_order_id?: string
+          p_order_type?: string
+          p_product_id: string
+          p_qty_delta: number
+          p_reason: string
+          p_to_status?: string
+          p_variant_id?: string
+        }
+        Returns: undefined
+      }
       reserve_stock: {
-        Args: { p_product_id: string; p_qty: number }
-        Returns: boolean
+        Args: {
+          p_actor?: string
+          p_channel?: string
+          p_order_id?: string
+          p_order_type?: string
+          p_product_id: string
+          p_qty: number
+          p_variant_id?: string
+        }
+        Returns: number
       }
       resolve_country_code: { Args: { p_label: string }; Returns: string }
       respond_to_wholesale_order: {
@@ -4113,10 +4974,34 @@ export type Database = {
         }
         Returns: undefined
       }
-      restore_stock: {
-        Args: { p_product_id: string; p_qty: number }
-        Returns: undefined
-      }
+      restore_stock:
+        | {
+            Args: {
+              p_actor?: string
+              p_channel?: string
+              p_order_id?: string
+              p_order_type?: string
+              p_product_id: string
+              p_qty: number
+              p_reason?: string
+              p_variant_id?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_actor?: string
+              p_channel?: string
+              p_from_status?: string
+              p_order_id?: string
+              p_order_type?: string
+              p_product_id: string
+              p_qty: number
+              p_reason?: string
+              p_variant_id?: string
+            }
+            Returns: undefined
+          }
       revoke_staff_permission: {
         Args: { p_capability: string; p_user_id: string }
         Returns: undefined
@@ -4138,6 +5023,21 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      transition_variant_stock_status: {
+        Args: {
+          p_actor?: string
+          p_channel?: string
+          p_from_status: string
+          p_order_id?: string
+          p_order_type?: string
+          p_product_id: string
+          p_qty: number
+          p_reason?: string
+          p_to_status: string
+          p_variant_id: string
+        }
+        Returns: undefined
+      }
       transition_wholesale_order_status: {
         Args: { p_new_status: string; p_notes?: string; p_order_id: string }
         Returns: undefined
@@ -4300,3 +5200,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
