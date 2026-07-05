@@ -29,7 +29,7 @@ Pro+backups, migs propres, redirect OK).
 Bloc 1A — Verrouiller (séquentiel, cette semaine)
 - ✅ A2 — Fix bug max_qty (surfacturation). ⚠️ ARGENT. FAIT 2026-07-04, mergé `main`. @finance 🟢 + @security 🟢. Diagnostic prod = 0 produit à risque.
 - ✅ A3 — Test A→Z gros complet, calculs signés @finance. **Verdict GO** (2026-07-04). Chaîne gros prouvée bout-en-bout (auto-tiers → commande 4 quantités prix=facturé → COD affilié → devis international) ; preuve A2 en conditions réelles ; anti-régression verte.
-- ⬜ Audit RLS ciblé tables gros/fournisseur (périmètre réduit du futur B1 complet).
+- 🔄 Audit RLS ciblé tables gros/fournisseur (périmètre réduit du futur B1 complet). **AUDIT FAIT + correctif partiel 2026-07-05** (branche `fix/rls-secrets-financiers`, mig 115, @finance🟢 @security🟢, NON mergé). **Fermé** : C1/C2 (prix source USD fournisseur lisible par grossiste) + E2 (coût d'usine `products` → staff-only, reprise mig 091). **Reporté** (fuites sur ses propres lignes, entremêlées aux writes — règle #3) : E1 (acheteur voit marge sur sa commande) + M1 (fournisseur voit marge sur sa fiche) → lot dédié @finance. M2 → backlog.
 
 Bloc 1B — Merger l'existant prêt (décisions Abdou, une branche à la fois)
 - ⬜ MERGE WMS-1 stock central (mig 092-095, GO ×2 déjà obtenus) → socle custody. Candidat n°1.
@@ -61,6 +61,7 @@ Bloc 2A — Rétention & canal WhatsApp (affichage/notifs, risque faible)
 
 Bloc 2B — Le cœur argent (séquentiel, ⚠️ chaque lot @finance + @security)
 - ⬜ B1 — Audit RLS COMPLET (toutes tables × tous rôles, deny par défaut). Prérequis.
+- ⬜ INFRA-1 — AUTOMATISATION DES MIGRATIONS DB (fin du copier-coller manuel). Problème constaté 2026-07-04 : l'historique de migrations local est DÉSYNCHRONISÉ de la prod (supabase db push veut rejouer 6 migrations 105-114 dont certaines déjà appliquées → dangereux). Tant que ce n'est pas nettoyé, chaque migration doit passer par le SQL Editor manuellement. OBJECTIF : (1) @backend-db + @security auditent l'état réel prod vs local (migration list + comparaison schéma), (2) réparer/marquer les migrations pour resynchroniser l'historique (supabase migration repair si besoin), (3) une fois aligné, mettre en place l'application des migrations en UNE commande sûre (db push avec dry-run préalable) OU migrations auto au déploiement Vercel. Résultat : Abdou n'a plus jamais à copier-coller de SQL à la main. ⚠️ touche la structure DB prod → @security + GO Abdou + backup avant chaque étape. À faire à tête reposée, PAS en fin de session.
 - ⬜ B2 — GRAND LIVRE double entrée : comptes internes dont « cash en transit chez livreur X »,
   append-only, idempotent, somme=0, rapprochement nocturne + alertes. (= Phase 2 finance existante.)
 - ⬜ B3 — MACHINE À ÉTATS COMMISSIONS liée aux versements (règle N1 : « livré » ≠ « payable » ;
