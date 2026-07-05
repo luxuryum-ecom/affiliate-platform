@@ -10,7 +10,7 @@
 > **URL prod :** https://affiliate-platform-gamma.vercel.app
 > **Projet Supabase :** `owvtfzxvirttrbcsiveg`
 
-> **✅ SESSION 2026-07-05 (b) = C1a DÉTECTION UNITÉ DURCIE** (branche `fix/c1a-detection-robuste`, **NON mergée/poussée**). Stress-test RÉEL Haiku ~28 légendes FR/AR/darija/EN → détection déjà robuste ; **1 flake isolé** (« œufs à l'unité »→parfois « œuf ») corrigé par **1 ligne** dans le prompt `extract.ts` (générique « l'unité »→pièce ; unité écrite explicite préservée). 14/14 stress OK, zéro régression, tsc0/build/vitest 591. Affichage pur (aucun prix touché). Reste : merge + push (à ta main).
+> **✅ SESSION 2026-07-05 (b) = C1a DÉTECTION UNITÉ RENFORCÉE — MERGÉE `main` `--no-ff` `92e5e84` (NON poussée, Abdou pousse).** Stress-test RÉEL Haiku ~28 légendes FR/AR/darija/EN, **testée et robuste** : **gramme, litre, mètre, kg, ml, sac** (contenant « sac de 10 kg »→unit=sac + pack), **carton** (+ pack boîtes), libres **botte / bouquet / plaque / douzaine / œuf** préservés verbatim, **arabe/darija** (`للغرام`→gramme, `للكيلو`→kg, `للتر`→litre), anglais (`per piece`→pièce), anti-hallucination (« 100 dh » nu→pièce). **1 flake isolé** (« œufs à l'unité »→parfois « œuf ») corrigé par **1 ligne** dans le prompt `extract.ts` (mot générique « l'unité »→pièce ; unité écrite explicite comme « l'œuf »/« la botte » préservée). 14/14 stress OK, zéro régression, tsc0/build/vitest 591. **Affichage pur, aucun prix touché. Pas de migration.** Reste : `git push` (à ta main) → déploiement → test téléphone (tableau de phrases dans le rapport de session).
 
 Lire aussi : `ETAT_SYSTEME.md` (registre de vérité — POINT DE REPRISE en tête), `FEUILLE_DE_ROUTE.md`, `CLAUDE.md`.
 
