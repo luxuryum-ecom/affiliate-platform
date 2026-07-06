@@ -52,8 +52,9 @@ export default async function SupplierDashboardPage() {
 
   const [profileResult, productsResult, telegramStatus, limitStatus] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    // Fuite M1 (mig 116) : lecture via la vue redacted OWNER (plus de SELECT base).
     supabase
-      .from('supplier_products')
+      .from('supplier_products_owner_read')
       .select('id, product_name, approval_status, created_at')
       .eq('supplier_id', user.id)
       .order('created_at', { ascending: false }),
@@ -69,8 +70,9 @@ export default async function SupplierDashboardPage() {
     .in('status', ['new', 'notified'])
 
   // Sample request counters (supplier sees requests for their products, not buyer identity)
+  // Fuite M1 (mig 116) : lecture via la vue redacted OWNER (plus de SELECT base).
   const { data: ownProductIds } = await supabase
-    .from('supplier_products')
+    .from('supplier_products_owner_read')
     .select('id')
     .eq('supplier_id', user.id)
   const productIdsForSamples = (ownProductIds ?? []).map((p: { id: string }) => p.id)

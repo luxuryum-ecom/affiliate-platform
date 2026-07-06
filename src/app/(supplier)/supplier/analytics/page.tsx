@@ -25,8 +25,9 @@ export default async function SupplierAnalyticsPage() {
   if (profile?.role !== 'supplier') redirect('/login')
 
   // ── Products ────────────────────────────────────────────────────────────────
+  // Fuite M1 (mig 116) : lecture via la vue redacted OWNER (plus de SELECT base).
   const { data: productsData } = await supabase
-    .from('supplier_products')
+    .from('supplier_products_owner_read')
     .select('id, product_name, approval_status, created_at')
     .eq('supplier_id', user.id)
     .order('created_at', { ascending: false })

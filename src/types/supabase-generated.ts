@@ -407,6 +407,13 @@ export type Database = {
             foreignKeyName: "category_suggestions_supplier_product_id_fkey"
             columns: ["supplier_product_id"]
             isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_suggestions_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
@@ -1535,6 +1542,13 @@ export type Database = {
             foreignKeyName: "products_source_supplier_product_id_fkey"
             columns: ["source_supplier_product_id"]
             isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_source_supplier_product_id_fkey"
+            columns: ["source_supplier_product_id"]
+            isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
@@ -2001,6 +2015,13 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
             referencedColumns: ["id"]
           },
           {
@@ -2788,6 +2809,13 @@ export type Database = {
             foreignKeyName: "supplier_product_attachments_supplier_product_id_fkey"
             columns: ["supplier_product_id"]
             isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_attachments_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
@@ -2821,6 +2849,13 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_moq_tiers_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
             referencedColumns: ["id"]
           },
           {
@@ -2869,6 +2904,13 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_variants_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
             referencedColumns: ["id"]
           },
           {
@@ -3167,6 +3209,13 @@ export type Database = {
             foreignKeyName: "supplier_quote_requests_supplier_product_id_fkey"
             columns: ["supplier_product_id"]
             isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
@@ -3349,6 +3398,13 @@ export type Database = {
             foreignKeyName: "telegram_inbound_supplier_product_id_fkey"
             columns: ["supplier_product_id"]
             isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_inbound_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
@@ -3404,6 +3460,13 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: true
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_pending_products_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_products_owner_read"
             referencedColumns: ["id"]
           },
           {
@@ -4231,6 +4294,13 @@ export type Database = {
             foreignKeyName: "products_source_supplier_product_id_fkey"
             columns: ["source_supplier_product_id"]
             isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_source_supplier_product_id_fkey"
+            columns: ["source_supplier_product_id"]
+            isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
@@ -4307,7 +4377,86 @@ export type Database = {
             foreignKeyName: "supplier_product_moq_tiers_supplier_product_id_fkey"
             columns: ["supplier_product_id"]
             isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_moq_tiers_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
             referencedRelation: "supplier_products_wholesaler_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_products_owner_read: {
+        Row: {
+          approval_status: string | null
+          archived_at: string | null
+          category: string | null
+          created_at: string | null
+          fx_rate_source_to_mad: number | null
+          id: string | null
+          min_quantity: number | null
+          origin_country: string | null
+          product_name: string | null
+          source_currency: string | null
+          stock_mode: string | null
+          stock_quantity: number | null
+          stock_quantity_updated_at: string | null
+          suggested_wholesale_price_mad: number | null
+          supplier_id: string | null
+          supplier_type: string | null
+        }
+        Insert: {
+          approval_status?: string | null
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string | null
+          fx_rate_source_to_mad?: number | null
+          id?: string | null
+          min_quantity?: number | null
+          origin_country?: string | null
+          product_name?: string | null
+          source_currency?: string | null
+          stock_mode?: string | null
+          stock_quantity?: number | null
+          stock_quantity_updated_at?: string | null
+          suggested_wholesale_price_mad?: number | null
+          supplier_id?: string | null
+          supplier_type?: string | null
+        }
+        Update: {
+          approval_status?: string | null
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string | null
+          fx_rate_source_to_mad?: number | null
+          id?: string | null
+          min_quantity?: number | null
+          origin_country?: string | null
+          product_name?: string | null
+          source_currency?: string | null
+          stock_mode?: string | null
+          stock_quantity?: number | null
+          stock_quantity_updated_at?: string | null
+          suggested_wholesale_price_mad?: number | null
+          supplier_id?: string | null
+          supplier_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_products_source_currency_fkey"
+            columns: ["source_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "supplier_products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4445,6 +4594,13 @@ export type Database = {
             columns: ["supplier_product_id"]
             isOneToOne: false
             referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_requests_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
             referencedColumns: ["id"]
           },
           {

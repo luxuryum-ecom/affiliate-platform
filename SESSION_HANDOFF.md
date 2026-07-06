@@ -184,7 +184,9 @@ Voir `FEUILLE_DE_ROUTE.md` → « 🔧 DETTES TECHNIQUES & GO-LIVE PUBLIC » et 
 
 | Branche / chantier | État |
 |--------------------|------|
-| `feat/supplier-stock-multimodes` (V5-bis) | Prêt pour merge, **mig 104 déjà appliquée prod** ; en attente GO Abdou |
+| ~~`feat/supplier-stock-multimodes` (V5-bis)~~ | ✅ **DÉJÀ MERGÉ `main` + EN PROD** (merge `c3b7f07`, mig 104 appliquée). Resync 2026-07-06 : n'était PAS en attente. |
+| ~~WMS-1 / Vitrine grossiste / Rôles 2 étages~~ | ✅ **DÉJÀ MERGÉS `main` + EN PROD** (merges `40da1bd`/`1f7dd67`/`bc7e627`, migs 092-099/106-107 appliquées). **Bloc 1B = FAIT** — la fausse dette « ⬜ à merger » du plan est corrigée (resync 2026-07-06). |
+| `feat/etape7-7a-affichage-variante` | ⚠️ **OBSOLÈTE / superseded** — 2 commits hors main, mais Étape 7 déjà EN PROD (mig 105). Ne pas merger ; candidate à suppression. |
 | `feat/categories-dynamiques` | Chantier scalabilité catégories en base + panneau admin — sous-lots 1-4 faits, STOP avant merge |
 | C4 pack grossiste / C5 bascule finale stock variante | Reportés, cadrage @finance |
 

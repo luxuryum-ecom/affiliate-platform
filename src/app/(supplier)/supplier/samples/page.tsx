@@ -40,9 +40,10 @@ export default async function SupplierSamplesPage() {
     .from('profiles').select('full_name, role').eq('id', user.id).single() as { data: Pick<Profile, 'full_name' | 'role'> | null; error: unknown }
   if (profile?.role !== 'supplier') redirect('/login')
 
-  // Get supplier's approved product ids
+  // Get supplier's approved product ids.
+  // Fuite M1 (mig 116) : lecture via la vue redacted OWNER (plus de SELECT base).
   const { data: ownProducts } = await supabase
-    .from('supplier_products')
+    .from('supplier_products_owner_read')
     .select('id')
     .eq('supplier_id', user.id)
 

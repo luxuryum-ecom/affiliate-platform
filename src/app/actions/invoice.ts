@@ -31,8 +31,11 @@ export async function requestInvoice(
   const invoice_registre_commerce = ((formData.get('registre_commerce') as string)?.trim()) || null
   const invoice_billing_address   = ((formData.get('billing_address') as string)?.trim()) || null
 
+  // Fuite E1 (mig 116) : lecture via la vue redacted acheteur (WHERE buyer_id =
+  // auth.uid() embarqué → ne renvoie que SES commandes ; plus de SELECT base). Le
+  // garde order.buyer_id !== user.id devient redondant mais reste (défense en profondeur).
   const { data: order } = (await supabase
-    .from('wholesale_orders')
+    .from('wholesale_orders_buyer_read')
     .select('id, status, buyer_id, invoice_requested')
     .eq('id', orderId)
     .single()) as {
