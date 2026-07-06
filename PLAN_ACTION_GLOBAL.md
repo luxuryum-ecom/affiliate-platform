@@ -6,6 +6,12 @@
 > Logique : paliers de sortie marché. À chaque palier, une partie du SaaS SORT et rapporte,
 > pendant que le palier suivant se construit derrière. Jamais tout bloqué en attendant tout.
 
+> **🔍 AUDIT PLAN vs CODE RÉEL — 2026-07-06.** Chaque lot ⬜ a été vérifié contre le code réel (`src/`),
+> les 116 migrations prod et git (5 agents Explore). Verdicts inscrits **inline** : ✅ = déjà fait (preuve
+> fichier/migration) · 🟡 = fondations existantes + **RESTE** précisé — **NE PAS reconstruire l'existant** ·
+> ⬜ = rien dans le code, vrai lot à coder. **Fausses dettes corrigées** (étaient ⬜, sont ✅ en prod) :
+> **AM-2 nudge de palier**, **stats affilié trackées**, **C3 échantillons payants**.
+
 ## ⚖️ RÈGLES DE PILOTAGE (rappel, non négociables)
 1. 🔒 Règles intouchables 2026-07-04 : thème, grille marketplace, textes validés, forme des paliers,
    acquis prod. Exception = AVANT/APRÈS + GO Abdou.
@@ -40,11 +46,11 @@ Bloc 1B — Merger l'existant prêt — ✅ **FAIT & EN PROD** (resync 2026-07-0
 
 Bloc 1C — Ouverture
 - ⬜ Onboarding fournisseurs réels TR/AE (Telegram, 1er test réel de l'ingestion). Délai humain.
-- ⬜ Niche déclarée à l'inscription grossiste (couche 1 perso — contenu servi, PAS la grille 🔒).
+- 🟡 Niche déclarée à l'inscription grossiste (couche 1 perso — contenu servi, PAS la grille 🔒). **PARTIEL** (audit 2026-07-06) — EXISTE : personnalisation par niche DÉDUITE du comportement (`src/lib/wholesale/detect-niche.ts` : boost tri + bannière). RESTE : le champ DÉCLARATIF au signup grossiste (aucun champ niche à l'inscription).
 - ⬜ 🚀 LANCEMENT GROS Maroc : commandes directes paliers + devis international. Paiements
   virement/COD manuels (volume faible OK).
 
-Quick win glissé dans le palier : ⬜ AM-2 NUDGE DE PALIER au panier (« ajoute X → économise Z DH »).
+Quick win glissé dans le palier : ✅ **AM-2 NUDGE DE PALIER — DÉJÀ FAIT** (audit 2026-07-06 ; `src/components/wholesale/add-to-cart-form.tsx:171` + clé i18n `addToCartNudge` fr/en/ar). « ajoute X → économise Z DH ». *(Non couvert par un test unitaire dédié — candidat à blinder.)*
 Petit, gros effet panier moyen. Vérif @finance légère (affichage d'un calcul existant).
 
 ## 🔨 PALIER 2 — RÉTENTION GROS + SOCLE ARGENT (S+2 à S+5, pendant que le gros tourne)
@@ -53,29 +59,29 @@ Petit, gros effet panier moyen. Vérif @finance légère (affichage d'un calcul 
 
 Bloc 2A — Rétention & canal WhatsApp (affichage/notifs, risque faible)
 - ⬜ AM-1 RÉASSORT 1-CLIC (« recommander ma dernière commande »).
-- ⬜ AM-8 NOTIFICATIONS WHATSAPP grossistes/affiliés (WhatsApp Business API ; Telegram reste fournisseur).
+- ⬜ AM-8 NOTIFICATIONS WHATSAPP grossistes/affiliés (WhatsApp Business API ; Telegram reste fournisseur). *(audit 2026-07-06 : seuls des liens de partage `wa.me` existent, aucune Business API — vrai lot à coder.)*
 - ⬜ AM-3 RELANCE PANIER ABANDONNÉ WhatsApp (2h).
 - ⬜ AM-4 WIN-BACK 30 jours (promo sur SA niche — s'appuie sur la table d'événements).
 - ⬜ V5 ALERTE PRIX / LISTE DE SUIVI (prix baisse / promo / retour stock → WhatsApp).
-- ⬜ V3 FACTURE PDF AUTO conforme Maroc (ICE/RC déjà en profil grossiste).
+- 🟡 V3 FACTURE PDF AUTO conforme Maroc (ICE/RC déjà en profil grossiste). **PARTIEL** (audit 2026-07-06) — EXISTE : capture de la *demande* de facture + champs ICE/RC/société/adresse (`src/app/actions/invoice.ts`, mig 018). RESTE : la génération PDF (aucune dep pdf, aucun rendu/stockage de document).
 - ⬜ AM-10 PWA installable (icône écran d'accueil).
 
 Bloc 2B — Le cœur argent (séquentiel, ⚠️ chaque lot @finance + @security)
-- ⬜ B1 — Audit RLS COMPLET (toutes tables × tous rôles, deny par défaut). Prérequis.
+- 🟡 B1 — Audit RLS COMPLET (toutes tables × tous rôles, deny par défaut). Prérequis. **PARTIEL** (audit 2026-07-06) — EXISTE : RLS deny-par-défaut + vues redacted appliqués partout (migs 060/063-064/089-091/102/115/116 ; ~52 migs avec policies). RESTE : le document d'audit MATRICIEL consolidé (aujourd'hui = colmatage itératif de fuites, pas un audit exhaustif tables × rôles).
 - ⬜ INFRA-1 — AUTOMATISATION DES MIGRATIONS DB (fin du copier-coller manuel). Problème constaté 2026-07-04 : l'historique de migrations local est DÉSYNCHRONISÉ de la prod (supabase db push veut rejouer 6 migrations 105-114 dont certaines déjà appliquées → dangereux). Tant que ce n'est pas nettoyé, chaque migration doit passer par le SQL Editor manuellement. OBJECTIF : (1) @backend-db + @security auditent l'état réel prod vs local (migration list + comparaison schéma), (2) réparer/marquer les migrations pour resynchroniser l'historique (supabase migration repair si besoin), (3) une fois aligné, mettre en place l'application des migrations en UNE commande sûre (db push avec dry-run préalable) OU migrations auto au déploiement Vercel. Résultat : Abdou n'a plus jamais à copier-coller de SQL à la main. ⚠️ touche la structure DB prod → @security + GO Abdou + backup avant chaque étape. À faire à tête reposée, PAS en fin de session.
-- ⬜ B2 — GRAND LIVRE double entrée : comptes internes dont « cash en transit chez livreur X »,
-  append-only, idempotent, somme=0, rapprochement nocturne + alertes. (= Phase 2 finance existante.)
-- ⬜ B3 — MACHINE À ÉTATS COMMISSIONS liée aux versements (règle N1 : « livré » ≠ « payable » ;
-  disponible = bordereau livreur rapproché ligne à ligne). Écran affilié = NOUVEL écran, maquette validée.
+- 🟡 B2 — GRAND LIVRE double entrée : comptes internes dont « cash en transit chez livreur X »,
+  append-only, idempotent, somme=0, rapprochement nocturne + alertes. (= Phase 2 finance existante.) **PARTIEL** (audit 2026-07-06) — EXISTE : ledger payout append-only idempotent (mig 049), stock_movements (092), ledger_currency (052). RESTE : le vrai DOUBLE-ENTRÉE débit/crédit, contrainte somme=0, comptes internes, et le compte « cash en transit chez livreur ».
+- 🟡 B3 — MACHINE À ÉTATS COMMISSIONS liée aux versements (règle N1 : « livré » ≠ « payable » ;
+  disponible = bordereau livreur rapproché ligne à ligne). Écran affilié = NOUVEL écran, maquette validée. **PARTIEL** (audit 2026-07-06) — EXISTE : statuts commission pending/approved/paid + reversed (`database.ts`, mig 013, `updateCommissionStatus`). RESTE : l'état « payable » distinct de « livré » et le lien payable = bordereau livreur rapproché (aucun rapprochement bordereau).
 - ⬜ N2 — MODULE LIVREURS : API Ozone + Cathedis (config déjà sur Egrow → récupérer clés/doc via
   contact WhatsApp), webhooks signés idempotents, RÉCONCILIATION BORDEREAUX (où l'argent se perdait),
   alertes créances, scoring livreur par société/ville. + Livreur local Casa : rôle « livreur » limité,
   gros boutons Livré/Retourné FR/darija, saisies signées.
-- ⬜ WMS-2 (synchro Egrow canal ecom_perso) + WMS-3 (scans custody) + QR interne muet (identifiant
-  opaque, données derrière autorisation, affichage par rôle) + étiquettes PDF QR+code128, scan caméra.
+- 🟡 WMS-2 (synchro Egrow canal ecom_perso) + WMS-3 (scans custody) + QR interne muet (identifiant
+  opaque, données derrière autorisation, affichage par rôle) + étiquettes PDF QR+code128, scan caméra. **PARTIEL** (audit 2026-07-06) — EXISTE : `scan_events` (mig 100, append-only immuable = socle WMS-3). RESTE : synchro Egrow (0 occurrence), QR interne muet, étiquettes PDF code128, scanner caméra.
 - ⬜ WMS-4 — RÉCONCILIATION GLOBALE temps réel (théorique vs réel, par fournisseur ET transporteur).
-- ⬜ B7 — ANTI-FRAUDE v1 : score commande pré-expédition, taux de livraison par affilié + seuil de
-  revue, anti auto-achat, multi-comptes, blocage modif prix post-approbation.
+- 🟡 B7 — ANTI-FRAUDE v1 : score commande pré-expédition, taux de livraison par affilié + seuil de
+  revue, anti auto-achat, multi-comptes, blocage modif prix post-approbation. **PARTIEL** (audit 2026-07-06) — EXISTE : `src/lib/order-analytics.ts` (`scoreDuplicateOrder`/`scoreSpamOrder`/`scoreFraudOrder` — ce dernier = placeholder). RESTE : taux de livraison par affilié, anti auto-achat, détection multi-comptes, blocage prix post-approbation.
 - ⬜ B8 — Suppression compte RGPD (dette bloquante documentée).
 - ⬜ Sous-lots stock (au lancement affiliation) AVEC AGRO-5 gravé dès le cadrage : DLC/DLUO par lot +
   FIFO strict + statut chaîne du froid dans la custody.
@@ -83,7 +89,7 @@ Bloc 2B — Le cœur argent (séquentiel, ⚠️ chaque lot @finance + @security
 ## 🌊 PALIER 3 — SORTIE MARCHÉ : L'AFFILIATION (S+5 à S+7)
 > But : ouvrir l'affiliation sur un socle financier prouvé par les commandes gros réelles.
 
-- ⬜ Liens trackés + STATS TEMPS RÉEL branchées sur le ledger (solde par état, centime par centime).
+- ✅ Liens trackés + STATS TEMPS RÉEL branchées sur le ledger (solde par état, centime par centime). **DÉJÀ FAIT** (audit 2026-07-06) — `?ref=` + `recordAffiliateClick` → table `affiliate_clicks` ; dashboard affilié (`src/app/(affiliate)/affiliate/dashboard/page.tsx`) calcule clics/conversion/soldes pending-approved-paid depuis le ledger.
 - ⬜ AM-15 SUB-IDs influenceurs (?sub=…) + volet INFLUENCEURS (codes promo nominatifs, dashboard dédié).
 - ⬜ V1 BOUTIQUE WHATSAPP DE L'AFFILIÉ : mini-vitrine publique partageable en un lien.
 - ⬜ Matériel marketing AUTO par produit (visuels + textes FR/AR/Darija) — version GRATUITE de base
@@ -94,9 +100,9 @@ Bloc 2B — Le cœur argent (séquentiel, ⚠️ chaque lot @finance + @security
 
 En continu pendant le palier (petits lots indépendants) :
 - ✅ C1a Unité de vente LIBRE par produit (champ libre réel + détection IA + confirmation fournisseur bot + affichage « prix / unité » 4 langues). Mergé `main` `75544f4`, migration 114 à appliquer en prod. ⬜ C1b (multi-unités carton+pièce) reporté.
-- ⬜ C2 BRIQUE 2 — contrôle qualité photo IA à la réception (textes validés Abdou 🔒).
-- ⬜ C3 Échantillons payants (mini-commande qty 1).
-- ⬜ C4 RFQ asynchrone via bot Telegram existant (chat intégré = plus tard, bouton WhatsApp en attendant).
+- 🟡 C2 BRIQUE 2 — contrôle qualité photo IA à la réception (textes validés Abdou 🔒). **PARTIEL** (audit 2026-07-06) — EXISTE : modération produit à l'ingestion (`moderateSupplierProduct`, mig 044, `ai_risk_score`) mais basée MOTS-CLÉS TEXTE + photo seulement vérifiée en présence. RESTE : la détection IA (flou / non-produit / interdit) sur l'image + prévenance auto du fournisseur.
+- ✅ C3 Échantillons payants (mini-commande qty 1). **DÉJÀ FAIT** (audit 2026-07-06) — flux complet : `wholesale/sample-requests` + `wholesale/samples`, côté fournisseur `supplier/samples`, table `sample_requests`.
+- 🟡 C4 RFQ asynchrone via bot Telegram existant (chat intégré = plus tard, bouton WhatsApp en attendant). **PARTIEL** (audit 2026-07-06) — EXISTE : RFQ complet côté WEB (migs 023/034/037/043, `rfq-engine.ts`, pages wholesale + admin quote-requests). RESTE : le canal via BOT TELEGRAM (le webhook ne fait qu'ingestion produit).
 - ⬜ PB-8 VRAI BAN FOURNISSEUR (masquage auto des produits d'un banni).
 
 ## 🥩 PALIER 4 — SORTIE MARCHÉ : VERTICAL AGRO + FIDÉLITÉ (S+7 à S+10)
@@ -122,10 +128,10 @@ En continu pendant le palier (petits lots indépendants) :
   MONTANT (« remplis mon panier pour 2000 DH sur ma niche »).
 - ⬜ AM-5 « PROTECTION ABDOU BABA » : centre de litiges structuré (photo → arbitrage → remboursement/
   avoir tracé + badge fiches). Équivalent Trade Assurance. ⚠️ ARGENT → @finance + @security.
-- ⬜ AM-6 NOTES FOURNISSEURS post-livraison (conformité/délai/qualité) affichées sur fiche.
-- ⬜ V7 BADGE « USINE VÉRIFIÉE — visitée par Abdou Baba » (photo/date des visites TR/CN). Coût zéro.
+- 🟡 AM-6 NOTES FOURNISSEURS post-livraison (conformité/délai/qualité) affichées sur fiche. **PARTIEL** (audit 2026-07-06) — EXISTE : journal d'incidents fournisseur INTERNE admin (`supplier_issues`, mig 033, `supplier-issues.ts`). RESTE : la NOTATION acheteur (conformité/délai/qualité) affichée sur la fiche.
+- 🟡 V7 BADGE « USINE VÉRIFIÉE — visitée par Abdou Baba » (photo/date des visites TR/CN). Coût zéro. **PARTIEL** (audit 2026-07-06) — EXISTE : système de badges `is_verified`/`VerifiedBadge` (mig 040) mais = statut premium/vérifié marketplace. RESTE : le concept « usine VISITÉE par Abdou » (photo + date de visite).
 - ⬜ V6 QR FOURNISSEUR mode foire/salon (scan stand → catalogue du fournisseur → inscription grossiste).
-- ⬜ V4 MULTI-UTILISATEURS par compte grossiste (patron + employé, permissions — étend staff_permissions).
+- 🟡 V4 MULTI-UTILISATEURS par compte grossiste (patron + employé, permissions — étend staff_permissions). **PARTIEL** (audit 2026-07-06) — EXISTE : `staff_permissions` (mig 083) + `team_members` (058) côté admin/plateforme. RESTE : l'extension côté COMPTE GROSSISTE (patron + employé, sous-comptes).
 
 ## 🧠 PALIER 5 — INTELLIGENCE + MONÉTISATION + COURONNEMENT (S+10 et au-delà)
 > But : les revenus additionnels et l'IA qui pilote — sur des données réelles accumulées.
@@ -134,7 +140,7 @@ Monétisation (chantiers roadmap existants) :
 - ⬜ PB-4 CRÉAS PAYANTES affilié/grossiste (visuels/vidéos marketing à la carte = revenu passif).
   ⚠️ ARGENT → @finance + @security. Stack à choisir par rentabilité.
 - ⬜ PB-3 « MANNEQUIN » : photo fournisseur non-pro → régénérée portée/présentée par IA.
-- ⬜ PB-9 CRUD PLANS ADMIN (créer/modifier plans premium sans SQL).
+- 🟡 PB-9 CRUD PLANS ADMIN (créer/modifier plans premium sans SQL). **PARTIEL** (audit 2026-07-06) — EXISTE : table `premium_plans` (mig 038) + `assignPlan`/`getPremiumPlans`/`cancelSubscription` (`premium.ts`, l'ASSIGNATION est faite). RESTE : le CRUD des PLANS eux-mêmes (create/update/delete sans SQL).
 - ⬜ PB-10 FACTURATION AUTO Stripe (abonnements récurrents, webhooks signés, downgrade auto impayé).
   ⚠️ GROS chantier ARGENT.
 - ⬜ VIS-CANAL (visibilité produit par canal = premium) + PREMIUM-DIRECT (accès direct fournisseur
@@ -144,12 +150,12 @@ Intelligence (architecturée depuis le Palier 2 via la table d'événements) :
 - ⬜ AM-11 PRIX INTELLIGENT fournisseur (fourchette marché à la soumission). ⚠️ @finance.
 - ⬜ AM-12 PRÉVISION DE RÉASSORT (rupture dans N jours → alerte fournisseur).
 - ⬜ AM-13 SCORE DE SANTÉ GROSSISTE (qui monte / qui décroche).
-- ⬜ Personnalisation couches 2-3 (scoring comportemental complet + IA de recommandation).
+- 🟡 Personnalisation couches 2-3 (scoring comportemental complet + IA de recommandation). **PARTIEL** (audit 2026-07-06) — EXISTE : couche 1 (`detect-niche.ts`, scoring comportemental pondéré, AFFICHAGE seul). RESTE : couches 2-3 (scoring persisté + moteur reco IA) + la TABLE D'ÉVÉNEMENTS générique (prérequis, absente aujourd'hui).
 - ⬜ AGRO-6 CRÉDIT COURT TERME 7/15 jours pour les fidèles, adossé ledger + AM-13.
   ⚠️ GROS chantier ARGENT + décision Abdou.
 - ⬜ COCKPIT PERFORMANCE HUMAINE complet (KPI temps réel par employé sur scans + audit).
-- ⬜ 🏔️ GARDIEN IA — LE COURONNEMENT (3 pouvoirs : suppléance, calculs exacts, bloquer+tracer+alerter).
-  Ordre gravé : rôles → WMS → Finance → Gardien.
+- 🟡 🏔️ GARDIEN IA — LE COURONNEMENT (3 pouvoirs : suppléance, calculs exacts, bloquer+tracer+alerter).
+  Ordre gravé : rôles → WMS → Finance → Gardien. **SOCLE/PARTIEL** (audit 2026-07-06) — EXISTE : préfiguration (mig 095 `stock_anomalies` + seuils placeholder, mig 097 cohérence). RESTE : les 3 pouvoirs OPÉRATIONNELS (placeholders seulement aujourd'hui).
 
 Reporté explicitement (ne pas builder avant) : chat négociation intégré (WhatsApp en attendant) ·
 PayTabs Dubaï international · sous-affiliés · inscription 100 % Telegram (Option B) · douchettes
