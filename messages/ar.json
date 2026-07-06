@@ -1139,6 +1139,7 @@
       "deliveryNote": "ملاحظة",
       "itemTotal": "الإجمالي",
       "invoiceSent": "تم إرسال طلب الفاتورة",
+      "invoiceDownloadPdf": "تحميل الفاتورة (PDF)",
       "invoiceSentOn": "بتاريخ {date}",
       "invoiceAvailableAfter": "متاحة بعد التسليم والسداد الكامل.",
       "invoiceCompanyName": "الاسم التجاري",

@@ -1139,6 +1139,7 @@
       "deliveryNote": "Note",
       "itemTotal": "Total",
       "invoiceSent": "Demande de facture envoyée",
+      "invoiceDownloadPdf": "Télécharger la facture (PDF)",
       "invoiceSentOn": "Le {date}",
       "invoiceAvailableAfter": "Disponible après livraison et règlement.",
       "invoiceCompanyName": "Raison sociale",
