@@ -31,11 +31,12 @@ Bloc 1A — Verrouiller (séquentiel, cette semaine)
 - ✅ A3 — Test A→Z gros complet, calculs signés @finance. **Verdict GO** (2026-07-04). Chaîne gros prouvée bout-en-bout (auto-tiers → commande 4 quantités prix=facturé → COD affilié → devis international) ; preuve A2 en conditions réelles ; anti-régression verte.
 - ✅ Audit RLS ciblé tables gros/fournisseur (périmètre réduit du futur B1 complet). **AUDIT FAIT 2026-07-05** (@security, 6 findings) **+ correctif fuites INTER-ACTEURS MERGÉ `main` `df8b1ce` + migration 115 APPLIQUÉE EN PROD 2026-07-05** (@finance🟢 @security🟢 @tester🟢 ; vérifié AVANT/APRÈS : 0 policy `wholesaler read` restante). **Fermé EN PROD** : C1/C2 (prix source USD fournisseur lisible par grossiste) + E2 (coût d'usine `products` → staff-only ; 091 déjà active). **⏸️ Reste à faire (lot dédié @finance)** : E1 (acheteur voit marge sur SA commande) + M1 (fournisseur voit marge sur SA fiche) — fuites sur ses propres lignes, entremêlées aux writes (règle #3). M2 → backlog.
 
-Bloc 1B — Merger l'existant prêt (décisions Abdou, une branche à la fois)
-- ⬜ MERGE WMS-1 stock central (mig 092-095, GO ×2 déjà obtenus) → socle custody. Candidat n°1.
-- ⬜ MERGE Vitrine grossiste intelligente (perso par niche comportementale, @security GO).
-- ⬜ MERGE Rôles 2 étages (base du futur rôle « livreur » + permissions employés).
-- ⬜ DÉCISION V5-bis stock multimodes (mig 104 déjà prod).
+Bloc 1B — Merger l'existant prêt — ✅ **FAIT & EN PROD** (resync 2026-07-06 : vérifié par git — chaque tip est ancêtre de `main` via son commit de merge, migrations dans l'arbre, `< 115` donc appliquées en prod. Le ⬜ précédent était une FAUSSE dette de doc.)
+- ✅ MERGE WMS-1 stock central (mig 092-095 + variantes 096-099) → merge `40da1bd` + admin UI `d19513a`. Socle custody EN PROD.
+- ✅ MERGE Vitrine grossiste intelligente (perso par niche, affichage pur 0 argent) → merge `1f7dd67`, resync `9c07146` « EN PROD ».
+- ✅ MERGE Rôles 2 étages (superviseur de volet + tâches fines, non-financier ; mig 106-107) → merge `bc7e627`, resync `d8e0ab2` « EN PROD ».
+- ✅ DÉCISION V5-bis stock multimodes (mig 104) → mergé `c3b7f07`, roadmap `83bca3f` « mergé prod ». Tranché & EN PROD.
+- ℹ️ Branche `feat/etape7-7a-affichage-variante` = **OBSOLÈTE / superseded** (2 commits hors main mais Étape 7 déjà EN PROD via mig 105) → ne pas merger, candidate à suppression.
 
 Bloc 1C — Ouverture
 - ⬜ Onboarding fournisseurs réels TR/AE (Telegram, 1er test réel de l'ingestion). Délai humain.

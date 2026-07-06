@@ -34,8 +34,10 @@ export default async function SupplierProductsPage() {
 
   const [profileResult, productsResult, telegramStatus, limitStatus] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    // Fuite M1 (mig 116) : lecture via la vue redacted OWNER (sans platform_margin_*
+    // ni final_wholesale_price_mad ; WHERE supplier_id = auth.uid() embarqué).
     supabase
-      .from('supplier_products')
+      .from('supplier_products_owner_read')
       .select(SUPPLIER_PRODUCT_SELECT)
       .eq('supplier_id', user.id)
       .order('created_at', { ascending: false }),

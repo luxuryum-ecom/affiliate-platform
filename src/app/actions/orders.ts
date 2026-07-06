@@ -902,7 +902,14 @@ export async function submitWholesaleOrder(
     cartItems.map((i) => ({ factory_cost_mad: i.product.factory_cost_mad, quantity: i.quantity })),
   )
 
-  const { data: newOrder, error: orderErr } = (await supabase
+  // Fuite E1 (mig 116) : le SELECT base de wholesale_orders est réservé STAFF ;
+  // l'acheteur n'a plus de policy SELECT sur la table de base. Le `returning`
+  // (.select('id')) après INSERT en aurait besoin → on crée la commande via
+  // service_role (adminRead, déjà en place ci-dessus, serveur uniquement). PÉRIMÈTRE
+  // STRICT : buyer_id est explicitement l'utilisateur courant (accès déjà validé
+  // lignes ~816-819) ; aucun montant ni champ ne change, seule la SOURCE d'écriture
+  // passe de RLS-vérifiée à service_role — comme la lecture du panier plus haut.
+  const { data: newOrder, error: orderErr } = (await adminRead
     .from('wholesale_orders')
     .insert({
       buyer_id: user.id,
@@ -920,9 +927,10 @@ export async function submitWholesaleOrder(
   if (orderErr || !newOrder) return fail('Erreur lors de la création de la commande.')
 
   const items = lineItems.map((li) => ({ ...li, order_id: newOrder.id }))
-  const { error: itemsErr } = await supabase.from('wholesale_order_items').insert(items)
+  const { error: itemsErr } = await adminRead.from('wholesale_order_items').insert(items)
   if (itemsErr) {
-    await supabase.from('wholesale_orders').delete().eq('id', newOrder.id)
+    // Rollback via service_role (la commande a été créée via service_role).
+    await adminRead.from('wholesale_orders').delete().eq('id', newOrder.id)
     return fail('Erreur lors de l\'enregistrement des articles.')
   }
 
@@ -1510,9 +1518,11 @@ export async function addWholesaleOrderProof(
   const ALLOWED: string[] = ['bank_receipt', 'transfer_proof', 'other']
   if (!ALLOWED.includes(proofType)) return fail('Type de preuve invalide.')
 
-  // Verrou propriété — le grossiste ne peut attacher une preuve qu'à ses propres commandes
+  // Verrou propriété — le grossiste ne peut attacher une preuve qu'à ses propres commandes.
+  // Fuite E1 (mig 116) : lecture via la vue redacted acheteur (WHERE buyer_id = auth.uid()
+  // embarqué) — plus de SELECT base. Le .eq('buyer_id') reste, redondant mais explicite.
   const { data: order } = await supabase
-    .from('wholesale_orders')
+    .from('wholesale_orders_buyer_read')
     .select('id')
     .eq('id', orderId)
     .eq('buyer_id', user.id)
@@ -1569,8 +1579,9 @@ export async function cancelWholesaleOrderBuyer(
   const orderId = (formData.get('orderId') as string)?.trim()
   if (!orderId) return fail('Commande non spécifiée.')
 
+  // Fuite E1 (mig 116) : lecture via la vue redacted acheteur (plus de SELECT base).
   const { data: order } = await supabase
-    .from('wholesale_orders')
+    .from('wholesale_orders_buyer_read')
     .select('id, status')
     .eq('id', orderId)
     .eq('buyer_id', user.id)
@@ -1603,8 +1614,9 @@ export async function updateWholesaleOrderBuyerNote(
   const note = (formData.get('buyer_notes') as string)?.trim() || null
   if (!orderId) return fail('Commande non spécifiée.')
 
+  // Fuite E1 (mig 116) : lecture via la vue redacted acheteur (plus de SELECT base).
   const { data: order } = await supabase
-    .from('wholesale_orders')
+    .from('wholesale_orders_buyer_read')
     .select('id, status')
     .eq('id', orderId)
     .eq('buyer_id', user.id)

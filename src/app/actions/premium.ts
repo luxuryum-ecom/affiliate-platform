@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from './_guards'
 import { checkProductLimit } from '@/lib/product-limit'
@@ -227,7 +228,27 @@ export async function getProductLimitStatus(supplierId: string): Promise<{
   planName: string
 }> {
   const supabase = await createClient()
-  const l = await checkProductLimit(supabase, supplierId)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Isolation stricte : un fournisseur ne consulte QUE son propre quota. Depuis la
+  // mig 116 (fuite M1), le SELECT base de supplier_products n'est plus accessible au
+  // fournisseur → le comptage passe par service_role, BORNÉ au fournisseur courant
+  // (garde ci-dessous). Aucun montant : juste un count + le plan. Repli neutre sinon.
+  if (!user || user.id !== supplierId) {
+    return {
+      currentCount: 0,
+      maxAllowed: 5,
+      isUnlimited: false,
+      isAtLimit: false,
+      planSlug: 'free',
+      planName: 'Gratuit',
+    }
+  }
+
+  const admin = createAdminClient() as unknown as Awaited<ReturnType<typeof createClient>>
+  const l = await checkProductLimit(admin, supplierId)
   return {
     currentCount: l.currentCount,
     maxAllowed: l.maxAllowed,

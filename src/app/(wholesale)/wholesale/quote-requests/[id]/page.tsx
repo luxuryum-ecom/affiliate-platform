@@ -59,8 +59,9 @@ export default async function WholesaleQuoteRequestDetailPage({ params }: Params
   // Fetch linked wholesale order (only relevant when converted_to_order)
   let linkedOrder: Pick<WholesaleOrder, 'id'> | null = null
   if (req.status === 'converted_to_order') {
+    // Fuite E1 (mig 116) : lecture via la vue redacted acheteur (plus de SELECT base).
     const { data: orderRow } = await supabase
-      .from('wholesale_orders')
+      .from('wholesale_orders_buyer_read')
       .select('id')
       .eq('quote_request_id', id)
       .eq('buyer_id', user.id)
