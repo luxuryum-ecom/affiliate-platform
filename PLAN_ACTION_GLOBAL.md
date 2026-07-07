@@ -46,7 +46,7 @@ Bloc 1B — Merger l'existant prêt — ✅ **FAIT & EN PROD** (resync 2026-07-0
 
 Bloc 1C — Ouverture
 - ⬜ Onboarding fournisseurs réels TR/AE (Telegram, 1er test réel de l'ingestion). Délai humain.
-- ✅ Niche déclarée à l'inscription grossiste (couche 1 perso — contenu servi, PAS la grille 🔒). **FAIT 2026-07-07** — mig 117 (`profiles.declared_niche` + trigger handle_new_user), champ `<select>` de catégories localisées au signup grossiste (facultatif, i18n FR/AR/EN, validé `isValidCategory`), fallback COLD-START dans la marketplace (niche = comportement ?? déclaration ; grille intouchée). Test intégration LOCAL 4/4. Mergé `main` `--no-ff`. **⚠️ Migration 117 = LOCAL seulement → à appliquer en PROD (lockstep après push+deploy).**
+- ✅ Niche déclarée à l'inscription grossiste (couche 1 perso — contenu servi, PAS la grille 🔒). **FAIT 2026-07-07** — mig 117 (`profiles.declared_niche` + trigger handle_new_user), champ `<select>` de catégories localisées au signup grossiste (facultatif, i18n FR/AR/EN, validé `isValidCategory`), fallback COLD-START dans la marketplace (niche = comportement ?? déclaration ; grille intouchée). Test intégration LOCAL 4/4. Mergé `main` `--no-ff`. **✅ Migration 117 APPLIQUÉE EN PROD 2026-07-07** (pooler, transaction atomique, lockstep ; vérifié AVANT/APRÈS : colonne créée, trigger recopie declared_niche, allowlist rôle intacte, 0 profil modifié).
 - ⬜ 🚀 LANCEMENT GROS Maroc : commandes directes paliers + devis international. Paiements
   virement/COD manuels (volume faible OK).
 
