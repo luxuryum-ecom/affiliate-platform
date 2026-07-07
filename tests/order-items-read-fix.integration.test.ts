@@ -107,4 +107,23 @@ describe('Migration 120 — l’acheteur relit ses lignes (fix mig 116)', () => 
     const { data } = await c.from('wholesale_order_items').select('id').eq('order_id', order1)
     expect(data?.length).toBe(2)
   })
+
+  it('(5) order_proofs — l’acheteur voit son justif paiement, PAS la preuve fournisseur (coût), PAS ceux des autres', async () => {
+    // Seed via service_role : sur la commande de B1, un reçu bancaire (acheteur) +
+    // une preuve de réception fournisseur (coût, ne doit JAMAIS être visible acheteur).
+    await sb.from('order_proofs').insert([
+      { proof_type: 'bank_receipt', file_url: 'https://x/receipt.pdf', related_wholesale_order_id: order1, uploaded_by: b1.id },
+      { proof_type: 'stock_reception_proof', file_url: 'https://x/supplier-invoice.pdf', related_wholesale_order_id: order1, uploaded_by: admin.id },
+    ])
+    const c1 = await client(b1.email)
+    const { data: mine } = await c1.from('order_proofs').select('proof_type').eq('related_wholesale_order_id', order1)
+    const types = (mine ?? []).map((r) => (r as { proof_type: string }).proof_type)
+    expect(types).toContain('bank_receipt')             // son justif de paiement : visible
+    expect(types).not.toContain('stock_reception_proof') // preuve fournisseur (coût) : masquée (P2-b)
+
+    // Isolation : B2 ne voit AUCUN justificatif de la commande de B1.
+    const c2 = await client(b2.email)
+    const { data: other } = await c2.from('order_proofs').select('id').eq('related_wholesale_order_id', order1)
+    expect(other?.length ?? 0).toBe(0)
+  })
 })
