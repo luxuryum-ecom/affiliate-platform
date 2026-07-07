@@ -6,6 +6,7 @@ import { ProductThumbnail } from '@/components/shared/product-thumbnail'
 import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderTimeline, buildWholesaleTimeline } from '@/components/shared/order-timeline'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
+import { ReorderButton } from '@/components/wholesale/reorder-button'
 import type { WholesaleOrderBuyerView, WholesaleOrderItem, Product, Profile, WholesaleImportStatus } from '@/types/database'
 
 export async function generateMetadata() {
@@ -85,6 +86,15 @@ export default async function WholesaleOrdersPage({ searchParams }: PageProps) {
           </div>
         ) : (
           <>
+            {/* AM-1 — réassort 1-clic depuis la dernière commande */}
+            <div className="bg-surface rounded-xl border border-line p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{t('reorderTitle')}</p>
+                <p className="text-xs text-faint mt-0.5">{t('reorderSubtitle')}</p>
+              </div>
+              <ReorderButton />
+            </div>
+
             {active.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-foreground mb-3">

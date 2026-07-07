@@ -2,8 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { getSupplierProductCtaMode } from '@/lib/wholesale-cta'
 import { findCatalogLink } from '@/lib/wholesale-catalog-link'
+import { planReorder, type ReorderItem } from '@/lib/wholesale/reorder'
 import type { Product } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -255,6 +257,102 @@ export async function addMarketplaceToCart(
   revalidatePath('/wholesale/cart')
   revalidatePath('/wholesale/marketplace')
   return { error: null, success: true, ...(marketplaceWarning ? { warning: marketplaceWarning } : {}) }
+}
+
+// ─── AM-1 — Réassort 1-clic ─────────────────────────────────────────────────
+
+/**
+ * Recharge le panier avec les lignes de la DERNIÈRE commande gros de l'acheteur.
+ * Ne copie AUCUN prix (product_id + variant_id + quantité uniquement) : le panier
+ * recalcule le prix courant. N'ajoute que les produits encore commandables en
+ * direct (actifs, stock local) ; les autres sont ignorés et comptés. Sur succès,
+ * redirige vers le panier avec un bilan (?reordered=N&skipped=M).
+ */
+export async function reorderLastOrder(
+  _prevState: CartState,
+  _formData: FormData,
+): Promise<CartState> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'errors.unauthenticated', success: false }
+
+  // Dernière commande (vue redacted acheteur, own-rows only).
+  const { data: lastOrder } = (await supabase
+    .from('wholesale_orders_buyer_read')
+    .select('id')
+    .eq('buyer_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()) as { data: { id: string } | null }
+
+  if (!lastOrder) return { error: 'errors.no_previous_order', success: false }
+
+  // Lignes de la commande (RLS : l'acheteur lit ses propres lignes).
+  const { data: itemsData } = (await supabase
+    .from('wholesale_order_items')
+    .select('product_id, variant_id, quantity')
+    .eq('order_id', lastOrder.id)) as { data: ReorderItem[] | null }
+
+  const items = itemsData ?? []
+  if (items.length === 0) return { error: 'errors.no_previous_order', success: false }
+
+  // Produits encore commandables en direct (actifs + stock local) via la vue redacted.
+  const ids = [...new Set(items.map((i) => i.product_id))]
+  const { data: catalogRows } = (await supabase
+    .from('products_catalog_read')
+    .select('id')
+    .in('id', ids)
+    .eq('active', true)
+    .eq('availability_type', 'local_stock')) as { data: { id: string }[] | null }
+
+  const orderable = new Set((catalogRows ?? []).map((c) => c.id))
+  const plan = planReorder(items, orderable)
+
+  if (plan.toAdd.length === 0) return { error: 'errors.reorder_nothing_available', success: false }
+
+  // (Ré)insère chaque ligne au panier — même pattern SELECT+UPDATE/INSERT que addToCart
+  // (index expressif non upsertable par PostgREST). Variante disparue → null (Option A).
+  for (const it of plan.toAdd) {
+    let variantId = it.variant_id
+    if (variantId) {
+      const { data: vRow } = (await supabase
+        .from('product_variants_read')
+        .select('id')
+        .eq('id', variantId)
+        .eq('product_id', it.product_id)
+        .maybeSingle()) as { data: { id: string } | null }
+      if (!vRow) variantId = null
+    }
+
+    const existingQuery = supabase
+      .from('wholesale_cart_items')
+      .select('id')
+      .eq('buyer_id', user.id)
+      .eq('product_id', it.product_id)
+    const { data: existing } = (await (variantId
+      ? existingQuery.eq('variant_id', variantId)
+      : existingQuery.is('variant_id', null)
+    ).maybeSingle()) as { data: { id: string } | null }
+
+    if (existing) {
+      await supabase
+        .from('wholesale_cart_items')
+        .update({ quantity: it.quantity, variant_id: variantId })
+        .eq('id', existing.id)
+        .eq('buyer_id', user.id)
+    } else {
+      await supabase
+        .from('wholesale_cart_items')
+        .insert({ buyer_id: user.id, product_id: it.product_id, variant_id: variantId, quantity: it.quantity })
+    }
+  }
+
+  revalidatePath('/wholesale/cart')
+  const qs =
+    `?reordered=${plan.toAdd.length}` + (plan.skippedCount > 0 ? `&skipped=${plan.skippedCount}` : '')
+  redirect(`/wholesale/cart${qs}`)
 }
 
 // ─── Update quantity ──────────────────────────────────────────────────────────
