@@ -46,27 +46,30 @@ export async function requestAccountDeletion(
   const admin = createAdminClient()
   const nowIso = new Date().toISOString()
 
-  // 1. Anonymiser la PII du profil (borné à l'id de l'appelant).
-  const { error: profErr } = await admin
-    .from('profiles')
-    .update(anonymizedProfileFields(nowIso))
-    .eq('id', user.id)
-  if (profErr) return { error: 'errors.update_failed' }
-
-  // 2. Anonymiser l'email + BANNIR la connexion côté auth (bloque tout futur login).
-  //    (best-effort sur les détails, mais le ban est le blocage effectif.)
+  // 1. AUTH D'ABORD (finding @security P1-3) : anonymiser l'email + BANNIR la
+  //    connexion. Si ça échoue, on N'ANONYMISE PAS le profil → aucun état
+  //    partiel, l'opération est intégralement réessayable (rien n'a bougé).
   const { error: authErr } = await admin.auth.admin.updateUserById(user.id, {
     email: `deleted-${user.id}@deleted.invalid`,
     user_metadata: {},
     ban_duration: '876600h', // ~100 ans
   })
   if (authErr) {
-    // Le profil est déjà anonymisé ; on signale mais on ne « dé-anonymise » pas.
-    // Le statut 'deleted' bloque déjà la connexion applicative (voir signIn).
     console.error('account deletion: auth anonymize/ban failed', user.id, authErr.message)
+    return { error: 'errors.update_failed' }
   }
 
-  // 3. Clore la session courante puis rediriger.
-  await supabase.auth.signOut()
+  // 2. Anonymiser la PII du profil (borné à l'id de l'appelant). Si ça échoue, la
+  //    connexion est DÉJÀ bloquée (ban + email anonymisé) — on remonte l'erreur ;
+  //    un nouvel appel ré-anonymise le profil (idempotent, sans dommage).
+  const { error: profErr } = await admin
+    .from('profiles')
+    .update(anonymizedProfileFields(nowIso))
+    .eq('id', user.id)
+  if (profErr) return { error: 'errors.update_failed' }
+
+  // 3. Révoquer TOUTES les sessions (finding @security P1-2 : scope global — sinon
+  //    un JWT déjà émis sur un autre appareil resterait valide jusqu'à expiration).
+  await supabase.auth.signOut({ scope: 'global' })
   redirect('/login?deleted=1')
 }

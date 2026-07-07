@@ -50,6 +50,7 @@ describe('Migration 119 — anonymisation compte + intégrité commande', () => 
         registre_commerce: 'RC 99887',
         billing_address: '5 rue du Test, Rabat',
         city: 'Rabat',
+        bank_account: 'RIB 011 780 0001234567890 12',
         declared_niche: 'Alimentaire',
       })
       .eq('id', userId)
@@ -85,7 +86,7 @@ describe('Migration 119 — anonymisation compte + intégrité commande', () => 
 
     const { data: p } = await sb
       .from('profiles')
-      .select('full_name, phone, company_name, ice, registre_commerce, billing_address, city, declared_niche, status, anonymized_at')
+      .select('full_name, phone, company_name, ice, registre_commerce, billing_address, city, bank_account, declared_niche, status, anonymized_at')
       .eq('id', userId)
       .single()
 
@@ -97,6 +98,7 @@ describe('Migration 119 — anonymisation compte + intégrité commande', () => 
     expect(prof.registre_commerce).toBeNull()
     expect(prof.billing_address).toBeNull()
     expect(prof.city).toBeNull()
+    expect(prof.bank_account).toBeNull() // RIB — PII financière (P1-1 @security)
     expect(prof.declared_niche).toBeNull()
     expect(prof.status).toBe('deleted')
     expect(prof.anonymized_at).not.toBeNull()

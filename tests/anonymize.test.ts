@@ -15,6 +15,7 @@ describe('anonymizedProfileFields', () => {
     expect(f.registre_commerce).toBeNull()
     expect(f.billing_address).toBeNull()
     expect(f.city).toBeNull()
+    expect(f.bank_account).toBeNull() // RIB — PII financière (P1-1 @security)
     expect(f.declared_niche).toBeNull()
   })
 
@@ -27,6 +28,7 @@ describe('anonymizedProfileFields', () => {
     expect(Object.keys(f).sort()).toEqual(
       [
         'anonymized_at',
+        'bank_account',
         'billing_address',
         'city',
         'company_name',
