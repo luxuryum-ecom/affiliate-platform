@@ -6,7 +6,7 @@ export type UserRole = 'admin' | 'affiliate' | 'wholesaler' | 'agent' | 'supplie
 
 /** How the platform margin is applied to factory cost. */
 export type PlatformMarginType = 'percentage' | 'fixed'
-export type UserStatus = 'pending' | 'approved' | 'rejected'
+export type UserStatus = 'pending' | 'approved' | 'rejected' | 'deleted'
 
 /** Legacy source type — kept for backward compat. Use availability_type + origin_detail instead. */
 export type ProductSourceType = 'local_production' | 'imported'
@@ -226,6 +226,12 @@ export interface Profile {
    *  products.category). Fallback cold-start de la perso comportementale
    *  (detect-niche.ts). AFFICHAGE seul — jamais un prix/marge. Nullable. */
   declared_niche: string | null
+
+  // ── Account deletion / RGPD (migration 119) ───────────────────────────────
+  /** Horodatage de l'anonymisation RGPD. Non null = compte supprimé (PII vidée,
+   *  statut 'deleted', connexion bloquée). La ligne subsiste pour l'intégrité
+   *  comptable des commandes (buyer_id conservé). */
+  anonymized_at: string | null
 }
 
 export interface Product {

@@ -37,8 +37,19 @@
     "originLabel": "{country, select, Maroc {Morocco} Turquie {Turkey} Chine {China} Égypte {Egypt} Dubai {Dubai} Autre {Other} Mixte {Mixed} other {{country}}}",
     "trustLabel": "{id, select, verified_supplier {Verified supplier} local_stock {Morocco stock — fast delivery} international {International supplier} transport_included {Shipping & customs included} platform_payment {Payment via platform} identity_protected {Supplier identity protected} other {}}"
   },
+  "account": {
+    "delete": {
+      "title": "Delete my account",
+      "subtitle": "Your account will be anonymised and you'll no longer have access. Your past orders are kept anonymously for accounting. This action is irreversible.",
+      "confirmLabel": "I understand this action is permanent and my account will be anonymised.",
+      "button": "Permanently delete my account",
+      "deleting": "Deleting…"
+    }
+  },
   "errors": {
     "unauthenticated": "Session expired, please sign in again.",
+    "confirmation_required": "Please tick the confirmation box.",
+    "admin_cannot_self_delete": "An admin account cannot be deleted here.",
     "order_id_required": "Order not found.",
     "order_not_found": "Order not found.",
     "assignee_id_required": "Select a member to assign.",
