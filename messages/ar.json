@@ -1092,6 +1092,7 @@
       "metaTitle": "طلباتي — فضاء الجملة",
       "pageTitle": "طلباتي",
       "breadcrumb": "طلباتي",
+      "genericProduct": "منتج",
       "reorderTitle": "إعادة طلب آخر طلبية",
       "reorderSubtitle": "نعيد ملء سلتك بنفس المنتجات والكميات.",
       "reorderButton": "إعادة الطلب",
@@ -1125,6 +1126,7 @@
     },
     "orderDetail": {
       "metaTitle": "الطلب #{ref} — فضاء الجملة",
+      "genericProduct": "منتج",
       "submittedBanner": "تم إرسال طلب الجملة بنجاح. سيعالجه فريقنا في أقرب وقت.",
       "itemCount": "{count, plural, one {# عنصر} other {# عناصر}}",
       "orderedOn": "طلب بتاريخ {date}",
