@@ -113,19 +113,27 @@ export async function GET(_req: Request, { params }: RouteParams) {
     })
   }
 
-  const pdfBytes = await buildInvoicePdf({
-    orderId: order.id,
-    orderedAtIso: order.created_at,
-    totalAmountMad: order.total_amount,
-    buyer: {
-      fullName: profile?.full_name ?? null,
-      companyName: order.invoice_company_name ?? profile?.company_name ?? null,
-      ice: order.invoice_ice ?? profile?.ice ?? null,
-      registreCommerce: order.invoice_registre_commerce ?? profile?.registre_commerce ?? null,
-      billingAddress: order.invoice_billing_address ?? profile?.billing_address ?? null,
-    },
-    lines,
-  })
+  let pdfBytes: Uint8Array
+  try {
+    pdfBytes = await buildInvoicePdf({
+      orderId: order.id,
+      orderedAtIso: order.created_at,
+      totalAmountMad: order.total_amount,
+      buyer: {
+        fullName: profile?.full_name ?? null,
+        companyName: order.invoice_company_name ?? profile?.company_name ?? null,
+        ice: order.invoice_ice ?? profile?.ice ?? null,
+        registreCommerce: order.invoice_registre_commerce ?? profile?.registre_commerce ?? null,
+        billingAddress: order.invoice_billing_address ?? profile?.billing_address ?? null,
+      },
+      lines,
+    })
+  } catch (e) {
+    // Filet : une erreur de rendu PDF renvoie un 500 JSON propre, jamais une
+    // stacktrace brute. L'assainissement WinAnsi (pdf.ts) devrait déjà l'éviter.
+    console.error('invoice pdf render failed:', order.id, e instanceof Error ? e.message : e)
+    return NextResponse.json({ error: 'Génération de la facture impossible.' }, { status: 500 })
+  }
 
   const filename = `facture-${order.id.slice(0, 8).toUpperCase()}.pdf`
 

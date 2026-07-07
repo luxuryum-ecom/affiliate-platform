@@ -75,6 +75,32 @@ const MUTED = rgb(0.42, 0.42, 0.46)
 const LINE = rgb(0.85, 0.85, 0.87)
 const GOLD = rgb(0.72, 0.55, 0.13)
 
+/**
+ * Assainit une chaîne pour l'encodage WinAnsi (Latin-1) de Helvetica standard.
+ * SANS ça, `drawText` LÈVE sur tout code point hors WinAnsi → 500 (finding P1
+ * @security). Deux causes réelles au Maroc :
+ *  - `Intl.NumberFormat('fr-MA')` utilise le séparateur de milliers U+202F
+ *    (narrow no-break space) → TOUT montant ≥ 1000 MAD plantait ;
+ *  - raison sociale / adresse en arabe, apostrophe typographique, emoji.
+ * On normalise les espaces/ponctuations spéciales, puis on remplace tout
+ * caractère non représentable en Latin-1 par « ? » (jamais de throw). L'arabe
+ * réel nécessiterait une police Unicode embarquée (amélioration future).
+ */
+function winAnsi(s: string): string {
+  return s
+    // Espaces spéciaux (dont U+202F de fr-MA, cause du crash ≥ 1000) → espace normal.
+    .replace(/[     ⁠﻿]/g, ' ')
+    // Apostrophes / guillemets typographiques → ASCII.
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+    // Tirets longs → tiret ASCII ; points de suspension → «...».
+    .replace(/[–—―]/g, '-')
+    .replace(/…/g, '...')
+    // Tout ce qui reste hors WinAnsi imprimable (0x20-0x7E, 0xA0-0xFF) → « ? ».
+    // Préserve les accents français (é, à, ç… tous en 0xA0-0xFF).
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '?')
+}
+
 /** Coupe un texte à `maxChars` avec « … » — évite tout débordement de colonne. */
 function clip(s: string, maxChars: number): string {
   if (s.length <= maxChars) return s
@@ -95,7 +121,7 @@ function text(
   opts: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb> } = {},
 ) {
   const size = opts.size ?? 9
-  ctx.page.drawText(s, {
+  ctx.page.drawText(winAnsi(s), {
     x,
     y: ctx.y,
     size,
@@ -112,7 +138,9 @@ function textRight(
 ) {
   const size = opts.size ?? 9
   const font = opts.bold ? ctx.bold : ctx.font
-  const w = font.widthOfTextAtSize(s, size)
+  // Largeur mesurée sur la chaîne ASSAINIE (cohérence avec ce qui est réellement
+  // dessiné par text() → alignement à droite exact).
+  const w = font.widthOfTextAtSize(winAnsi(s), size)
   text(ctx, s, rightX - w, opts)
 }
 

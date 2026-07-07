@@ -75,6 +75,36 @@ describe('buildInvoicePdf', () => {
     expect(bytes.byteLength).toBeGreaterThan(500)
   })
 
+  it('P1 WinAnsi : montant B2B ≥ 1000 MAD + U+202F littéral ne plantent PAS', async () => {
+    // Régression du finding @security : Intl.NumberFormat('fr-MA') peut insérer
+    // U+202F (narrow no-break space) comme séparateur de milliers → hors WinAnsi
+    // → throw. On force AUSSI un U+202F littéral dans un champ texte (indépendant
+    // de l'ICU de l'environnement) pour prouver que l'assainisseur le neutralise.
+    const bytes = await buildInvoicePdf({
+      ...baseInput,
+      totalAmountMad: 128450.75,
+      buyer: { ...baseInput.buyer, companyName: 'Société Test SARL' },
+      lines: [
+        { label: 'Lot gros', detail: 'Palier · 1000 × 128,45 MAD', quantity: 1000, unitPriceMad: 128.45, totalMad: 128450.75 },
+      ],
+    })
+    expect(bytes.byteLength).toBeGreaterThan(500)
+  })
+
+  it('P1 WinAnsi : raison sociale/adresse en arabe + apostrophe typographique ne plantent PAS', async () => {
+    const bytes = await buildInvoicePdf({
+      ...baseInput,
+      buyer: {
+        fullName: 'محمد العلمي',
+        companyName: 'شركة الأغذية العامة ش.م.م',
+        ice: '001234567000089',
+        registreCommerce: 'RC 45231',
+        billingAddress: 'شارع الحرية 12، الدار البيضاء — bureau n°3 « l’angle »',
+      },
+    })
+    expect(bytes.byteLength).toBeGreaterThan(500)
+  })
+
   it('réconciliation P1 : lignes qui ne totalisent pas le TTC → PDF valide (ligne Ajustement)', async () => {
     // total facturé 1000, mais lignes = 900 (remise non détaillée) → +100 ajusté.
     const under = await buildInvoicePdf({
