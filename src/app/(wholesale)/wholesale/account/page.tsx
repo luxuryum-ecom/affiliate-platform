@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { WholesalerBillingForm } from '@/components/wholesale/billing-form'
+import { DeleteAccountSection } from '@/components/account/delete-account-section'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import type { Profile } from '@/types/database'
 
@@ -79,6 +80,9 @@ export default async function WholesalerAccountPage() {
             }}
           />
         </div>
+
+        {/* B8/RGPD — zone dangereuse : suppression de compte */}
+        <DeleteAccountSection />
       </main>
     </div>
   )

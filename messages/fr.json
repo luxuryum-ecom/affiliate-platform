@@ -37,10 +37,21 @@
     "originLabel": "{country, select, Maroc {Maroc} Turquie {Turquie} Chine {Chine} Égypte {Égypte} Dubai {Dubai} Autre {Autre} Mixte {Mixte} other {{country}}}",
     "trustLabel": "{id, select, verified_supplier {Fournisseur vérifié} local_stock {Stock Maroc — livraison rapide} international {Fournisseur international} transport_included {Transport & douane inclus} platform_payment {Paiement via plateforme} identity_protected {Identité fournisseur protégée} other {}}"
   },
+  "account": {
+    "delete": {
+      "title": "Supprimer mon compte",
+      "subtitle": "Votre compte sera anonymisé et vous n'y aurez plus accès. Vos commandes passées sont conservées de façon anonyme pour la comptabilité. Action irréversible.",
+      "confirmLabel": "Je comprends que cette action est définitive et que mon compte sera anonymisé.",
+      "button": "Supprimer définitivement mon compte",
+      "deleting": "Suppression…"
+    }
+  },
   "errors": {
     "unauthenticated": "Session expirée, reconnectez-vous.",
     "no_previous_order": "Vous n'avez pas encore de commande à recommander.",
     "reorder_nothing_available": "Aucun produit de votre dernière commande n'est disponible à la commande directe.",
+    "confirmation_required": "Veuillez cocher la case de confirmation.",
+    "admin_cannot_self_delete": "Un compte administrateur ne peut pas être supprimé ici.",
     "order_id_required": "Commande introuvable.",
     "order_not_found": "Commande introuvable.",
     "product_not_found": "Produit introuvable ou indisponible.",

@@ -161,6 +161,13 @@ export async function signIn(
     return { error: 'Votre compte a été rejeté. Contactez le support.' }
   }
 
+  // B8/RGPD — compte supprimé/anonymisé : connexion bloquée (double garde en plus
+  // du ban auth). Message neutre (cohérent avec le pattern raw de ce fichier).
+  if (profile.status === 'deleted') {
+    await supabase.auth.signOut()
+    return { error: 'Ce compte a été supprimé.' }
+  }
+
   if (profile.status === 'pending') {
     redirect('/pending')
   }
