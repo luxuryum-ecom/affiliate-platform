@@ -1698,7 +1698,11 @@
       "countryPlaceholder": "Sélectionnez votre pays",
       "countryHelp": "Votre pays détermine la devise de saisie de vos prix. Il ne pourra plus être modifié ensuite.",
       "phoneRequired": "Le numéro de téléphone est obligatoire.",
-      "phoneInvalid": "Numéro invalide. Format international attendu, ex. +212600000000."
+      "phoneInvalid": "Numéro invalide. Format international attendu, ex. +212600000000.",
+      "nicheLabel": "Votre secteur",
+      "nicheOptional": "(facultatif)",
+      "nichePlaceholder": "Choisir un secteur…",
+      "nicheHelp": "Nous personnalisons votre marketplace dès la première visite. Modifiable à tout moment."
     },
     "pending": {
       "metaTitle": "Compte en attente — Abdou Baba",
