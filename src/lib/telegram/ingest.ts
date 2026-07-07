@@ -6,6 +6,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { moderateSupplierProduct } from '@/lib/supplier-product-moderation'
 import { extractProductFromTelegram, extractProductReply } from './extract'
+import { photoIssueDecision } from './photo-quality'
 import { telegramDownloadPhoto, telegramSendMessage } from './client'
 import { buildSupplierWelcome } from './welcome'
 import {
@@ -34,6 +35,8 @@ import {
   msgReaskTiers,
   msgConfirmUnit,
   msgReaskUnit,
+  msgPhotoNotProduct,
+  msgPhotoBlurry,
 } from './messages'
 import {
   decideAwaiting,
@@ -313,6 +316,17 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
       imageMediaType: photo.mediaType,
     })
 
+    // C2 — contrôle qualité photo (verdict IA du MÊME appel d'extraction).
+    // NON-PRODUIT (selfie, capture, texte…) → on ne crée AUCUNE fiche, on guide le
+    // fournisseur vers une vraie photo. FLOU → on crée quand même (vrai produit) +
+    // flag admin + invitation à renvoyer une photo nette (géré plus bas).
+    const photoDecision = photoIssueDecision(clean.photo_issue)
+    if (photoDecision.block) {
+      await telegramSendMessage(chatId, msgPhotoNotProduct(lc))
+      await markInbound(admin, messageKey, { status: 'rejected', error: 'photo_not_product' })
+      return
+    }
+
     const productName =
       clean.product_name ||
       msg.caption?.trim().slice(0, 80) ||
@@ -410,13 +424,22 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
       supplier_unit_price_usd: null,
       moq_tier_count: moqTiers.length,
     })
+    // C2 — photo FLOUE : fusionne le signal 'blurry_photo' et force au minimum une
+    // revue admin (une fiche saine ne doit pas être auto-approuvée avec photo floue).
+    const mergedSignals = photoDecision.signal
+      ? [...new Set([...moderation.moderation_signals, photoDecision.signal])]
+      : moderation.moderation_signals
+    const mergedFlag =
+      photoDecision.signal && moderation.moderation_flag === 'approved'
+        ? 'review_required'
+        : moderation.moderation_flag
     await admin
       .from('supplier_products')
       .update({
-        moderation_flag: moderation.moderation_flag,
+        moderation_flag: mergedFlag,
         ai_risk_score: moderation.ai_risk_score,
         moderation_reason: moderation.moderation_reason,
-        moderation_signals: moderation.moderation_signals,
+        moderation_signals: mergedSignals,
       })
       .eq('id', productId)
 
@@ -441,6 +464,13 @@ async function ingestProductMessage(admin: Admin, msg: TelegramMessage): Promise
       supplier_product_id: productId,
       ai_extraction: clean,
     })
+
+    // C2 — photo FLOUE : la fiche est créée (vrai produit) ; on invite le
+    // fournisseur à renvoyer une photo nette AVANT de poursuivre le flux normal
+    // (prix/unité). Best-effort, n'interrompt jamais la conversation.
+    if (photoDecision.signal === 'blurry_photo') {
+      await telegramSendMessage(chatId, msgPhotoBlurry(lc, { name: productName }))
+    }
 
     // BRIQUE 3 — le produit est-il COMPLET, ou faut-il DEMANDER l'info manquante ?
     // Prix absent → on demande le prix ; prix présent sans palier → on propose les

@@ -298,6 +298,29 @@ export function msgReaskUnit(lc: string | null | undefined): string {
   })
 }
 
+// C2 — Photo NON-PRODUIT (selfie, capture, texte…) → on ne crée rien, on guide
+// vers une vraie photo de produit. 🔒 Wording à faire valider par Abdou.
+export function msgPhotoNotProduct(lc: string | null | undefined): string {
+  return t(lc, {
+    fr: "Hmm, cette photo ne montre pas un produit à vendre 🤔. Envoie une photo claire du produit (bien cadré, en lumière) avec son prix, et je crée ta fiche 📸.",
+    en: "Hmm, this photo doesn't show a product for sale 🤔. Send a clear photo of the product (well framed, good light) with its price, and I'll create your listing 📸.",
+    msa: "يبدو أن هذه الصورة لا تُظهر منتجاً للبيع 🤔. أرسل صورة واضحة للمنتج (بإطار جيد وإضاءة) مع سعره، وسأنشئ بطاقتك 📸.",
+    darija: "هاد الصورة ما كتبيّنش شي منتج للبيع 🤔. صيفط تصويرة واضحة ديال المنتج (مقادّة وفيها الضو) مع الثمن، وأنا نصايب ليك الفيش 📸.",
+  })
+}
+
+// C2 — Photo FLOUE : la fiche est créée quand même (vrai produit), mais on invite
+// à renvoyer une photo nette pour mieux vendre. 🔒 Wording à faire valider par Abdou.
+export function msgPhotoBlurry(lc: string | null | undefined, vars: { name: string }): string {
+  const { name } = vars
+  return t(lc, {
+    fr: `J'ai enregistré ${name}, mais la photo est un peu floue 📷. Si tu peux, renvoie une photo plus nette : elle vendra mieux ✨ (je garde celle-ci en attendant).`,
+    en: `I saved ${name}, but the photo is a bit blurry 📷. If you can, send a sharper one: it will sell better ✨ (I'll keep this one meanwhile).`,
+    msa: `سجّلت ${name}، لكن الصورة غير واضحة قليلاً 📷. إن أمكن، أرسل صورة أوضح: ستبيع أفضل ✨ (سأحتفظ بهذه في الأثناء).`,
+    darija: `سجّلت ${name}، ولكن التصويرة شوية مخبّطة 📷. إلا قدرتي، صيفط وحدة أوضح: غادي تبيع حسن ✨ (غانحتافظ بهاذي دابا).`,
+  })
+}
+
 // 14 — (conservé, compat) Produit reçu mais PRIX manquant → demander le prix unitaire.
 export function msgAskPrice(lc: string | null | undefined, vars: { name: string }): string {
   const { name } = vars

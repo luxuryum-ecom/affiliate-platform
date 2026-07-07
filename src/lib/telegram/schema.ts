@@ -5,6 +5,7 @@
 import { z } from 'zod'
 import { PRODUCT_CATEGORIES, getSubcategories } from '@/lib/taxonomy'
 import { sanitizeSaleUnitFreeText } from '@/lib/units'
+import { classifyPhotoIssue, type PhotoIssue } from './photo-quality'
 
 // ── 1. Payload webhook Telegram (sous-ensemble consommé) ─────────────────────
 
@@ -99,6 +100,9 @@ export const aiExtractionRawSchema = z.object({
     )
     .nullable()
     .optional(),
+  // C2 — verdict qualité de la PHOTO ('ok' | 'blurry' | 'not_product'). Optionnel/
+  // nullable (défensif) ; normalisé fail-open par classifyPhotoIssue (→ 'ok' si absent).
+  photo_issue: z.union([z.string(), z.null()]).optional(),
 })
 
 export type AiExtractionRaw = z.infer<typeof aiExtractionRawSchema>
@@ -413,6 +417,8 @@ export type CleanExtraction = {
    * via buildMirrorTiers, jamais ici). Suggestion pending_review — jamais publié.
    */
   moq_tiers: SanitizedMoqTier[]
+  /** C2 — verdict qualité de la photo, normalisé fail-open ('ok' si incertain). */
+  photo_issue: PhotoIssue
 }
 
 // Plafond anti-absurde du conditionnement (nb d'unités par lot).
@@ -443,6 +449,8 @@ export function buildCleanExtraction(
     // On ne force donc pas l'égalité ici ; base et paliers sont 2 suggestions
     // indépendantes, toutes deux en pending_review (l'admin réconcilie au Lot 4).
     moq_tiers: sanitizeMoqTiers(raw.moq_tiers),
+    // C2 — qualité photo normalisée fail-open (valeur inattendue/absente → 'ok').
+    photo_issue: classifyPhotoIssue(raw.photo_issue),
   }
 }
 

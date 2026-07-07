@@ -73,6 +73,7 @@ function fakeClean(p: Partial<CleanExtraction>): CleanExtraction {
     pack_unit: null,
     suggested_category: null,
     moq_tiers: [],
+    photo_issue: 'ok',
     ...p,
   } as CleanExtraction
 }
