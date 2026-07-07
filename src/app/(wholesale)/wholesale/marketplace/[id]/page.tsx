@@ -12,6 +12,8 @@ import { computeStockFreshness, stockAgeDays, stockNeedsConfirmation, stockNeeds
 import { formatMAD, formatQty } from '@/lib/utils'
 import { getMeaningfulDescription } from '@/lib/product-media'
 import { ProductThumbnail } from '@/components/shared/product-thumbnail'
+import { WatchButton } from '@/components/wholesale/watch-button'
+import { isWatching } from '@/app/actions/watch'
 import SampleRequestClient from './SampleRequestClient'
 import type {
   Profile,
@@ -107,6 +109,8 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
   // devis côté formulaire (réactif). Le miroir reste exigé/garanti côté SERVEUR
   // (addMarketplaceToCart + auto-provision à l'approbation) — défense en profondeur.
   const ctaMode = getSupplierProductCtaMode(product)
+  // V5 — le grossiste suit-il déjà ce produit ? (RLS own-only)
+  const watching = await isWatching(product.id)
   const directMinQty = product.min_quantity
   const directStock = product.stock_quantity
 
@@ -343,6 +347,13 @@ export default async function MarketplaceProductDetailPage({ params }: PageProps
             {!isMorocco && indicativeTiers.length >= 2 && (
               <IndicativeTiersEstimate tiers={indicativeTiers} unitLabel={product.unit?.trim() || undefined} />
             )}
+
+            {/* V5 — suivre le prix (watchlist) : alerte in-app à la baisse. */}
+            <div className="bg-surface rounded-xl border border-line p-4">
+              <p className="text-sm font-semibold text-foreground mb-1">{t('watchTitle')}</p>
+              <p className="text-xs text-muted mb-3">{t('watchSubtitle')}</p>
+              <WatchButton supplierProductId={product.id} initialWatching={watching} />
+            </div>
 
             {ctaMode === 'direct' ? (
               <>
