@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { SignupForm } from '@/components/auth/signup-form'
 import { MozounaLogo } from '@/components/shared/branding'
+import { getCategoryDisplayList } from '@/lib/categories/display'
 import { cn } from '@/lib/utils'
 
 interface SignupPageProps {
@@ -23,6 +24,18 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
       : params.type === 'supplier'
       ? 'supplier'
       : 'affiliate'
+
+  // Options de niche déclarée (grossiste uniquement) — catégories canoniques
+  // localisées (value == products.category, aligné sur la perso). Sérialisable
+  // (strings), passé au Client Component : conforme à la règle « pas de fonction ».
+  const nicheOptions =
+    role === 'wholesaler'
+      ? (await getCategoryDisplayList()).map((c) => ({
+          value: c.value,
+          label: c.label,
+          icon: c.icon,
+        }))
+      : []
 
   const ACCOUNT_TYPES = [
     {
@@ -100,7 +113,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             ))}
           </div>
 
-          <SignupForm defaultRole={role} />
+          <SignupForm defaultRole={role} nicheOptions={nicheOptions} />
         </div>
 
         <p className="mt-4 text-center text-xs text-faint">

@@ -220,6 +220,12 @@ export interface Profile {
   /** When true, user has access to wholesale features regardless of role.
    *  Allows a user to be both affiliate and wholesaler simultaneously. */
   wholesale_access: boolean
+
+  // ── Wholesaler declared niche (migration 117) ─────────────────────────────
+  /** Niche déclarée par le grossiste au signup (catégorie canonique ==
+   *  products.category). Fallback cold-start de la perso comportementale
+   *  (detect-niche.ts). AFFICHAGE seul — jamais un prix/marge. Nullable. */
+  declared_niche: string | null
 }
 
 export interface Product {

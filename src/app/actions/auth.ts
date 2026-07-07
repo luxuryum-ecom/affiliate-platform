@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { isSupplierCountryCode } from '@/lib/supplier-countries'
+import { isValidCategory } from '@/lib/taxonomy'
 import { notifyAdminNewSignup } from '@/lib/notifications/new-signup'
 import type { Profile } from '@/types/database'
 
@@ -36,6 +37,10 @@ export async function signUp(
   // Normalisation téléphone : on retire espaces, tirets, points et parenthèses
   // saisis par l'utilisateur, on conserve le « + » et les chiffres (E.164).
   const phone = ((formData.get('phone') as string) ?? '').replace(/[\s\-().]/g, '')
+  // Niche déclarée (grossiste, optionnelle) : catégorie canonique validée par
+  // l'allowlist taxonomie. Toute valeur hors taxonomie → ignorée (null). Sert de
+  // fallback cold-start à la perso comportementale. AFFICHAGE seul, aucun prix.
+  const declared_niche_raw = (formData.get('declared_niche') as string)?.trim() || ''
 
   if (!email || !password || !full_name) {
     return { error: 'Tous les champs sont requis.' }
@@ -64,6 +69,11 @@ export async function signUp(
     if (!E164_RE.test(phone)) return { error: ts('phoneInvalid') }
   }
 
+  // Niche déclarée retenue UNIQUEMENT pour un grossiste ET si c'est une catégorie
+  // valide (allowlist taxonomie). Sinon ignorée silencieusement (champ facultatif).
+  const declared_niche =
+    role === 'wholesaler' && isValidCategory(declared_niche_raw) ? declared_niche_raw : ''
+
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signUp({
@@ -75,6 +85,7 @@ export async function signUp(
         role,
         ...(role === 'supplier' ? { country_code } : {}),
         ...(phoneRequired ? { phone } : {}),
+        ...(declared_niche ? { declared_niche } : {}),
       },
     },
   })

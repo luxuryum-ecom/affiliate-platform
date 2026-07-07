@@ -46,7 +46,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   const [t, locale, profileResult, productsResult, internalResult, cats, nicheResult] = await Promise.all([
     getTranslations('wholesale.marketplace'),
     getLocale(),
-    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, declared_niche').eq('id', user.id).single(),
     supabase
       .from('supplier_products_wholesaler_read')
       .select(
@@ -66,7 +66,7 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
 
   const tCommon = await getTranslations('wholesale.common')
 
-  const profile = profileResult.data as Pick<Profile, 'full_name'> | null
+  const profile = profileResult.data as Pick<Profile, 'full_name' | 'declared_niche'> | null
 
   // Build icon map from dynamic category list (fallback to static CATEGORY_ICONS if absent)
   const catIconMap = new Map<string, string>(
@@ -76,7 +76,14 @@ export default async function WholesaleMarketplacePage({ searchParams }: PagePro
   // ── PERSONNALISATION — niche détectée (catégorie dominante du comportement) ──
   // Sert UNIQUEMENT à : (a) le boost de tri (ré-ordonnancement affichage), (b) la
   // bannière de tête. Aucune donnée produit/prix modifiée. Cold-start → null.
-  const niche = nicheResult.topNiche
+  // Comportement d'abord ; à défaut (cold-start), la niche DÉCLARÉE au signup
+  // (mig 117) prend le relais si elle est une catégorie connue. Le comportement
+  // réel écrase toujours la déclaration dès qu'un signal existe.
+  const declaredNiche =
+    profile?.declared_niche && cats.some((c) => c.value === profile.declared_niche)
+      ? profile.declared_niche
+      : null
+  const niche = nicheResult.topNiche ?? declaredNiche
   const nicheLabel = niche ? (cats.find((c) => c.value === niche)?.label ?? niche) : null
   const nicheIcon = niche ? (catIconMap.get(niche) ?? CATEGORY_ICONS[niche] ?? '🎯') : null
 

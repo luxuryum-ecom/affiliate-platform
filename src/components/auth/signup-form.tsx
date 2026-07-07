@@ -8,11 +8,19 @@ import { SUPPLIER_COUNTRIES } from '@/lib/supplier-countries'
 
 const initialState: AuthState = { error: null }
 
-interface SignupFormProps {
-  defaultRole: 'affiliate' | 'wholesaler' | 'supplier'
+interface NicheOption {
+  value: string
+  label: string
+  icon: string
 }
 
-export function SignupForm({ defaultRole }: SignupFormProps) {
+interface SignupFormProps {
+  defaultRole: 'affiliate' | 'wholesaler' | 'supplier'
+  /** Options de niche déclarée (grossiste). Vide pour les autres rôles. */
+  nicheOptions?: NicheOption[]
+}
+
+export function SignupForm({ defaultRole, nicheOptions = [] }: SignupFormProps) {
   const [state, action, isPending] = useActionState(signUp, initialState)
   const t = useTranslations('auth')
   const ts = useTranslations('auth.signup')
@@ -92,6 +100,29 @@ export function SignupForm({ defaultRole }: SignupFormProps) {
             placeholder={ts('phonePlaceholder')}
           />
           <p className="mt-1 text-xs text-muted">{ts('phoneHelp')}</p>
+        </div>
+      )}
+
+      {defaultRole === 'wholesaler' && nicheOptions.length > 0 && (
+        <div>
+          <label htmlFor="declared_niche" className="block text-sm font-medium text-muted mb-1">
+            {ts('nicheLabel')} <span className="text-faint">{ts('nicheOptional')}</span>
+          </label>
+          <select
+            id="declared_niche"
+            name="declared_niche"
+            defaultValue=""
+            disabled={isPending}
+            className="w-full px-3 py-2.5 border border-line rounded-lg text-sm bg-surface text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 disabled:bg-surface-2 disabled:text-faint"
+          >
+            <option value="">{ts('nichePlaceholder')}</option>
+            {nicheOptions.map((n) => (
+              <option key={n.value} value={n.value}>
+                {n.icon} {n.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted">{ts('nicheHelp')}</p>
         </div>
       )}
 

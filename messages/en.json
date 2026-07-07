@@ -1699,7 +1699,11 @@
       "countryPlaceholder": "Select your country",
       "countryHelp": "Your country determines the currency you enter your prices in. It cannot be changed afterwards.",
       "phoneRequired": "Phone number is required.",
-      "phoneInvalid": "Invalid number. International format expected, e.g. +212600000000."
+      "phoneInvalid": "Invalid number. International format expected, e.g. +212600000000.",
+      "nicheLabel": "Your sector",
+      "nicheOptional": "(optional)",
+      "nichePlaceholder": "Choose a sector…",
+      "nicheHelp": "We personalise your marketplace from the very first visit. Changeable anytime."
     },
     "pending": {
       "metaTitle": "Account pending — Abdou Baba",
