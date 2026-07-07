@@ -34,7 +34,15 @@ interface NotifRow {
   event: string
   order_id: string | null
   cod_order_id: string | null
-  payload: { ref?: string; city?: string | null } | null
+  payload: {
+    ref?: string
+    city?: string | null
+    // V5 — price_drop
+    supplier_product_id?: string
+    product_name?: string
+    old_price?: number
+    new_price?: number
+  } | null
   read_at: string | null
   created_at: string
 }
@@ -82,6 +90,7 @@ export async function getNotifications(
   const tCodCreated = await getTranslations('notifications.cod_order_created')
   const tCodConfirmed = await getTranslations('notifications.cod_order_confirmed')
   const tTgLinked = await getTranslations('notifications.supplier_telegram_linked')
+  const tPriceDrop = await getTranslations('notifications.price_drop')
   const numLocale =
     locale.split('-')[0] === 'ar'
       ? 'ar-MA-u-nu-latn' // numéraux latins en arabe (règle CLAUDE)
@@ -94,6 +103,9 @@ export async function getNotifications(
     hour: '2-digit',
     minute: '2-digit',
   })
+  // Formateur MAD (numéraux latins) pour le corps de l'alerte de prix.
+  const madFmt = (n: number) =>
+    `${new Intl.NumberFormat(numLocale, { maximumFractionDigits: 2 }).format(n)} MAD`
 
   const items: NotificationView[] = (rows ?? []).map((r) => {
     const p = r.payload ?? {}
@@ -119,6 +131,15 @@ export async function getNotifications(
       title = tTgLinked('title')
       body = tTgLinked('body')
       if (role === 'supplier') href = '/supplier/dashboard'
+    } else if (r.event === 'price_drop') {
+      title = tPriceDrop('title')
+      body = tPriceDrop('body', {
+        name: p.product_name ?? '—',
+        oldPrice: p.old_price != null ? madFmt(p.old_price) : '—',
+        newPrice: p.new_price != null ? madFmt(p.new_price) : '—',
+      })
+      // Lien vers la fiche produit suivie (grossiste).
+      if (p.supplier_product_id) href = `/wholesale/marketplace/${p.supplier_product_id}`
     }
 
     return {

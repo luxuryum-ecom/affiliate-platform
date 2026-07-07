@@ -41,6 +41,7 @@
     "unauthenticated": "انتهت الجلسة، يرجى تسجيل الدخول من جديد.",
     "order_id_required": "الطلب غير موجود.",
     "order_not_found": "الطلب غير موجود.",
+    "product_not_found": "المنتج غير موجود أو غير متوفر.",
     "assignee_id_required": "اختر عضوًا لإسناد الطلب إليه.",
     "assignee_not_found": "هذا العضو غير موجود.",
     "forbidden_assign_orders": "ليست لديك صلاحية إسناد الطلبات.",
@@ -1332,6 +1333,11 @@
       "countryDubaiTagline": "مركز لوجستي متعدد المنشأ",
       "countryDubaiNote": "طلب مجمّع · إعادة تصدير"
     },
+    "watch": {
+      "follow": "تتبّع السعر",
+      "following": "السعر متابَع",
+      "followingHint": "سننبّهك بمجرد انخفاض السعر."
+    },
     "marketplaceDetail": {
       "metaTitle": "{name} — سوق الجملة",
       "metaFallback": "منتج",
@@ -1369,6 +1375,8 @@
       "indicativeTiersBanner": "تقدير إرشادي — بدون النقل والجمارك. السعر النهائي يُحدَّد في عرض السعر.",
       "indicativeColQty": "الكمية",
       "indicativeColUnitPrice": "السعر التقديري للوحدة",
+      "watchTitle": "تنبيه السعر",
+      "watchSubtitle": "تابِع هذا المنتج وسنُعلمك بأي انخفاض في السعر.",
       "directOrderTitle": "طلب بالجملة",
       "directOrderSubtitle": "السعر والمخزون والحد الأدنى معروفة — أضف إلى السلة ثم أكّد طلبك.",
       "sampleTitle": "طلب عيّنة / مستند",
@@ -3805,6 +3813,10 @@
     "supplier_telegram_linked": {
       "title": "تم ربط تيليغرام بحسابك",
       "body": "تم ربط حساب تيليغرام الخاص بك بمساحة المورّد. إذا لم تكن أنت، تواصل مع الدعم."
+    },
+    "price_drop": {
+      "title": "انخفاض السعر على منتج تتابعه",
+      "body": "انخفض سعر {name} من {oldPrice} إلى {newPrice}."
     }
   },
   "categories": {

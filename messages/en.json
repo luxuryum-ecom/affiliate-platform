@@ -41,6 +41,7 @@
     "unauthenticated": "Session expired, please sign in again.",
     "order_id_required": "Order not found.",
     "order_not_found": "Order not found.",
+    "product_not_found": "Product not found or unavailable.",
     "assignee_id_required": "Select a member to assign.",
     "assignee_not_found": "This member was not found.",
     "forbidden_assign_orders": "You don't have permission to assign orders.",
@@ -1332,6 +1333,11 @@
       "countryDubaiTagline": "Multi-origin logistics hub",
       "countryDubaiNote": "Consolidated order · Re-export"
     },
+    "watch": {
+      "follow": "Watch price",
+      "following": "Watching price",
+      "followingHint": "We'll alert you as soon as the price drops."
+    },
     "marketplaceDetail": {
       "metaTitle": "{name} — Wholesale Marketplace",
       "metaFallback": "Product",
@@ -1369,6 +1375,8 @@
       "indicativeTiersBanner": "Indicative estimate — excludes shipping and customs. The firm price is provided in the quote.",
       "indicativeColQty": "Quantity",
       "indicativeColUnitPrice": "Estimated unit price",
+      "watchTitle": "Price alert",
+      "watchSubtitle": "Follow this product and get notified on any price drop.",
       "directOrderTitle": "Bulk order",
       "directOrderSubtitle": "Listed price, stock and MOQ known — add to cart then confirm your order.",
       "sampleTitle": "Request a sample / document",
@@ -3805,6 +3813,10 @@
     "supplier_telegram_linked": {
       "title": "Telegram linked to your account",
       "body": "Your Telegram account has just been linked to your supplier area. If this wasn't you, contact support."
+    },
+    "price_drop": {
+      "title": "Price drop on a product you follow",
+      "body": "The price of {name} dropped: {oldPrice} → {newPrice}."
     }
   },
   "categories": {

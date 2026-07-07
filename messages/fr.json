@@ -41,6 +41,7 @@
     "unauthenticated": "Session expirée, reconnectez-vous.",
     "order_id_required": "Commande introuvable.",
     "order_not_found": "Commande introuvable.",
+    "product_not_found": "Produit introuvable ou indisponible.",
     "assignee_id_required": "Sélectionnez un membre à assigner.",
     "assignee_not_found": "Ce membre est introuvable.",
     "forbidden_assign_orders": "Vous n'avez pas la permission d'assigner des commandes.",
@@ -1332,6 +1333,11 @@
       "countryDubaiTagline": "Hub logistique multi-origines",
       "countryDubaiNote": "Commande groupée · Réexportation"
     },
+    "watch": {
+      "follow": "Suivre le prix",
+      "following": "Prix suivi",
+      "followingHint": "Nous vous préviendrons dès que le prix baisse."
+    },
     "marketplaceDetail": {
       "metaTitle": "{name} — Marketplace Grossiste",
       "metaFallback": "Produit",
@@ -1369,6 +1375,8 @@
       "indicativeTiersBanner": "Estimation indicative — hors transport et douane. Le prix ferme est communiqué au devis.",
       "indicativeColQty": "Quantité",
       "indicativeColUnitPrice": "Prix unitaire estimé",
+      "watchTitle": "Alerte prix",
+      "watchSubtitle": "Suivez ce produit et soyez prévenu à la moindre baisse.",
       "directOrderTitle": "Commander en gros",
       "directOrderSubtitle": "Prix affiché, stock et MOQ connus — ajout au panier puis validation de commande.",
       "sampleTitle": "Demander un échantillon / document",
@@ -3805,6 +3813,10 @@
     "supplier_telegram_linked": {
       "title": "Telegram lié à votre compte",
       "body": "Votre compte Telegram vient d'être lié à votre espace fournisseur. Si ce n'est pas vous, contactez le support."
+    },
+    "price_drop": {
+      "title": "Baisse de prix sur un produit suivi",
+      "body": "Le prix de {name} a baissé : {oldPrice} → {newPrice}."
     }
   },
   "categories": {
