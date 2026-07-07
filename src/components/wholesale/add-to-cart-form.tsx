@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { addToCart, type CartState } from '@/app/actions/cart'
 import { getWholesaleTier, formatMAD } from '@/lib/utils'
 import { priceWithUnit } from '@/lib/units'
+import { computeTierNudge, shouldShowNudge } from '@/lib/wholesale/tier-nudge'
 import type { WholesaleTier } from '@/types/database'
 
 interface AddToCartFormProps {
@@ -59,12 +60,10 @@ export function AddToCartForm({
   // qty > stock (y compris stock 0) → on bascule en devis « sur-commande », pas de panier.
   const isOverOrder = qty > stockCount
 
-  const nextTier = tiers
-    .filter((tier) => tier.min_qty > qty)
-    .sort((a, b) => a.min_qty - b.min_qty)[0] ?? null
-  const nextTierReachable = nextTier != null && nextTier.min_qty <= stockCount
-  const unitsToNextTier = nextTier ? nextTier.min_qty - qty : 0
-  const savingsPerUnit = nextTier ? unitPrice - nextTier.price_per_unit : 0
+  // Nudge de palier (AM-2) — logique pure extraite dans tier-nudge.ts (testée).
+  const nudge = computeTierNudge(tiers, qty, unitPrice, stockCount)
+  const { unitsToNextTier, savingsPerUnit } = nudge
+  const showNudge = shouldShowNudge(nudge)
 
   return (
     <div className="space-y-5">
@@ -169,7 +168,7 @@ export function AddToCartForm({
           <input type="hidden" name="quantity" value={qty} />
 
           {/* Next-tier nudge */}
-          {nextTierReachable && savingsPerUnit > 0 && (
+          {showNudge && (
             <p className="text-xs text-muted bg-surface-2 border border-line rounded-lg px-3 py-2">
               {t('addToCartNudge', {
                 units: unitsToNextTier,
