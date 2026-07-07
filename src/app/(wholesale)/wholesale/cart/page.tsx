@@ -13,7 +13,16 @@ export async function generateMetadata() {
   return { title: t('metaTitle') }
 }
 
-export default async function WholesaleCartPage() {
+interface CartPageProps {
+  searchParams: Promise<{ reordered?: string; skipped?: string }>
+}
+
+export default async function WholesaleCartPage({ searchParams }: CartPageProps) {
+  const { reordered, skipped } = await searchParams
+  // AM-1 — bilan du réassort (borné, entiers non négatifs).
+  const reorderedCount = Math.max(0, Math.floor(Number(reordered)) || 0)
+  const skippedCount = Math.max(0, Math.floor(Number(skipped)) || 0)
+
   const supabase = await createClient()
 
   const {
@@ -98,6 +107,17 @@ export default async function WholesaleCartPage() {
             </span>
           )}
         </h1>
+
+        {reorderedCount > 0 && (
+          <div className="mb-6 bg-success-soft border border-success rounded-xl px-4 py-3 text-sm text-success-fg">
+            {t('reorderedBanner', { count: reorderedCount })}
+            {skippedCount > 0 && (
+              <span className="block text-xs text-muted mt-1">
+                {t('reorderedSkipped', { count: skippedCount })}
+              </span>
+            )}
+          </div>
+        )}
 
         {items.length === 0 ? (
           /* Empty cart */
