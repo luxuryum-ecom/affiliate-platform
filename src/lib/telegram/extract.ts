@@ -66,6 +66,7 @@ Règles STRICTES :
 - "suggested_category" : NOUVELLE catégorie proposée, UNIQUEMENT si AUCUNE catégorie de la liste ci-dessous ne convient vraiment au produit.
   Dans ce cas : mets "category"="Autres" ET propose dans "suggested_category" un nom de catégorie COURT, générique et réutilisable (1 à 3 mots, ex. "Électroménager", "Quincaillerie", "Animalerie"), pas un nom de produit.
   Si une catégorie de la liste convient → "suggested_category"=null (NE propose RIEN). Ne propose jamais un nom déjà présent dans la liste. En cas de doute → null.
+- "photo_issue" : QUALITÉ de la photo. "blurry" si l'image est FLOUE / trop sombre / illisible au point qu'on ne distingue pas le produit ; "not_product" si l'image N'EST PAS un produit à vendre (selfie/personne, capture d'écran, texte seul, paysage, logo, animal sans lien commercial) ; sinon "ok". EN CAS DE DOUTE → "ok" (ne bloque JAMAIS un vrai produit par excès de zèle). Continue TOUJOURS de remplir les autres champs au mieux, même si photo_issue ≠ "ok".
 
 Catégories et sous-catégories autorisées :
 ${taxonomyBlock}`
@@ -112,6 +113,12 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
         description:
           'NOUVELLE catégorie proposée (1-3 mots, générique) UNIQUEMENT si aucune catégorie de la liste ne convient (alors category="Autres"). Sinon null.',
       },
+      photo_issue: {
+        type: 'string',
+        enum: ['ok', 'blurry', 'not_product'],
+        description:
+          "Verdict de QUALITÉ de la PHOTO : 'blurry' si l'image est FLOUE/illisible (on ne distingue pas le produit) ; 'not_product' si l'image N'EST PAS un produit (selfie, capture d'écran, texte seul, paysage, personne, animal domestique sans lien commercial…) ; sinon 'ok'. En cas de doute → 'ok'.",
+      },
       moq_tiers: {
         type: 'array',
         description:
@@ -146,6 +153,7 @@ const RECORD_PRODUCT_TOOL: Anthropic.Tool = {
       'pack_unit',
       'suggested_category',
       'moq_tiers',
+      'photo_issue',
     ],
   } as Anthropic.Tool['input_schema'],
 }
