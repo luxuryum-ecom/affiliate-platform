@@ -1139,6 +1139,7 @@
       "deliveryNote": "Note",
       "itemTotal": "Total",
       "invoiceSent": "Invoice request submitted",
+      "invoiceDownloadPdf": "Download invoice (PDF)",
       "invoiceSentOn": "On {date}",
       "invoiceAvailableAfter": "Available after delivery and full payment.",
       "invoiceCompanyName": "Company name",
