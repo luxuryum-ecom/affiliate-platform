@@ -46,11 +46,11 @@ Bloc 1B — Merger l'existant prêt — ✅ **FAIT & EN PROD** (resync 2026-07-0
 
 Bloc 1C — Ouverture
 - ⬜ Onboarding fournisseurs réels TR/AE (Telegram, 1er test réel de l'ingestion). Délai humain.
-- 🟡 Niche déclarée à l'inscription grossiste (couche 1 perso — contenu servi, PAS la grille 🔒). **PARTIEL** (audit 2026-07-06) — EXISTE : personnalisation par niche DÉDUITE du comportement (`src/lib/wholesale/detect-niche.ts` : boost tri + bannière). RESTE : le champ DÉCLARATIF au signup grossiste (aucun champ niche à l'inscription).
+- ✅ Niche déclarée à l'inscription grossiste (couche 1 perso — contenu servi, PAS la grille 🔒). **FAIT 2026-07-07** — mig 117 (`profiles.declared_niche` + trigger handle_new_user), champ `<select>` de catégories localisées au signup grossiste (facultatif, i18n FR/AR/EN, validé `isValidCategory`), fallback COLD-START dans la marketplace (niche = comportement ?? déclaration ; grille intouchée). Test intégration LOCAL 4/4. Mergé `main` `--no-ff`. **⚠️ Migration 117 = LOCAL seulement → à appliquer en PROD (lockstep après push+deploy).**
 - ⬜ 🚀 LANCEMENT GROS Maroc : commandes directes paliers + devis international. Paiements
   virement/COD manuels (volume faible OK).
 
-Quick win glissé dans le palier : ✅ **AM-2 NUDGE DE PALIER — DÉJÀ FAIT** (audit 2026-07-06 ; `src/components/wholesale/add-to-cart-form.tsx:171` + clé i18n `addToCartNudge` fr/en/ar). « ajoute X → économise Z DH ». *(Non couvert par un test unitaire dédié — candidat à blinder.)*
+Quick win glissé dans le palier : ✅ **AM-2 NUDGE DE PALIER — FAIT + BLINDÉ** (`src/components/wholesale/add-to-cart-form.tsx:171` + clé i18n `addToCartNudge` fr/en/ar). « ajoute X → économise Z DH ». **✅ 2026-07-07 : logique extraite en helper pur `src/lib/wholesale/tier-nudge.ts` (comportement identique) + 11 tests unitaires** (unitsToNextTier/savingsPerUnit/nextTierReachable). Mergé `main` `--no-ff`.
 Petit, gros effet panier moyen. Vérif @finance légère (affichage d'un calcul existant).
 
 ## 🔨 PALIER 2 — RÉTENTION GROS + SOCLE ARGENT (S+2 à S+5, pendant que le gros tourne)
@@ -63,7 +63,7 @@ Bloc 2A — Rétention & canal WhatsApp (affichage/notifs, risque faible)
 - ⬜ AM-3 RELANCE PANIER ABANDONNÉ WhatsApp (2h).
 - ⬜ AM-4 WIN-BACK 30 jours (promo sur SA niche — s'appuie sur la table d'événements).
 - ⬜ V5 ALERTE PRIX / LISTE DE SUIVI (prix baisse / promo / retour stock → WhatsApp).
-- 🟡 V3 FACTURE PDF AUTO conforme Maroc (ICE/RC déjà en profil grossiste). **PARTIEL** (audit 2026-07-06) — EXISTE : capture de la *demande* de facture + champs ICE/RC/société/adresse (`src/app/actions/invoice.ts`, mig 018). RESTE : la génération PDF (aucune dep pdf, aucun rendu/stockage de document).
+- ✅ V3 FACTURE PDF conforme Maroc (ICE/RC déjà en profil grossiste). **FAIT 2026-07-07** — `src/lib/invoice/` (compute/config/pdf via **pdf-lib**) + route GET `/wholesale/orders/[id]/invoice` + bouton i18n. Invariant TTC facturé=`total_amount` (centimes entiers, 0 float). **@finance 🟢** (invariant testé) + **@security 🟢** (0 IDOR/fuite/service_role ; P1 WinAnsi U+202F/arabe corrigé). 16 tests. Mergé `main` `--no-ff`. **⚠️ Reste ops : renseigner env vendeur `INVOICE_SELLER_ICE/RC/IF` + `INVOICE_VAT_RATE` (défaut 20) dans Vercel avant vraies factures** (le code omet proprement les champs non renseignés).
 - ⬜ AM-10 PWA installable (icône écran d'accueil).
 
 Bloc 2B — Le cœur argent (séquentiel, ⚠️ chaque lot @finance + @security)
@@ -100,7 +100,7 @@ Bloc 2B — Le cœur argent (séquentiel, ⚠️ chaque lot @finance + @security
 
 En continu pendant le palier (petits lots indépendants) :
 - ✅ C1a Unité de vente LIBRE par produit (champ libre réel + détection IA + confirmation fournisseur bot + affichage « prix / unité » 4 langues). Mergé `main` `75544f4`, migration 114 à appliquer en prod. ⬜ C1b (multi-unités carton+pièce) reporté.
-- 🟡 C2 BRIQUE 2 — contrôle qualité photo IA à la réception (textes validés Abdou 🔒). **PARTIEL** (audit 2026-07-06) — EXISTE : modération produit à l'ingestion (`moderateSupplierProduct`, mig 044, `ai_risk_score`) mais basée MOTS-CLÉS TEXTE + photo seulement vérifiée en présence. RESTE : la détection IA (flou / non-produit / interdit) sur l'image + prévenance auto du fournisseur.
+- 🟡 C2 BRIQUE 2 — contrôle qualité photo IA à la réception (textes validés Abdou 🔒). **CODÉ 2026-07-07, EN ATTENTE VALIDATION WORDING** (branche `feat/c2-photo-quality-ai`, PAS mergé) — `photo_issue` ajouté à l'extraction Haiku (même appel, 0 coût) + `photo-quality.ts` (fail-open) + câblage `ingest.ts` : NON-PRODUIT → aucune fiche + guide ; FLOU → fiche créée + signal `blurry_photo` + revue admin + invitation photo nette. Messages bot 4 langues 🔒 **à valider par Abdou (capture RTL demandée)** avant merge. 9 tests. Pas de migration.
 - ✅ C3 Échantillons payants (mini-commande qty 1). **DÉJÀ FAIT** (audit 2026-07-06) — flux complet : `wholesale/sample-requests` + `wholesale/samples`, côté fournisseur `supplier/samples`, table `sample_requests`.
 - 🟡 C4 RFQ asynchrone via bot Telegram existant (chat intégré = plus tard, bouton WhatsApp en attendant). **PARTIEL** (audit 2026-07-06) — EXISTE : RFQ complet côté WEB (migs 023/034/037/043, `rfq-engine.ts`, pages wholesale + admin quote-requests). RESTE : le canal via BOT TELEGRAM (le webhook ne fait qu'ingestion produit).
 - ⬜ PB-8 VRAI BAN FOURNISSEUR (masquage auto des produits d'un banni).
