@@ -29,7 +29,7 @@ interface Params {
 }
 
 type OrderItemWithProduct = WholesaleOrderItem & {
-  product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sale_unit'>
+  product: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sale_unit'> | null
 }
 
 type BillingProfile = Pick<
@@ -99,8 +99,10 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
       .eq('buyer_id', user!.id)
       .single(),
     supabase
+      // `products` base = staff-only (mig 091) → pas d'embed produit ici (renverrait
+      // null). L'affichage produit est résolu via la vue redacted plus bas.
       .from('wholesale_order_items')
-      .select('*, product:products(id,name,images,media,sale_unit)')
+      .select('id, order_id, product_id, quantity, unit_price_snapshot, subtotal, tier_label_snapshot')
       .eq('order_id', id),
     supabase
       .from('wholesale_order_import_history')
@@ -121,7 +123,23 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
 
   const profile = profileRes.data as BillingProfile | null
   const order = orderRes.data as WholesaleOrderBuyerView | null
-  const items = (itemsRes.data ?? []) as unknown as OrderItemWithProduct[]
+  const rawItems = (itemsRes.data ?? []) as unknown as WholesaleOrderItem[]
+
+  // Affichage produit via la vue redacted `products_catalog_read` (grossiste, zéro
+  // coût/marge) — jamais la table `products` base (staff-only, mig 091).
+  const itemProductIds = [...new Set(rawItems.map((i) => i.product_id).filter(Boolean))]
+  const itemProductDisplay = new Map<string, Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sale_unit'>>()
+  if (itemProductIds.length) {
+    const { data: prows } = (await supabase
+      .from('products_catalog_read')
+      .select('id, name, images, media, sale_unit')
+      .in('id', itemProductIds)) as { data: Pick<Product, 'id' | 'name' | 'images' | 'media' | 'sale_unit'>[] | null }
+    for (const p of prows ?? []) itemProductDisplay.set(p.id, p)
+  }
+  const items: OrderItemWithProduct[] = rawItems.map((i) => ({
+    ...i,
+    product: itemProductDisplay.get(i.product_id) ?? null,
+  }))
   const importHistory = (importHistoryRes.data ?? []) as unknown as WholesaleOrderImportHistory[]
   const paymentHistory = (paymentHistoryRes.data ?? []) as unknown as WholesaleOrderPaymentHistory[]
   const proofs = (proofsRes.data ?? []) as unknown as OrderProof[]
@@ -209,22 +227,23 @@ export default async function WholesaleOrderDetailPage({ params, searchParams }:
               <h2 className="text-sm font-semibold text-foreground mb-4">{t('sectionItems')}</h2>
               <div className="divide-y divide-line">
                 {items.map((item) => {
-                  const coverUrl = getProductCoverUrl(item.product)
+                  const coverUrl = item.product ? getProductCoverUrl(item.product) : null
+                  const itemName = item.product?.name ?? t('genericProduct')
                   // Suffixe d'unité (C1a) — résolu SERVEUR (string). null si sale_unit
                   // non posé → priceWithUnit renvoie le prix INCHANGÉ (zéro régression).
-                  const unitLabel = item.product.sale_unit
+                  const unitLabel = item.product?.sale_unit
                     ? resolveUnitLabel(item.product.sale_unit, tUnits)
                     : null
                   return (
                     <div key={item.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                       <ProductThumbnail
                         src={coverUrl}
-                        name={item.product.name}
+                        name={itemName}
                         className="w-10 h-10 rounded-lg border border-line shrink-0 text-[10px]"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">
-                          {item.product.name}
+                          {itemName}
                         </p>
                         <p className="text-xs text-muted mt-0.5">
                           {item.tier_label_snapshot} · {item.quantity} × {priceWithUnit(formatMAD(item.unit_price_snapshot), unitLabel)}

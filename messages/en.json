@@ -1092,6 +1092,7 @@
       "metaTitle": "My orders — Wholesale area",
       "pageTitle": "My orders",
       "breadcrumb": "My orders",
+      "genericProduct": "Item",
       "reorderTitle": "Reorder my last order",
       "reorderSubtitle": "We'll refill your cart with the same products and quantities.",
       "reorderButton": "Reorder",
@@ -1125,6 +1126,7 @@
     },
     "orderDetail": {
       "metaTitle": "Order #{ref} — Wholesale area",
+      "genericProduct": "Item",
       "submittedBanner": "Your wholesale order has been submitted. Our team will process it shortly.",
       "itemCount": "{count, plural, one {# item} other {# items}}",
       "orderedOn": "Order placed on {date}",

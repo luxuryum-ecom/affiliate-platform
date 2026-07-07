@@ -1092,6 +1092,7 @@
       "metaTitle": "Mes commandes — Espace Grossiste",
       "pageTitle": "Mes commandes",
       "breadcrumb": "Mes commandes",
+      "genericProduct": "Article",
       "reorderTitle": "Recommander ma dernière commande",
       "reorderSubtitle": "On recharge votre panier avec les mêmes produits et quantités.",
       "reorderButton": "Recommander",
@@ -1125,6 +1126,7 @@
     },
     "orderDetail": {
       "metaTitle": "Commande #{ref} — Espace Grossiste",
+      "genericProduct": "Article",
       "submittedBanner": "Votre commande grossiste a été soumise. Notre équipe la traitera sous peu.",
       "itemCount": "{count, plural, one {# article} other {# articles}}",
       "orderedOn": "Commande du {date}",

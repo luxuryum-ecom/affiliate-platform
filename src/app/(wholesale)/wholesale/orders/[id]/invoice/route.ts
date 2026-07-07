@@ -74,30 +74,36 @@ export async function GET(_req: Request, { params }: RouteParams) {
     .eq('id', user.id)
     .single()
 
-  // Lignes de commande.
+  // Lignes de commande. `products` base = staff-only (mig 091) → pas d'embed
+  // produit (renverrait null) : on lit le NOM via la vue redacted plus bas.
   const { data: itemsData } = await supabase
     .from('wholesale_order_items')
-    .select('id, quantity, unit_price_snapshot, subtotal, tier_label_snapshot, product:products(name)')
+    .select('id, product_id, quantity, unit_price_snapshot, subtotal, tier_label_snapshot')
     .eq('order_id', id)
 
   type ItemRow = {
     id: string
+    product_id: string
     quantity: number
     unit_price_snapshot: number
     subtotal: number
     tier_label_snapshot: string | null
-    product: { name: string } | { name: string }[] | null
   }
   const items = (itemsData ?? []) as unknown as ItemRow[]
 
-  const productName = (p: ItemRow['product']): string => {
-    if (!p) return 'Produit'
-    const rec = Array.isArray(p) ? p[0] : p
-    return rec?.name ?? 'Produit'
+  // Noms produits via la vue redacted `products_catalog_read` (grossiste, zéro marge).
+  const invProductIds = [...new Set(items.map((i) => i.product_id).filter(Boolean))]
+  const nameById = new Map<string, string>()
+  if (invProductIds.length) {
+    const { data: prows } = (await supabase
+      .from('products_catalog_read')
+      .select('id, name')
+      .in('id', invProductIds)) as { data: { id: string; name: string }[] | null }
+    for (const p of prows ?? []) nameById.set(p.id, p.name)
   }
 
   const lines: InvoiceLineInput[] = items.map((it) => ({
-    label: productName(it.product),
+    label: nameById.get(it.product_id) ?? 'Article',
     detail: it.tier_label_snapshot ?? undefined,
     quantity: it.quantity,
     unitPriceMad: it.unit_price_snapshot,

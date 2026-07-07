@@ -15,7 +15,7 @@ export async function generateMetadata() {
 }
 
 type OrderWithItems = WholesaleOrderBuyerView & {
-  items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> })[]
+  items: (WholesaleOrderItem & { product: Pick<Product, 'id' | 'name' | 'images' | 'media'> | null })[]
 }
 
 type BillingProfile = Pick<Profile, 'full_name'>
@@ -45,13 +45,33 @@ export default async function WholesaleOrdersPage({ searchParams }: PageProps) {
       .single(),
     supabase
       .from('wholesale_orders_buyer_read')
-      .select('*, items:wholesale_order_items(*, product:products(id,name,images,media))')
+      // Les lignes de commande NE PEUVENT PAS embarquer `products` (table de base
+      // staff-only, mig 091) → l'embed renverrait product=null. On récupère le
+      // product_id ici, puis l'affichage produit via la vue redacted plus bas.
+      .select('*, items:wholesale_order_items(id, order_id, product_id, quantity, unit_price_snapshot, subtotal, tier_label_snapshot)')
       .eq('buyer_id', user!.id)
       .order('created_at', { ascending: false }),
   ])
 
   const profile = profileRes.data as BillingProfile | null
-  const orders = (ordersRes.data ?? []) as OrderWithItems[]
+  const rawOrders = (ordersRes.data ?? []) as unknown as (WholesaleOrderBuyerView & { items: WholesaleOrderItem[] })[]
+
+  // Affichage produit (nom/médias) via la vue redacted `products_catalog_read`
+  // (lisible par le grossiste, zéro coût/marge) — jamais la table `products` base.
+  const allProductIds = [...new Set(rawOrders.flatMap((o) => o.items.map((i) => i.product_id)).filter(Boolean))]
+  const productDisplay = new Map<string, Pick<Product, 'id' | 'name' | 'images' | 'media'>>()
+  if (allProductIds.length) {
+    const { data: prows } = (await supabase
+      .from('products_catalog_read')
+      .select('id, name, images, media')
+      .in('id', allProductIds)) as { data: Pick<Product, 'id' | 'name' | 'images' | 'media'>[] | null }
+    for (const p of prows ?? []) productDisplay.set(p.id, p)
+  }
+
+  const orders: OrderWithItems[] = rawOrders.map((o) => ({
+    ...o,
+    items: o.items.map((i) => ({ ...i, product: productDisplay.get(i.product_id) ?? null })),
+  }))
 
   const active   = orders.filter((o) => !['delivered', 'cancelled'].includes(o.status))
   const archived = orders.filter((o) => ['delivered', 'cancelled'].includes(o.status))
@@ -223,16 +243,17 @@ function OrderCard({
       {/* Items */}
       <div className="space-y-2">
         {order.items.slice(0, compact ? 2 : 10).map((item) => {
-          const coverUrl = getProductCoverUrl(item.product)
+          const coverUrl = item.product ? getProductCoverUrl(item.product) : null
+          const itemName = item.product?.name ?? t('genericProduct')
           return (
             <div key={item.id} className="flex items-center gap-2">
               <ProductThumbnail
                 src={coverUrl}
-                name={item.product.name}
+                name={itemName}
                 className="w-8 h-8 rounded-md border border-line shrink-0 text-[8px]"
               />
               <p className="text-xs text-muted flex-1 truncate">
-                {item.product.name} <span className="text-faint">×{item.quantity}</span>
+                {itemName} <span className="text-faint">×{item.quantity}</span>
               </p>
               <p className="text-xs font-medium text-foreground shrink-0">{formatMAD(item.subtotal)}</p>
             </div>

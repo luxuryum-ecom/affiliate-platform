@@ -46,8 +46,8 @@ COMMENT ON FUNCTION public.is_my_wholesale_order(uuid) IS
   'posée par mig 116). Ne renvoie qu''un booléen d''appartenance — AUCUNE '
   'colonne, donc AUCUNE marge/coût exposée. E1 reste fermé.';
 
--- Exécutable par les rôles applicatifs (la fonction ne divulgue rien de sensible).
-GRANT EXECUTE ON FUNCTION public.is_my_wholesale_order(uuid) TO authenticated, anon;
+-- Exécutable par les authentifiés seulement (anon n'a pas d'auth.uid() → inutile).
+GRANT EXECUTE ON FUNCTION public.is_my_wholesale_order(uuid) TO authenticated;
 
 -- ── 2. wholesale_order_items : l'acheteur relit ses lignes ───────────────────
 -- Branche acheteur via la fonction ; branches staff (agent/admin) inchangées
@@ -84,10 +84,16 @@ CREATE POLICY "buyer_read_payment_history"
 -- La branche AFFILIÉ (subquery sur `orders` COD, restée lisible par l'affilié)
 -- n'est PAS concernée et n'est pas touchée ici.
 
+-- Durcissement (finding @finance P2-b) : l'acheteur ne voit QUE les justificatifs
+-- qui le concernent — on EXCLUT `stock_reception_proof` (preuve de réception
+-- fournisseur, potentiellement une facture d'achat révélant le COÛT). Le
+-- grossiste upload lui-même bank_receipt/transfer_proof/other, et voit aussi
+-- delivery/return receipts. Plus strict que l'état pré-116.
 DROP POLICY IF EXISTS "proofs: buyers read own wholesale proofs" ON public.order_proofs;
 CREATE POLICY "proofs: buyers read own wholesale proofs"
   ON public.order_proofs FOR SELECT TO authenticated
   USING (
     related_wholesale_order_id IS NOT NULL
+    AND proof_type <> 'stock_reception_proof'
     AND public.is_my_wholesale_order(related_wholesale_order_id)
   );
