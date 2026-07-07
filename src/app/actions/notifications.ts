@@ -138,8 +138,11 @@ export async function getNotifications(
         oldPrice: p.old_price != null ? madFmt(p.old_price) : '—',
         newPrice: p.new_price != null ? madFmt(p.new_price) : '—',
       })
-      // Lien vers la fiche produit suivie (grossiste).
-      if (p.supplier_product_id) href = `/wholesale/marketplace/${p.supplier_product_id}`
+      // Lien vers la fiche produit suivie — gaté par rôle (cohérence défensive
+      // avec les autres branches ; seul un grossiste reçoit ce type de notif).
+      if (role === 'wholesaler' && p.supplier_product_id) {
+        href = `/wholesale/marketplace/${p.supplier_product_id}`
+      }
     }
 
     return {

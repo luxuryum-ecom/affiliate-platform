@@ -46,6 +46,15 @@ DROP POLICY IF EXISTS "watch: insert own" ON public.product_watches;
 CREATE POLICY "watch: insert own"
   ON public.product_watches FOR INSERT TO authenticated
   WITH CHECK (buyer_id = auth.uid());
+-- NOTE (audit @security P2-1, risque ACCEPTÉ) : le WITH CHECK ne vérifie PAS
+-- l'approbation du produit. On ne peut pas l'ajouter via EXISTS sur
+-- `supplier_products` : cette table est SELECT staff-only (mig 116) → sous la RLS
+-- de l'acheteur l'EXISTS serait toujours vide et CASSERAIT tout suivi légitime.
+-- La gate « produit approuvé » est donc appliquée côté server action (toggleWatch).
+-- Le seul contournement (INSERT PostgREST direct) n'offre qu'un ORACLE D'EXISTENCE
+-- sur des UUID non énumérables, SANS aucune fuite de prix/marge (la FK distingue
+-- juste un id existant d'un absent), et le trigger d'alerte exige `approved` de
+-- toute façon → aucune notification ne partirait sur un produit non approuvé.
 
 DROP POLICY IF EXISTS "watch: delete own" ON public.product_watches;
 CREATE POLICY "watch: delete own"
