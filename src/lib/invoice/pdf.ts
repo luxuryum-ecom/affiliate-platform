@@ -149,6 +149,22 @@ export async function buildInvoicePdf(input: InvoiceInput): Promise<Uint8Array> 
     totalCentimes: toCentimes(l.totalMad),
   }))
 
+  // Réconciliation lignes ↔ total (parade P1 @finance) : le TTC facturé est la
+  // source de vérité. Si la somme des lignes en diffère (remise B2B, frais non
+  // détaillés, ajustement…), on ajoute une ligne « Ajustement » égale à l'écart
+  // → les lignes totalisent TOUJOURS le TTC imprimé. Aucun écart possible
+  // aujourd'hui (total_amount = Σ subtotals + livraison), garde-fou pour l'avenir.
+  const sumLines = lines.reduce((acc, l) => acc + l.totalCentimes, 0)
+  const diff = totalTtc - sumLines
+  if (diff !== 0) {
+    lines.push({
+      label: 'Ajustement',
+      quantity: null,
+      unitPriceCentimes: null,
+      totalCentimes: diff,
+    })
+  }
+
   const doc = await PDFDocument.create()
   doc.setTitle(`Facture ${invoiceNumber}`)
   doc.setProducer('Mozouna Group')

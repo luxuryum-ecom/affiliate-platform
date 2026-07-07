@@ -74,4 +74,21 @@ describe('buildInvoicePdf', () => {
     })
     expect(bytes.byteLength).toBeGreaterThan(500)
   })
+
+  it('réconciliation P1 : lignes qui ne totalisent pas le TTC → PDF valide (ligne Ajustement)', async () => {
+    // total facturé 1000, mais lignes = 900 (remise non détaillée) → +100 ajusté.
+    const under = await buildInvoicePdf({
+      ...baseInput,
+      totalAmountMad: 1000,
+      lines: [{ label: 'Produit', quantity: 10, unitPriceMad: 90, totalMad: 900 }],
+    })
+    expect(under.byteLength).toBeGreaterThan(500)
+    // Cas inverse : lignes 1100 > total 1000 → ajustement négatif (remise).
+    const over = await buildInvoicePdf({
+      ...baseInput,
+      totalAmountMad: 1000,
+      lines: [{ label: 'Produit', quantity: 10, unitPriceMad: 110, totalMad: 1100 }],
+    })
+    expect(over.byteLength).toBeGreaterThan(500)
+  })
 })
