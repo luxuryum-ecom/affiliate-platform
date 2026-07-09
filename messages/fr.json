@@ -3904,5 +3904,13 @@
     "chooseOption": "Choisir une option",
     "unavailable": "Indisponible — stock à confirmer",
     "variantLabel": "Variante"
+  },
+  "pwa": {
+    "installTitle": "Installer Abdou Baba",
+    "installBody": "Accès rapide depuis votre écran d'accueil, comme une application.",
+    "installButton": "Installer",
+    "later": "Plus tard",
+    "gotIt": "Compris",
+    "iosHint": "Appuyez sur Partager, puis « Sur l'écran d'accueil »."
   }
 }

@@ -3904,5 +3904,13 @@
     "chooseOption": "Choose an option",
     "unavailable": "Unavailable — stock to confirm",
     "variantLabel": "Variant"
+  },
+  "pwa": {
+    "installTitle": "Install Abdou Baba",
+    "installBody": "Quick access from your home screen, just like an app.",
+    "installButton": "Install",
+    "later": "Later",
+    "gotIt": "Got it",
+    "iosHint": "Tap Share, then \"Add to Home Screen\"."
   }
 }
