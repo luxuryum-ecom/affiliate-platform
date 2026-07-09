@@ -67,23 +67,21 @@
 
 **🪵 Dette connue Lot 4 (non bloquante)** : la séquence d'écriture de `approveSupplierProduct` (UPDATE `supplier_products` + DELETE/INSERT `supplier_product_moq_tiers` via `service_role` + upsert miroir) n'est **pas transactionnelle**. Échec INSERT après DELETE → « MOQ à jour + 0 palier » (repli sûr, revendable au prix unitaire, rejouable — idempotence prouvée). **Zéro impact ledger.** Signalé @finance + @security. À envelopper dans un RPC transactionnel si les paliers deviennent un prix facturé critique.
 
-### 🚧 RESTE — 4 BLOQUANTS AVANT GO-LIVE PUBLIC (dans l'ordre)
-> **Action conseillée : (1) rotation des secrets, PUIS (2) backups auto prod.** (3) et (4) = actions ops courtes.
+### 🪦 STATUTS GRAVÉS — 2026-07-09 (NE PLUS RE-LISTER COMME « À FAIRE » ; vérifiés dans le code/prod)
+> Ces points revenaient à chaque état des lieux comme des zombies. **Tranchés définitivement ici, preuve à l'appui.**
+> **Ne JAMAIS les remettre en « bloquant à faire ».** Toute réouverture exige une NOUVELLE preuve contraire.
 
-**1. 🟡 ROTATION DES SECRETS — PRÉSUMÉE FAITE, reste confirmation dashboard.**
-> **🔍 RESYNC VÉRITÉ 2026-07-09 (forensics repo).** La rotation est **PRÉSUMÉE FAITE côté ops** : commit `57e6a1f` (2026-06-27) trace « Rotation service_role + correction NEXT_PUBLIC_APP_URL = faites côté ops (Abdou) », et les docs consolidées du 2026-07-04 (`FEUILLE_DE_ROUTE.md:46` + `PLAN_ACTION_GLOBAL.md:28`) déclarent A1 clos « clé rotée, **déjà faite 27/06, vérifiée** ». **MAIS** une rotation se fait dans le dashboard Supabase et **ne laisse AUCUNE trace vérifiable dans le repo** → le code/config ne peut ni confirmer ni infirmer la régénération réelle. Ce qui EST prouvé côté repo : ✅ aucune clé en dur (grep `sb_secret_<valeur>` vide), ✅ `SERVICE_ROLE_KEY` lue uniquement via `process.env` (jamais `NEXT_PUBLIC_*`), ✅ garde-fou build anti-récidive actif (`next.config.ts`), ✅ `.env*` gitignorés. **RESTE (Abdou, hors repo) = la SEULE action ouverte** : au dashboard Supabase → API Keys, confirmer que la clé `service_role` a une **date de création > 2026-06-27** et que **l'ancienne clé est révoquée** (test API 401) ; vérifier `NEXT_PUBLIC_APP_URL` = domaine `https://…` (plus le secret) en env Vercel ; confirmer 0 `sb_secret_` dans le bundle prod après redeploy.
-- **`SUPABASE_SERVICE_ROLE_KEY`** fuitée (incidents 2026-06-20/22 tests + 2026-06-27 via `NEXT_PUBLIC_APP_URL` inliné client). Détail : 🚨 INCIDENT SÉCURITÉ ci-dessous.
-- **Mot de passe admin** `AdminTest2026!` **committé** → changer + nettoyer comptes/secrets de test (à confirmer côté ops également).
+| Point | Statut GRAVÉ | Preuve (2026-07-09) |
+|---|---|---|
+| **MIG 091** (policy `products` staff-only) | ✅ **CLOS — appliquée en prod** | Pooler : policy `products: staff read [SELECT]` **présente** ; historique `schema_migrations` contient 091. **Zombie mort.** |
+| **INFRA-1** (historique migrations désync) | ✅ **CLOS — historique resynchronisé** | Pooler : `schema_migrations` = **001→120 sans trou** (112-120 réparés + 111 no-op enregistré, 0 ligne concernée). `db push` = no-op propre. Futures migrations : appliquer + enregistrer **via pooler pg** (`backups/.db_password`), **JAMAIS le Supabase CLI** (boucle trousseau macOS). |
+| **REDIRECT `/auth/callback`** | ✅ **CODE FAIT** — 1 seule action dashboard restante | Code en place : route `src/app/auth/callback/route.ts` (flux `verifyOtp` stateless + PKCE) + reset MDP pointe sur `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password` (`auth.ts:201`). **SEULE action Abdou (dashboard, non-code)** : Supabase → Auth → URL Configuration → ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` aux **Redirect URLs**, ET le template email « Reset Password » doit pointer sur `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password`. |
+| **ROTATION SECRETS** | 🟡 **PRÉSUMÉE FAITE (27/06)** — 1 seule vérif dashboard | Prouvé repo : 0 clé en dur, lue via `process.env` uniquement, garde-fou build actif, `.env*` gitignorés. **SEULE action Abdou (dashboard, non vérifiable en repo)** : Supabase → API Keys → confirmer date clé `service_role` > 27/06 + ancienne révoquée (test 401). **Ne plus lister comme « à faire ».** Cf. 🚨 INCIDENT SÉCURITÉ + RESYNC VÉRITÉ ci-dessous. |
 
-**2. 🚧 BACKUPS AUTO PROD.** La base `owvtfzxvirttrbcsiveg` n'a **aucun backup automatique actif**. Mettre en place **l'un** :
-- **Supabase PITR** (plan Pro, payant) — backups continus, restauration à la minute. **Recommandé** ; OU
-- **Cron `pg_dump`** hors-PC (le LaunchAgent local `com.mozouna.backup-prod` dépend du PC allumé + Docker → non fiable). Voir section 🛟 SÉCURITÉ / BACKUP.
+### 🚧 RESTE — 1 SEUL VRAI BLOQUANT OPS (+ actions dashboard courtes ci-dessus)
+**BACKUPS AUTO PROD.** La base `owvtfzxvirttrbcsiveg` n'a **aucun backup automatique serveur actif** (le LaunchAgent local dépend du PC+Docker → non fiable). **Marche exacte donnée à Abdou 2026-07-09** (cf. réponse session). Recommandé = **Supabase PITR** (add-on plan Pro) OU daily backups Pro. C'est le seul point ops encore réellement ouvert (avec les 2 clics dashboard rotation + redirect).
 
-**3. ⚙️ VÉRIFIER / APPLIQUER MIG 091** (policy SELECT `products` → staff-only). Statut incohérent dans les docs (« appliquée » vs « reste à appliquer ») → **confirmer en prod**, `supabase db push` si absente. Sans elle, la table de base reste lisible par les authentifiés (pages déjà sur vue redacted → pas de fuite UI). Cf. NOTES OPS GO-LIVE ci-dessous.
-
-**4. 🔧 REDIRECT `/auth/callback` SUPABASE** (non-code). Ajouter `${NEXT_PUBLIC_APP_URL}/auth/callback` à l'allowlist « Redirect URLs » du dashboard Supabase Auth, sinon le reset mot de passe self-service échoue.
-
-→ **PROCHAINE ACTION = CONFIRMER la rotation au dashboard Supabase (présumée faite 27/06), puis backups auto prod.**
+→ **PROCHAINES ACTIONS OPS (Abdou, hors code)** : (1) activer backups (PITR/daily), (2) 1 clic redirect `/auth/callback` + template email, (3) 1 vérif date clé `service_role`. Tout le reste = ✅ gravé CLOS.
 
 ### 🪵 DETTES POST-BETA CONNUES (non bloquantes, à traiter après ouverture)
 1. **RTL admin** — refresh RTL complet sur l'espace admin (cohérence directionnelle de toutes les pages admin).
