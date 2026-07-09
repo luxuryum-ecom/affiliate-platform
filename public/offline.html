@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>Abdou Baba</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 20px; padding: 24px; text-align: center;
+        background: #0b0b0c; color: #f5f5f4;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      img { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 8px 24px -12px rgba(201,162,39,.35); }
+      h1 { font-size: 1.25rem; font-weight: 700; margin: 4px 0 0; }
+      p { font-size: 0.95rem; color: #a1a1aa; max-width: 340px; margin: 0; line-height: 1.5; }
+      .gold { color: #c9a227; }
+      button {
+        margin-top: 8px; padding: 12px 24px; border: 0; border-radius: 12px;
+        background: #c9a227; color: #0a0a0a; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+      }
+      button:active { background: #a8851c; }
+    </style>
+  </head>
+  <body>
+    <img src="/icons/icon-192.png" alt="Abdou Baba" />
+    <h1 id="title">Vous êtes hors ligne</h1>
+    <p id="body">Vérifiez votre connexion internet, puis réessayez.</p>
+    <button id="retry" onclick="location.reload()">Réessayer</button>
+    <script>
+      // Contenu FR + AR (فصحى) + EN — sélection selon la langue de l'appareil (repli rare, hors-ligne).
+      var L = {
+        fr: { dir: 'ltr', title: 'Vous êtes hors ligne', body: 'Vérifiez votre connexion internet, puis réessayez.', retry: 'Réessayer' },
+        ar: { dir: 'rtl', title: 'أنت غير متصل بالإنترنت', body: 'تحقق من اتصالك بالإنترنت ثم أعد المحاولة.', retry: 'إعادة المحاولة' },
+        en: { dir: 'ltr', title: "You're offline", body: 'Check your internet connection, then try again.', retry: 'Retry' }
+      };
+      var lang = (navigator.language || 'fr').slice(0, 2).toLowerCase();
+      var t = L[lang] || L.fr;
+      document.documentElement.lang = lang in L ? lang : 'fr';
+      document.documentElement.dir = t.dir;
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('body').textContent = t.body;
+      document.getElementById('retry').textContent = t.retry;
+    </script>
+  </body>
+</html>
