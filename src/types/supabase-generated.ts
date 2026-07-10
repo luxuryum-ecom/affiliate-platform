@@ -591,6 +591,101 @@ export type Database = {
           },
         ]
       }
+      courier_remittance_orders: {
+        Row: {
+          collected_amount_mad: number
+          created_at: string
+          id: string
+          order_id: string
+          remittance_id: string
+        }
+        Insert: {
+          collected_amount_mad?: number
+          created_at?: string
+          id?: string
+          order_id: string
+          remittance_id: string
+        }
+        Update: {
+          collected_amount_mad?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          remittance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_remittance_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_remittance_orders_remittance_id_fkey"
+            columns: ["remittance_id"]
+            isOneToOne: false
+            referencedRelation: "courier_remittances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courier_remittances: {
+        Row: {
+          courier_id: string | null
+          courier_name: string
+          created_at: string
+          currency: string
+          expected_amount_mad: number
+          id: string
+          idempotency_key: string
+          notes: string | null
+          received_amount_mad: number
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reference: string | null
+          status: string
+        }
+        Insert: {
+          courier_id?: string | null
+          courier_name: string
+          created_at?: string
+          currency?: string
+          expected_amount_mad?: number
+          id?: string
+          idempotency_key: string
+          notes?: string | null
+          received_amount_mad: number
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Update: {
+          courier_id?: string | null
+          courier_name?: string
+          created_at?: string
+          currency?: string
+          expected_amount_mad?: number
+          id?: string
+          idempotency_key?: string
+          notes?: string | null
+          received_amount_mad?: number
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_remittances_currency_fkey"
+            columns: ["currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       currencies: {
         Row: {
           active: boolean
@@ -701,6 +796,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_accounts: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          normal_balance: string
+          type: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          normal_balance: string
+          type: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          normal_balance?: string
+          type?: string
+        }
+        Relationships: []
+      }
       ledger_entries: {
         Row: {
           affiliate_id: string
@@ -781,6 +903,115 @@ export type Database = {
             columns: ["payout_id"]
             isOneToOne: false
             referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ledger_postings: {
+        Row: {
+          account_id: string
+          amount: number
+          amount_source: number | null
+          created_at: string
+          currency: string
+          fx_rate_to_mad: number
+          id: string
+          party_id: string | null
+          party_type: string | null
+          transaction_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          amount_source?: number | null
+          created_at?: string
+          currency?: string
+          fx_rate_to_mad?: number
+          id?: string
+          party_id?: string | null
+          party_type?: string | null
+          transaction_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          amount_source?: number | null
+          created_at?: string
+          currency?: string
+          fx_rate_to_mad?: number
+          id?: string
+          party_id?: string | null
+          party_type?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_postings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_postings_currency_fkey"
+            columns: ["currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "ledger_postings_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ledger_transactions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          idempotency_key: string
+          kind: string
+          metadata: Json
+          order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          idempotency_key: string
+          kind: string
+          metadata?: Json
+          order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          metadata?: Json
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_transactions_currency_fkey"
+            columns: ["currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "ledger_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -883,6 +1114,35 @@ export type Database = {
             columns: ["recipient_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_financial_snapshots: {
+        Row: {
+          created_at: string
+          factory_cost_mad: number | null
+          order_id: string
+          platform_margin_mad: number | null
+        }
+        Insert: {
+          created_at?: string
+          factory_cost_mad?: number | null
+          order_id: string
+          platform_margin_mad?: number | null
+        }
+        Update: {
+          created_at?: string
+          factory_cost_mad?: number | null
+          order_id?: string
+          platform_margin_mad?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_financial_snapshots_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1038,6 +1298,8 @@ export type Database = {
           delivery_company: string | null
           delivery_fee_snapshot: number | null
           duplicate_risk_score: number | null
+          fraud_cleared_at: string | null
+          fraud_cleared_by: string | null
           fraud_score: number | null
           id: string
           is_pre_confirmed: boolean
@@ -1081,6 +1343,8 @@ export type Database = {
           delivery_company?: string | null
           delivery_fee_snapshot?: number | null
           duplicate_risk_score?: number | null
+          fraud_cleared_at?: string | null
+          fraud_cleared_by?: string | null
           fraud_score?: number | null
           id?: string
           is_pre_confirmed?: boolean
@@ -1124,6 +1388,8 @@ export type Database = {
           delivery_company?: string | null
           delivery_fee_snapshot?: number | null
           duplicate_risk_score?: number | null
+          fraud_cleared_at?: string | null
+          fraud_cleared_by?: string | null
           fraud_score?: number | null
           id?: string
           is_pre_confirmed?: boolean
@@ -1353,6 +1619,56 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products_public_read"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_watches: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          id: string
+          supplier_product_id: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          id?: string
+          supplier_product_id: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          supplier_product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_watches_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_watches_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_watches_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_owner_read"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_watches_supplier_product_id_fkey"
+            columns: ["supplier_product_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_products_wholesaler_read"
             referencedColumns: ["id"]
           },
         ]
@@ -1590,6 +1906,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          anonymized_at: string | null
           bank_account: string | null
           billing_address: string | null
           city: string | null
@@ -1597,6 +1914,7 @@ export type Database = {
           country_code: string | null
           country_setup_requested: boolean
           created_at: string
+          declared_niche: string | null
           full_name: string
           ice: string | null
           id: string
@@ -1607,6 +1925,7 @@ export type Database = {
           wholesale_access: boolean
         }
         Insert: {
+          anonymized_at?: string | null
           bank_account?: string | null
           billing_address?: string | null
           city?: string | null
@@ -1614,6 +1933,7 @@ export type Database = {
           country_code?: string | null
           country_setup_requested?: boolean
           created_at?: string
+          declared_niche?: string | null
           full_name?: string
           ice?: string | null
           id: string
@@ -1624,6 +1944,7 @@ export type Database = {
           wholesale_access?: boolean
         }
         Update: {
+          anonymized_at?: string | null
           bank_account?: string | null
           billing_address?: string | null
           city?: string | null
@@ -1631,6 +1952,7 @@ export type Database = {
           country_code?: string | null
           country_setup_requested?: boolean
           created_at?: string
+          declared_niche?: string | null
           full_name?: string
           ice?: string | null
           id?: string
@@ -4612,6 +4934,23 @@ export type Database = {
           },
         ]
       }
+      v_courier_cash_in_transit: {
+        Row: {
+          balance_mad: number | null
+        }
+        Relationships: []
+      }
+      v_ledger_balances: {
+        Row: {
+          account_code: string | null
+          balance_mad: number | null
+          normal_balance: string | null
+          party_id: string | null
+          party_type: string | null
+          type: string | null
+        }
+        Relationships: []
+      }
       variant_status_balance: {
         Row: {
           product_id: string | null
@@ -4958,6 +5297,10 @@ export type Database = {
         Returns: undefined
       }
       can_assign_orders: { Args: { uid: string }; Returns: boolean }
+      clear_order_fraud_hold: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       client_currency_for: { Args: { p_label: string }; Returns: string }
       confirm_cod_order: { Args: { p_order_id: string }; Returns: boolean }
       create_payout: {
@@ -5014,9 +5357,29 @@ export type Database = {
       }
       has_capability: { Args: { p_capability: string }; Returns: boolean }
       has_wholesale_buyer_access: { Args: never; Returns: boolean }
+      is_my_wholesale_order: { Args: { p_order_id: string }; Returns: boolean }
+      is_order_fraud_held: { Args: { p_order_id: string }; Returns: boolean }
       is_wholesale_delivery_undercollateralized: {
         Args: { p_order_id: string }
         Returns: boolean
+      }
+      ledger2_add_posting: {
+        Args: {
+          p_amount: number
+          p_code: string
+          p_party_id?: string
+          p_party_type?: string
+          p_txn_id: string
+        }
+        Returns: undefined
+      }
+      ledger2_post_cod_collected: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      ledger2_post_cod_reversal: {
+        Args: { p_order_id: string }
+        Returns: undefined
       }
       link_agent_country: {
         Args: { p_agent_id: string; p_country_code: string }
@@ -5066,6 +5429,18 @@ export type Database = {
         Returns: undefined
       }
       my_role: { Args: never; Returns: string }
+      reconcile_courier_remittance: {
+        Args: {
+          p_courier_id?: string
+          p_courier_name: string
+          p_idempotency_key: string
+          p_notes?: string
+          p_order_ids: string[]
+          p_received_amount: number
+          p_reference?: string
+        }
+        Returns: string
+      }
       record_anomaly: {
         Args: {
           p_actor?: string
@@ -5078,6 +5453,17 @@ export type Database = {
           p_type: string
         }
         Returns: undefined
+      }
+      record_ledger_transaction: {
+        Args: {
+          p_currency?: string
+          p_idempotency_key: string
+          p_kind: string
+          p_metadata?: Json
+          p_order_id?: string
+          p_postings: Json
+        }
+        Returns: string
       }
       record_scan: {
         Args: {

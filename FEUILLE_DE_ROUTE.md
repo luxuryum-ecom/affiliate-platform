@@ -8,7 +8,7 @@
 > - **mig 122** branchement AUTO grand livre (cod_collected / contre-passation / réconciliation versement livreur) · **mig 123** machine à états commissions + règle N1 (payable après réconciliation) · **mig 124** gate anti-fraude sur payabilité.
 > - **Décisions prises seul (justifiées)** : (a) snapshots coût/marge dans une **table staff-only** `order_financial_snapshots` plutôt qu'en colonnes sur `orders` — évite la fuite marge affilié ET la régression en cascade type mig 116 (policies affilié référençant `orders`). (b) Paiement commission verrouillé à `/admin/payouts`/`create_payout` (bouton « Marquer payée » retiré).
 > - **⚙️ DÉCISION EN ATTENTE ABDOU** : seuil de retenue anti-fraude `fraud_score >= 70` (mig 124) — garder ou ajuster.
-> - Migrations 122/123/124 = LOCAL seulement (121 déjà prod). Appliquer en prod après push + Vercel Ready (pooler pg, lockstep). Dettes tracées : D-N1a/b/c + D-B7a.
+> - ✅ Migrations 122/123/124 APPLIQUÉES EN PROD le 2026-07-10 (pooler pg `backups/.db_password`, atomiques lockstep, vérif AVANT/APRÈS de chacune, `schema_migrations` 001→124 sans trou, 0 donnée modifiée). Types régénérés + cast RPC retiré de `fraud.ts` (tsc 0). Reste = commit des 2 fichiers (types+fraud.ts) sur GO Abdou. Dettes tracées : D-N1a/b/c + D-B7a.
 
 # 🎯 PLAN DE LANCEMENT A→Z — 2 VAGUES (validé Abdou 2026-07-04)
 

@@ -17,13 +17,10 @@ export async function clearOrderFraudHold(
   const { supabase, error, userId } = await requireAdmin({ allowAgent: false })
   if (error || !userId) return { error: error ?? 'Erreur.' }
 
-  // RPC mig 124 — pas encore dans les types générés (schéma prod). Cast ciblé typé
-  // (aucun `any`), à retirer quand la migration sera appliquée en prod + types régénérés.
-  const rpc = supabase.rpc as unknown as (
-    fn: 'clear_order_fraud_hold',
-    args: { p_order_id: string }
-  ) => Promise<{ error: { message: string } | null }>
-  const { error: rpcErr } = await rpc('clear_order_fraud_hold', { p_order_id: orderId })
+  // RPC mig 124 — appliquée en prod le 2026-07-10, présente dans les types générés.
+  const { error: rpcErr } = await supabase.rpc('clear_order_fraud_hold', {
+    p_order_id: orderId,
+  })
   if (rpcErr) return { error: rpcErr.message }
 
   revalidatePath(`/admin/orders/${orderId}`)
