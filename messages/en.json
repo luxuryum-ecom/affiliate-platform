@@ -2552,10 +2552,10 @@
       "paid": "Commission paid{date}",
       "paidDate": " on {date}",
       "approve": "Approve commission",
-      "markPaid": "Mark as paid",
       "statusPending": "Pending",
       "statusApproved": "Approved",
-      "statusPaid": "Paid"
+      "statusPaid": "Paid",
+      "approvedAwaitingPayout": "Approved — settle via the Payouts page"
     },
     "createPayoutForm": {
       "affiliateLabel": "Affiliate",

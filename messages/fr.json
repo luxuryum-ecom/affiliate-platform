@@ -2552,10 +2552,10 @@
       "paid": "Commission payée{date}",
       "paidDate": " le {date}",
       "approve": "Approuver commission",
-      "markPaid": "Marquer payée",
       "statusPending": "En attente",
       "statusApproved": "Approuvée",
-      "statusPaid": "Payée"
+      "statusPaid": "Payée",
+      "approvedAwaitingPayout": "Approuvée — règlement via la page Paiements"
     },
     "createPayoutForm": {
       "affiliateLabel": "Affilié",

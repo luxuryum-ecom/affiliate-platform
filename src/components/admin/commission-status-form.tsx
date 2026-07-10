@@ -59,15 +59,12 @@ export function CommissionStatusForm({ commission }: CommissionStatusFormProps) 
             {t('approve')}
           </button>
         )}
-        {(commission.status === 'pending' || commission.status === 'approved') && (
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => handleUpdate('paid')}
-            className="text-xs px-3 py-1.5 bg-success-soft text-success-fg border border-success rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gold-400"
-          >
-            {t('markPaid')}
-          </button>
+        {/* N1 (mig 123) : le paiement ne se fait PLUS par un bouton « payé » ici
+            (raccourci qui court-circuitait la réconciliation livreur + create_payout).
+            Le règlement passe exclusivement par /admin/payouts → create_payout
+            (atomique, idempotent, écrit le grand livre). */}
+        {commission.status === 'approved' && (
+          <p className="text-xs text-muted">{t('approvedAwaitingPayout')}</p>
         )}
       </div>
     </div>

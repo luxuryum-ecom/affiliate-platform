@@ -2552,10 +2552,10 @@
       "paid": "العمولة مدفوعة{date}",
       "paidDate": " في {date}",
       "approve": "اعتماد العمولة",
-      "markPaid": "تعيين مدفوعة",
       "statusPending": "بانتظار المعالجة",
       "statusApproved": "معتمدة",
-      "statusPaid": "مدفوعة"
+      "statusPaid": "مدفوعة",
+      "approvedAwaitingPayout": "معتمدة — الدفع عبر صفحة المدفوعات"
     },
     "createPayoutForm": {
       "affiliateLabel": "المنتسب",

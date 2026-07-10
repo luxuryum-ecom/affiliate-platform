@@ -8,7 +8,11 @@ export async function updateCommissionStatus(
   commissionId: string,
   newStatus: CommissionStatus
 ): Promise<{ error: string | null }> {
-  if (!['approved', 'paid', 'pending'].includes(newStatus)) {
+  // N1 (mig 123) : 'paid' n'est JAMAIS posé ici — uniquement par la RPC atomique
+  // create_payout (049), qui crée la ligne payouts + les écritures ledger. Un
+  // passage direct à 'paid' court-circuiterait la réconciliation livreur, le
+  // filtre reversed et le grand livre. La garde DB le refuse aussi (ceinture+bretelles).
+  if (!['approved', 'pending'].includes(newStatus)) {
     return { error: 'Statut invalide.' }
   }
 
@@ -16,9 +20,6 @@ export async function updateCommissionStatus(
   if (error || !userId) return { error: error ?? 'Erreur.' }
 
   const update: Record<string, unknown> = { status: newStatus }
-  if (newStatus === 'paid') {
-    update.paid_at = new Date().toISOString()
-  }
 
   const { error: updateErr } = await supabase
     .from('commissions')
