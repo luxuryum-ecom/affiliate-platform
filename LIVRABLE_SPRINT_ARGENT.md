@@ -1,6 +1,6 @@
 # LIVRABLE — SPRINT CŒUR ARGENT (automatisation grand livre + machine à états)
 
-> **Branche :** `feat/b3-mig122-ledger-auto-wiring` — **NON mergée, NON poussée** (attente GO Abdou).
+> **Branche :** `feat/b3-mig122-ledger-auto-wiring` — **✅ GO MERGE donné par Abdou (2026-07-10)** après TEST RÉEL de bout en bout @tester (finance équilibrée prouvée chiffrée, zéro régression, étanchéité prouvée). **Mergée `main` `--no-ff`. NON poussée** (Abdou pousse). **Seuil anti-fraude 70 = GARDÉ (décision Abdou).**
 > **Suite de B2** (grand livre double-entrée mig 121, déjà en prod). Ici : le **branchement AUTOMATIQUE** (122), la **machine à états des commissions + règle N1** (123), et l'**anti-fraude sur la payabilité** (124, LOT 3).
 > **Date :** 2026-07-10. **Modèle :** Opus (cœur argent). **Circuit règle #5 respecté** : @finance + @security AVANT commit.
 
@@ -99,11 +99,16 @@ Fermer le trou où « l'argent se perdait » : tracer AUTOMATIQUEMENT chaque dir
 - **NON poussé / NON mergé** — attente **GO Abdou** (règle : pas de merge/push sans accord explicite).
 - **Circuit financier (règle #5) respecté** : @finance + @security 🟢 sur les 3 lots.
 
-### ⚠️ À valider / à faire APRÈS GO
-1. **DÉCISION Abdou** : seuil de retenue fraude `fraud_score >= 70` (LOT 3) — garder ou ajuster.
-2. **Régénérer les types** (`supabase-generated.ts`) APRÈS application prod des migrations, puis retirer le cast ciblé dans `src/app/actions/fraud.ts`. *(Le script `npm run types` vise la PROD `--project-id` ; ne PAS le lancer avant que les migrations soient en prod.)*
-3. **Appliquer 122→124 en prod** (pooler pg, lockstep, vérif AVANT/APRÈS) une fois poussé + Vercel Ready.
-4. **Traiter les dettes** D-N1a/b/c + D-B7a quand prioritaire.
+### ✅ Test réel @tester (2026-07-10, LOCAL, tout en ROLLBACK)
+- **POINT 1 finance ✅** : décomposition chiffrée équilibrée à 0 (cash_in_transit +400 vs crédits −400), versement partiel 380/400 → créance livreur 20 chiffrée, N1 prouvée (payable seulement après réconciliation) + contre-preuve (approbation refusée en base sans versement). 30 assertions vertes.
+- **POINT 2 non-régression ✅** : vitest 668/669 (le 1 échec = `lot1b-notif` flaky, 7/7 en isolation), parcours acheteur/facture/réassort/nudge/bot/marketplace tous verts, smoke 16/16, trigger snapshot ne casse aucune création de commande.
+- **POINT 3 étanchéité ✅** : `order_financial_snapshots` staff-only (affilié → 0 ligne, admin → visible), `ledger2_*`/`is_order_fraud_held` non exécutables anon/authenticated, RPC admin refusent les non-admin, bordereaux invisibles à l'affilié.
+
+### ⚠️ À faire APRÈS le push d'Abdou (Vercel Ready)
+1. **Appliquer 122 → 123 → 124 en prod DANS L'ORDRE** (pooler pg via `backups/.db_password`, **jamais le CLI**), lockstep, **vérif AVANT/APRÈS de chacune**.
+2. **Régénérer les types** (`supabase-generated.ts`) une fois les migrations en prod, puis retirer le cast ciblé dans `src/app/actions/fraud.ts`. *(`npm run types` vise la PROD `--project-id` — à lancer SEULEMENT après application prod.)*
+3. **Traiter les dettes** D-N1a/b/c + D-B7a quand prioritaire.
+- **Seuil anti-fraude `fraud_score >= 70` : GARDÉ (décision Abdou 2026-07-10).**
 
 ## 🪵 Dette additionnelle (LOT 3)
 - **D-B7a** : le bloc `→paid` de la garde ne re-vérifie pas `is_order_fraud_held` (non exploité dans le flux nominal — le scoring fraude précède l'approbation). À durcir si un `fraud_score` peut monter APRÈS approbation.
