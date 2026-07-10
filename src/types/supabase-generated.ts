@@ -513,6 +513,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "commissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       countries: {
@@ -620,6 +627,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_remittance_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "courier_remittance_orders_remittance_id_fkey"
@@ -899,6 +913,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ledger_entries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
             foreignKeyName: "ledger_entries_payout_id_fkey"
             columns: ["payout_id"]
             isOneToOne: false
@@ -1014,6 +1035,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ledger_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       logistics_settings: {
@@ -1089,6 +1117,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "notifications_cod_order_id_fkey"
+            columns: ["cod_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
             foreignKeyName: "notifications_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -1145,6 +1180,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_financial_snapshots_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       order_proofs: {
@@ -1188,6 +1230,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_proofs_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "order_proofs_related_product_id_fkey"
@@ -1272,6 +1321,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_signals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -4940,6 +4996,29 @@ export type Database = {
         }
         Relationships: []
       }
+      v_courier_remittance_pending: {
+        Row: {
+          affiliate_commission_mad: number | null
+          affiliate_id: string | null
+          city: string | null
+          courier_code: string | null
+          courier_zone: string | null
+          delivered_at: string | null
+          expected_amount_mad: number | null
+          order_id: string | null
+          reference: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_ledger_balances: {
         Row: {
           account_code: string | null
@@ -4947,6 +5026,16 @@ export type Database = {
           normal_balance: string | null
           party_id: string | null
           party_type: string | null
+          type: string | null
+        }
+        Relationships: []
+      }
+      v_treasury_overview: {
+        Row: {
+          account_code: string | null
+          balance_mad: number | null
+          movements: number | null
+          normal_balance: string | null
           type: string | null
         }
         Relationships: []
