@@ -84,7 +84,7 @@ Chaque lot : @finance + @security + 4 checks verts + captures AVANT proposition 
 Migrations LOCAL puis PROD via pooler `backups/.db_password` (jamais le CLI) APRÈS GO + déploiement.
 
 ### GO à donner par Abdou
-- [ ] **Lot A** (registre livreurs) — **PRÊT** : @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR. Branche `feat/livreurs-lot-a`, **NON commité** (règle #5 financier → GO avant commit). Sur GO : commit + merge `--no-ff` → appliquer **migration 126 en prod** (pooler, lockstep, vérif AVANT/APRÈS).
+- [x] **Lot A** (registre livreurs) — ✅ **LIVRÉ EN PROD** : @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR. **MERGÉ main `--no-ff` (28b0ca7) + POUSSÉ + déployé Vercel. ✅ Migration 126 APPLIQUÉE EN PROD le 2026-07-10** (pooler `backups/.db_password`, transaction atomique lockstep APRÈS déploiement — jamais le CLI). Vérifié AVANT (objets absents) / APRÈS (3 objets + orders.courier_id créés, **tables VIDES**, RLS admin-only, trigger append-only, rempart staff, historique 001→126). Types déjà à jour (schéma prod = commité).
 - [ ] **Lots B→F** : spécifiés ci-dessus, à coder 1 par 1 (1 session/lot). **Pré-requis Lot C** : durcir `access_code` (P2-3) avant d'ouvrir le portail `/courier`.
 
 ### Fichiers Lot A (branche `feat/livreurs-lot-a`, non commité)
