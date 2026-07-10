@@ -1947,7 +1947,8 @@
       "attributedClick": "Attributed click",
       "commissionValidation": "Commission validation",
       "proofs": "Proofs & documents",
-      "updateStatus": "Update status"
+      "updateStatus": "Update status",
+      "fraudCleared": "Fraud hold cleared"
     },
     "products": {
       "metaTitle": "Products — Administration",
@@ -3806,6 +3807,11 @@
       "anomalyQty": "Qty",
       "anomalyStockBefore": "Stock before",
       "anomalyShortfall": "Shortfall"
+    },
+    "fraudHold": {
+      "held": "Order held (fraud risk) — commission NOT payable until cleared.",
+      "clear": "Clear hold (reviewed)",
+      "clearing": "Clearing…"
     }
   },
   "notifications": {

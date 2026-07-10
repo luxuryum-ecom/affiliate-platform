@@ -1947,7 +1947,8 @@
       "attributedClick": "Clic attribué",
       "commissionValidation": "Validation commission",
       "proofs": "Preuves & justificatifs",
-      "updateStatus": "Mettre à jour le statut"
+      "updateStatus": "Mettre à jour le statut",
+      "fraudCleared": "Retenue fraude levée"
     },
     "products": {
       "metaTitle": "Produits — Administration",
@@ -3806,6 +3807,11 @@
       "anomalyQty": "Qté",
       "anomalyStockBefore": "Stock avant",
       "anomalyShortfall": "Déficit"
+    },
+    "fraudHold": {
+      "held": "Commande retenue (risque de fraude) — commission NON payable tant que non levée.",
+      "clear": "Lever la retenue (revue faite)",
+      "clearing": "Levée…"
     }
   },
   "notifications": {

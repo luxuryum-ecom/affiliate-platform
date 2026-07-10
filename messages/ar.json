@@ -1947,7 +1947,8 @@
       "attributedClick": "النقرة المنسوبة",
       "commissionValidation": "التحقق من العمولة",
       "proofs": "الإثباتات والمستندات",
-      "updateStatus": "تحديث الحالة"
+      "updateStatus": "تحديث الحالة",
+      "fraudCleared": "تم رفع تعليق الاحتيال"
     },
     "products": {
       "metaTitle": "المنتجات — الإدارة",
@@ -3806,6 +3807,11 @@
       "anomalyQty": "الكمية",
       "anomalyStockBefore": "المخزون قبل",
       "anomalyShortfall": "العجز"
+    },
+    "fraudHold": {
+      "held": "الطلب موقوف (اشتباه احتيال) — العمولة غير قابلة للدفع حتى الرفع.",
+      "clear": "رفع التعليق (تمت المراجعة)",
+      "clearing": "جارٍ الرفع…"
     }
   },
   "notifications": {

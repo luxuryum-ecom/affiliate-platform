@@ -6,6 +6,8 @@ import { getProductCoverUrl } from '@/lib/product-media'
 import { OrderStatusForm } from '@/components/admin/order-status-form'
 import { CodOrderAssignForm } from '@/components/admin/cod-order-assign-form'
 import { CommissionStatusForm } from '@/components/admin/commission-status-form'
+import { FraudHoldControl } from '@/components/admin/fraud-hold-control'
+import { FRAUD_HOLD_THRESHOLD } from '@/lib/order-analytics'
 import { OrderProofForm } from '@/components/admin/order-proof-form'
 import { OrderTimeline, buildCodTimeline } from '@/components/shared/order-timeline'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
@@ -137,6 +139,12 @@ export default async function AdminOrderDetailPage({ params }: Params) {
                   <div><p className="text-xs text-faint">{t('duplicate')}</p><p className="font-medium">{order.duplicate_risk_score ?? '—'}/100</p></div>
                   <div><p className="text-xs text-faint">{t('spam')}</p><p className="font-medium">{order.spam_score ?? '—'}/100</p></div>
                 </div>
+                {/* Anti-fraude B7 (mig 124) : retenue de payabilité au-delà du seuil. */}
+                {order.fraud_score != null && order.fraud_score >= FRAUD_HOLD_THRESHOLD && (
+                  order.fraud_cleared_at
+                    ? <p className="mt-1 text-xs text-success-fg">{t('fraudCleared')}</p>
+                    : <FraudHoldControl orderId={order.id} />
+                )}
               </div>
             )}
 
