@@ -26,6 +26,15 @@ export function scoreSpamOrder(phone: string, name: string): number {
   return Math.min(100, score)
 }
 
+/**
+ * Anti-fraude B7 (mig 124) : seuil de RETENUE de payabilité. Une commande dont
+ * `fraud_score >= FRAUD_HOLD_THRESHOLD` et non levée par un admin bloque
+ * l'approbation (donc le paiement) de sa commission.
+ * ⚠️ DOIT rester aligné avec le seuil de la fonction SQL `is_order_fraud_held`
+ * (migration 124). Valeur métier ajustable (décision Abdou).
+ */
+export const FRAUD_HOLD_THRESHOLD = 70
+
 /** Placeholder fraud score — hook for future AI models. */
 export function scoreFraudOrder(opts: {
   duplicateScore: number

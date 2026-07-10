@@ -423,6 +423,9 @@ export interface Order {
   duplicate_risk_score: number | null
   spam_score: number | null
   signals_metadata: Record<string, unknown>
+  /** Anti-fraude B7 (mig 124) : levée admin de la retenue fraude. NULL = non levée. */
+  fraud_cleared_at: string | null
+  fraud_cleared_by: string | null
 
   status: OrderStatus
   /** Agent en charge du traitement (LOT 1F, mig 110). NULL = non assignée. Orthogonal au statut. */
