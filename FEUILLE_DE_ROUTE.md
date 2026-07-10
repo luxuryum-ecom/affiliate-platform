@@ -3,6 +3,13 @@
 <!-- Ajout PUR en tête. RIEN supprimé/modifié dessous. Indexe l'existant.      -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
+<!-- ── 2026-07-10 — SPRINT CŒUR ARGENT (suite B2) : automatisation ledger + N1 + anti-fraude ── -->
+> **🟢 2026-07-10 — Branche `feat/b3-mig122-ledger-auto-wiring` : 3 lots CODÉS + AUDITÉS (@finance 🟢 + @security 🟢), NON poussés/NON mergés (attente GO Abdou).** Bilan : `LIVRABLE_SPRINT_ARGENT.md`.
+> - **mig 122** branchement AUTO grand livre (cod_collected / contre-passation / réconciliation versement livreur) · **mig 123** machine à états commissions + règle N1 (payable après réconciliation) · **mig 124** gate anti-fraude sur payabilité.
+> - **Décisions prises seul (justifiées)** : (a) snapshots coût/marge dans une **table staff-only** `order_financial_snapshots` plutôt qu'en colonnes sur `orders` — évite la fuite marge affilié ET la régression en cascade type mig 116 (policies affilié référençant `orders`). (b) Paiement commission verrouillé à `/admin/payouts`/`create_payout` (bouton « Marquer payée » retiré).
+> - **⚙️ DÉCISION EN ATTENTE ABDOU** : seuil de retenue anti-fraude `fraud_score >= 70` (mig 124) — garder ou ajuster.
+> - Migrations 122/123/124 = LOCAL seulement (121 déjà prod). Appliquer en prod après push + Vercel Ready (pooler pg, lockstep). Dettes tracées : D-N1a/b/c + D-B7a.
+
 # 🎯 PLAN DE LANCEMENT A→Z — 2 VAGUES (validé Abdou 2026-07-04)
 
 > Découverte clé du 2026-07-04 : ~80 % du lancement GROS est déjà en prod, et la plupart des « grands systèmes » (WMS, Gardien IA, Vitrine intelligente) sont déjà cadrés voire construits sur branches plus bas dans ce fichier. Ce bloc ne réinvente rien : il ordonne l'existant en 2 vagues + grave 3 nouveautés décidées ce jour.
