@@ -8,6 +8,7 @@ import { SupplierTelegramLink } from '@/components/admin/supplier-telegram-link'
 import { SUPPLIER_COUNTRIES } from '@/lib/supplier-countries'
 import { DashboardHeader } from '@/components/shared/dashboard-header'
 import { getTranslations, getLocale } from 'next-intl/server'
+import { formatMAD } from '@/lib/utils'
 import type { Profile } from '@/types/database'
 
 interface Params {
@@ -74,6 +75,69 @@ export default async function AdminUserDetailPage({ params }: Params) {
   const isAdmin      = profile.role === 'admin'
   const isAgent      = profile.role === 'agent'
   const countryLabel = SUPPLIER_COUNTRIES.find((c) => c.code === profile.country_code)
+
+  // ── Performance affilié — agrégation LECTURE SEULE de commissions/orders existants
+  //    (aucun nouveau calcul financier). Visible admin only, uniquement si isAffiliate.
+  let affiliatePerf: {
+    commissionsPaidMad: number
+    commissionsPaidCount: number
+    commissionsApprovedMad: number
+    commissionsApprovedCount: number
+    commissionsPendingMad: number
+    commissionsPendingCount: number
+    reversedCount: number
+    ordersTotal: number
+    ordersDelivered: number
+    ordersCancelledReturned: number
+    conversionRate: number
+    codRevenueMad: number
+  } | null = null
+
+  if (isAffiliate) {
+    const [commissionsRes, ordersRes] = await Promise.all([
+      supabase
+        .from('commissions')
+        .select('amount, status, reversed')
+        .eq('affiliate_id', profile.id),
+      supabase
+        .from('orders')
+        .select('status, total_amount')
+        .eq('affiliate_id', profile.id),
+    ])
+
+    const commissions = (commissionsRes.data ?? []) as { amount: number; status: string; reversed: boolean }[]
+    const orders = (ordersRes.data ?? []) as { status: string; total_amount: number }[]
+
+    const activeCommissions = commissions.filter((c) => !c.reversed)
+    const sumByStatus = (status: string) =>
+      activeCommissions.filter((c) => c.status === status).reduce((sum, c) => sum + c.amount, 0)
+    const countByStatus = (status: string) =>
+      activeCommissions.filter((c) => c.status === status).length
+
+    const ordersTotal = orders.length
+    const deliveredOrders = orders.filter((o) => o.status === 'delivered')
+    const ordersDelivered = deliveredOrders.length
+    const ordersCancelledReturned = orders.filter(
+      (o) => o.status === 'cancelled' || o.status === 'returned'
+    ).length
+    const codRevenueMad = deliveredOrders.reduce((sum, o) => sum + o.total_amount, 0)
+
+    affiliatePerf = {
+      commissionsPaidMad: sumByStatus('paid'),
+      commissionsPaidCount: countByStatus('paid'),
+      commissionsApprovedMad: sumByStatus('approved'),
+      commissionsApprovedCount: countByStatus('approved'),
+      commissionsPendingMad: sumByStatus('pending'),
+      commissionsPendingCount: countByStatus('pending'),
+      reversedCount: commissions.filter((c) => c.reversed).length,
+      ordersTotal,
+      ordersDelivered,
+      ordersCancelledReturned,
+      // Garde-fou division par zéro → 0. Arrondi à 1 décimale.
+      conversionRate: ordersTotal > 0 ? Math.round((ordersDelivered / ordersTotal) * 1000) / 10 : 0,
+      codRevenueMad,
+    }
+  }
 
   function statusLabel(s: string) {
     if (s === 'pending')  return t('statusPending')
@@ -223,6 +287,71 @@ export default async function AdminUserDetailPage({ params }: Params) {
             </div>
           )}
         </div>
+
+        {/* ── Performance affilié — lecture seule, agrégée depuis commissions/orders existants ── */}
+        {isAffiliate && affiliatePerf && (
+          <div className="bg-surface rounded-xl border border-line p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">{t('affiliatePerfTitle')}</h2>
+
+            {affiliatePerf.ordersTotal === 0 && affiliatePerf.commissionsPaidCount === 0 &&
+             affiliatePerf.commissionsApprovedCount === 0 && affiliatePerf.commissionsPendingCount === 0 ? (
+              <p className="text-sm text-faint">{t('noActivity')}</p>
+            ) : (
+              <>
+                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="bg-surface-2 rounded-lg p-3">
+                    <dt className="text-xs text-muted">{t('commissionsPaid')}</dt>
+                    <dd className="text-2xl font-bold tabular-nums text-foreground mt-1">
+                      {formatMAD(affiliatePerf.commissionsPaidMad)}
+                    </dd>
+                  </div>
+                  <div className="bg-surface-2 rounded-lg p-3">
+                    <dt className="text-xs text-muted">{t('commissionsApproved')}</dt>
+                    <dd className="text-2xl font-bold tabular-nums text-foreground mt-1">
+                      {formatMAD(affiliatePerf.commissionsApprovedMad)}
+                    </dd>
+                  </div>
+                  <div className="bg-surface-2 rounded-lg p-3">
+                    <dt className="text-xs text-muted">{t('commissionsPending')}</dt>
+                    <dd className="text-2xl font-bold tabular-nums text-foreground mt-1">
+                      {formatMAD(affiliatePerf.commissionsPendingMad)}
+                    </dd>
+                  </div>
+                  <div className="bg-surface-2 rounded-lg p-3">
+                    <dt className="text-xs text-muted">{t('ordersTotal')}</dt>
+                    <dd className="text-2xl font-bold tabular-nums text-foreground mt-1">
+                      {affiliatePerf.ordersTotal}
+                    </dd>
+                  </div>
+                  <div className="bg-surface-2 rounded-lg p-3">
+                    <dt className="text-xs text-muted">{t('ordersDelivered')}</dt>
+                    <dd className="text-2xl font-bold tabular-nums text-foreground mt-1">
+                      {affiliatePerf.ordersDelivered}
+                    </dd>
+                  </div>
+                  <div className="bg-surface-2 rounded-lg p-3">
+                    <dt className="text-xs text-muted">{t('conversionRate')}</dt>
+                    <dd className="text-2xl font-bold tabular-nums text-foreground mt-1">
+                      {affiliatePerf.conversionRate}%
+                    </dd>
+                  </div>
+                  <div className="bg-surface-2 rounded-lg p-3 col-span-2 sm:col-span-3">
+                    <dt className="text-xs text-muted">{t('codRevenue')}</dt>
+                    <dd className="text-2xl font-bold tabular-nums text-foreground mt-1">
+                      {formatMAD(affiliatePerf.codRevenueMad)}
+                    </dd>
+                  </div>
+                </dl>
+
+                {affiliatePerf.reversedCount > 0 && (
+                  <p className="text-xs text-faint mt-4">
+                    {t('reversedCommissions', { count: affiliatePerf.reversedCount })}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── Liaison Telegram fournisseur — l'admin génère le lien magique + QR
             et le partage (WhatsApp) au fournisseur non-technique. Visible admin only. ── */}

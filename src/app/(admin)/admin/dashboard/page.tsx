@@ -358,6 +358,18 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/audit',
               },
+              {
+                title: t('treasuryTitle'),
+                description: t('treasuryDesc'),
+                badge: null,
+                href: '/admin/treasury',
+              },
+              {
+                title: t('remittancesTitle'),
+                description: t('remittancesDesc'),
+                badge: null,
+                href: '/admin/remittances',
+              },
             ].map((action) => (
               <div
                 key={action.title}
