@@ -598,6 +598,71 @@ export type Database = {
           },
         ]
       }
+      courier_product_debts: {
+        Row: {
+          amount_mad: number
+          courier_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          order_id: string | null
+          quantity: number
+          reason: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          amount_mad: number
+          courier_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string | null
+          quantity: number
+          reason?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          amount_mad?: number
+          courier_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string | null
+          quantity?: number
+          reason?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_product_debts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_product_debts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_product_debts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_product_debts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
       courier_remittance_orders: {
         Row: {
           collected_amount_mad: number
@@ -699,6 +764,48 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      couriers: {
+        Row: {
+          access_code: string | null
+          balance_cap_mad: number
+          company_name: string | null
+          courier_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          status: string
+        }
+        Insert: {
+          access_code?: string | null
+          balance_cap_mad?: number
+          company_name?: string | null
+          courier_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+        }
+        Update: {
+          access_code?: string | null
+          balance_cap_mad?: number
+          company_name?: string | null
+          courier_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       currencies: {
         Row: {
@@ -1345,6 +1452,7 @@ export type Database = {
           commission_amount: number
           confirmation_fee_snapshot: number | null
           confirmed_at: string | null
+          courier_id: string | null
           created_at: string
           customer_address: string
           customer_city: string
@@ -1390,6 +1498,7 @@ export type Database = {
           commission_amount: number
           confirmation_fee_snapshot?: number | null
           confirmed_at?: string | null
+          courier_id?: string | null
           created_at?: string
           customer_address: string
           customer_city: string
@@ -1435,6 +1544,7 @@ export type Database = {
           commission_amount?: number
           confirmation_fee_snapshot?: number | null
           confirmed_at?: string | null
+          courier_id?: string | null
           created_at?: string
           customer_address?: string
           customer_city?: string
@@ -1487,6 +1597,20 @@ export type Database = {
             columns: ["attribution_click_id"]
             isOneToOne: false
             referencedRelation: "affiliate_clicks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
             referencedColumns: ["id"]
           },
           {
@@ -4989,6 +5113,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_courier_balances: {
+        Row: {
+          balance_cap_mad: number | null
+          cash_owed_mad: number | null
+          company_name: string | null
+          courier_type: string | null
+          id: string | null
+          name: string | null
+          over_cap: boolean | null
+          product_debt_mad: number | null
+          status: string | null
+          total_balance_mad: number | null
+        }
+        Relationships: []
       }
       v_courier_cash_in_transit: {
         Row: {

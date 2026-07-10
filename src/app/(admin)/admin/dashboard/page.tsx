@@ -370,6 +370,12 @@ export default async function AdminDashboardPage() {
                 badge: null,
                 href: '/admin/remittances',
               },
+              {
+                title: t('couriersNavTitle'),
+                description: t('couriersNavDesc'),
+                badge: null,
+                href: '/admin/couriers',
+              },
             ].map((action) => (
               <div
                 key={action.title}
