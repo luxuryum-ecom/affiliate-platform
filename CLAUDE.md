@@ -4,6 +4,9 @@
 > Définit le contexte, les règles et les rôles.
 > La stack exacte et le schéma DB seront complétés par l'audit de la PHASE 0.
 
+## DÉMARRAGE DE SESSION (obligatoire, à faire AVANT toute action)
+Au début de CHAQUE session, lire dans l'ordre : graphify-out/graph.json (carte du code), SESSION_HANDOFF.md (état de session), ETAT_REEL_[date récente].md (état réel vérifié), PLAN_ACTION_GLOBAL.md (plan). Résumer en 5 lignes où on en est AVANT de proposer quoi que ce soit. Ne JAMAIS proposer un lot sans avoir vérifié dans le code réel qu'il n'est pas déjà fait (règle anti-fausse-dette).
+
 ## 🗺️ AVANT TOUT CHANTIER — CARTOGRAPHIER L'EXISTANT D'ABORD
 > Issue d'une régression réelle (2026-06-14) : on a failli construire une 2ᵉ marge fournisseur
 > alors que l'achat direct route par le **miroir catalogue** qui capte DÉJÀ la marge → doublon
