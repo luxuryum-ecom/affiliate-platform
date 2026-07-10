@@ -114,10 +114,10 @@ Test `tests/p0-remittance-unblocks-commission.integration.test.ts` — **6/6 ver
 
 ---
 
-## ✅ MERGÉ — GO ABDOU DONNÉ (2026-07-10)
+## ✅ LIVRÉ EN PROD (2026-07-10)
 
-**Lot P0 + P2 MERGÉS `main` `--no-ff`** après GO Abdou (écrans validés + non-régression verte). **NON poussé** (Abdou pousse).
-**PROCHAINE ÉTAPE (après push + Vercel Ready) : appliquer la migration 125 en PROD** via pooler `backups/.db_password` (lockstep, vérif AVANT/APRÈS — jamais le CLI), puis régénérer les types depuis la prod.
+**Lot P0 + P2 MERGÉS `main` `--no-ff`, POUSSÉS, déployés Vercel (04d5172).**
+**✅ Migration 125 APPLIQUÉE EN PROD** (pooler `backups/.db_password`, transaction atomique lockstep APRÈS déploiement — jamais le CLI). Vérifié AVANT (2 vues absentes) / APRÈS (2 vues créées, colonnes correctes, **rempart staff `my_role`+`service_role` dans les définitions**, `security_invoker` actif, historique `schema_migrations` **001→125 sans trou**). **Rempart prouvé live** : contexte service_role → 8 comptes visibles ; contexte non-staff → 0. Types prod régénérés = **identiques** au fichier commité (aucun changement). **Le cœur argent est désormais pilotable en prod : `/admin/treasury` + `/admin/remittances` lisent les vraies vues.**
 
 ### Manifeste des fichiers (branche `feat/p0-tresorerie-reconciliation`)
 **Lot P0 — CŒUR ARGENT (financier → GO Abdou requis, puis mig prod) :**
