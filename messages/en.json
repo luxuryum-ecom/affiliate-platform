@@ -4098,6 +4098,22 @@
     "variantLabel": "Variant"
   },
   "courier": {
+    "dashboard": {
+      "metaTitle": "My courier space — Mozouna",
+      "pageTitle": "My dashboard",
+      "invalidTitle": "Invalid link",
+      "invalidMessage": "This link is invalid or expired. Ask the administrator for a new one.",
+      "toDeposit": "To deposit (cash collected)",
+      "toDepositHint": "Amount to hand in at the depot / office.",
+      "productDebt": "Product debt",
+      "totalBalance": "Total balance",
+      "scanCta": "Scan my deliveries",
+      "deliveriesTitle": "My deliveries",
+      "deliveriesEmpty": "No delivery in progress.",
+      "codLabel": "To collect",
+      "returnsTitle": "Returns to hand back",
+      "returnsEmpty": "No return to hand back."
+    },
     "scan": {
       "metaTitle": "Delivery scan — Mozouna",
       "pageTitle": "Scan my deliveries",

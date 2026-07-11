@@ -4098,6 +4098,22 @@
     "variantLabel": "النسخة"
   },
   "courier": {
+    "dashboard": {
+      "metaTitle": "مساحتي كموزّع — موزونة",
+      "pageTitle": "لوحتي",
+      "invalidTitle": "رابط غير صالح",
+      "invalidMessage": "هذا الرابط غير صالح أو منتهي. اطلب رابطًا جديدًا من الإدارة.",
+      "toDeposit": "للإيداع (النقد المُحصَّل)",
+      "toDepositHint": "المبلغ الواجب تسليمه للمستودع / المكتب.",
+      "productDebt": "دَين المنتج",
+      "totalBalance": "الرصيد الإجمالي",
+      "scanCta": "مسح توصيلاتي",
+      "deliveriesTitle": "توصيلاتي",
+      "deliveriesEmpty": "لا توجد توصيلات جارية.",
+      "codLabel": "للتحصيل",
+      "returnsTitle": "مرتجعات للإرجاع",
+      "returnsEmpty": "لا مرتجعات للإرجاع."
+    },
     "scan": {
       "metaTitle": "مسح التسليم — موزونة",
       "pageTitle": "مسح طلبيات التوصيل",
