@@ -4098,6 +4098,22 @@
     "variantLabel": "Variante"
   },
   "courier": {
+    "dashboard": {
+      "metaTitle": "Mon espace livreur — Mozouna",
+      "pageTitle": "Mon tableau de bord",
+      "invalidTitle": "Lien invalide",
+      "invalidMessage": "Ce lien est invalide ou expiré. Demandez-en un nouveau à l'administrateur.",
+      "toDeposit": "À déposer (cash encaissé)",
+      "toDepositHint": "Montant à remettre au dépôt / bureau.",
+      "productDebt": "Créance produit",
+      "totalBalance": "Solde total",
+      "scanCta": "Scanner mes livraisons",
+      "deliveriesTitle": "Mes livraisons",
+      "deliveriesEmpty": "Aucune livraison en cours.",
+      "codLabel": "À encaisser",
+      "returnsTitle": "Retours à rendre",
+      "returnsEmpty": "Aucun retour à rendre."
+    },
     "scan": {
       "metaTitle": "Scan livraison — Mozouna",
       "pageTitle": "Scanner mes livraisons",

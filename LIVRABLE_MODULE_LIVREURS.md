@@ -9,7 +9,7 @@
 | 0 | Cartographie anti-fausse-dette | — | ✅ fait |
 | A | Registre + comptes livreurs + /admin/couriers | `feat/livreurs-lot-a` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
 | B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ✅ **LIVRÉ EN PROD** — mergé main (65668fc) + poussé + **mig 127 appliquée prod 2026-07-11** |
-| C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ⏭️ spécifié |
+| C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
 | D | Tournées + retours 3 cas | `feat/livreurs-lot-d` | ⏭️ spécifié |
 | E | Notifications instantanées | `feat/livreurs-lot-e` | ⏭️ spécifié |
 | F | Relevé PDF affilié au payout | `feat/livreurs-lot-f` | ⏭️ spécifié |
@@ -33,6 +33,26 @@ Existant réutilisable vérifié dans le code réel :
 3. **`orders.courier_id`** (FK nullable) : assignation d'un livreur à une livraison (relie la réconciliation P0 par livreur).
 4. **Créance PRODUIT (retour manquant = fuite)** : table `courier_product_debts` + poste grand livre dédié, chiffré sur le solde livreur.
 5. **scan_events étendu** (Lot B) : nouveaux `scan_type` livraison (`delivered_collected`, `delivery_refused`) au lieu d'une 2ᵉ table.
+
+---
+## 🔒 CHAÎNE DE GARDE — décisions Abdou VERROUILLÉES (pour lots D enrichi + G)
+> Gravé le 2026-07-11 (décision Abdou). À respecter dans tous les lots suivants du module Livreurs.
+
+**PRINCIPE FONDATEUR** : chaque **colis** et chaque **dirham** a TOUJOURS un responsable identifié. Tout **transfert de responsabilité** = **DOUBLE CONFIRMATION** — 2 personnes, 2 comptes distincts, **JAMAIS de compte partagé** (l'équipe dépôt n'est pas fixe → chaque salarié scanne avec SON propre code).
+
+**Lot D ENRICHI — ramassage tracé** :
+- **Scan de RAMASSAGE OBLIGATOIRE** à la sortie du dépôt, effectué par un **salarié dépôt avec SON code** (compte personnel), pour les livreurs **perso ET** les chauffeurs sociétés (Ozone/Cathedis). C'est le 1er maillon de la chaîne de garde (dépôt → livreur).
+- **Bordereau de ramassage PDF** (liste des colis remis à un livreur/chauffeur, horodaté, 2 signatures/scans).
+- **Comptes salariés dépôt** : réutiliser le système de **permissions salariés existant** (staff_permissions / capacités), pas de nouveau modèle d'auth.
+
+**Lot G — AGENT GARDIEN (surveillance anti-fuite)** :
+- **Retour déclaré par livreur** → **notif INSTANTANÉE Abdou** + état **`RETOUR_DÉCLARÉ_NON_CONFIRMÉ`** ; la **dette du livreur reste INCHANGÉE** jusqu'au **scan de réception par un salarié dépôt** (2ᵉ confirmation). Escalade **48h** sans réception = alerte **« retour fantôme »**.
+- **Réception SANS déclaration préalable** du livreur = alerte **« collusion »** (salarié + livreur).
+- **Cash encaissé** → la dette ne tombe qu'à **validation Abdou** ; **virement** → **validation bancaire Abdou**.
+- **Blocage** : **AUTO** pour livreurs perso (plafond dépassé / fraude) ; **alerte + blocage MANUEL** pour les sociétés (on ne bloque pas une société automatiquement).
+- **Alertes** : Telegram admin + cloche in-app + **email récap quotidien**.
+- **Détection de pattern** : paire **livreur ↔ salarié** anormalement récurrente = signal.
+- **Réconciliation stock continue** + **inventaire physique mensuel guidé**.
 
 ---
 ## LOTS (détail au fil de l'eau)
@@ -68,7 +88,19 @@ Existant réutilisable vérifié dans le code réel :
 **✅ Lot B = PRÊT POUR GO.** Fichiers (branche `feat/livreurs-lot-b`, NON commité) : mig `127_courier_scan_and_access_hardening.sql` · `src/app/actions/{courier-scan,courier-access}.ts` · `src/app/(courier)/{layout.tsx,courier/scan/page.tsx}` · `src/components/courier/scan-panel.tsx` · `src/components/admin/courier-regenerate-link.tsx` · `src/lib/courier/{code128,labels-pdf}.ts` · `src/app/(admin)/admin/couriers/labels/route.ts` · `tests/{lot-b-courier-scan.integration,code128}.test.ts` · i18n `messages/*` · captures. Migration 127 = LOCAL — PROD après GO (pooler, lockstep).
 
 ---
-## SPÉCIFICATIONS C→F (prêtes à coder, 1 lot = 1 session)
+## Lot C — Dashboard livreur mobile cloisonné 🔄 (code + 4 checks verts, audits en cours)
+**AUCUNE migration** — réutilise l'existant (règle « pas de nouvelle surface de données »).
+- **Action** `src/app/actions/courier-dashboard.ts` : `getCourierDashboard(code)` — auth par `resolveCourierSession` (mig 127, même que /courier/scan), lit `v_courier_balances` (solde EXACT du grand livre, filtré au livreur) + ses commandes en cours (orders scopées `courier_id=lui`, avec contact client de SES livraisons) + ses retours. Service_role APRÈS résolution du code. 100 % lecture.
+- **Page** `src/app/(courier)/courier/page.tsx` (mobile-first) : carte « à déposer » (cash encaissé) + créance produit + solde total (chiffres grand livre), gros bouton « Scanner mes livraisons » → /courier/scan, liste de SES livraisons (réf, nom, ville, adresse, **tél cliquable `tel:`**, montant COD), retours à rendre. Thème 🔒, i18n FR/AR/EN (`courier.dashboard`, 14 clés) + RTL, libellés courts (darija/arabe).
+- **Cloisonnement** : zéro marge/prix d'achat/autre livreur/total plateforme ; contact client UNIQUEMENT pour SES livraisons.
+- **Test** `lot-c-courier-dashboard` 5/5 (A ne voit pas B, solde === v_courier_balances, contact scopé, code invalide→erreur). **4 checks verts** : tsc 0 · build · vitest **698** · smoke 16.
+**@finance 🟢 VERT** (aucun P0/P1) : solde livreur = grand livre EXACT (`total_balance_mad` de la vue, pas de somme JS parallèle), zéro écriture financière, zéro float, zéro fuite marge, **cohérence garantie avec la trésorerie admin** (même vue `v_courier_balances`, divergence impossible). P2 informationnels : log d'échec d'auth (sécurité, non-financier), cloisonnement applicatif via `.eq(courier_id)` post-résolution (voulu).
+**@security 🟢 GO** : **cloisonnement absolu confirmé** — un livreur ne peut PAS voir un autre livreur ni la plateforme (seul input = le code, qui résout de façon déterministe/unique vers son propre livreur ; toutes lectures scopées `courier_id=lui` côté serveur ; zéro marge/coût/total plateforme ; PII bornée à SES livraisons). Auth par code robuste (hash+TTL+rate-limit mig 127). **P2-1 corrigé** (erreurs DB génériques + log serveur). P2-2 (code en URL, = Lot B) + P2-3 (tel: non validé) documentés, non bloquants.
+**Captures FR/AR (mobile)** : `couriers-captures/lot-c/` + `Desktop/p0-ecrans/livreurs-lot-c/` (dashboard : à déposer 300 MAD, solde total, livraisons avec contact + tél, retours, bouton scan ; RTL ; solde vérifié contre le grand livre).
+**✅ Lot C = PRÊT POUR GO.** Fichiers (branche `feat/livreurs-lot-c`, NON commité) : `src/app/actions/courier-dashboard.ts` · `src/app/(courier)/courier/page.tsx` · i18n `messages/*` (`courier.dashboard`) · `tests/lot-c-courier-dashboard.integration.test.ts` · captures + scripts. **AUCUNE migration** (lecture seule sur l'existant). + section CHAÎNE DE GARDE gravée (décisions Abdou pour D enrichi + G).
+
+---
+## SPÉCIFICATIONS D→F (prêtes à coder, 1 lot = 1 session)
 
 ### Lot B — QR + code128 + étiquettes PDF + scan mobile ⏭️
 - **Étendre `scan_events` (mig 100)** : nouveaux `scan_type` `delivered_collected` (livré+encaissé) et `delivery_refused` (refusé→retour). Étendre le CHECK. RPC `record_scan` déjà idempotente (unique index) → réutiliser/étendre.
