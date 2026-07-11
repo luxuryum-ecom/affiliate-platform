@@ -54,6 +54,19 @@ Existant réutilisable vérifié dans le code réel :
 - **Détection de pattern** : paire **livreur ↔ salarié** anormalement récurrente = signal.
 - **Réconciliation stock continue** + **inventaire physique mensuel guidé**.
 
+**🎯 RÈGLE DU PORTEUR — IMPUTATION AUTOMATIQUE (priorité Lot G, gravé 2026-07-11) :**
+> But : rendre l'erreur ET la fraude par imputation croisée **STRUCTURELLEMENT IMPOSSIBLES** (pas juste détectées).
+- Le **PORTEUR** d'un colis = le livreur/société qui a scanné le **RAMASSAGE** (`scan_events` `pickup_dispatch`, Lot D). Le système le **connaît déjà** (résolu à la source, jamais saisi).
+- **SCAN DE RÉCEPTION AU DÉPÔT : le salarié NE CHOISIT JAMAIS le livreur.** Il scanne le colis, le système **résout AUTOMATIQUEMENT** le porteur enregistré et affiche en clair « **Colis [réf] — Porteur : [nom] — [montant] MAD** » pour **confirmation visuelle** uniquement. **Aucun menu déroulant, aucune saisie manuelle du livreur** → zéro erreur de frappe, zéro fraude par imputation. *(NB : diffère du scan de RAMASSAGE Lot D où le salarié choisit le livreur — à la RÉCEPTION, le porteur est déjà lié au colis, donc imposé.)*
+- La **dette annulée est TOUJOURS celle du porteur enregistré**. Impossible d'imputer un retour à un autre livreur/société.
+- **Colis scanné SANS porteur enregistré** (jamais ramassé) → **REFUS du scan** + alerte gardien « **colis fantôme — aucun ramassage enregistré** ».
+- **Cas légitime (transporteur ≠ responsable)** : si un colis porté par X est physiquement rapporté par un camion Ozone, le retour reste **imputé à X** (SA dette tombe) ; Ozone n'est noté que comme « **transporteur du retour** » (information, PAS responsabilité). **La dette ne change JAMAIS de propriétaire.**
+- **Même règle sur le CASH** : un versement n'éteint que la dette du **porteur qui l'a encaissé**. **Aucune compensation croisée** entre livreurs/sociétés.
+
+**📱 RÈGLE CAPTURES — VIEWPORT MOBILE (gravé 2026-07-11) :**
+- Toutes les captures des écrans **`/courier/*`** et **`/admin/couriers/pickup`** doivent être en **VIEWPORT MOBILE (390×844, iPhone)** — **98 % de l'usage réel est sur téléphone** (livreurs + salariés dépôt).
+- Les écrans **admin de bureau** (`/admin/couriers`, `/admin/couriers/[id]`, `/admin/treasury`, `/admin/remittances`, etc.) restent en **desktop**.
+
 ---
 ## LOTS (détail au fil de l'eau)
 
