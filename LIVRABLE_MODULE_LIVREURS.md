@@ -10,7 +10,7 @@
 | A | Registre + comptes livreurs + /admin/couriers | `feat/livreurs-lot-a` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
 | B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ✅ **LIVRÉ EN PROD** — mergé main (65668fc) + poussé + **mig 127 appliquée prod 2026-07-11** |
 | C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
-| D | Tournées + scan ramassage + retours 3 cas | `feat/livreurs-lot-d` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
+| D | Tournées + scan ramassage + retours 3 cas | `feat/livreurs-lot-d` | ✅ **LIVRÉ EN PROD** — mergé main (e294897) + poussé + **mig 128 appliquée prod 2026-07-11** |
 | E | Notifications instantanées | `feat/livreurs-lot-e` | ⏭️ spécifié |
 | F | Relevé PDF affilié au payout | `feat/livreurs-lot-f` | ⏭️ spécifié |
 
