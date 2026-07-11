@@ -9,7 +9,10 @@ import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { CourierStatusToggle } from '@/components/admin/courier-status-toggle'
 import { CourierRegenerateLink } from '@/components/admin/courier-regenerate-link'
+import { CourierTourCreateForm } from '@/components/admin/courier-tour-create-form'
+import { CourierReturnActions } from '@/components/admin/courier-return-actions'
 import { getCourierDetail } from '@/app/actions/couriers'
+import { listCourierTours, getTourDetail, listCourierReturns } from '@/app/actions/courier-tours'
 import type { Profile } from '@/types/database'
 
 export async function generateMetadata() {
@@ -60,6 +63,30 @@ export default async function AdminCourierDetailPage({
   const overCap = balance?.overCap ?? false
 
   const shortRef = (s: string) => s.slice(0, 8).toUpperCase()
+
+  // Tournées + nb colis (Lot D).
+  const { tours } = await listCourierTours(id)
+  const tourDetails = await Promise.all(tours.map((tr) => getTourDetail(tr.id)))
+  const tourParcelCounts = new Map(tours.map((tr, i) => [tr.id, tourDetails[i]?.detail?.orders.length ?? 0]))
+  const tourStatusLabel = (status: string) =>
+    status === 'closed' ? t('tourStatusClosed') : status === 'dispatched' ? t('tourStatusDispatched') : t('tourStatusOpen')
+  const tourStatusClass = (status: string) =>
+    status === 'closed'
+      ? 'bg-success-soft text-success-fg'
+      : status === 'dispatched'
+        ? 'bg-warning-soft text-warning-fg'
+        : 'bg-surface-2 text-muted'
+
+  // Retours — chaîne de garde (Lot D).
+  const { returns } = await listCourierReturns(id)
+  const returnStateLabel = (state: string) =>
+    state === 'lost' ? t('returnStateLost') : state === 'declared' ? t('returnStateDeclared') : t('returnStateConfirmed')
+  const returnStateClass = (state: string) =>
+    state === 'lost'
+      ? 'bg-danger-soft text-danger-fg'
+      : state === 'declared'
+        ? 'bg-warning-soft text-warning-fg'
+        : 'bg-success-soft text-success-fg'
 
   return (
     <div className="min-h-screen bg-bg text-foreground">
@@ -260,6 +287,98 @@ export default async function AdminCourierDetailPage({
                       <td className="py-2.5 px-4 text-right tabular-nums text-muted">{d.quantity}</td>
                       <td className="py-2.5 px-4 text-right tabular-nums text-danger-fg font-medium">{formatMAD(d.amountMad)}</td>
                       <td className="py-2.5 px-5 text-right text-muted">{d.createdAt.slice(0, 10)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* Tournées (Lot D) */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-faint">{t('toursSection')}</h2>
+            <CourierTourCreateForm courierId={courier.id} />
+          </div>
+          <div className="bg-surface rounded-xl border border-line overflow-hidden">
+            {tours.length === 0 ? (
+              <p className="text-sm text-muted px-5 py-5">{t('toursEmpty')}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs min-w-[520px]">
+                  <thead>
+                    <tr className="text-faint text-left border-y border-line bg-surface-2">
+                      <th className="py-2.5 px-5 font-medium">{t('tourColDate')}</th>
+                      <th className="py-2.5 px-4 font-medium">{t('tourColStatus')}</th>
+                      <th className="py-2.5 px-4 font-medium text-right">{t('tourColParcels')}</th>
+                      <th className="py-2.5 px-5 font-medium text-right">{t('printSlip')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tours.map((tr) => (
+                      <tr key={tr.id} className="border-b border-line/60 last:border-0">
+                        <td className="py-2.5 px-5 text-foreground">{tr.tourDate}</td>
+                        <td className="py-2.5 px-4">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${tourStatusClass(tr.status)}`}>
+                            {tourStatusLabel(tr.status)}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 text-right tabular-nums text-muted">
+                          {tourParcelCounts.get(tr.id) ?? 0}
+                        </td>
+                        <td className="py-2.5 px-5 text-right">
+                          <Link
+                            href={`/admin/couriers/tours/${tr.id}/slip`}
+                            target="_blank"
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {t('printSlip')}
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Retours — chaîne de garde (Lot D) */}
+        <section className="bg-surface rounded-xl border border-line overflow-hidden">
+          <div className="px-5 pt-5 pb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-faint mb-2">{t('returnsSection')}</h2>
+            <p className="text-[11px] text-faint">{t('returnChainNote')}</p>
+          </div>
+          {returns.length === 0 ? (
+            <p className="text-sm text-muted px-5 pb-5">{t('returnsEmpty')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs min-w-[640px]">
+                <thead>
+                  <tr className="text-faint text-left border-y border-line bg-surface-2">
+                    <th className="py-2.5 px-5 font-medium">{t('returnColRef')}</th>
+                    <th className="py-2.5 px-4 font-medium">{t('returnColStatus')}</th>
+                    <th className="py-2.5 px-5 font-medium">{t('colActions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {returns.map((r) => (
+                    <tr key={r.id} className="border-b border-line/60 last:border-0">
+                      <td className="py-2.5 px-5 font-mono text-foreground align-top">{shortRef(r.orderId)}</td>
+                      <td className="py-2.5 px-4 align-top">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${returnStateClass(r.state)}`}>
+                          {returnStateLabel(r.state)}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-5 align-top">
+                        {r.state === 'declared' ? (
+                          <CourierReturnActions orderId={r.orderId} />
+                        ) : (
+                          <span className="text-faint">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

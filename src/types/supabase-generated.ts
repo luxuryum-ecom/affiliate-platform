@@ -807,6 +807,179 @@ export type Database = {
           },
         ]
       }
+      courier_returns: {
+        Row: {
+          company_ref: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          courier_id: string
+          created_at: string
+          declared_at: string | null
+          declared_by: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          state: string
+        }
+        Insert: {
+          company_ref?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          courier_id: string
+          created_at?: string
+          declared_at?: string | null
+          declared_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          state?: string
+        }
+        Update: {
+          company_ref?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          courier_id?: string
+          created_at?: string
+          declared_at?: string | null
+          declared_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_returns_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_returns_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "courier_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
+      courier_tour_orders: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          tour_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          tour_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          tour_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_tour_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_tour_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "courier_tour_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "courier_tour_orders_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "courier_tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courier_tours: {
+        Row: {
+          courier_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          status: string
+          tour_date: string
+        }
+        Insert: {
+          courier_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tour_date?: string
+        }
+        Update: {
+          courier_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tour_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_tours_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_tours_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couriers: {
         Row: {
           access_code: string | null
@@ -5663,6 +5836,11 @@ export type Database = {
       }
       client_currency_for: { Args: { p_label: string }; Returns: string }
       confirm_cod_order: { Args: { p_order_id: string }; Returns: boolean }
+      confirm_return_company: {
+        Args: { p_company_ref: string; p_order_id: string }
+        Returns: Json
+      }
+      confirm_return_depot: { Args: { p_order_id: string }; Returns: Json }
       create_payout: {
         Args: {
           p_affiliate_id: string
@@ -5687,6 +5865,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      declare_courier_return: {
+        Args: { p_courier_id: string; p_order_id: string }
+        Returns: Json
       }
       default_variant_id: { Args: { p_product_id: string }; Returns: string }
       fx_rate_to_mad: { Args: { p_code: string }; Returns: number }
@@ -5788,6 +5970,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_return_lost: {
+        Args: { p_amount_mad: number; p_order_id: string; p_quantity?: number }
+        Returns: Json
+      }
       my_role: { Args: never; Returns: string }
       reconcile_courier_remittance: {
         Args: {
@@ -5833,6 +6019,10 @@ export type Database = {
           p_postings: Json
         }
         Returns: string
+      }
+      record_pickup_scan: {
+        Args: { p_courier_id: string; p_order_id: string; p_tour_id?: string }
+        Returns: Json
       }
       record_scan: {
         Args: {

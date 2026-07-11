@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { formatMAD } from '@/lib/utils'
-import { recordDeliveryScan, type ScanQueueOrder } from '@/app/actions/courier-scan'
+import { recordDeliveryScan, declareCourierReturn, type ScanQueueOrder } from '@/app/actions/courier-scan'
 
 // ─── Types minimaux BarcodeDetector (API navigateur native, absente de lib.dom.d.ts
 // en TS 5.9) — décrits ici pour rester typés sans dépendance externe. Détection
@@ -146,7 +146,14 @@ export function ScanPanel({ code, orders }: ScanPanelProps) {
     if (!selectedOrder || !confirmOutcome) return
     setIsSubmitting(true)
     setFeedback(null)
-    const res = await recordDeliveryScan({ code, orderId: selectedOrder.orderId, outcome: confirmOutcome })
+    // CHAÎNE DE GARDE (Lot D) : « Livré+encaissé » enregistre la livraison (ledger),
+    // mais « Refusé/retour » ne fait que DÉCLARER le retour (état declared, dette
+    // INCHANGÉE) — la validation (dette annulée) vient du scan de réception d'un
+    // salarié dépôt (double confirmation). Le livreur ne peut pas auto-valider un retour.
+    const res =
+      confirmOutcome === 'delivered_collected'
+        ? await recordDeliveryScan({ code, orderId: selectedOrder.orderId, outcome: 'delivered_collected' })
+        : await declareCourierReturn({ code, orderId: selectedOrder.orderId })
     setIsSubmitting(false)
     setConfirmOutcome(null)
 
@@ -156,7 +163,7 @@ export function ScanPanel({ code, orders }: ScanPanelProps) {
     }
     setFeedback({
       type: 'success',
-      message: confirmOutcome === 'delivered_collected' ? t('successDelivered') : t('successRefused'),
+      message: confirmOutcome === 'delivered_collected' ? t('successDelivered') : t('successReturnDeclared'),
     })
     setSelectedId('')
     router.refresh()
