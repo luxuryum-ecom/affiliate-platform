@@ -8,7 +8,7 @@ import { MozounaLogo } from '@/components/shared/branding'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { CourierStatusToggle } from '@/components/admin/courier-status-toggle'
-import { CourierCopyLinkButton } from '@/components/admin/courier-copy-link-button'
+import { CourierRegenerateLink } from '@/components/admin/courier-regenerate-link'
 import { getCourierDetail } from '@/app/actions/couriers'
 import type { Profile } from '@/types/database'
 
@@ -58,11 +58,6 @@ export default async function AdminCourierDetailPage({
   const { courier, balance, remittances, orders, productDebts } = detail
   const typeLabel = courier.courierType === 'company' ? t('typeCompany') : t('typePersonal')
   const overCap = balance?.overCap ?? false
-
-  // Lien d'accès cloisonné du livreur (Lot C) — construit côté serveur (string sérialisable).
-  const accessUrl = courier.accessCode
-    ? `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/courier?code=${courier.accessCode}`
-    : ''
 
   const shortRef = (s: string) => s.slice(0, 8).toUpperCase()
 
@@ -166,17 +161,7 @@ export default async function AdminCourierDetailPage({
 
           <div className="bg-surface rounded-xl border border-line p-5">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-faint mb-4">{t('accessSection')}</h2>
-            {courier.accessCode ? (
-              <div className="space-y-3">
-                <p className="text-xs text-muted">{t('accessLinkHelp')}</p>
-                <code className="block text-xs bg-surface-2 rounded-lg px-3 py-2 text-foreground break-all">
-                  {accessUrl}
-                </code>
-                <CourierCopyLinkButton url={accessUrl} strings={{ copy: t('copyLink'), copied: t('copiedLink') }} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted">{t('noAccessCode')}</p>
-            )}
+            <CourierRegenerateLink courierId={courier.id} />
           </div>
         </div>
 

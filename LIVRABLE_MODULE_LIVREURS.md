@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 0 | Cartographie anti-fausse-dette | — | ✅ fait |
 | A | Registre + comptes livreurs + /admin/couriers | `feat/livreurs-lot-a` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
-| B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ⏭️ spécifié |
+| B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
 | C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ⏭️ spécifié |
 | D | Tournées + retours 3 cas | `feat/livreurs-lot-d` | ⏭️ spécifié |
 | E | Notifications instantanées | `feat/livreurs-lot-e` | ⏭️ spécifié |
@@ -53,7 +53,22 @@ Existant réutilisable vérifié dans le code réel :
 **Lot A = PRÊT POUR GO.** Migration 126 = LOCAL — PROD après GO via pooler.
 
 ---
-## SPÉCIFICATIONS B→F (prêtes à coder, 1 lot = 1 session)
+## Lot B — Scan livraison + étiquettes 🔄 (code + 4 checks verts, audits en cours)
+**Migration `127_courier_scan_and_access_hardening.sql`** (LOCAL, additive, 0 trigger financier prod touché) :
+- **Durcissement accès (@security P2-3)** : `couriers.access_code_hash` (SHA-256) + `access_code_expires_at` (TTL 30j) ; table `courier_access_attempts` + fonction `resolve_courier_by_access_code` (hash + TTL + **rate-limit** 10/min/ip, service_role only, erreur générique). L'ancien `access_code` clair est vidé à la régénération.
+- **Scan livraison** : `scan_type` étendu (`delivered_collected`/`delivery_refused`), RPC `record_delivery_scan` (change le statut → les **triggers 122 EXISTANTS postent le ledger**, pas de duplication ; pose `orders.courier_id` pour l'attribution solde), vue `v_courier_scan_queue` (non sensible, rempart staff).
+- Actions `courier-scan.ts` (resolveCourierSession, getCourierScanQueue, recordDeliveryScan — cloisonné, service_role après auth par code) + `courier-access.ts` (regenerateCourierAccessCode, code en clair 1 seule fois).
+**Portail `/courier/scan`** (groupe `(courier)`, mobile-first, cloisonné) : file des commandes (réf, ville, montant COD), lecture caméra `BarcodeDetector` (QR + code128) + **fallback saisie manuelle**, boutons « Livré+encaissé » / « Refusé-retour ». Fiche admin : bouton « régénérer le lien » (code hashé).
+**Étiquettes PDF** : `src/lib/courier/code128.ts` (encodeur Code128B canonique, pur, testé) + `labels-pdf.ts` (planche A4, réf+ville+COD+code-barres) + route `/admin/couriers/labels` + lien sur la page couriers.
+**i18n** FR/AR/EN (`courier.scan` 25 clés + `admin.couriers` régénération/étiquettes) + RTL. **Tests** : `lot-b-courier-scan` 6/6 (scan→ledger sans double-poste, rate-limit, TTL) + `code128` 6/6. **4 checks verts** : tsc 0 · build · vitest **693** · smoke 16.
+**Décisions** : le scan réutilise les triggers ledger 122 (anti-double-poste) ; QR labels = code128 seul pour l'instant (scannable ; QR nécessiterait une lib serveur `qrcode`, noté).
+**@finance 🟢 (après fix)** : additif pur confirmé (0 objet financier redéfini, 0 double-poste, 0 fuite marge, scan réutilise les triggers 122). **P1 CORRIGÉ** : `record_delivery_scan` cloisonnée (`courier_id=p_courier_id OR courier_id IS NULL`) → un livreur ne peut transitionner QUE ses commandes ou non assignées (re-testé 6/6). P2 documentés : attribution COALESCE (réglée par le fix), dédup scan_events par tracking_ref, file = pool partagé (intentionnel).
+**@security 🟢** : portail **étanche** (aucun accès sans code valide, code non bruteforçable ~80 bits, résolution avant tout affichage), hash SHA-256 au repos + TTL + code clair 1 fois, cloisonnement livreur confirmé, service_role serveur-only, RPC REVOKE public/anon/authenticated, RLS deny + rempart vue. **P2 corrigés** : (P2-C) un code valide ne consomme plus de quota → plus d'auto-blocage ; (P2-A) rate-limit sur les ÉCHECS même IP nulle (par préfixe). **P2 consignés pré-go-live public** (non bloquants merge) : rétention `courier_access_attempts` (purge >48h), code en query-string → échanger contre cookie httpOnly, TTL 30j long (révocation rapide). (Commentaire entropie 80 bits corrigé.)
+**Captures FR/AR (mobile) + écran verrouillé** : `couriers-captures/lot-b/` (portail file cloisonnée, RTL, 🔒 sans code). **4 checks verts** : tsc 0 · build · vitest **693** · smoke 16.
+**✅ Lot B = PRÊT POUR GO.** Fichiers (branche `feat/livreurs-lot-b`, NON commité) : mig `127_courier_scan_and_access_hardening.sql` · `src/app/actions/{courier-scan,courier-access}.ts` · `src/app/(courier)/{layout.tsx,courier/scan/page.tsx}` · `src/components/courier/scan-panel.tsx` · `src/components/admin/courier-regenerate-link.tsx` · `src/lib/courier/{code128,labels-pdf}.ts` · `src/app/(admin)/admin/couriers/labels/route.ts` · `tests/{lot-b-courier-scan.integration,code128}.test.ts` · i18n `messages/*` · captures. Migration 127 = LOCAL — PROD après GO (pooler, lockstep).
+
+---
+## SPÉCIFICATIONS C→F (prêtes à coder, 1 lot = 1 session)
 
 ### Lot B — QR + code128 + étiquettes PDF + scan mobile ⏭️
 - **Étendre `scan_events` (mig 100)** : nouveaux `scan_type` `delivered_collected` (livré+encaissé) et `delivery_refused` (refusé→retour). Étendre le CHECK. RPC `record_scan` déjà idempotente (unique index) → réutiliser/étendre.

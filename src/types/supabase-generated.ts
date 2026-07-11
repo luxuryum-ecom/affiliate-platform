@@ -520,6 +520,13 @@ export type Database = {
             referencedRelation: "v_courier_remittance_pending"
             referencedColumns: ["order_id"]
           },
+          {
+            foreignKeyName: "commissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       countries: {
@@ -598,6 +605,27 @@ export type Database = {
           },
         ]
       }
+      courier_access_attempts: {
+        Row: {
+          attempted_at: string
+          code_prefix: string | null
+          id: string
+          ip: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          code_prefix?: string | null
+          id?: string
+          ip?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          code_prefix?: string | null
+          id?: string
+          ip?: string | null
+        }
+        Relationships: []
+      }
       courier_product_debts: {
         Row: {
           amount_mad: number
@@ -661,6 +689,13 @@ export type Database = {
             referencedRelation: "v_courier_remittance_pending"
             referencedColumns: ["order_id"]
           },
+          {
+            foreignKeyName: "courier_product_debts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       courier_remittance_orders: {
@@ -698,6 +733,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: true
             referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "courier_remittance_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_scan_queue"
             referencedColumns: ["order_id"]
           },
           {
@@ -768,6 +810,8 @@ export type Database = {
       couriers: {
         Row: {
           access_code: string | null
+          access_code_expires_at: string | null
+          access_code_hash: string | null
           balance_cap_mad: number
           company_name: string | null
           courier_type: string
@@ -781,6 +825,8 @@ export type Database = {
         }
         Insert: {
           access_code?: string | null
+          access_code_expires_at?: string | null
+          access_code_hash?: string | null
           balance_cap_mad?: number
           company_name?: string | null
           courier_type: string
@@ -794,6 +840,8 @@ export type Database = {
         }
         Update: {
           access_code?: string | null
+          access_code_expires_at?: string | null
+          access_code_hash?: string | null
           balance_cap_mad?: number
           company_name?: string | null
           courier_type?: string
@@ -1027,6 +1075,13 @@ export type Database = {
             referencedColumns: ["order_id"]
           },
           {
+            foreignKeyName: "ledger_entries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
             foreignKeyName: "ledger_entries_payout_id_fkey"
             columns: ["payout_id"]
             isOneToOne: false
@@ -1149,6 +1204,13 @@ export type Database = {
             referencedRelation: "v_courier_remittance_pending"
             referencedColumns: ["order_id"]
           },
+          {
+            foreignKeyName: "ledger_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       logistics_settings: {
@@ -1231,6 +1293,13 @@ export type Database = {
             referencedColumns: ["order_id"]
           },
           {
+            foreignKeyName: "notifications_cod_order_id_fkey"
+            columns: ["cod_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
             foreignKeyName: "notifications_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -1294,6 +1363,13 @@ export type Database = {
             referencedRelation: "v_courier_remittance_pending"
             referencedColumns: ["order_id"]
           },
+          {
+            foreignKeyName: "order_financial_snapshots_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       order_proofs: {
@@ -1343,6 +1419,13 @@ export type Database = {
             columns: ["related_order_id"]
             isOneToOne: false
             referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "order_proofs_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
             referencedColumns: ["order_id"]
           },
           {
@@ -1434,6 +1517,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "order_signals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
             referencedColumns: ["order_id"]
           },
         ]
@@ -5158,6 +5248,48 @@ export type Database = {
           },
         ]
       }
+      v_courier_scan_queue: {
+        Row: {
+          courier_id: string | null
+          customer_city: string | null
+          order_id: string | null
+          reference: string | null
+          status: string | null
+          total_amount: number | null
+        }
+        Insert: {
+          courier_id?: string | null
+          customer_city?: string | null
+          order_id?: string | null
+          reference?: never
+          status?: string | null
+          total_amount?: number | null
+        }
+        Update: {
+          courier_id?: string | null
+          customer_city?: string | null
+          order_id?: string | null
+          reference?: never
+          status?: string | null
+          total_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_ledger_balances: {
         Row: {
           account_code: string | null
@@ -5682,6 +5814,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_delivery_scan: {
+        Args: {
+          p_courier_id: string
+          p_order_id: string
+          p_outcome: string
+          p_tracking_ref?: string
+        }
+        Returns: Json
+      }
       record_ledger_transaction: {
         Args: {
           p_currency?: string
@@ -5736,6 +5877,10 @@ export type Database = {
         Returns: number
       }
       resolve_country_code: { Args: { p_label: string }; Returns: string }
+      resolve_courier_by_access_code: {
+        Args: { p_code: string; p_ip?: string }
+        Returns: string
+      }
       respond_to_wholesale_order: {
         Args: {
           p_lead_time_days: number
