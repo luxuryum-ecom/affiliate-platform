@@ -17,7 +17,10 @@ function fd(obj: Record<string, string>) {
 
 // NB : l'idempotence RÉELLE (rejeu/double-clic neutralisés, montant dérivé) est
 // garantie côté Postgres par la RPC `create_payout` (atomique + ON CONFLICT sur la clé).
-// Ici on garde le CONTRAT JS, inchangé par le PR #1 (payouts.ts non touché par 876094d).
+// Ici on garde le CONTRAT JS : le montant n'est jamais transmis (dérivé serveur).
+// Lot F (mig 130) : APRÈS create_payout, l'action appelle aussi
+// `generate_payout_statement` (relevé figé) — d'où >1 appel rpc possible ; on cible
+// donc explicitement l'appel `create_payout`.
 
 describe('createPayout — contrat d’idempotence (côté JS)', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -37,13 +40,16 @@ describe('createPayout — contrat d’idempotence (côté JS)', () => {
 
     const res = await createPayout(emptyState, fd({ affiliateId: 'aff1', idempotencyKey: 'KEY-123', reference: 'REF', notes: 'n' }))
 
-    expect(rpc).toHaveBeenCalledTimes(1)
+    // `create_payout` appelé EXACTEMENT une fois (l'appel `generate_payout_statement`
+    // du Lot F est un appel rpc distinct, autorisé).
+    const createCalls = rpc.mock.calls.filter((c) => c[0] === 'create_payout')
+    expect(createCalls).toHaveLength(1)
     expect(rpc).toHaveBeenCalledWith('create_payout', expect.objectContaining({
       p_affiliate_id: 'aff1',
       p_idempotency_key: 'KEY-123',
     }))
     // Le montant n'est jamais saisi/transmis côté client → dérivé par la RPC
-    const args = rpc.mock.calls[0][1] as Record<string, unknown>
+    const args = createCalls[0][1] as Record<string, unknown>
     expect(args).not.toHaveProperty('p_amount')
     expect(res.success).toBe(true)
     expect(res.amount).toBe(250)

@@ -236,9 +236,17 @@ export default async function AffiliateCommissionsPage({ searchParams }: PagePro
         {/* Payout history */}
         {payouts.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-foreground mb-3">
-              {t('payoutsTitle', { count: payouts.length })}
-            </h2>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('payoutsTitle', { count: payouts.length })}
+              </h2>
+              <Link
+                href="/affiliate/statements"
+                className="text-xs text-primary hover:underline font-medium shrink-0"
+              >
+                {t('statementsLink')}
+              </Link>
+            </div>
             <div className="bg-surface rounded-xl border border-line divide-y divide-line">
               {payouts.map((payout) => {
                 const cls = PAYOUT_CLS[payout.status] ?? 'bg-surface-2 text-muted border-line'

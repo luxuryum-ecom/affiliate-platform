@@ -328,7 +328,29 @@
       "payoutStatusProcessing": "Processing",
       "payoutStatusPaid": "Paid",
       "payoutRef": "Ref: {ref}",
-      "payoutPaidOn": "paid on {date}"
+      "payoutPaidOn": "paid on {date}",
+      "statementsLink": "My PDF statements →"
+    },
+    "statements": {
+      "metaTitle": "My statements — Affiliate area",
+      "pageTitle": "My statements",
+      "backLabel": "Commissions",
+      "intro": "Final payment statements, downloadable as PDF.",
+      "emptyState": "No statement available yet.",
+      "colPeriod": "Period",
+      "colTotal": "Total paid",
+      "colMethod": "Method",
+      "colReference": "Reference",
+      "colDate": "Generated on",
+      "colDownload": "Download",
+      "methodVirement": "Bank transfer",
+      "methodCash": "Cash",
+      "methodCheque": "Cheque",
+      "methodAutre": "Other",
+      "methodUnknown": "—",
+      "downloadFr": "FR",
+      "downloadAr": "AR",
+      "downloadEn": "EN"
     },
     "products": {
       "metaTitle": "Product catalog — Affiliate area",
@@ -1921,6 +1943,24 @@
       "returnActionCancel": "Cancel",
       "returnActionError": "Error: {message}"
     },
+    "courierStatements": {
+      "sectionTitle": "Signable statements",
+      "generatorStartLabel": "Period start",
+      "generatorEndLabel": "Period end",
+      "generatorSubmit": "Generate statement",
+      "generatorSubmitting": "Generating…",
+      "generatorSuccess": "Statement generated.",
+      "generatorError": "Error: {message}",
+      "downloadLink": "Download PDF",
+      "downloadLinkLang": "Download ({lang})",
+      "langFr": "FR",
+      "langAr": "AR",
+      "listEmpty": "No statement generated yet.",
+      "colPeriod": "Period",
+      "colBalance": "Final balance",
+      "colDate": "Generated on",
+      "colDownload": "Download"
+    },
     "depotPickup": {
       "metaTitle": "Pickup scan — Mozouna",
       "pageTitle": "Pickup scan (depot exit)",
@@ -2723,6 +2763,12 @@
       "noEligible": "No approved commissions pending payment.",
       "amountLabel": "Amount to disburse (auto-calculated)",
       "amountNote": "Exact sum of the affiliate’s approved commissions. Not editable: the amount cannot diverge from settled commissions.",
+      "methodLabel": "Payment method",
+      "methodPlaceholder": "Not specified",
+      "methodVirement": "Bank transfer",
+      "methodCash": "Cash",
+      "methodCheque": "Cheque",
+      "methodAutre": "Other",
       "referenceLabel": "Transfer reference",
       "referencePlaceholder": "Wire no., CCP, CIH…",
       "notesLabel": "Notes",
@@ -4118,6 +4164,10 @@
       "titleOverCap": "🚨 Cap exceeded",
       "titleRemittance": "💰 Remittance recorded",
       "body": "{name} · ref {ref} · {amount}"
+    },
+    "payout_paid": {
+      "title": "Payment received",
+      "body": "Your payment of {amount} was made (ref {ref}). Statement available."
     }
   },
   "categories": {

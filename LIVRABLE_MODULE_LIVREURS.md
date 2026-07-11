@@ -12,7 +12,7 @@
 | C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
 | D | Tournées + scan ramassage + retours 3 cas | `feat/livreurs-lot-d` | ✅ **LIVRÉ EN PROD** — mergé main (e294897) + poussé + **mig 128 appliquée prod 2026-07-11** |
 | E | Notifications instantanées par état | `feat/livreurs-lot-e` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures (mobile /courier + desktop cloche) |
-| F | Relevé PDF affilié au payout | `feat/livreurs-lot-f` | ⏭️ spécifié |
+| F | Relevés PDF figés (affilié au payout + livreur signable) | `feat/livreurs-lot-f` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts (vitest 718/718), captures PDF FR/AR/EN + écrans ; mig 130 LOCAL (prod après GO) |
 
 > **CADRAGE HONNÊTE** : la limite de session a coupé 2× sur ce très gros module (6 lots, chacun = migration + backend + frontend + tester + @finance + @security + captures). Décision d'autonomie : **livrer le Lot A (la FONDATION dont B→F dépendent tous) jusqu'au bout GO-ready**, et **spécifier B→F précisément** ci-dessous pour un enchaînement propre lot par lot. Mieux vaut 1 lot solide et vérifié + 5 cadrés que 6 à moitié. Chaque lot suivant = 1 session dédiée.
 
@@ -164,9 +164,29 @@ Existant réutilisable vérifié dans le code réel :
 ### Lot E — Notifications instantanées ⏭️
 - **Réutiliser l'infra** `src/lib/notifications/*` (in-app `notifications` + Telegram admin `ADMIN_TELEGRAM_CHAT_ID`, pattern `order-created.ts`). Chaque état (livré/encaissé/retourné/manquant/dépôt/**plafond dépassé**) → cloche admin + Telegram admin + confirmation au livreur (in-app dans son portail Lot C). Best-effort (n'altère jamais l'opération). @security (zéro PII/marge dans payloads).
 
-### Lot F — Relevé PDF affilié au payout ⏭️
-- **Colonne `payouts.payment_method`** (cash/virement/…) — additive (mig). `create_payout` (049) : soit ajouter un param méthode, soit une table annexe.
-- À la création d'un payout : générer un **PDF détaillé** (période, commandes couvertes, montants, total, méthode) via `pdf-lib` (pattern `invoice/pdf.ts`). Notif affilié (infra Lot E). Archivage : lien du PDF sur la fiche payout admin (+ Supabase storage ou génération à la volée). @finance (montants = commissions payées) + @security.
+### Lot F — Relevés PDF figés (affilié + livreur signable) ✅ **GO-READY** (branche `feat/livreurs-lot-f`, NON commité, prod intouchée)
+**Livré 2026-07-11.** @finance 🟢 GO + @security 🟢 GO (aucun P1/P2 ; P3 mineurs, P3-1 traités). 4 checks verts : `tsc` 0 · `next build` OK · `vitest` 718/718 · `smoke` 16.
+
+**Migration 130 (LOCAL uniquement — À APPLIQUER EN PROD APRÈS GO + déploiement, pooler `backups/.db_password`, jamais le CLI, lockstep, vérif AVANT/APRÈS) :**
+- `payouts.payment_method` (virement/cash/cheque/autre, CHECK, nullable) — **métadonnée d'affichage, n'entre dans AUCUN calcul de montant**.
+- Tables `payout_statements` (1/payout, UNIQUE) + `courier_statements` (N/livreur) — **append-only immuables** (triggers), RLS : affilié voit SES relevés (`affiliate_id=auth.uid() OR admin`), relevés livreurs **admin-only**. Aucune policy INSERT/UPDATE/DELETE (écriture RPC/service_role only).
+- RPC `generate_payout_statement(payout_id)` : snapshot FIGÉ construit DEPUIS LE GRAND LIVRE (`ledger_entries` payout→commissions→orders). **Garde-fou INCONTOURNABLE** : `total lignes = payouts.amount` sinon EXCEPTION (divergence structurellement impossible). Idempotent (`ON CONFLICT payout_id`).
+- RPC `generate_courier_statement(courier_id, start, end)` : **SOLDE FINAL = `v_courier_balances`** (grand livre, aucun recalcul) + activité de période (ramassages, livraisons+cash, retours dépôt/société, pertes chiffrées, cash versé) bornée période+livreur (zéro double comptage). SECURITY DEFINER, garde `admin OR service_role`, `SET search_path`.
+
+**Rendu PDF (à la volée depuis le snapshot figé — zéro calcul dans le renderer) :**
+- `src/lib/statements/` : `pdf-fonts.ts` (Helvetica FR/EN + **Noto Sans Arabic embarqué base64 + reshaper** pour l'AR ; runs latins/chiffres → Helvetica), `pdf-i18n.ts` (libellés **FR/AR/EN**, `fmtMad` Intl sans /100), `pdf-core.ts` (primitives conscientes de la direction **LTR/RTL**), `payout-statement-pdf.ts`, `courier-statement-pdf.ts` (**zone de double signature** livreur + Mozouna, preuve anti-litige). **AR RTL vérifié visuellement** (lettres liées, ordre RTL correct).
+- **Anti-fausse-dette** : réutilise `getSellerIdentity` (invoice/config), `pdf-lib`, grand livre (048/049/126), `create_payout` inchangée.
+
+**Câblage & UI :**
+- `createPayout` (payouts.ts) : après le paiement (money déjà écrit), pose `payment_method` + `generate_payout_statement` + notif affilié — **best-effort NON BLOQUANT** (double try/catch, jamais dans la transaction money).
+- Routes RLS-scopées : `GET /api/statements/payout/[payoutId]?lang=` + `/api/statements/courier/[statementId]?lang=` (client RLS, **pas** service_role → IDOR impossible).
+- Actions `src/app/actions/statements.ts` (générer + lister, gardes `requireAdmin` / RLS own). Notif `src/lib/notifications/payout-paid.ts` (payload sûr).
+- UI : sélecteur méthode dans le formulaire payout, section « Relevés signables » (générateur période + liste) sur `/admin/couriers/[id]`, page `/affiliate/statements` (« Mes relevés »). i18n FR/AR/EN complet (parité vérifiée). Cloche : rendu `payout_paid`.
+
+**Tests LOCAL verts :** `tests/lot-f-statements.integration.test.ts` (invariant grand-livre EXACT, garde-fou anti-divergence, snapshot figé, immuabilité, solde livreur = v_courier_balances) + `tests/lot-f-statements-render.test.ts` (rendu FR/AR/EN valides).
+**Captures :** `Bureau/p0-ecrans/livreurs-lot-f/` — 6 PDF réels (affilié+livreur × FR/AR/EN) + 6 écrans (admin payouts, fiche livreur, affilié × FR/AR).
+
+**⚠️ CONFIG PROD (Vercel) déjà en place pour ce lot** : aucune nouvelle variable requise (le PDF affilié utilise l'identité vendeur `INVOICE_SELLER_*` déjà prévue ; sinon défaut « Mozouna Group »).
 
 ---
 ## VÉRIFS & GO (par lot)

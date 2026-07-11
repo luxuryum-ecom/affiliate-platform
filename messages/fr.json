@@ -328,7 +328,29 @@
       "payoutStatusProcessing": "En cours",
       "payoutStatusPaid": "Versé",
       "payoutRef": "Réf : {ref}",
-      "payoutPaidOn": "versé le {date}"
+      "payoutPaidOn": "versé le {date}",
+      "statementsLink": "Mes relevés PDF →"
+    },
+    "statements": {
+      "metaTitle": "Mes relevés — Espace Affilié",
+      "pageTitle": "Mes relevés",
+      "backLabel": "Commissions",
+      "intro": "Relevés de paiement figés, téléchargeables en PDF.",
+      "emptyState": "Aucun relevé disponible pour le moment.",
+      "colPeriod": "Période",
+      "colTotal": "Total versé",
+      "colMethod": "Méthode",
+      "colReference": "Référence",
+      "colDate": "Généré le",
+      "colDownload": "Télécharger",
+      "methodVirement": "Virement",
+      "methodCash": "Espèces",
+      "methodCheque": "Chèque",
+      "methodAutre": "Autre",
+      "methodUnknown": "—",
+      "downloadFr": "FR",
+      "downloadAr": "AR",
+      "downloadEn": "EN"
     },
     "products": {
       "metaTitle": "Catalogue produits — Espace Affilié",
@@ -1921,6 +1943,24 @@
       "returnActionCancel": "Annuler",
       "returnActionError": "Erreur : {message}"
     },
+    "courierStatements": {
+      "sectionTitle": "Relevés signables",
+      "generatorStartLabel": "Début de période",
+      "generatorEndLabel": "Fin de période",
+      "generatorSubmit": "Générer le relevé",
+      "generatorSubmitting": "Génération…",
+      "generatorSuccess": "Relevé généré.",
+      "generatorError": "Erreur : {message}",
+      "downloadLink": "Télécharger le PDF",
+      "downloadLinkLang": "Télécharger ({lang})",
+      "langFr": "FR",
+      "langAr": "AR",
+      "listEmpty": "Aucun relevé généré pour le moment.",
+      "colPeriod": "Période",
+      "colBalance": "Solde final",
+      "colDate": "Généré le",
+      "colDownload": "Téléchargement"
+    },
     "depotPickup": {
       "metaTitle": "Scan ramassage — Mozouna",
       "pageTitle": "Scan ramassage (sortie dépôt)",
@@ -2723,6 +2763,12 @@
       "noEligible": "Aucune commission approuvée en attente de paiement.",
       "amountLabel": "Montant à verser (calculé automatiquement)",
       "amountNote": "Somme exacte des commissions approuvées de l’affilié. Non modifiable : le montant ne peut pas diverger des commissions soldées.",
+      "methodLabel": "Méthode de paiement",
+      "methodPlaceholder": "Non précisée",
+      "methodVirement": "Virement",
+      "methodCash": "Espèces",
+      "methodCheque": "Chèque",
+      "methodAutre": "Autre",
       "referenceLabel": "Référence de virement",
       "referencePlaceholder": "N° virement, CCP, CIH…",
       "notesLabel": "Notes",
@@ -4118,6 +4164,10 @@
       "titleOverCap": "🚨 Plafond dépassé",
       "titleRemittance": "💰 Versement enregistré",
       "body": "{name} · réf {ref} · {amount}"
+    },
+    "payout_paid": {
+      "title": "Paiement reçu",
+      "body": "Votre paiement de {amount} a été effectué (réf {ref}). Relevé disponible."
     }
   },
   "categories": {
