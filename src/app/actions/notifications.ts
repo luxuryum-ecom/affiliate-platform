@@ -34,6 +34,7 @@ interface NotifRow {
   event: string
   order_id: string | null
   cod_order_id: string | null
+  courier_id: string | null
   payload: {
     ref?: string
     city?: string | null
@@ -42,6 +43,10 @@ interface NotifRow {
     product_name?: string
     old_price?: number
     new_price?: number
+    // Lot E — events courier_*
+    courierName?: string
+    reference?: string
+    amountMad?: number
   } | null
   read_at: string | null
   created_at: string
@@ -73,7 +78,7 @@ export async function getNotifications(
 
   let query = supabase
     .from('notifications')
-    .select('id, event, order_id, cod_order_id, payload, read_at, created_at')
+    .select('id, event, order_id, cod_order_id, courier_id, payload, read_at, created_at')
     .order('created_at', { ascending: false })
     .limit(limit)
   if (opts?.unreadOnly) query = query.is('read_at', null)
@@ -91,6 +96,18 @@ export async function getNotifications(
   const tCodConfirmed = await getTranslations('notifications.cod_order_confirmed')
   const tTgLinked = await getTranslations('notifications.supplier_telegram_linked')
   const tPriceDrop = await getTranslations('notifications.price_drop')
+  const tCourier = await getTranslations('notifications.courier')
+
+  // Lot E — event courier_* → clé de titre i18n.
+  const COURIER_TITLE_KEY: Record<string, string> = {
+    courier_pickup: 'titlePickup',
+    courier_delivered: 'titleDelivered',
+    courier_return_declared: 'titleReturnDeclared',
+    courier_return_confirmed: 'titleReturnConfirmed',
+    courier_return_lost: 'titleReturnLost',
+    courier_over_cap: 'titleOverCap',
+    courier_remittance: 'titleRemittance',
+  }
   const numLocale =
     locale.split('-')[0] === 'ar'
       ? 'ar-MA-u-nu-latn' // numéraux latins en arabe (règle CLAUDE)
@@ -143,6 +160,15 @@ export async function getNotifications(
       if (role === 'wholesaler' && p.supplier_product_id) {
         href = `/wholesale/marketplace/${p.supplier_product_id}`
       }
+    } else if (COURIER_TITLE_KEY[r.event]) {
+      // Lot E — events livreurs (module Livreurs). Payload non sensible.
+      title = tCourier(COURIER_TITLE_KEY[r.event])
+      body = tCourier('body', {
+        name: p.courierName ?? '—',
+        ref: p.reference ?? '—',
+        amount: p.amountMad != null ? madFmt(p.amountMad) : '—',
+      })
+      if (role === 'admin' && r.courier_id) href = `/admin/couriers/${r.courier_id}`
     }
 
     return {

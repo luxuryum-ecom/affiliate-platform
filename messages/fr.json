@@ -4108,6 +4108,16 @@
     "price_drop": {
       "title": "Baisse de prix sur un produit suivi",
       "body": "Le prix de {name} a baissé : {oldPrice} → {newPrice}."
+    },
+    "courier": {
+      "titlePickup": "📦 Colis ramassé",
+      "titleDelivered": "✅ Colis livré + encaissé",
+      "titleReturnDeclared": "🚨 Retour déclaré",
+      "titleReturnConfirmed": "↩️ Retour confirmé",
+      "titleReturnLost": "🚨 Perte constatée",
+      "titleOverCap": "🚨 Plafond dépassé",
+      "titleRemittance": "💰 Versement enregistré",
+      "body": "{name} · réf {ref} · {amount}"
     }
   },
   "categories": {
@@ -4190,7 +4200,12 @@
       "deliveriesEmpty": "Aucune livraison en cours.",
       "codLabel": "À encaisser",
       "returnsTitle": "Retours à rendre",
-      "returnsEmpty": "Aucun retour à rendre."
+      "returnsEmpty": "Aucun retour à rendre.",
+      "myReturnsTitle": "Mes retours",
+      "returnStateDeclared": "En attente de confirmation dépôt",
+      "returnStateConfirmed": "Confirmé",
+      "returnStateLost": "Perte",
+      "remittancesTitle": "Versements enregistrés"
     },
     "scan": {
       "metaTitle": "Scan livraison — Mozouna",

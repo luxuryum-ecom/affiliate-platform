@@ -4108,6 +4108,16 @@
     "price_drop": {
       "title": "Price drop on a product you follow",
       "body": "The price of {name} dropped: {oldPrice} → {newPrice}."
+    },
+    "courier": {
+      "titlePickup": "📦 Parcel picked up",
+      "titleDelivered": "✅ Delivered + cash collected",
+      "titleReturnDeclared": "🚨 Return declared",
+      "titleReturnConfirmed": "↩️ Return confirmed",
+      "titleReturnLost": "🚨 Loss recorded",
+      "titleOverCap": "🚨 Cap exceeded",
+      "titleRemittance": "💰 Remittance recorded",
+      "body": "{name} · ref {ref} · {amount}"
     }
   },
   "categories": {
@@ -4190,7 +4200,12 @@
       "deliveriesEmpty": "No delivery in progress.",
       "codLabel": "To collect",
       "returnsTitle": "Returns to hand back",
-      "returnsEmpty": "No return to hand back."
+      "returnsEmpty": "No return to hand back.",
+      "myReturnsTitle": "My returns",
+      "returnStateDeclared": "Awaiting depot confirmation",
+      "returnStateConfirmed": "Confirmed",
+      "returnStateLost": "Lost",
+      "remittancesTitle": "Recorded remittances"
     },
     "scan": {
       "metaTitle": "Delivery scan — Mozouna",

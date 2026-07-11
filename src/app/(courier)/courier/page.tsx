@@ -40,7 +40,13 @@ export default async function CourierDashboardPage({ searchParams }: PageProps) 
     )
   }
 
-  const { courierName, toDepositMad, productDebtMad, totalBalanceMad, deliveries, returns } = dashboard
+  const { courierName, toDepositMad, productDebtMad, totalBalanceMad, deliveries, returns, returnDeclarations, recentRemittances } = dashboard
+
+  function returnStateLabel(state: string): { text: string; cls: string } {
+    if (state === 'declared') return { text: t('returnStateDeclared'), cls: 'bg-warning-soft text-warning-fg' }
+    if (state === 'lost') return { text: t('returnStateLost'), cls: 'bg-danger-soft text-danger-fg' }
+    return { text: t('returnStateConfirmed'), cls: 'bg-success-soft text-success-fg' }
+  }
   const scanHref = `/courier/scan?code=${encodeURIComponent(cleanCode)}`
 
   return (
@@ -134,6 +140,35 @@ export default async function CourierDashboardPage({ searchParams }: PageProps) 
             ))
           )}
         </section>
+
+        {/* Confirmations : états de mes retours déclarés (chaîne de garde) */}
+        {returnDeclarations.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-faint px-1">{t('myReturnsTitle')}</h2>
+            {returnDeclarations.map((r) => {
+              const s = returnStateLabel(r.state)
+              return (
+                <div key={r.orderId} className="bg-surface border border-line rounded-xl p-3 flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs text-foreground">{r.reference}</span>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${s.cls}`}>{s.text}</span>
+                </div>
+              )
+            })}
+          </section>
+        )}
+
+        {/* Confirmations : mes versements enregistrés */}
+        {recentRemittances.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-faint px-1">{t('remittancesTitle')}</h2>
+            {recentRemittances.map((r) => (
+              <div key={r.id} className="bg-surface border border-line rounded-xl p-3 flex items-center justify-between gap-2">
+                <span className="text-xs text-muted">{r.reconciledAt ? r.reconciledAt.slice(0, 10) : '—'}</span>
+                <span className="text-sm font-semibold tabular-nums text-success-fg">✓ {formatMAD(r.receivedAmountMad)}</span>
+              </div>
+            ))}
+          </section>
+        )}
       </main>
     </div>
   )

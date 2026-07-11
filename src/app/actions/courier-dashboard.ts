@@ -41,6 +41,21 @@ export interface CourierReturn {
   customerCity: string | null
 }
 
+/** Confirmation au livreur : état de SES retours déclarés (chaîne de garde). */
+export interface CourierReturnStatus {
+  orderId: string
+  reference: string
+  /** declared = en attente de confirmation dépôt ; confirmed_* = validé ; lost = perte. */
+  state: string
+}
+
+/** Confirmation au livreur : ses versements enregistrés. */
+export interface CourierRemittanceInfo {
+  id: string
+  receivedAmountMad: number
+  reconciledAt: string | null
+}
+
 export interface CourierDashboard {
   courierName: string
   /** Solde EXACT du grand livre (v_courier_balances) — aucun calcul parallèle. */
@@ -51,6 +66,9 @@ export interface CourierDashboard {
   toDepositMad: number
   deliveries: CourierDelivery[]
   returns: CourierReturn[]
+  /** Confirmations : états de SES retours déclarés + SES versements. */
+  returnDeclarations: CourierReturnStatus[]
+  recentRemittances: CourierRemittanceInfo[]
 }
 
 export interface GetCourierDashboardResult {
@@ -124,6 +142,36 @@ export async function getCourierDashboard(code: string): Promise<GetCourierDashb
     customerCity: o.customer_city as string | null,
   }))
 
+  // 4. Confirmations : états de SES retours déclarés (chaîne de garde, mig 128).
+  const { data: declRows, error: declErr } = await admin
+    .from('courier_returns')
+    .select('order_id, state, declared_at')
+    .eq('courier_id', session.courierId)
+    .order('declared_at', { ascending: false })
+    .limit(20)
+  if (declErr) { console.error('[courier-dashboard] returns state error:', declErr.message); return { error: 'Erreur de chargement.', dashboard: null } }
+
+  const returnDeclarations: CourierReturnStatus[] = (declRows ?? []).map((r) => ({
+    orderId: r.order_id as string,
+    reference: shortRef(r.order_id as string),
+    state: r.state as string,
+  }))
+
+  // 5. Confirmations : SES versements enregistrés (scopés au livreur).
+  const { data: remitRows, error: remitErr } = await admin
+    .from('courier_remittances')
+    .select('id, received_amount_mad, reconciled_at, created_at')
+    .eq('courier_id', session.courierId)
+    .order('created_at', { ascending: false })
+    .limit(5)
+  if (remitErr) { console.error('[courier-dashboard] remittances error:', remitErr.message); return { error: 'Erreur de chargement.', dashboard: null } }
+
+  const recentRemittances: CourierRemittanceInfo[] = (remitRows ?? []).map((r) => ({
+    id: r.id as string,
+    receivedAmountMad: Number(r.received_amount_mad ?? 0),
+    reconciledAt: (r.reconciled_at ?? r.created_at) as string | null,
+  }))
+
   return {
     error: null,
     dashboard: {
@@ -134,6 +182,8 @@ export async function getCourierDashboard(code: string): Promise<GetCourierDashb
       toDepositMad: cashOwedMad,
       deliveries,
       returns,
+      returnDeclarations,
+      recentRemittances,
     },
   }
 }
