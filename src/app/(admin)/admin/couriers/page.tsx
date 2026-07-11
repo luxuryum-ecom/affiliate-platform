@@ -82,14 +82,22 @@ export default async function AdminCouriersPage() {
             <h1 className="text-lg font-semibold text-foreground">{t('pageTitle')}</h1>
             <p className="text-sm text-muted mt-0.5">{t('subtitle')}</p>
           </div>
-          <a
-            href="/admin/couriers/labels"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs px-3 py-1.5 bg-surface-2 text-foreground rounded-lg hover:opacity-90 transition-opacity"
-          >
-            {t('printLabels')}
-          </a>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/couriers/pickup"
+              className="text-xs px-3 py-1.5 bg-surface-2 text-foreground rounded-lg hover:opacity-90 transition-opacity"
+            >
+              {t('pickupScanLink')}
+            </Link>
+            <a
+              href="/admin/couriers/labels"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-3 py-1.5 bg-surface-2 text-foreground rounded-lg hover:opacity-90 transition-opacity"
+            >
+              {t('printLabels')}
+            </a>
+          </div>
         </div>
 
         {error && (

@@ -120,10 +120,14 @@ export async function getCourierScanQueue(code: string): Promise<GetCourierScanQ
 
 // ─── Scan d'un état de livraison ─────────────────────────────────────────────
 
+// @finance P1-A : `recordDeliveryScan` n'accepte QUE la livraison encaissée. Le
+// RETOUR/refus passe EXCLUSIVEMENT par `declareCourierReturn` (chaîne de garde,
+// double confirmation) — jamais par un scan livraison qui contre-passerait le
+// ledger sans confirmation dépôt. `delivery_refused` retiré de la surface.
 const RecordScanSchema = z.object({
   code: z.string().trim().min(8, { message: 'Lien invalide.' }),
   orderId: z.string().uuid({ message: 'Commande invalide.' }),
-  outcome: z.enum(['delivered_collected', 'delivery_refused']),
+  outcome: z.enum(['delivered_collected']),
   trackingRef: z.string().trim().max(120).optional(),
 })
 
@@ -178,4 +182,54 @@ export async function recordDeliveryScan(
     newStatus: res.new_status ?? null,
     outcome: res.outcome ?? outcome,
   }
+}
+
+// ─── Déclaration de retour (chaîne de garde, module Livreurs Lot D) ──────────
+//
+// RETOUR_DÉCLARÉ_NON_CONFIRMÉ (§🔒, LIVRABLE_MODULE_LIVREURS.md) : cette action
+// N'AFFECTE NI orders.status NI le ledger — la dette du livreur reste INCHANGÉE
+// tant qu'un salarié/admin n'a pas confirmé (confirmReturnDepot/confirmReturnCompany,
+// cf. courier-tours.ts, DOUBLE CONFIRMATION). Cloisonné : le livreur ne déclare
+// que ses propres colis (déjà vérifié côté RPC : orders.courier_id = son id).
+
+const DeclareCourierReturnSchema = z.object({
+  code: z.string().trim().min(8, { message: 'Lien invalide.' }),
+  orderId: z.string().uuid({ message: 'Commande invalide.' }),
+})
+
+export type DeclareCourierReturnInput = z.infer<typeof DeclareCourierReturnSchema>
+
+export interface DeclareCourierReturnResult {
+  error: string | null
+  orderId: string | null
+  state: string | null
+}
+
+/**
+ * Déclare un retour depuis le portail livreur (cloisonné par access_code).
+ * Appelle `declare_courier_return` (mig 128, SECURITY DEFINER) via service_role
+ * APRÈS résolution du livreur — aucune écriture ledger, aucun changement de
+ * statut commande.
+ */
+export async function declareCourierReturn(
+  input: DeclareCourierReturnInput,
+): Promise<DeclareCourierReturnResult> {
+  const parsed = DeclareCourierReturnSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Données invalides.', orderId: null, state: null }
+  }
+  const { code, orderId } = parsed.data
+
+  const { error: sessErr, session } = await resolveCourierSession(code)
+  if (sessErr || !session) return { error: sessErr ?? 'Lien invalide.', orderId: null, state: null }
+
+  const admin = createAdminClient()
+  const { data, error: rpcErr } = await admin.rpc('declare_courier_return', {
+    p_order_id: orderId,
+    p_courier_id: session.courierId,
+  })
+  if (rpcErr) return { error: rpcErr.message, orderId: null, state: null }
+
+  const res = (data ?? {}) as { order_id?: string; state?: string }
+  return { error: null, orderId: res.order_id ?? orderId, state: res.state ?? null }
 }
