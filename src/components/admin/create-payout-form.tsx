@@ -107,6 +107,19 @@ export function CreatePayoutForm({ affiliates }: CreatePayoutFormProps) {
 
       <div>
         <label className="block text-xs font-medium text-muted mb-1.5">
+          {t('methodLabel')}
+        </label>
+        <select name="paymentMethod" disabled={isPending} defaultValue="" className={INPUT}>
+          <option value="">{t('methodPlaceholder')}</option>
+          <option value="virement">{t('methodVirement')}</option>
+          <option value="cash">{t('methodCash')}</option>
+          <option value="cheque">{t('methodCheque')}</option>
+          <option value="autre">{t('methodAutre')}</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-muted mb-1.5">
           {t('referenceLabel')}
         </label>
         <input

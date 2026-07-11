@@ -47,6 +47,8 @@ interface NotifRow {
     courierName?: string
     reference?: string
     amountMad?: number
+    // Lot F — event payout_paid (affilié)
+    payoutId?: string
   } | null
   read_at: string | null
   created_at: string
@@ -97,6 +99,7 @@ export async function getNotifications(
   const tTgLinked = await getTranslations('notifications.supplier_telegram_linked')
   const tPriceDrop = await getTranslations('notifications.price_drop')
   const tCourier = await getTranslations('notifications.courier')
+  const tPayout = await getTranslations('notifications.payout_paid')
 
   // Lot E — event courier_* → clé de titre i18n.
   const COURIER_TITLE_KEY: Record<string, string> = {
@@ -160,6 +163,14 @@ export async function getNotifications(
       if (role === 'wholesaler' && p.supplier_product_id) {
         href = `/wholesale/marketplace/${p.supplier_product_id}`
       }
+    } else if (r.event === 'payout_paid') {
+      // Lot F — paiement affilié. Payload SÛR (montant + réf, aucune marge).
+      title = tPayout('title')
+      body = tPayout('body', {
+        amount: p.amountMad != null ? madFmt(p.amountMad) : '—',
+        ref: p.reference ?? '—',
+      })
+      if (role === 'affiliate') href = '/affiliate/statements'
     } else if (COURIER_TITLE_KEY[r.event]) {
       // Lot E — events livreurs (module Livreurs). Payload non sensible.
       title = tCourier(COURIER_TITLE_KEY[r.event])

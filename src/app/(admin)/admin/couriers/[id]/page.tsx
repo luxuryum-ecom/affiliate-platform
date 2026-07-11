@@ -11,8 +11,10 @@ import { CourierStatusToggle } from '@/components/admin/courier-status-toggle'
 import { CourierRegenerateLink } from '@/components/admin/courier-regenerate-link'
 import { CourierTourCreateForm } from '@/components/admin/courier-tour-create-form'
 import { CourierReturnActions } from '@/components/admin/courier-return-actions'
+import { CourierStatementGenerator } from '@/components/admin/courier-statement-generator'
 import { getCourierDetail } from '@/app/actions/couriers'
 import { listCourierTours, getTourDetail, listCourierReturns } from '@/app/actions/courier-tours'
+import { getCourierStatements } from '@/app/actions/statements'
 import type { Profile } from '@/types/database'
 
 export async function generateMetadata() {
@@ -42,6 +44,7 @@ export default async function AdminCourierDetailPage({
 
   const t = await getTranslations('admin.couriers')
   const tc = await getTranslations('admin.common')
+  const ts = await getTranslations('admin.courierStatements')
 
   const { error, detail } = await getCourierDetail(id)
   if (!detail) {
@@ -79,6 +82,10 @@ export default async function AdminCourierDetailPage({
 
   // Retours — chaîne de garde (Lot D).
   const { returns } = await listCourierReturns(id)
+
+  // Relevés signables (Lot F) — RPC SECURITY DEFINER, calcul entièrement serveur.
+  const statements = await getCourierStatements(id)
+  const fmtStatementDate = (iso: string) => iso.slice(0, 10)
   const returnStateLabel = (state: string) =>
     state === 'lost' ? t('returnStateLost') : state === 'declared' ? t('returnStateDeclared') : t('returnStateConfirmed')
   const returnStateClass = (state: string) =>
@@ -385,6 +392,61 @@ export default async function AdminCourierDetailPage({
               </table>
             </div>
           )}
+        </section>
+
+        {/* Relevés signables (Lot F) */}
+        <section className="space-y-3">
+          <CourierStatementGenerator courierId={courier.id} />
+
+          <div className="bg-surface rounded-xl border border-line overflow-hidden">
+            {statements.length === 0 ? (
+              <p className="text-sm text-muted px-5 py-5">{ts('listEmpty')}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs min-w-[560px]">
+                  <thead>
+                    <tr className="text-faint text-left border-y border-line bg-surface-2">
+                      <th className="py-2.5 px-5 font-medium">{ts('colPeriod')}</th>
+                      <th className="py-2.5 px-4 font-medium text-right">{ts('colBalance')}</th>
+                      <th className="py-2.5 px-4 font-medium">{ts('colDate')}</th>
+                      <th className="py-2.5 px-5 font-medium text-right">{ts('colDownload')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statements.map((s) => (
+                      <tr key={s.id} className="border-b border-line/60 last:border-0">
+                        <td className="py-2.5 px-5 text-foreground">
+                          {fmtStatementDate(s.periodStart)} – {fmtStatementDate(s.periodEnd)}
+                        </td>
+                        {/* ARGENT: formatMAD inchangé */}
+                        <td className="py-2.5 px-4 text-right tabular-nums text-foreground font-medium">
+                          {formatMAD(s.finalBalanceMad)}
+                        </td>
+                        <td className="py-2.5 px-4 text-muted">{fmtStatementDate(s.generatedAt)}</td>
+                        <td className="py-2.5 px-5 text-right">
+                          <Link
+                            href={`/api/statements/courier/${s.id}?lang=fr`}
+                            target="_blank"
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {ts('langFr')}
+                          </Link>
+                          {' · '}
+                          <Link
+                            href={`/api/statements/courier/${s.id}?lang=ar`}
+                            target="_blank"
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {ts('langAr')}
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </section>
       </main>
     </div>

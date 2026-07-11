@@ -328,7 +328,29 @@
       "payoutStatusProcessing": "قيد المعالجة",
       "payoutStatusPaid": "مدفوع",
       "payoutRef": "المرجع: {ref}",
-      "payoutPaidOn": "مدفوع بتاريخ {date}"
+      "payoutPaidOn": "مدفوع بتاريخ {date}",
+      "statementsLink": "كشوفاتي بصيغة PDF ←"
+    },
+    "statements": {
+      "metaTitle": "كشوفاتي — فضاء المسوّق",
+      "pageTitle": "كشوفاتي",
+      "backLabel": "العمولات",
+      "intro": "كشوفات دفع نهائية، قابلة للتحميل بصيغة PDF.",
+      "emptyState": "لا يوجد أي كشف متاح حاليًا.",
+      "colPeriod": "الفترة",
+      "colTotal": "المبلغ المحوَّل",
+      "colMethod": "الطريقة",
+      "colReference": "المرجع",
+      "colDate": "تاريخ الإنشاء",
+      "colDownload": "تحميل",
+      "methodVirement": "تحويل بنكي",
+      "methodCash": "نقدًا",
+      "methodCheque": "شيك",
+      "methodAutre": "أخرى",
+      "methodUnknown": "—",
+      "downloadFr": "FR",
+      "downloadAr": "AR",
+      "downloadEn": "EN"
     },
     "products": {
       "metaTitle": "كتالوج المنتجات — فضاء المسوّق",
@@ -1921,6 +1943,24 @@
       "returnActionCancel": "إلغاء",
       "returnActionError": "خطأ: {message}"
     },
+    "courierStatements": {
+      "sectionTitle": "كشوفات قابلة للتوقيع",
+      "generatorStartLabel": "بداية الفترة",
+      "generatorEndLabel": "نهاية الفترة",
+      "generatorSubmit": "إنشاء الكشف",
+      "generatorSubmitting": "جارٍ الإنشاء…",
+      "generatorSuccess": "تم إنشاء الكشف.",
+      "generatorError": "خطأ: {message}",
+      "downloadLink": "تحميل PDF",
+      "downloadLinkLang": "تحميل ({lang})",
+      "langFr": "FR",
+      "langAr": "AR",
+      "listEmpty": "لا يوجد أي كشف حتى الآن.",
+      "colPeriod": "الفترة",
+      "colBalance": "الرصيد النهائي",
+      "colDate": "تاريخ الإنشاء",
+      "colDownload": "تحميل"
+    },
     "depotPickup": {
       "metaTitle": "مسح الاستلام — موزونة",
       "pageTitle": "مسح الاستلام (خروج من المستودع)",
@@ -2723,6 +2763,12 @@
       "noEligible": "لا توجد عمولات معتمدة بانتظار الدفع.",
       "amountLabel": "المبلغ المراد صرفه (يُحسَب تلقائيًا)",
       "amountNote": "المجموع الدقيق لعمولات المنتسب المعتمدة. غير قابل للتعديل: لا يمكن أن يختلف المبلغ عن العمولات المُسوَّاة.",
+      "methodLabel": "طريقة الدفع",
+      "methodPlaceholder": "غير محدَّدة",
+      "methodVirement": "تحويل بنكي",
+      "methodCash": "نقدًا",
+      "methodCheque": "شيك",
+      "methodAutre": "أخرى",
       "referenceLabel": "مرجع التحويل",
       "referencePlaceholder": "رقم التحويل، CCP، CIH…",
       "notesLabel": "ملاحظات",
@@ -4118,6 +4164,10 @@
       "titleOverCap": "🚨 تجاوز السقف",
       "titleRemittance": "💰 دفعة مُسجّلة",
       "body": "{name} · مرجع {ref} · {amount}"
+    },
+    "payout_paid": {
+      "title": "تم استلام الدفع",
+      "body": "تمّ دفع مبلغكم {amount} (المرجع {ref}). الكشف متاح."
     }
   },
   "categories": {
