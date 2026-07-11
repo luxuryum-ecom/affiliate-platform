@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 0 | Cartographie anti-fausse-dette | — | ✅ fait |
 | A | Registre + comptes livreurs + /admin/couriers | `feat/livreurs-lot-a` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
-| B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
+| B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ✅ **LIVRÉ EN PROD** — mergé main (65668fc) + poussé + **mig 127 appliquée prod 2026-07-11** |
 | C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ⏭️ spécifié |
 | D | Tournées + retours 3 cas | `feat/livreurs-lot-d` | ⏭️ spécifié |
 | E | Notifications instantanées | `feat/livreurs-lot-e` | ⏭️ spécifié |
