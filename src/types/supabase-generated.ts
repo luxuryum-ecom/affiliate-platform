@@ -1420,6 +1420,7 @@ export type Database = {
         Row: {
           channels: string[]
           cod_order_id: string | null
+          courier_id: string | null
           created_at: string
           event: string
           id: string
@@ -1431,6 +1432,7 @@ export type Database = {
         Insert: {
           channels?: string[]
           cod_order_id?: string | null
+          courier_id?: string | null
           created_at?: string
           event: string
           id?: string
@@ -1442,6 +1444,7 @@ export type Database = {
         Update: {
           channels?: string[]
           cod_order_id?: string | null
+          courier_id?: string | null
           created_at?: string
           event?: string
           id?: string
@@ -1471,6 +1474,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_courier_scan_queue"
             referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "notifications_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notifications_order_id_fkey"

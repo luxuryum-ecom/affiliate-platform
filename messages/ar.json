@@ -4108,6 +4108,16 @@
     "price_drop": {
       "title": "انخفاض السعر على منتج تتابعه",
       "body": "انخفض سعر {name} من {oldPrice} إلى {newPrice}."
+    },
+    "courier": {
+      "titlePickup": "📦 تم ملتقط الطرد",
+      "titleDelivered": "✅ تم التسليم والتحصيل",
+      "titleReturnDeclared": "🚨 تم التصريح بمُرتجع",
+      "titleReturnConfirmed": "↩️ تم تأكيد المُرتجع",
+      "titleReturnLost": "🚨 خسارة مُثبتة",
+      "titleOverCap": "🚨 تجاوز السقف",
+      "titleRemittance": "💰 دفعة مُسجّلة",
+      "body": "{name} · مرجع {ref} · {amount}"
     }
   },
   "categories": {
@@ -4190,7 +4200,12 @@
       "deliveriesEmpty": "لا توجد توصيلات جارية.",
       "codLabel": "للتحصيل",
       "returnsTitle": "مرتجعات للإرجاع",
-      "returnsEmpty": "لا مرتجعات للإرجاع."
+      "returnsEmpty": "لا مرتجعات للإرجاع.",
+      "myReturnsTitle": "مرتجعاتي",
+      "returnStateDeclared": "بانتظار تأكيد المستودع",
+      "returnStateConfirmed": "مؤكَّد",
+      "returnStateLost": "فقدان",
+      "remittancesTitle": "الدفعات المسجّلة"
     },
     "scan": {
       "metaTitle": "مسح التسليم — موزونة",

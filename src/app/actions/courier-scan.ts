@@ -17,6 +17,42 @@
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyCourierEvent } from '@/lib/notifications/courier-events'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// ─── Notif livreur best-effort (cœur notifications Lot E) ────────────────────
+// APRÈS le succès de la RPC uniquement, jamais bloquant (cf. courier-events.ts).
+async function notifyCourierEventSafe(
+  admin: SupabaseClient,
+  params: {
+    event: Parameters<typeof notifyCourierEvent>[0]['event']
+    orderId: string
+    courierId: string
+    courierName: string
+  },
+): Promise<void> {
+  try {
+    const { event, orderId, courierId, courierName } = params
+    const { data: order } = await admin
+      .from('orders')
+      .select('customer_city, total_amount')
+      .eq('id', orderId)
+      .maybeSingle()
+    const o = order as { customer_city: string | null; total_amount: number | string | null } | null
+
+    await notifyCourierEvent({
+      event,
+      orderId,
+      courierId,
+      courierName,
+      reference: orderId.slice(0, 8),
+      city: o?.customer_city ?? undefined,
+      amountMad: o?.total_amount != null ? Number(o.total_amount) : undefined,
+    })
+  } catch (e) {
+    console.error('notifyCourierEventSafe', e)
+  }
+}
 
 // ─── Résolution de session livreur (par access_code) ─────────────────────────
 
@@ -176,9 +212,17 @@ export async function recordDeliveryScan(
   if (rpcErr) return { error: rpcErr.message, orderId: null, newStatus: null, outcome: null }
 
   const res = (data ?? {}) as { order_id?: string; new_status?: string; outcome?: string }
+  const finalOrderId = res.order_id ?? orderId
+  await notifyCourierEventSafe(admin, {
+    event: 'courier_delivered',
+    orderId: finalOrderId,
+    courierId: session.courierId,
+    courierName: session.name,
+  })
+
   return {
     error: null,
-    orderId: res.order_id ?? orderId,
+    orderId: finalOrderId,
     newStatus: res.new_status ?? null,
     outcome: res.outcome ?? outcome,
   }
@@ -231,5 +275,13 @@ export async function declareCourierReturn(
   if (rpcErr) return { error: rpcErr.message, orderId: null, state: null }
 
   const res = (data ?? {}) as { order_id?: string; state?: string }
-  return { error: null, orderId: res.order_id ?? orderId, state: res.state ?? null }
+  const finalOrderId = res.order_id ?? orderId
+  await notifyCourierEventSafe(admin, {
+    event: 'courier_return_declared',
+    orderId: finalOrderId,
+    courierId: session.courierId,
+    courierName: session.name,
+  })
+
+  return { error: null, orderId: finalOrderId, state: res.state ?? null }
 }

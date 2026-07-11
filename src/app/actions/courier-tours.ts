@@ -21,7 +21,57 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAdmin, requireCapability } from './_guards'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyCourierEvent } from '@/lib/notifications/courier-events'
 import type { Database } from '@/types/supabase-generated'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// ─── Notifs livreur (best-effort, cœur notifications Lot E) ──────────────────
+// RÈGLE ABSOLUE (CLAUDE.md) : notifs émises APRÈS le succès de la RPC, JAMAIS
+// dans une transaction financière, JAMAIS bloquantes. Le try/catch englobe
+// aussi les lectures légères (nom livreur / ville / montant) : un échec de
+// lecture ne doit jamais faire échouer l'action.
+async function notifyCourierEventSafe(
+  admin: SupabaseClient,
+  params: {
+    event: Parameters<typeof notifyCourierEvent>[0]['event']
+    orderId?: string
+    courierId?: string
+  },
+): Promise<void> {
+  try {
+    const { event, orderId, courierId } = params
+    let courierName: string | undefined
+    let city: string | undefined
+    let amountMad: number | undefined
+
+    if (courierId) {
+      const { data: courier } = await admin.from('couriers').select('name').eq('id', courierId).maybeSingle()
+      courierName = (courier as { name: string } | null)?.name ?? undefined
+    }
+    if (orderId) {
+      const { data: order } = await admin
+        .from('orders')
+        .select('customer_city, total_amount')
+        .eq('id', orderId)
+        .maybeSingle()
+      const o = order as { customer_city: string | null; total_amount: number | string | null } | null
+      city = o?.customer_city ?? undefined
+      amountMad = o?.total_amount != null ? Number(o.total_amount) : undefined
+    }
+
+    await notifyCourierEvent({
+      event,
+      orderId,
+      courierId,
+      courierName,
+      reference: orderId ? orderId.slice(0, 8) : undefined,
+      city,
+      amountMad,
+    })
+  } catch (e) {
+    console.error('notifyCourierEventSafe', e)
+  }
+}
 
 type CourierTourRow = Database['public']['Tables']['courier_tours']['Row']
 type CourierReturnRow = Database['public']['Tables']['courier_returns']['Row']
@@ -74,10 +124,15 @@ export async function recordPickupScan(input: RecordPickupScanInput): Promise<Re
 
   const res = (data ?? {}) as { order_id?: string; courier_id?: string; tour_id?: string | null }
   revalidatePath('/admin/couriers')
+
+  const finalOrderId = res.order_id ?? orderId
+  const finalCourierId = res.courier_id ?? courierId
+  await notifyCourierEventSafe(admin, { event: 'courier_pickup', orderId: finalOrderId, courierId: finalCourierId })
+
   return {
     error: null,
-    orderId: res.order_id ?? orderId,
-    courierId: res.courier_id ?? courierId,
+    orderId: finalOrderId,
+    courierId: finalCourierId,
     tourId: res.tour_id ?? tourId ?? null,
   }
 }
@@ -363,7 +418,16 @@ export async function confirmReturnDepot(orderId: string): Promise<ConfirmReturn
 
   const res = (data ?? {}) as { order_id?: string; state?: string }
   revalidatePath('/admin/couriers')
-  return { error: null, orderId: res.order_id ?? parsed.data, state: res.state ?? null }
+
+  const finalOrderId = res.order_id ?? parsed.data
+  const { data: ret } = await admin.from('courier_returns').select('courier_id').eq('order_id', finalOrderId).maybeSingle()
+  await notifyCourierEventSafe(admin, {
+    event: 'courier_return_confirmed',
+    orderId: finalOrderId,
+    courierId: (ret as { courier_id: string } | null)?.courier_id,
+  })
+
+  return { error: null, orderId: finalOrderId, state: res.state ?? null }
 }
 
 // ─── confirmReturnCompany ─────────────────────────────────────────────────────
@@ -398,7 +462,16 @@ export async function confirmReturnCompany(input: ConfirmReturnCompanyInput): Pr
 
   const res = (data ?? {}) as { order_id?: string; state?: string }
   revalidatePath('/admin/couriers')
-  return { error: null, orderId: res.order_id ?? orderId, state: res.state ?? null }
+
+  const finalOrderId = res.order_id ?? orderId
+  const { data: ret } = await admin.from('courier_returns').select('courier_id').eq('order_id', finalOrderId).maybeSingle()
+  await notifyCourierEventSafe(admin, {
+    event: 'courier_return_confirmed',
+    orderId: finalOrderId,
+    courierId: (ret as { courier_id: string } | null)?.courier_id,
+  })
+
+  return { error: null, orderId: finalOrderId, state: res.state ?? null }
 }
 
 // ─── markReturnLost ───────────────────────────────────────────────────────────
@@ -448,10 +521,38 @@ export async function markReturnLost(input: MarkReturnLostInput): Promise<MarkRe
 
   const res = (data ?? {}) as { order_id?: string; state?: string; debt_mad?: number }
   revalidatePath('/admin/couriers')
+
+  const finalOrderId = res.order_id ?? orderId
+  const finalDebtMad = res.debt_mad != null ? Number(res.debt_mad) : amountMad
+
+  try {
+    const { data: ret } = await admin.from('courier_returns').select('courier_id').eq('order_id', finalOrderId).maybeSingle()
+    const lostCourierId = (ret as { courier_id: string } | null)?.courier_id
+    await notifyCourierEventSafe(admin, {
+      event: 'courier_return_lost',
+      orderId: finalOrderId,
+      courierId: lostCourierId,
+    })
+
+    // Vérifie over_cap APRÈS la perte (v_courier_balances déjà à jour, mig 126).
+    if (lostCourierId) {
+      const { data: bal } = await admin
+        .from('v_courier_balances')
+        .select('over_cap')
+        .eq('id', lostCourierId)
+        .maybeSingle()
+      if ((bal as { over_cap: boolean } | null)?.over_cap) {
+        await notifyCourierEventSafe(admin, { event: 'courier_over_cap', courierId: lostCourierId })
+      }
+    }
+  } catch (e) {
+    console.error('markReturnLost notif', e)
+  }
+
   return {
     error: null,
-    orderId: res.order_id ?? orderId,
+    orderId: finalOrderId,
     state: res.state ?? null,
-    debtMad: res.debt_mad != null ? Number(res.debt_mad) : amountMad,
+    debtMad: finalDebtMad,
   }
 }

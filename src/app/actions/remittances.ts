@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireAdmin } from './_guards'
+import { notifyCourierEvent } from '@/lib/notifications/courier-events'
 
 /**
  * P0 réconciliation livreur — couche données.
@@ -192,7 +193,23 @@ export async function reconcileRemittance(
   revalidatePath('/admin/treasury')
   revalidatePath('/admin/commissions')
 
-  return { error: null, remittanceId: (data as string) ?? null }
+  const remittanceId = (data as string) ?? null
+
+  // Notif best-effort (cœur notifications Lot E) — APRÈS le succès de la RPC,
+  // jamais bloquant. Ne bloque jamais le retour de l'action.
+  try {
+    await notifyCourierEvent({
+      event: 'courier_remittance',
+      courierId: courierId,
+      courierName: courierName,
+      reference: remittanceId ? remittanceId.slice(0, 8) : undefined,
+      amountMad: receivedAmount,
+    })
+  } catch (e) {
+    console.error('reconcileRemittance notif', e)
+  }
+
+  return { error: null, remittanceId }
 }
 
 // ─── listRemittanceHistory ─────────────────────────────────────────────────────
