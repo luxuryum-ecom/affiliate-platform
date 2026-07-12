@@ -31,6 +31,13 @@ export interface DigestLossDebt {
   amountMad: number
 }
 
+// Agent Gardien (Lot G) : alertes ouvertes agrégées par type + gravité.
+export interface DigestGuardianAlert {
+  alertType: string
+  severity: string
+  count: number
+}
+
 export interface CourierDailyDigest {
   returnsPending: DigestReturnPending[]
   couriersOverCap: DigestCourierCapEntry[]
@@ -38,6 +45,7 @@ export interface CourierDailyDigest {
   totalOutstandingMad: number
   lossDebtsToday: DigestLossDebt[]
   pickedUpNotResolved: { count: number }[]
+  guardianAlerts: DigestGuardianAlert[]
 }
 
 export interface GetCourierDailyDigestResult {
@@ -187,6 +195,25 @@ export async function computeCourierDigest(
     pickedUpNotResolvedCount = unresolvedOrders?.length ?? 0
   }
 
+  // ── 5. Alertes Agent Gardien OUVERTES (Lot G, mig 131) — agrégées ───────────
+  const { data: alertRows, error: alertErr } = await supabase
+    .from('guardian_alerts')
+    .select('alert_type, severity')
+    .eq('status', 'open')
+  if (alertErr) return { error: alertErr.message, digest: null }
+
+  const alertMap = new Map<string, DigestGuardianAlert>()
+  for (const a of alertRows ?? []) {
+    const key = `${a.alert_type}|${a.severity}`
+    const cur = alertMap.get(key)
+    if (cur) cur.count += 1
+    else alertMap.set(key, { alertType: a.alert_type as string, severity: a.severity as string, count: 1 })
+  }
+  // Tri : critical d'abord, puis par nombre décroissant.
+  const guardianAlerts = Array.from(alertMap.values()).sort(
+    (x, y) => (x.severity === 'critical' ? 0 : 1) - (y.severity === 'critical' ? 0 : 1) || y.count - x.count,
+  )
+
   return {
     error: null,
     digest: {
@@ -196,6 +223,7 @@ export async function computeCourierDigest(
       totalOutstandingMad,
       lossDebtsToday,
       pickedUpNotResolved: [{ count: pickedUpNotResolvedCount }],
+      guardianAlerts,
     },
   }
 }

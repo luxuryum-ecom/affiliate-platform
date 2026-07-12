@@ -31,6 +31,16 @@ export type CourierNotificationEvent =
   | 'courier_return_lost'
   | 'courier_over_cap'
   | 'courier_remittance'
+  // ── Agent Gardien anti-collusion (Lot G) — destinataire = Abdou (Telegram via
+  //    ADMIN_TELEGRAM_CHAT_ID) + cloche in-app admins. Champ superviseur délégable
+  //    prévu mais inactif (cf. TODO en tête de fichier).
+  | 'guardian_ghost_parcel'
+  | 'guardian_cross_imputation'
+  | 'guardian_collusion'
+  | 'guardian_cash_pending'
+  | 'guardian_auto_block'
+  | 'guardian_return_ghost'
+  | 'guardian_inventory_delta'
 
 export interface NotifyCourierEventInput {
   event: CourierNotificationEvent
@@ -47,12 +57,27 @@ const TELEGRAM_EVENTS: ReadonlySet<CourierNotificationEvent> = new Set([
   'courier_return_declared',
   'courier_return_lost',
   'courier_over_cap',
+  // Gardien (Lot G) : les 🚨 critiques partent aussi en Telegram immédiat à Abdou.
+  'guardian_ghost_parcel',
+  'guardian_cross_imputation',
+  'guardian_collusion',
+  'guardian_cash_pending',
+  'guardian_auto_block',
+  'guardian_return_ghost',
+  'guardian_inventory_delta',
 ])
 
 const TELEGRAM_LABELS: Record<string, string> = {
   courier_return_declared: 'Retour déclaré',
   courier_return_lost: 'Retour perdu',
   courier_over_cap: 'Plafond dépassé',
+  guardian_ghost_parcel: '🚨 Colis fantôme (jamais ramassé)',
+  guardian_cross_imputation: '🚨 Tentative d’imputation croisée',
+  guardian_collusion: '🚨 Réception sans déclaration (collusion ?)',
+  guardian_cash_pending: 'Versement déclaré — à valider',
+  guardian_auto_block: '🚨 Blocage automatique livreur',
+  guardian_return_ghost: 'Retour fantôme (>48h non confirmé)',
+  guardian_inventory_delta: 'Écart d’inventaire dépôt',
 }
 
 interface CourierNotifPayload {

@@ -60,6 +60,27 @@ export function renderCourierDigestEmail(digest: CourierDailyDigest, dateLabel: 
 
   const pickedUp = digest.pickedUpNotResolved?.[0]?.count ?? 0
 
+  const GUARDIAN_LABELS: Record<string, string> = {
+    ghost_parcel: 'Colis fantôme (jamais ramassé)',
+    cross_imputation: 'Tentative d’imputation croisée',
+    reception_without_declaration: 'Réception sans déclaration (collusion ?)',
+    return_ghost_48h: 'Retour fantôme (>48h)',
+    pattern_courier_staff: 'Paire livreur↔salarié anormale',
+    over_cap: 'Plafond dépassé (société)',
+    debt_spike: 'Dette en forte hausse',
+    cash_declared_pending: 'Versement déclaré à valider',
+    fraud_auto_block: 'Blocage automatique (perso)',
+    inventory_delta: 'Écart d’inventaire',
+  }
+  const guardian = digest.guardianAlerts.length
+    ? `<ul style="margin:4px 0;padding-left:18px;font-size:13px">${digest.guardianAlerts
+        .map(
+          (a) =>
+            `<li style="color:${a.severity === 'critical' ? '#b00' : '#a60'}">${a.severity === 'critical' ? '🚨 ' : '⚠️ '}${esc(GUARDIAN_LABELS[a.alertType] ?? a.alertType)} · <b>${a.count}</b></li>`,
+        )
+        .join('')}</ul>`
+    : empty('Aucune alerte gardien ouverte.')
+
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#111">
     <h1 style="font-size:18px;margin:0 0 4px">Récap livreurs · ${dateLabel}</h1>
@@ -69,6 +90,7 @@ export function renderCourierDigestEmail(digest: CourierDailyDigest, dateLabel: 
     ${section('⚠️ Livreurs proches du plafond', nearCap)}
     ${section('💸 Créances perte du jour', loss)}
     ${section('🚚 Colis ramassés non encore livrés ni retournés', `<p style="font-size:13px;color:#333;margin:4px 0"><b>${pickedUp}</b> colis en cours.</p>`)}
+    ${section('🛡️ Agent Gardien — alertes ouvertes', guardian)}
     ${section('💰 Encours total', `<p style="font-size:15px;font-weight:bold;margin:4px 0">${fmtMad(digest.totalOutstandingMad)}</p>`)}
   </div>`
 }
