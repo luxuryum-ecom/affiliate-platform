@@ -1,7 +1,7 @@
 # LIVRABLE — MODULE LIVREURS & TRAÇABILITÉ COMPLÈTE
 
 > Chantier autonome démarré 2026-07-10 (repris après reset session). Branche par lot.
-> **✅ RÉCONCILIATION RÉEL 2026-07-12** : les **Lots A→F sont TOUS mergés sur `main` ET EN PROD** — vérifié par `git log main` (A `28b0ca7`, B `65668fc`, C `0fff3bf`, D `e294897`, E `7267b41`, F `9344733`) et par requête LECTURE SEULE sur `supabase_migrations.schema_migrations` en prod (pooler `backups/.db_password`) : **migrations 126, 127, 128, 129, 130 toutes présentes**. Le **Lot G** (Agent Gardien anti-collusion) est désormais **construit et GO-ready** (branche `feat/livreurs-lot-g`, mig 131 LOCAL, RIEN commité, prod intouchée — @finance 🟢 + @security 🟢, 4 checks verts, 13 tests de fraude) — voir §🛡️ LOT G ci-dessous. Le module Livreurs A→G est complet, en attente du GO Abdou pour Lot G.
+> **✅ RÉCONCILIATION RÉEL 2026-07-12** : les **Lots A→F sont TOUS mergés sur `main` ET EN PROD** — vérifié par `git log main` (A `28b0ca7`, B `65668fc`, C `0fff3bf`, D `e294897`, E `7267b41`, F `9344733`) et par requête LECTURE SEULE sur `supabase_migrations.schema_migrations` en prod (pooler `backups/.db_password`) : **migrations 126, 127, 128, 129, 130 toutes présentes**. Le **Lot G** (Agent Gardien anti-collusion) est désormais **EN PROD** (mergé main `730baf0` + **mig 131 appliquée prod 2026-07-12**, lockstep, tables vides, REVOKE vérifié — @finance 🟢 + @security 🟢, 4 checks verts, 13 tests de fraude) — voir §🛡️ LOT G ci-dessous. **Le module Livreurs A→G est 100% EN PROD ET LIVE.**
 > Ce fichier est mis à jour au fil des lots pour survivre à une coupure. **Statuts : ✅ prêt / 🟡 partiel / ⏭️ à faire / 🔄 en cours.**
 
 ## RÉSUMÉ EXÉCUTIF (état vivant)
@@ -14,9 +14,9 @@
 | D | Tournées + scan ramassage + retours 3 cas | `feat/livreurs-lot-d` | ✅ **EN PROD** — mergé main (e294897) + **mig 128 appliquée prod 2026-07-11** |
 | E | Notifications instantanées par état | `feat/livreurs-lot-e` | ✅ **EN PROD** — mergé main (7267b41) + **mig 129 appliquée prod** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
 | F | Relevés PDF figés (affilié au payout + livreur signable) | `feat/livreurs-lot-f` | ✅ **EN PROD** — mergé main (9344733) + **mig 130 appliquée prod** — @finance 🟢 + @security 🟢, 4 checks verts (vitest 718/718), captures PDF FR/AR/EN |
-| G | Agent Gardien anti-collusion (RÈGLE DU PORTEUR + double confirmation + patterns) | `feat/livreurs-lot-g` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts (tsc 0 · vitest 731 · build · smoke 16), 13 tests de fraude simulée, captures FR/AR + mobile 390×844. **Mig 131 LOCAL uniquement, RIEN commité, prod intouchée** (GO Abdou requis) |
+| G | Agent Gardien anti-collusion (RÈGLE DU PORTEUR + double confirmation + patterns) | `feat/livreurs-lot-g` | ✅ **EN PROD** — mergé main (730baf0) + poussé + **mig 131 appliquée prod 2026-07-12** (lockstep, tables vides, REVOKE vérifié). @finance 🟢 + @security 🟢, 4 checks verts (tsc 0 · vitest 731 · build · smoke 16), 13 tests de fraude, captures FR/AR + mobile 390×844 |
 
-> **BILAN 2026-07-12** : les **6 lots A→F sont terminés, mergés sur `main` et EN PROD** (migrations 126→130 appliquées, vérifiées en base). Le module de traçabilité livreurs (registre, scan livraison/ramassage, dashboard mobile cloisonné, tournées/retours 3 cas, notifications instantanées, relevés PDF figés) est **live**. **Seul reste le Lot G — Agent Gardien** (surveillance anti-fuite + RÈGLE DU PORTEUR), spécifié dans la section CHAÎNE DE GARDE, à traiter en session dédiée (@architect → @finance/@security → implémentation).
+> **BILAN 2026-07-12** : le **module Livreurs A→G est TERMINÉ, mergé sur `main` et 100% EN PROD** (migrations 126→131 appliquées, vérifiées en base). Traçabilité complète : registre, scan livraison/ramassage, dashboard mobile cloisonné, tournées/retours 3 cas, notifications instantanées, relevés PDF figés, et **Agent Gardien anti-collusion** (RÈGLE DU PORTEUR, double confirmation argent, détection de patterns, sanctions). Module **live de bout en bout**.
 
 ## PHASE 0 — CARTOGRAPHIE (anti-fausse-dette) ✅
 Existant réutilisable vérifié dans le code réel :
@@ -70,9 +70,9 @@ Existant réutilisable vérifié dans le code réel :
 - Les écrans **admin de bureau** (`/admin/couriers`, `/admin/couriers/[id]`, `/admin/treasury`, `/admin/remittances`, etc.) restent en **desktop**.
 
 ---
-## 🛡️ LOT G — AGENT GARDIEN ANTI-COLLUSION — ✅ GO-ready (2026-07-12, NON commité)
+## 🛡️ LOT G — AGENT GARDIEN ANTI-COLLUSION — ✅ EN PROD (2026-07-12)
 
-> Branche `feat/livreurs-lot-g`. **RIEN commité, prod intouchée, migration 131 appliquée en LOCAL uniquement.** GO Abdou requis pour commit + merge + prod. Le lot le plus critique du module : rend la fraude **structurellement impossible**, pas seulement détectée.
+> Branche `feat/livreurs-lot-g` **mergée main `--no-ff` (`730baf0`) + poussée** ; **migration 131 APPLIQUÉE EN PROD le 2026-07-12** (pooler `backups/.db_password`, transaction atomique `--single-transaction` lockstep APRÈS Vercel Ready, jamais le CLI). Vérifié AVANT (prod à 130, 131 absente) / APRÈS (6 tables + 15 RPC + 4 vues, `guardian_alerts` RLS activée + **tables VIDES**, **REVOKE effectif** = `authenticated` ne peut exécuter ni `confirm_cash_receipt` ni `record_depot_reception`, trigger d'immuabilité présent, 0 policy d'écriture, historique → 131). Types conformes prod (schéma local identique, régén byte-identique). Le lot le plus critique du module : rend la fraude **structurellement impossible**, pas seulement détectée.
 
 **Anti-fausse-dette (réutilise l'existant, zéro doublon)** : `scan_events`/`pickup_dispatch` (mig 128) = source du porteur ; trigger de contre-passation `handle_order_status_reversal` (mig 122, INCHANGÉ) ; `reconcile_courier_remittance` (mig 122, INCHANGÉE) appelée telle quelle ; `v_courier_balances` (126) lue en seule lecture ; infra notif Lot E (`notifyCourierEvent` + `computeCourierDigest` + email Resend + cron `/api/cron/courier-digest`) ÉTENDUE (pas dupliquée). **Aucun objet financier redéfini.**
 
@@ -93,7 +93,7 @@ Existant réutilisable vérifié dans le code réel :
 
 **Décisions prises seul (autonomie)** : (1) réception mobile en 1 seul appel = « confirmation visuelle uniquement » conforme au spec (porteur imposé serveur ; anti-tamper `confirmedCourierId` testé au niveau RPC via F2) ; (2) destinataire Abdou = Telegram via `ADMIN_TELEGRAM_CHAT_ID` + cloche in-app admins, champ superviseur délégable = TODO inactif de `courier-events.ts` (conforme spec) ; (3) email récap = extension du digest Lot E existant (aucune nouvelle infra cron).
 
-**Reste (GO Abdou)** : commit branche → merge → **appliquer mig 131 en prod** (pooler `backups/.db_password`, lockstep APRÈS déploiement, jamais le CLI, vérif AVANT/APRÈS) → régénérer types depuis prod. **Ops non bloquantes** : env `CRON_SECRET`/`COURIER_DIGEST_EMAIL`/`RESEND_API_KEY`/`EMAIL_FROM` (déjà requises Lot E) pour l'email récap ; planifier le cron `/api/cron/courier-digest` (déjà routé).
+**Fait (2026-07-12)** : commit `4ca9835` → merge `730baf0` → poussé → **mig 131 appliquée prod** (lockstep, vérif AVANT/APRÈS OK) → types confirmés conformes. **Ops non bloquantes restantes** : env `CRON_SECRET`/`COURIER_DIGEST_EMAIL`/`RESEND_API_KEY`/`EMAIL_FROM` (déjà requises Lot E) pour l'email récap ; planifier le cron `/api/cron/courier-digest` (déjà routé).
 
 ---
 ## LOTS (détail au fil de l'eau)
@@ -224,7 +224,7 @@ Migrations LOCAL puis PROD via pooler `backups/.db_password` (jamais le CLI) APR
 ### GO à donner par Abdou
 - [x] **Lot A** (registre livreurs) — ✅ **LIVRÉ EN PROD** : @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR. **MERGÉ main `--no-ff` (28b0ca7) + POUSSÉ + déployé Vercel. ✅ Migration 126 APPLIQUÉE EN PROD le 2026-07-10** (pooler `backups/.db_password`, transaction atomique lockstep APRÈS déploiement — jamais le CLI). Vérifié AVANT (objets absents) / APRÈS (3 objets + orders.courier_id créés, **tables VIDES**, RLS admin-only, trigger append-only, rempart staff, historique 001→126). Types déjà à jour (schéma prod = commité).
 - [x] **Lots B→F** — ✅ **TOUS EN PROD** (vérifié 2026-07-12) : B mergé `65668fc` (mig 127), C mergé `0fff3bf` (sans mig), D mergé `e294897` (mig 128), E mergé `7267b41` (mig 129), F mergé `9344733` (mig 130). Migrations 127→130 confirmées présentes dans `schema_migrations` prod (requête lecture seule pooler). Pré-requis Lot C (durcissement `access_code` P2-3) traité au Lot B.
-- [x] **Lot G — Agent Gardien anti-collusion** — ✅ **PRÊT (GO-ready) 2026-07-12**, branche `feat/livreurs-lot-g`, **RIEN commité, prod intouchée, mig 131 LOCAL uniquement**. Voir bilan détaillé ci-dessous. @finance 🟢 + @security 🟢, 4 checks verts, 13 tests de fraude. **GO Abdou requis** pour commit + merge + application prod mig 131 (pooler `backups/.db_password`, jamais le CLI).
+- [x] **Lot G — Agent Gardien anti-collusion** — ✅ **EN PROD 2026-07-12** : mergé main `730baf0` + poussé + **mig 131 appliquée prod** (pooler `backups/.db_password`, lockstep, jamais le CLI, vérif AVANT/APRÈS OK). @finance 🟢 + @security 🟢, 4 checks verts, 13 tests de fraude. Voir bilan détaillé ci-dessous.
 
 ### Fichiers Lot A (branche `feat/livreurs-lot-a`, non commité)
 - `supabase/migrations/126_couriers_registry.sql`
