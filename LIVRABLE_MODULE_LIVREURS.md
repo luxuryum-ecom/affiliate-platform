@@ -1,20 +1,22 @@
 # LIVRABLE — MODULE LIVREURS & TRAÇABILITÉ COMPLÈTE
 
-> Chantier autonome démarré 2026-07-10 (repris après reset session). Branche par lot. NON mergé (GO Abdou requis).
+> Chantier autonome démarré 2026-07-10 (repris après reset session). Branche par lot.
+> **✅ RÉCONCILIATION RÉEL 2026-07-12** : les **Lots A→F sont TOUS mergés sur `main` ET EN PROD** — vérifié par `git log main` (A `28b0ca7`, B `65668fc`, C `0fff3bf`, D `e294897`, E `7267b41`, F `9344733`) et par requête LECTURE SEULE sur `supabase_migrations.schema_migrations` en prod (pooler `backups/.db_password`) : **migrations 126, 127, 128, 129, 130 toutes présentes**. Il ne reste que le **Lot G** (Agent Gardien) — non démarré, aucune branche.
 > Ce fichier est mis à jour au fil des lots pour survivre à une coupure. **Statuts : ✅ prêt / 🟡 partiel / ⏭️ à faire / 🔄 en cours.**
 
 ## RÉSUMÉ EXÉCUTIF (état vivant)
 | Lot | Sujet | Branche | Statut |
 |---|---|---|---|
 | 0 | Cartographie anti-fausse-dette | — | ✅ fait |
-| A | Registre + comptes livreurs + /admin/couriers | `feat/livreurs-lot-a` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
-| B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ✅ **LIVRÉ EN PROD** — mergé main (65668fc) + poussé + **mig 127 appliquée prod 2026-07-11** |
-| C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
-| D | Tournées + scan ramassage + retours 3 cas | `feat/livreurs-lot-d` | ✅ **LIVRÉ EN PROD** — mergé main (e294897) + poussé + **mig 128 appliquée prod 2026-07-11** |
-| E | Notifications instantanées par état | `feat/livreurs-lot-e` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts, captures (mobile /courier + desktop cloche) |
-| F | Relevés PDF figés (affilié au payout + livreur signable) | `feat/livreurs-lot-f` | ✅ **PRÊT (GO-ready)** — @finance 🟢 + @security 🟢, 4 checks verts (vitest 718/718), captures PDF FR/AR/EN + écrans ; mig 130 LOCAL (prod après GO) |
+| A | Registre + comptes livreurs + /admin/couriers | `feat/livreurs-lot-a` | ✅ **EN PROD** — mergé main (28b0ca7) + **mig 126 appliquée prod** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
+| B | QR + code128 + étiquettes PDF + /courier/scan | `feat/livreurs-lot-b` | ✅ **EN PROD** — mergé main (65668fc) + **mig 127 appliquée prod 2026-07-11** |
+| C | Dashboard livreur mobile cloisonné | `feat/livreurs-lot-c` | ✅ **EN PROD** — mergé main (0fff3bf), **sans migration** — @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR |
+| D | Tournées + scan ramassage + retours 3 cas | `feat/livreurs-lot-d` | ✅ **EN PROD** — mergé main (e294897) + **mig 128 appliquée prod 2026-07-11** |
+| E | Notifications instantanées par état | `feat/livreurs-lot-e` | ✅ **EN PROD** — mergé main (7267b41) + **mig 129 appliquée prod** — @finance 🟢 + @security 🟢, 4 checks verts, captures |
+| F | Relevés PDF figés (affilié au payout + livreur signable) | `feat/livreurs-lot-f` | ✅ **EN PROD** — mergé main (9344733) + **mig 130 appliquée prod** — @finance 🟢 + @security 🟢, 4 checks verts (vitest 718/718), captures PDF FR/AR/EN |
+| G | Agent Gardien (surveillance anti-fuite + RÈGLE DU PORTEUR) | — | ⏭️ **À FAIRE** — non démarré, aucune branche ; spécifié §CHAÎNE DE GARDE (seul reste du module) |
 
-> **CADRAGE HONNÊTE** : la limite de session a coupé 2× sur ce très gros module (6 lots, chacun = migration + backend + frontend + tester + @finance + @security + captures). Décision d'autonomie : **livrer le Lot A (la FONDATION dont B→F dépendent tous) jusqu'au bout GO-ready**, et **spécifier B→F précisément** ci-dessous pour un enchaînement propre lot par lot. Mieux vaut 1 lot solide et vérifié + 5 cadrés que 6 à moitié. Chaque lot suivant = 1 session dédiée.
+> **BILAN 2026-07-12** : les **6 lots A→F sont terminés, mergés sur `main` et EN PROD** (migrations 126→130 appliquées, vérifiées en base). Le module de traçabilité livreurs (registre, scan livraison/ramassage, dashboard mobile cloisonné, tournées/retours 3 cas, notifications instantanées, relevés PDF figés) est **live**. **Seul reste le Lot G — Agent Gardien** (surveillance anti-fuite + RÈGLE DU PORTEUR), spécifié dans la section CHAÎNE DE GARDE, à traiter en session dédiée (@architect → @finance/@security → implémentation).
 
 ## PHASE 0 — CARTOGRAPHIE (anti-fausse-dette) ✅
 Existant réutilisable vérifié dans le code réel :
@@ -195,7 +197,8 @@ Migrations LOCAL puis PROD via pooler `backups/.db_password` (jamais le CLI) APR
 
 ### GO à donner par Abdou
 - [x] **Lot A** (registre livreurs) — ✅ **LIVRÉ EN PROD** : @finance 🟢 + @security 🟢, 4 checks verts, captures FR/AR. **MERGÉ main `--no-ff` (28b0ca7) + POUSSÉ + déployé Vercel. ✅ Migration 126 APPLIQUÉE EN PROD le 2026-07-10** (pooler `backups/.db_password`, transaction atomique lockstep APRÈS déploiement — jamais le CLI). Vérifié AVANT (objets absents) / APRÈS (3 objets + orders.courier_id créés, **tables VIDES**, RLS admin-only, trigger append-only, rempart staff, historique 001→126). Types déjà à jour (schéma prod = commité).
-- [ ] **Lots B→F** : spécifiés ci-dessus, à coder 1 par 1 (1 session/lot). **Pré-requis Lot C** : durcir `access_code` (P2-3) avant d'ouvrir le portail `/courier`.
+- [x] **Lots B→F** — ✅ **TOUS EN PROD** (vérifié 2026-07-12) : B mergé `65668fc` (mig 127), C mergé `0fff3bf` (sans mig), D mergé `e294897` (mig 128), E mergé `7267b41` (mig 129), F mergé `9344733` (mig 130). Migrations 127→130 confirmées présentes dans `schema_migrations` prod (requête lecture seule pooler). Pré-requis Lot C (durcissement `access_code` P2-3) traité au Lot B.
+- [ ] **Lot G — Agent Gardien** : ⏭️ non démarré, aucune branche. Seul reste du module. Spécifié §CHAÎNE DE GARDE (Lot G + RÈGLE DU PORTEUR). Session dédiée : @architect → @finance/@security → implémentation. **NE PAS coder sans GO Abdou.**
 
 ### Fichiers Lot A (branche `feat/livreurs-lot-a`, non commité)
 - `supabase/migrations/126_couriers_registry.sql`
@@ -207,4 +210,4 @@ Migrations LOCAL puis PROD via pooler `backups/.db_password` (jamais le CLI) APR
 - `tests/lot-a-courier-balances.integration.test.ts`
 - (captures) `scripts/seed-couriers-captures-local.mjs`, `e2e/couriers-captures.spec.ts`, `playwright.couriers.config.ts`, `couriers-captures/*.png`
 
-*Dernière mise à jour : Lot A GO-ready (data+UI+finance+security+tests+captures), B→F spécifiés.*
+*Dernière mise à jour : 2026-07-12 — RÉCONCILIATION RÉEL : Lots A→F TOUS EN PROD (migrations 126→130 vérifiées en base, lecture seule pooler ; 6 merges confirmés sur main). Seul reste le Lot G (Agent Gardien), non démarré.*
