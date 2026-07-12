@@ -89,6 +89,24 @@ export default async function AdminCouriersPage() {
             >
               {t('pickupScanLink')}
             </Link>
+            <Link
+              href="/admin/couriers/reception"
+              className="text-xs px-3 py-1.5 bg-surface-2 text-foreground rounded-lg hover:opacity-90 transition-opacity"
+            >
+              {t('receptionScanLink')}
+            </Link>
+            <Link
+              href="/admin/couriers/inventory"
+              className="text-xs px-3 py-1.5 bg-surface-2 text-foreground rounded-lg hover:opacity-90 transition-opacity"
+            >
+              {t('inventoryLink')}
+            </Link>
+            <Link
+              href="/admin/guardian"
+              className="text-xs px-3 py-1.5 bg-warning-soft text-warning-fg rounded-lg hover:opacity-90 transition-opacity"
+            >
+              🛡️ {t('guardianLink')}
+            </Link>
             <a
               href="/admin/couriers/labels"
               target="_blank"

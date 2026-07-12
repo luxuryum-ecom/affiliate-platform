@@ -56,6 +56,7 @@ export default async function AdminDashboardPage() {
     { count: pendingSourcingRequests },
     { count: pendingMarketplaceRFQs },
     { count: pendingSampleRequests },
+    { count: guardianOpenAlerts },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -104,6 +105,12 @@ export default async function AdminDashboardPage() {
       .from('sample_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending'),
+    // v_guardian_alerts est admin-only (security_invoker + rempart my_role()='admin') —
+    // pour un agent, RLS renvoie 0 ligne sans erreur (count=0, inoffensif).
+    supabase
+      .from('v_guardian_alerts')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'open'),
   ])
 
   const pendingCommissionRows = (pendingCommissionsRes.data ?? []) as { amount: number }[]
@@ -375,6 +382,12 @@ export default async function AdminDashboardPage() {
                 description: t('couriersNavDesc'),
                 badge: null,
                 href: '/admin/couriers',
+              },
+              {
+                title: `🛡️ ${t('guardianNavTitle')}`,
+                description: t('guardianNavDesc'),
+                badge: guardianOpenAlerts ?? 0,
+                href: '/admin/guardian',
               },
             ].map((action) => (
               <div

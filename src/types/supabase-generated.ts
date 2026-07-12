@@ -626,6 +626,148 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_blocks: {
+        Row: {
+          action: string
+          alert_id: string | null
+          block_type: string
+          courier_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          action: string
+          alert_id?: string | null
+          block_type: string
+          courier_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          action?: string
+          alert_id?: string | null
+          block_type?: string
+          courier_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_blocks_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "guardian_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_blocks_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_blocks_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_blocks_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_blocks_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+        ]
+      }
+      courier_cash_confirmations: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          courier_id: string
+          created_at: string
+          declared_amount_mad: number
+          declared_at: string
+          declared_by: string | null
+          id: string
+          idempotency_key: string
+          method: string
+          order_ids: string[]
+          reject_reason: string | null
+          remittance_id: string | null
+          state: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          courier_id: string
+          created_at?: string
+          declared_amount_mad: number
+          declared_at?: string
+          declared_by?: string | null
+          id?: string
+          idempotency_key: string
+          method: string
+          order_ids: string[]
+          reject_reason?: string | null
+          remittance_id?: string | null
+          state?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          courier_id?: string
+          created_at?: string
+          declared_amount_mad?: number
+          declared_at?: string
+          declared_by?: string | null
+          id?: string
+          idempotency_key?: string
+          method?: string
+          order_ids?: string[]
+          reject_reason?: string | null
+          remittance_id?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_cash_confirmations_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_cash_confirmations_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_cash_confirmations_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+        ]
+      }
       courier_product_debts: {
         Row: {
           amount_mad: number
@@ -674,6 +816,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_courier_balances"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_product_debts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
           },
           {
             foreignKeyName: "courier_product_debts_order_id_fkey"
@@ -863,6 +1012,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "courier_returns_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+          {
             foreignKeyName: "courier_returns_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: true
@@ -882,6 +1038,122 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_courier_scan_queue"
             referencedColumns: ["order_id"]
+          },
+        ]
+      }
+      courier_staff_pairs: {
+        Row: {
+          computed_at: string
+          courier_id: string
+          event_count: number
+          flagged: boolean
+          id: string
+          last_event_at: string | null
+          staff_id: string
+          window_days: number
+        }
+        Insert: {
+          computed_at?: string
+          courier_id: string
+          event_count?: number
+          flagged?: boolean
+          id?: string
+          last_event_at?: string | null
+          staff_id: string
+          window_days?: number
+        }
+        Update: {
+          computed_at?: string
+          courier_id?: string
+          event_count?: number
+          flagged?: boolean
+          id?: string
+          last_event_at?: string | null
+          staff_id?: string
+          window_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_staff_pairs_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_staff_pairs_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_staff_pairs_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+        ]
+      }
+      courier_statements: {
+        Row: {
+          cash_owed_mad: number
+          courier_id: string
+          final_balance_mad: number
+          generated_at: string
+          generated_by: string | null
+          id: string
+          period_end: string
+          period_start: string
+          product_debt_mad: number
+          snapshot: Json
+        }
+        Insert: {
+          cash_owed_mad: number
+          courier_id: string
+          final_balance_mad: number
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          product_debt_mad: number
+          snapshot: Json
+        }
+        Update: {
+          cash_owed_mad?: number
+          courier_id?: string
+          final_balance_mad?: number
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          product_debt_mad?: number
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_statements_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_statements_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_statements_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
           },
         ]
       }
@@ -977,6 +1249,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_courier_balances"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_tours_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
           },
         ]
       }
@@ -1093,6 +1372,118 @@ export type Database = {
           },
         ]
       }
+      guardian_alerts: {
+        Row: {
+          alert_type: string
+          courier_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          order_id: string | null
+          related_courier_id: string | null
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          staff_id: string | null
+          status: string
+        }
+        Insert: {
+          alert_type: string
+          courier_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          order_id?: string | null
+          related_courier_id?: string | null
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          staff_id?: string | null
+          status?: string
+        }
+        Update: {
+          alert_type?: string
+          courier_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          order_id?: string | null
+          related_courier_id?: string | null
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          staff_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardian_alerts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_related_courier_id_fkey"
+            columns: ["related_courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_related_courier_id_fkey"
+            columns: ["related_courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_related_courier_id_fkey"
+            columns: ["related_courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+        ]
+      }
       import_tariffs: {
         Row: {
           active: boolean
@@ -1135,6 +1526,86 @@ export type Database = {
           transport_customs_price_mad?: number
           unit?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      inventory_snapshot_lines: {
+        Row: {
+          counted_at: string | null
+          counted_by: string | null
+          counted_qty: number | null
+          created_at: string
+          delta: number | null
+          expected_qty: number
+          id: string
+          product_id: string | null
+          snapshot_id: string
+          variant_id: string
+        }
+        Insert: {
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_qty?: number | null
+          created_at?: string
+          delta?: number | null
+          expected_qty: number
+          id?: string
+          product_id?: string | null
+          snapshot_id: string
+          variant_id: string
+        }
+        Update: {
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_qty?: number | null
+          created_at?: string
+          delta?: number | null
+          expected_qty?: number
+          id?: string
+          product_id?: string | null
+          snapshot_id?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_snapshot_lines_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_snapshots: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          id: string
+          notes: string | null
+          period_label: string
+          started_at: string
+          started_by: string | null
+          status: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          notes?: string | null
+          period_label: string
+          started_at?: string
+          started_by?: string | null
+          status?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          notes?: string | null
+          period_label?: string
+          started_at?: string
+          started_by?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -1488,6 +1959,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_courier_balances"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
           },
           {
             foreignKeyName: "notifications_order_id_fkey"
@@ -1894,6 +2372,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+          {
             foreignKeyName: "orders_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -1930,6 +2415,63 @@ export type Database = {
           },
         ]
       }
+      payout_statements: {
+        Row: {
+          affiliate_id: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          payment_method: string | null
+          payout_id: string
+          period_end: string | null
+          period_start: string | null
+          reference: string | null
+          snapshot: Json
+          total_amount: number
+        }
+        Insert: {
+          affiliate_id: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          payment_method?: string | null
+          payout_id: string
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          snapshot: Json
+          total_amount: number
+        }
+        Update: {
+          affiliate_id?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          payment_method?: string | null
+          payout_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          snapshot?: Json
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_statements_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_statements_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: true
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payouts: {
         Row: {
           affiliate_id: string
@@ -1939,6 +2481,7 @@ export type Database = {
           idempotency_key: string | null
           notes: string | null
           paid_at: string | null
+          payment_method: string | null
           reference: string | null
           status: string
         }
@@ -1950,6 +2493,7 @@ export type Database = {
           idempotency_key?: string | null
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
           reference?: string | null
           status?: string
         }
@@ -1961,6 +2505,7 @@ export type Database = {
           idempotency_key?: string | null
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
           reference?: string | null
           status?: string
         }
@@ -5478,6 +6023,199 @@ export type Database = {
             referencedRelation: "v_courier_balances"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+        ]
+      }
+      v_guardian_alerts: {
+        Row: {
+          alert_type: string | null
+          courier_id: string | null
+          courier_name: string | null
+          courier_type: string | null
+          created_at: string | null
+          details: Json | null
+          id: string | null
+          order_id: string | null
+          related_courier_id: string | null
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          staff_id: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardian_alerts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_related_courier_id_fkey"
+            columns: ["related_courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_related_courier_id_fkey"
+            columns: ["related_courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_alerts_related_courier_id_fkey"
+            columns: ["related_courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+        ]
+      }
+      v_guardian_courier_risk: {
+        Row: {
+          balance_cap_mad: number | null
+          courier_id: string | null
+          courier_type: string | null
+          name: string | null
+          open_alerts: number | null
+          over_cap: boolean | null
+          status: string | null
+          total_balance_mad: number | null
+        }
+        Relationships: []
+      }
+      v_guardian_open_returns: {
+        Row: {
+          age_hours: number | null
+          courier_id: string | null
+          courier_name: string | null
+          declared_at: string | null
+          order_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_returns_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_returns_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_returns_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
+          {
+            foreignKeyName: "courier_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_remittance_pending"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "courier_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "v_courier_scan_queue"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
+      v_guardian_pending_cash: {
+        Row: {
+          courier_id: string | null
+          courier_name: string | null
+          courier_type: string | null
+          declared_amount_mad: number | null
+          declared_at: string | null
+          declared_by: string | null
+          id: string | null
+          method: string | null
+          orders_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_cash_confirmations_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_cash_confirmations_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_courier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_cash_confirmations_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "v_guardian_courier_risk"
+            referencedColumns: ["courier_id"]
+          },
         ]
       }
       v_ledger_balances: {
@@ -5846,12 +6584,33 @@ export type Database = {
         Args: { p_assignee: string; p_notes?: string; p_order_id: string }
         Returns: undefined
       }
+      block_courier: {
+        Args: {
+          p_actor_id: string
+          p_block?: boolean
+          p_courier_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       can_assign_orders: { Args: { uid: string }; Returns: boolean }
       clear_order_fraud_hold: {
         Args: { p_order_id: string }
         Returns: undefined
       }
       client_currency_for: { Args: { p_label: string }; Returns: string }
+      close_inventory_snapshot: {
+        Args: { p_actor_id: string; p_snapshot_id: string }
+        Returns: Json
+      }
+      confirm_cash_receipt: {
+        Args: {
+          p_actor_id: string
+          p_confirmation_id: string
+          p_received_amount?: number
+        }
+        Returns: Json
+      }
       confirm_cod_order: { Args: { p_order_id: string }; Returns: boolean }
       confirm_return_company: {
         Args: { p_company_ref: string; p_order_id: string }
@@ -5873,6 +6632,7 @@ export type Database = {
           idempotency_key: string | null
           notes: string | null
           paid_at: string | null
+          payment_method: string | null
           reference: string | null
           status: string
         }
@@ -5883,12 +6643,76 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      declare_courier_cash: {
+        Args: {
+          p_actor_id: string
+          p_amount_mad: number
+          p_courier_id: string
+          p_idempotency_key: string
+          p_method: string
+          p_order_ids: string[]
+        }
+        Returns: Json
+      }
       declare_courier_return: {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: Json
       }
       default_variant_id: { Args: { p_product_id: string }; Returns: string }
+      detect_courier_staff_patterns: {
+        Args: { p_threshold?: number; p_window_days?: number }
+        Returns: number
+      }
+      detect_debt_spikes: {
+        Args: { p_threshold_mad?: number }
+        Returns: number
+      }
+      detect_ghost_returns: { Args: { p_hours?: number }; Returns: number }
+      evaluate_courier_block: { Args: { p_courier_id: string }; Returns: Json }
       fx_rate_to_mad: { Args: { p_code: string }; Returns: number }
+      generate_courier_statement: {
+        Args: { p_courier_id: string; p_end: string; p_start: string }
+        Returns: {
+          cash_owed_mad: number
+          courier_id: string
+          final_balance_mad: number
+          generated_at: string
+          generated_by: string | null
+          id: string
+          period_end: string
+          period_start: string
+          product_debt_mad: number
+          snapshot: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "courier_statements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      generate_payout_statement: {
+        Args: { p_payout_id: string }
+        Returns: {
+          affiliate_id: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          payment_method: string | null
+          payout_id: string
+          period_end: string | null
+          period_start: string | null
+          reference: string | null
+          snapshot: Json
+          total_amount: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payout_statements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_orders_by_phone: {
         Args: { p_phone: string }
         Returns: {
@@ -5992,6 +6816,10 @@ export type Database = {
         Returns: Json
       }
       my_role: { Args: never; Returns: string }
+      open_inventory_snapshot: {
+        Args: { p_actor_id: string; p_period_label: string }
+        Returns: string
+      }
       reconcile_courier_remittance: {
         Args: {
           p_courier_id?: string
@@ -6023,6 +6851,36 @@ export type Database = {
           p_order_id: string
           p_outcome: string
           p_tracking_ref?: string
+        }
+        Returns: Json
+      }
+      record_depot_reception: {
+        Args: {
+          p_actor_id: string
+          p_confirmed_courier_id?: string
+          p_order_id: string
+          p_transporter_note?: string
+        }
+        Returns: Json
+      }
+      record_guardian_alert: {
+        Args: {
+          p_alert_type: string
+          p_courier_id?: string
+          p_details?: Json
+          p_order_id?: string
+          p_related_courier_id?: string
+          p_severity: string
+          p_staff_id?: string
+        }
+        Returns: string
+      }
+      record_inventory_count: {
+        Args: {
+          p_actor_id: string
+          p_counted_qty: number
+          p_snapshot_id: string
+          p_variant_id: string
         }
         Returns: Json
       }
@@ -6071,6 +6929,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      reject_cash_confirmation: {
+        Args: {
+          p_actor_id: string
+          p_confirmation_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       reserve_stock: {
         Args: {
           p_actor?: string
@@ -6088,6 +6954,16 @@ export type Database = {
         Args: { p_code: string; p_ip?: string }
         Returns: string
       }
+      resolve_guardian_alert: {
+        Args: {
+          p_actor_id: string
+          p_alert_id: string
+          p_reason: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      resolve_parcel_bearer: { Args: { p_order_id: string }; Returns: string }
       respond_to_wholesale_order: {
         Args: {
           p_lead_time_days: number
