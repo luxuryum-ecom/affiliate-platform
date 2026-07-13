@@ -3,6 +3,12 @@
 <!-- Ajout PUR en tête. RIEN supprimé/modifié dessous. Indexe l'existant.      -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
+<!-- ── 2026-07-13 — CORRECTIF FINANCE X-1 + C-1 + C-2 (audit AUDIT_SAAS_2026-07-12) ── -->
+> **🟢 2026-07-13 — Branche `fix/finance-x1-c1` : correctif CODÉ + AUDITÉ (@finance 🟢🟢🟢🟢 + @security 🟢), NON commité/NON poussé (STOP GO-ready, attente GO Abdou).** Bilan : `CORRECTIF_FINANCE_X1_C1.md`.
+> - **X-1** (création d'argent par affilié via INSERT PostgREST empoisonné) : trigger `BEFORE INSERT` SECURITY DEFINER (mig **132 LOCAL**) qui recalcule/borne la commission côté base + garde payout. **C-1** (clawback retour post-paiement non récupéré) : `create_payout` verse le SOLDE NET (approuvé − clawback), report si net ≤ 0. **C-2** : `fraud_score` recalculé serveur (self-order plus forcé à 0).
+> - **Non-régression prouvée** : 749 tests verts (731 + 11 adversariaux + 3 X-1 + 4 C-1), tsc 0, build OK, smoke 16 OK. Payout sans retour = comportement IDENTIQUE à mig 052 ; commande légitime jamais refusée.
+> - **⚙️ EN ATTENTE ABDOU** : validation → merge → application mig 132 en prod (GO explicite, règle n°5) ; vérifier l'exposition legacy prod (§5 du bilan).
+
 <!-- ── 2026-07-10 — SPRINT CŒUR ARGENT (suite B2) : automatisation ledger + N1 + anti-fraude ── -->
 > **🟢 2026-07-10 — Branche `feat/b3-mig122-ledger-auto-wiring` : 3 lots CODÉS + AUDITÉS (@finance 🟢 + @security 🟢), NON poussés/NON mergés (attente GO Abdou).** Bilan : `LIVRABLE_SPRINT_ARGENT.md`.
 > - **mig 122** branchement AUTO grand livre (cod_collected / contre-passation / réconciliation versement livreur) · **mig 123** machine à états commissions + règle N1 (payable après réconciliation) · **mig 124** gate anti-fraude sur payabilité.
