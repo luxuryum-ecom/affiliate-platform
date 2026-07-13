@@ -9,6 +9,26 @@
 > - **Non-régression prouvée** : 749 tests verts (731 + 11 adversariaux + 3 X-1 + 4 C-1), tsc 0, build OK, smoke 16 OK. Payout sans retour = comportement IDENTIQUE à mig 052 ; commande légitime jamais refusée.
 > - **Vérif prod lecture seule AVANT application** : passif C-1 = **0 MAD** ; legacy X-1 = **150 MAD sur le compte de test « abdou »** (dérive de config produit, pas une fraude).
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- À FAIRE AVANT LANCEMENT RÉEL — PLAN DE SECOURS DES DONNÉES (vérifié 2026-07-13) -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+## 🛟 À FAIRE AVANT LANCEMENT RÉEL — PLAN DE SECOURS DES DONNÉES (vérifié 2026-07-13)
+
+**✅ PLAN DE SECOURS — ÉTAT VÉRIFIÉ 2026-07-13**
+- **Backups Supabase Pro : quotidiens automatiques, ACTIFS et confirmés** (liste visible au dashboard, backups **PHYSICAL** jusqu'au **13 Jul 2026**). Restauration possible via **Restore / Point-in-Time (PITR) / Restore to new project**.
+- **Structure reproductible** : migrations **001→133 rejouables à l'identique** (dette GRANTs hors-migrations **fermée par mig 133** — cf. `ETAT_REEL_2026-07-13.md` §DETTE RÉVÉLÉE).
+- **Pilier structure + pilier données = tous deux couverts.**
+
+**⚠️ À TRAITER AVANT LANCEMENT RÉEL** (pas urgent tant que ce sont des données de TEST) :
+1. **STORAGE non inclus dans les backups Supabase** (images produits stockées via Storage API — un backup DB ne contient que les *métadonnées* `storage.objects`, pas les fichiers binaires). **Mettre en place une sauvegarde séparée du Storage AVANT d'avoir de vraies images produits en prod.**
+2. **Script backup local (`~/AI-FACTORY`) cassé** : mauvais chemin du `.db_password` (`~/AI-FACTORY/backups/` au lieu de `~/AI-FACTORY/affiliate-platform/backups/`) → **échoue en silence depuis 17 jours** (dernier bon dump = 2026-06-26). **NON CRITIQUE** (Supabase Pro fait le vrai backup). À **réparer comme filet secondaire OU retirer**. S'il est réparé : le faire **échouer BRUYAMMENT (alerte Telegram)** au lieu de silencieusement.
+3. **TESTER une restauration réelle** (*Restore to new project* jetable) **avant le lancement** : confirmer que **les users se connectent** et que **les données sont intactes**. *Un backup non testé n'est pas un backup.*
+
+**📋 RESTE DU BACKLOG AUDIT** (`AUDIT_SAAS_2026-07-12.md`, post-lancement, non urgent) :
+- **G-4** — borner `received_amount ≤ expected` (RPC réconciliation) **avant de déléguer l'accès admin** (aujourd'hui admin unique = mitigé).
+- **G-3** — compléter le grand livre GLOBAL (121) sur les sorties (`affiliate_payout`/`supplier_payment`) → **trésorerie affichée exacte** (`v_treasury_overview` cesse de surévaluer).
+- **SEC-1** — durcir `get_orders_by_phone` (rate-limit IP+téléphone, masquer nom / retirer `total_amount`) contre la **fuite PII client**.
+
 <!-- ── 2026-07-10 — SPRINT CŒUR ARGENT (suite B2) : automatisation ledger + N1 + anti-fraude ── -->
 > **🟢 2026-07-10 — Branche `feat/b3-mig122-ledger-auto-wiring` : 3 lots CODÉS + AUDITÉS (@finance 🟢 + @security 🟢), NON poussés/NON mergés (attente GO Abdou).** Bilan : `LIVRABLE_SPRINT_ARGENT.md`.
 > - **mig 122** branchement AUTO grand livre (cod_collected / contre-passation / réconciliation versement livreur) · **mig 123** machine à états commissions + règle N1 (payable après réconciliation) · **mig 124** gate anti-fraude sur payabilité.
