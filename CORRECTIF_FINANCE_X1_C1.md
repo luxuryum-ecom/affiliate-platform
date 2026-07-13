@@ -1,8 +1,11 @@
 # CORRECTIF FINANCE — X-1 (commission empoisonnée) + C-1 (clawback non récupéré) + C-2
 
-> **Statut : GO-ready.** Branche `fix/finance-x1-c1`. **Rien commité, prod intouchée.**
-> Migration `132_finance_fix_x1_c1.sql` = **LOCAL uniquement** (appliquée en base locale
-> `127.0.0.1:54322` pour les tests, jamais poussée en prod). Date : 2026-07-13.
+> **Statut : ✅ 100% EN PROD ET LIVE (2026-07-13).** Mergé `main` `--no-ff` **`0911060`**
+> (commit branche `ce656f9`) + POUSSÉ. **Migration `132_finance_fix_x1_c1.sql` APPLIQUÉE
+> EN PROD** (pooler `aws-1-eu-central-1.pooler.supabase.com:5432`, `backups/.db_password`,
+> `--single-transaction` lockstep APRÈS Vercel Ready, jamais le CLI) — vérif AVANT (131,
+> 0 objet) / APRÈS (132, tous objets présents, **données inchangées** : 4 orders / 2
+> commissions / 0 ledger / 0 payouts, somme ledger 0). Date : 2026-07-13.
 > Réf audit : `AUDIT_SAAS_2026-07-12.md` (findings X-1 P0/P1, C-1 P1, C-2 P2).
 
 ---
@@ -147,5 +150,8 @@ garantie structurelle).
 | `tests/payout-clawback-c1.integration.test.ts` | **Nouveau** — 4 tests C-1 |
 | `CORRECTIF_FINANCE_X1_C1.md` | Ce bilan |
 
-**Prochaine action** : validation Abdou → merge `fix/finance-x1-c1` → application mig 132
-en prod sur GO (avec vérif legacy point 5.1). Rien n'est commité ni poussé à ce stade.
+**Statut final** : ✅ mergé (`0911060`) + poussé + **mig 132 appliquée en prod le 2026-07-13**
+(vérif AVANT/APRÈS OK, données inchangées). Correctif X-1 + C-1 + C-2 **LIVE**. Les points
+§5 (legacy / premier payout) ont été vérifiés en prod AVANT application : passif C-1 = 0 MAD,
+legacy = 150 MAD sur le compte de test « abdou » (dérive de config, pas une fraude) → aucun
+blocage. **Plus aucune action en attente sur ce correctif.**

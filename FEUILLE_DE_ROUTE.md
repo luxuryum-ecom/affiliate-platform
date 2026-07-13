@@ -4,10 +4,10 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
 <!-- ── 2026-07-13 — CORRECTIF FINANCE X-1 + C-1 + C-2 (audit AUDIT_SAAS_2026-07-12) ── -->
-> **🟢 2026-07-13 — Branche `fix/finance-x1-c1` : correctif CODÉ + AUDITÉ (@finance 🟢🟢🟢🟢 + @security 🟢), NON commité/NON poussé (STOP GO-ready, attente GO Abdou).** Bilan : `CORRECTIF_FINANCE_X1_C1.md`.
-> - **X-1** (création d'argent par affilié via INSERT PostgREST empoisonné) : trigger `BEFORE INSERT` SECURITY DEFINER (mig **132 LOCAL**) qui recalcule/borne la commission côté base + garde payout. **C-1** (clawback retour post-paiement non récupéré) : `create_payout` verse le SOLDE NET (approuvé − clawback), report si net ≤ 0. **C-2** : `fraud_score` recalculé serveur (self-order plus forcé à 0).
+> **🟢 2026-07-13 — CORRECTIF X-1 + C-1 + C-2 = 100% EN PROD ET LIVE.** Mergé `main` `--no-ff` **`0911060`** (commit branche `ce656f9`) + POUSSÉ ; **mig 132 APPLIQUÉE EN PROD** (pooler `backups/.db_password`, `--single-transaction` lockstep APRÈS Vercel Ready, jamais le CLI, vérif AVANT 131/APRÈS 132, données inchangées). Audits **@finance 🟢🟢🟢🟢 + @security 🟢**. Bilan : `CORRECTIF_FINANCE_X1_C1.md` · État réel : `ETAT_REEL_2026-07-13.md`.
+> - **X-1** (création d'argent par affilié via INSERT PostgREST empoisonné) : trigger `BEFORE INSERT` SECURITY DEFINER (mig 132) qui recalcule/borne la commission côté base + garde payout. **C-1** (clawback retour post-paiement non récupéré) : `create_payout` verse le SOLDE NET (approuvé − clawback), report si net ≤ 0. **C-2** : `fraud_score` recalculé serveur (self-order plus forcé à 0).
 > - **Non-régression prouvée** : 749 tests verts (731 + 11 adversariaux + 3 X-1 + 4 C-1), tsc 0, build OK, smoke 16 OK. Payout sans retour = comportement IDENTIQUE à mig 052 ; commande légitime jamais refusée.
-> - **⚙️ EN ATTENTE ABDOU** : validation → merge → application mig 132 en prod (GO explicite, règle n°5) ; vérifier l'exposition legacy prod (§5 du bilan).
+> - **Vérif prod lecture seule AVANT application** : passif C-1 = **0 MAD** ; legacy X-1 = **150 MAD sur le compte de test « abdou »** (dérive de config produit, pas une fraude).
 
 <!-- ── 2026-07-10 — SPRINT CŒUR ARGENT (suite B2) : automatisation ledger + N1 + anti-fraude ── -->
 > **🟢 2026-07-10 — Branche `feat/b3-mig122-ledger-auto-wiring` : 3 lots CODÉS + AUDITÉS (@finance 🟢 + @security 🟢), NON poussés/NON mergés (attente GO Abdou).** Bilan : `LIVRABLE_SPRINT_ARGENT.md`.
