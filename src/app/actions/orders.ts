@@ -453,6 +453,27 @@ export async function createAffiliateOrder(
     }
   }
 
+  // ── C-2 (audit 2026-07-12) — anti-fraude sur les self-orders affilié ──────
+  // On ne force PLUS fraud_score=0 : on score comme le flux public (placeOrder),
+  // sinon les self-orders échappent au gate B7 (mig 124). La garde structurelle
+  // (trigger mig 132) recalcule de toute façon ces scores côté serveur ; on les
+  // calcule ici pour la cohérence app/UI et la défense en profondeur.
+  const dayAgoAff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { count: recentDupesAff } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .eq('customer_phone', customerPhone)
+    .eq('product_id', productId)
+    .gte('created_at', dayAgoAff)
+
+  const duplicateScoreAff = scoreDuplicateOrder(recentDupesAff ?? 0)
+  const spamScoreAff = scoreSpamOrder(customerPhone, customerName)
+  const fraudScoreAff = scoreFraudOrder({
+    duplicateScore: duplicateScoreAff,
+    spamScore: spamScoreAff,
+    hasAffiliate: true, // self-order affilié
+  })
+
   const { data: order, error: insertError } = (await supabase
     .from('orders')
     .insert({
@@ -477,10 +498,10 @@ export async function createAffiliateOrder(
       status:                  'pending_confirmation',
       notes,
       is_pre_confirmed:        isPreConfirmed,
-      fraud_score:             0,
-      duplicate_risk_score:    0,
-      spam_score:              0,
-      signals_metadata:        { source: 'affiliate_manual_entry' },
+      fraud_score:             fraudScoreAff,
+      duplicate_risk_score:    duplicateScoreAff,
+      spam_score:              spamScoreAff,
+      signals_metadata:        { source: 'affiliate_manual_entry', scoring_version: '1.0', recent_duplicate_count_24h: recentDupesAff ?? 0 },
     })
     .select('id')
     .single()) as { data: { id: string } | null; error: unknown }
